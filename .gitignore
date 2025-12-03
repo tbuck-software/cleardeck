@@ -9,3 +9,8 @@
 /WhatsApp Audio 2025-12-02 at 21.10.39.opus
 interview/
 audio/
+app/node_modules
+app/.webpack
+app/out
+app/dist
+app/.cache

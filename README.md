@@ -1,66 +1,43 @@
-# Employee DB
+# Employee DB – Electron Desktop App
 
-Electron app to manage employees
+Lokale Mitarbeiter- und VZAE-Uebersicht als Electron-Desktop-App mit SQLite, Export (CSV/Excel) und Passwortschutz.
 
-## Getting Started
+## Features (Stand: Prototyp)
+- Historisierte Mitarbeitenden-Tabelle (Eintritt, Austritt, Stellenanteil, Qualifikation, Quelle, Notiz, Dokumentenpfad).
+- Jahresfilter mit Status (aktiv, Neueintritt, ausgeschieden) und VZAE-Berechnung je Qualifikation + Gesamt.
+- Historienpflege: mehrere Perioden pro Person moeglich (Toggle „Neue Historienperiode“).
+- Exporte: CSV oder Excel inkl. Aggregationen je Qualifikation.
+- Verweis auf Dokumentenpfad; Button oeffnet Datei/Ordner via Electron shell.
+- Lokale Verschluesselung: App-Schluessel wird aus Benutzerpasswort abgeleitet, Datenbank liegt verschluesselt im User-Data-Verzeichnis.
 
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes. See deployment for notes on how to deploy the project on a live system.
+## Projektstruktur
+- `anforderungsdokument.md`: Anforderungen / Kontext.
+- `app/`: Electron-Forge Projekt (TypeScript, React, better-sqlite3).
+  - `src/index.ts`: Main-Prozess (DB, Verschluesselung, IPC, Export).
+  - `src/preload.ts`: IPC-Bruecke.
+  - `src/renderer.tsx`: UI (React).
 
-### Prerequisites
+## Setup & Start
+Voraussetzung: Node.js 18+.
 
-What things you need to install the software and how to install them
-
-```
-Node.js
-```
-
-### Installing
-
-A step by step series of examples that tell you how to get a development env running
-
-Say what the step will be
-
-```
+```bash
+cd app
 npm install
-```
-
-And repeat
-
-```
 npm start
 ```
 
-End with an example of getting some data out of the system or using it for a little demo
+Der erste Start fragt nach einem Passwort (setzt gleichzeitig den lokalen App-Schluessel). Danach kann die Jahresliste gefiltert, editiert und exportiert werden.
 
-## Running the tests
+## Datenablage & Verschluesselung
+- Arbeits- und Konfigurationsdaten liegen unter `app.getPath('userData')/data` (OS-abhaengig).
+- Datenbank wird beim Schliessen in `employee.db.enc` (AES-GCM) verschluesselt. Entschluesselung nur nach Login.
+- Passwort wird nicht gespeichert; bei Verlust ist die DB nicht wiederherstellbar.
 
-Explain how to run the automated tests for this system
+## Wichtige NPM-Skripte (im Ordner `app/`)
+- `npm start` – Entwicklung mit Hot-Reload.
+- `npm run make` – Paketieren (plattformabhaengig, erfordert System-Toolchain).
 
-### Break down into end to end tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-### And coding style tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-## Deployment
-
-Add additional notes about how to deploy this on a live system
-
-## Built With
-
-* [Electron](https://electronjs.org/) - The web framework used
-* [Node.js](https://nodejs.org/en/) - Dependency Management
-
-## Contributing
-
-Please read
+## Bekannte TODOs / Naechste Schritte
+- Optional: dedizierte Auto-Update-Pipeline und Installationspakete pro OS.
+- Tests (Unit/E2E) ergaenzen, Lint/Formatting-Konfiguration schaerfen.
+- Optional: SQLCipher statt App-seitiger AES-Verpackung.
