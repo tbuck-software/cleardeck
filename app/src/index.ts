@@ -432,7 +432,6 @@ const getYearDataset = (year: number): YearDataset => {
         name: row.name,
         qualification: row.qualification,
         dataSource: row.dataSource ?? undefined,
-        note: row.note ?? undefined,
         weeklyHours: row.weeklyHours ?? null,
         documentPath: row.documentPath ?? undefined,
         createdAt: row.createdAt,

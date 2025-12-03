@@ -40,6 +40,12 @@ type FormState = {
 
 type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'settings' | 'view';
 
+type EventModalType = EmployeeEventType | 'period';
+
+type TimelineItem =
+  | { kind: 'period'; date: string; record: EmploymentPeriod }
+  | { kind: 'event'; date: string; record: EmployeeEvent };
+
 const statusLabels: Record<EmployeeWithPeriod['status'], string> = {
   active: 'aktiv',
   left: 'ausgeschieden',
@@ -331,6 +337,7 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dbMessage, setDbMessage] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeWithPeriod['status']>('all');
   const [qualificationFilter, setQualificationFilter] = useState<string>('all');
@@ -381,7 +388,7 @@ const App = () => {
     open: boolean;
     id?: number;
     eventDate: string;
-    type: EmployeeEventType;
+    type: EventModalType;
     title: string;
     details: string;
     previousValue?: string | null;
@@ -389,7 +396,7 @@ const App = () => {
   }>({
     open: false,
     eventDate: new Date().toISOString().slice(0, 10),
-    type: 'period' as EmployeeEventType,
+    type: 'period',
     title: '',
     details: '',
     previousValue: null,
@@ -578,9 +585,6 @@ const App = () => {
     }
     if (target === 'edit' && !form.id) {
       return;
-    }
-    if (target === 'qualifications') {
-      refreshQualifications();
     }
     if (target === 'view' && !selectedEmployee) return;
     setPage(target);
@@ -887,6 +891,10 @@ const App = () => {
 
   const handleSaveEvent = async () => {
     if (!selectedEmployee) return;
+    if (eventModal.type === 'period') {
+      await handleAddPeriod();
+      return;
+    }
     if (!eventModal.eventDate || !eventModal.title.trim()) {
       handleError(new Error('Datum und Titel dürfen nicht leer sein.'));
       return;
@@ -991,9 +999,8 @@ const App = () => {
     return selectedEmployee.createdAt ?? selectedEmployee.startDate;
   }, [events, selectedEmployee]);
 
-  const timelineItems = useMemo(() => {
-    const items: { kind: 'period'; date: string; record: EmploymentPeriod } | { kind: 'event'; date: string; record: EmployeeEvent }[] =
-      [];
+  const timelineItems: TimelineItem[] = useMemo(() => {
+    const items: TimelineItem[] = [];
     periods.forEach((p) => items.push({ kind: 'period', date: p.startDate, record: p }));
     events.forEach((ev) => items.push({ kind: 'event', date: ev.eventDate, record: ev }));
     return items.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0));
@@ -1544,6 +1551,7 @@ const App = () => {
                   Import ersetzt die lokale Datenbank. Verschlüsselte Importe erwarten das aktuelle App-Passwort /
                   den geladenen Schlüssel.
                 </p>
+                {dbMessage && <p className="subtitle small success-text">{dbMessage}</p>}
                 <label className="full-width">
                   Basis-Wochenstunden für VZÄ (Default 36)
                   <input
@@ -1760,7 +1768,7 @@ const App = () => {
                 <select
                   value={eventModal.type}
                   onChange={(e) => {
-                    const nextType = e.target.value as EmployeeEventType;
+                    const nextType = e.target.value as EventModalType;
                     if ((nextType === 'name-change' || nextType === 'note-change') && !eventModal.id) return;
                     setEventModal((prev) => ({
                       ...prev,
@@ -2101,7 +2109,9 @@ const App = () => {
               <div className="inline-row compact">
                 <button
                   className="ghost-button"
-                  onClick={() => setEditModal({ open: false, name: '', note: '', weeklyHours: '' })}
+                  onClick={() =>
+                    setEditModal({ open: false, name: '', note: '', weeklyHours: '', linked: true, fteValue: '' })
+                  }
                 >
                   Abbrechen
                 </button>
@@ -2153,7 +2163,14 @@ const App = () => {
                       handleError(err);
                     } finally {
                       setLoading(false);
-                      setEditModal({ open: false, name: '', note: '', weeklyHours: '' });
+                      setEditModal({
+                        open: false,
+                        name: '',
+                        note: '',
+                        weeklyHours: '',
+                        linked: true,
+                        fteValue: '',
+                      });
                       setTimeout(() => setToast(null), 2000);
                     }
                   }}

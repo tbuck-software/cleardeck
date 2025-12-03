@@ -1,7 +1,7 @@
 {
   "name": "employee-db",
   "productName": "Employee DB",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Electron-Desktop-App für Mitarbeiter-, Historie- und VZÄ-Übersicht (SQLite, Export, Verschlüsselung).",
   "main": ".webpack/main",
   "scripts": {
