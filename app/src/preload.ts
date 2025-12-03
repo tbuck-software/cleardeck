@@ -6,6 +6,7 @@ import type {
   YearDataset,
   EmployeeEvent,
   EmployeeEventType,
+  UpdateStatus,
 } from './shared/types';
 
 type ExportFormat = 'csv' | 'xlsx';
@@ -67,6 +68,9 @@ export type Api = {
   resetApp: () => Promise<AppState>;
   getBaseHours: () => Promise<number>;
   setBaseHours: (hours: number) => Promise<number>;
+  checkUpdates: () => Promise<boolean>;
+  installUpdate: () => Promise<boolean>;
+  onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
 };
 
 const api: Api = {
@@ -94,6 +98,13 @@ const api: Api = {
   resetApp: () => ipcRenderer.invoke('app:reset'),
   getBaseHours: () => ipcRenderer.invoke('settings:getBaseHours'),
   setBaseHours: (hours) => ipcRenderer.invoke('settings:setBaseHours', { hours }),
+  checkUpdates: () => ipcRenderer.invoke('updates:check'),
+  installUpdate: () => ipcRenderer.invoke('updates:install'),
+  onUpdateStatus: (cb) => {
+    const listener = (_event: Electron.IpcRendererEvent, status: UpdateStatus) => cb(status);
+    ipcRenderer.on('updates:status', listener);
+    return () => ipcRenderer.removeListener('updates:status', listener);
+  },
 };
 
 contextBridge.exposeInMainWorld('api', api);

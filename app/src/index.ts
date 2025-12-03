@@ -5,6 +5,7 @@ import {
   ipcMain,
   shell,
 } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -21,6 +22,7 @@ import type {
   EmployeeEventType,
   QualificationType,
   YearDataset,
+  UpdateStatus,
 } from './shared/types';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -50,6 +52,9 @@ let mainWindow: BrowserWindow | null = null;
 let db: DatabaseType | null = null;
 let encryptionKey: Buffer | null = null;
 let unlocked = false;
+let updaterInitialized = false;
+let updateFeedConfigured = false;
+let latestUpdateVersion: string | undefined;
 
 const ensureDataDir = (): void => {
   if (!fs.existsSync(dataDir)) {
@@ -1001,8 +1006,47 @@ const createWindow = (): void => {
   }
 };
 
+const sendUpdateStatus = (status: UpdateStatus): void => {
+  if (mainWindow) {
+    mainWindow.webContents.send('updates:status', status);
+  }
+};
+
+const initAutoUpdater = (): void => {
+  if (updaterInitialized || !app.isPackaged) {
+    return;
+  }
+  updaterInitialized = true;
+  const feedUrl = process.env.UPDATE_FEED_URL;
+  if (feedUrl) {
+    autoUpdater.setFeedURL({ provider: 'generic', url: feedUrl, channel: 'latest' });
+    updateFeedConfigured = true;
+  }
+  autoUpdater.autoDownload = true;
+  autoUpdater.on('checking-for-update', () => sendUpdateStatus({ state: 'checking' }));
+  autoUpdater.on('update-available', (info) => {
+    latestUpdateVersion = info.version;
+    sendUpdateStatus({ state: 'available', version: info.version });
+  });
+  autoUpdater.on('update-not-available', () => sendUpdateStatus({ state: 'not-available' }));
+  autoUpdater.on('download-progress', (progress) =>
+    sendUpdateStatus({
+      state: 'downloading',
+      version: latestUpdateVersion,
+      progress: Math.round(progress.percent),
+    }),
+  );
+  autoUpdater.on('update-downloaded', (info) => {
+    latestUpdateVersion = info.version;
+    sendUpdateStatus({ state: 'downloaded', version: info.version });
+  });
+  autoUpdater.on('error', (err) => sendUpdateStatus({ state: 'error', message: err.message }));
+  sendUpdateStatus({ state: 'idle' });
+};
+
 app.on('ready', () => {
   createWindow();
+  initAutoUpdater();
 });
 
 app.on('window-all-closed', () => {
@@ -1026,6 +1070,34 @@ ipcMain.handle('app:state', (): AppState => ({
   configured: isConfigured(),
   unlocked,
 }));
+
+ipcMain.handle('updates:check', async () => {
+  if (!app.isPackaged) {
+    sendUpdateStatus({ state: 'not-available' });
+    return false;
+  }
+  if (!updaterInitialized) {
+    initAutoUpdater();
+  }
+  if (!updateFeedConfigured) {
+    const feedUrl = process.env.UPDATE_FEED_URL;
+    if (!feedUrl) {
+      sendUpdateStatus({ state: 'error', message: 'UPDATE_FEED_URL ist nicht konfiguriert.' });
+      return false;
+    }
+    autoUpdater.setFeedURL({ provider: 'generic', url: feedUrl, channel: 'latest' });
+    updateFeedConfigured = true;
+  }
+  await autoUpdater.checkForUpdates();
+  return true;
+});
+
+ipcMain.handle('updates:install', async () => {
+  if (!app.isPackaged) return false;
+  if (!updaterInitialized) return false;
+  autoUpdater.quitAndInstall();
+  return true;
+});
 
 ipcMain.handle('auth:register', (_event, password: string): AppState => {
   if (isConfigured()) {

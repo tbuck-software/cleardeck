@@ -22,6 +22,7 @@ import type {
   QualificationType,
   YearDataset,
   EmployeeEventType,
+  UpdateStatus,
 } from './shared/types';
 
 type FormState = {
@@ -337,6 +338,7 @@ const App = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' });
   const [dbMessage, setDbMessage] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeWithPeriod['status']>('all');
@@ -502,6 +504,21 @@ const App = () => {
       setQualificationFilter('all');
     }
   }, [qualifications, qualificationFilter]);
+
+  useEffect(() => {
+    const unsubscribe = window.api.onUpdateStatus((status) => {
+      setUpdateStatus(status);
+      if (status.state === 'downloaded') {
+        setToast(`Update ${status.version ? `v${status.version} ` : ''}heruntergeladen. Neu starten zum Installieren.`);
+      }
+    });
+    window.api.checkUpdates().catch(() => {
+      setUpdateStatus((prev) => prev);
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, []);
 
   const handleLogin = async (password: string, mode: 'setup' | 'login') => {
     try {
@@ -831,6 +848,22 @@ const App = () => {
     );
   };
 
+  const handleCheckUpdates = async () => {
+    try {
+      await window.api.checkUpdates();
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
+  const handleInstallUpdate = async () => {
+    try {
+      await window.api.installUpdate();
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
   const handleAddPeriod = async () => {
     if (!selectedEmployee) return;
     if (!addPeriodForm.qualification || !addPeriodForm.startDate) return;
@@ -1087,9 +1120,9 @@ const App = () => {
   }
 
   return (
-    <div className="layout">
-      <Sidebar current={page} onNavigate={goTo} />
-      <div className="main">
+      <div className="layout">
+        <Sidebar current={page} onNavigate={goTo} />
+        <div className="main">
         <header className="topbar">
           <div>
             <div className="breadcrumbs">
@@ -1726,6 +1759,55 @@ const App = () => {
           </div>
         )}
       </div>
+
+      {['available', 'downloading', 'downloaded', 'error', 'checking'].includes(updateStatus.state) && (
+        <div className="update-banner">
+          <div>
+            <p className="eyebrow">Update</p>
+            <h4 className="update-title">
+              {updateStatus.state === 'available' && (
+                <>
+                  Update verfügbar {updateStatus.version ? `v${updateStatus.version}` : ''}
+                </>
+              )}
+              {updateStatus.state === 'downloading' && (
+                <>
+                  Lädt Update {updateStatus.version ? `v${updateStatus.version}` : ''}
+                </>
+              )}
+              {updateStatus.state === 'downloaded' && (
+                <>
+                  Update {updateStatus.version ? `v${updateStatus.version}` : ''} bereit
+                </>
+              )}
+              {updateStatus.state === 'checking' && 'Suche nach Updates …'}
+              {updateStatus.state === 'error' && 'Update fehlgeschlagen'}
+            </h4>
+            {updateStatus.state === 'downloading' && (
+              <div className="update-progress">
+                <div
+                  className="update-progress-bar"
+                  style={{ width: `${Math.min(100, Math.round(updateStatus.progress ?? 0))}%` }}
+                />
+                <span>{Math.round(updateStatus.progress ?? 0)}%</span>
+              </div>
+            )}
+            {updateStatus.state === 'error' && (
+              <p className="subtitle small">{updateStatus.message}</p>
+            )}
+          </div>
+          <div className="inline-row compact">
+            <button className="ghost-button" onClick={handleCheckUpdates}>
+              Erneut prüfen
+            </button>
+            {updateStatus.state === 'downloaded' && (
+              <button className="primary" onClick={handleInstallUpdate}>
+                Neu starten & installieren
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {toast && <div className="toast">{toast}</div>}
       {error && <div className="toast error-toast">{error}</div>}

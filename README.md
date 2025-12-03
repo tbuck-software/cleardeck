@@ -34,6 +34,11 @@ Der erste Start fragt nach einem Passwort (setzt gleichzeitig den lokalen App-Sc
 - `make show-version`: zeigt die aktuelle Version an.
 - Voraussetzungen: sauberes Git-Working-Tree, installierte Dependencies (`npm install` im Ordner `app/`). Artefakte landen unter `app/out` (ignored).
 
+### CI-Releases (GitHub Actions)
+- Workflow: `.github/workflows/release.yml` baut auf Tags (`v*`) für macOS, Windows und Linux und lädt die Artefakte als Release-Assets hoch.
+- Default: `SKIP_FUSES=1` im CI (kein Codesigning nötig). Für signierte Builds einfach die Variable entfernen/setzen und die jeweiligen Zertifikate/Notarisierungs-Secrets hinterlegen.
+- Linux benötigt `rpm`/`fakeroot` (wird im Workflow installiert); Windows/macOS nutzen die Standard-Forge-Maker (Squirrel/ZIP, ZIP).
+
 ## Datenablage & Verschluesselung
 - Arbeits- und Konfigurationsdaten liegen unter `app.getPath('userData')/data` (OS-abhaengig).
 - Datenbank wird beim Schliessen in `employee.db.enc` (AES-GCM) verschluesselt. Entschluesselung nur nach Login.
