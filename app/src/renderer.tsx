@@ -1,6 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faDownload, faCalendarDays, faTrash, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import {
+  faPlus,
+  faDownload,
+  faCalendarDays,
+  faTrash,
+  faTriangleExclamation,
+  faGaugeHigh,
+  faUsers,
+  faGraduationCap,
+  faGear,
+} from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import type { EmploymentPeriod, EmployeeWithPeriod, QualificationType, YearDataset } from './shared/types';
@@ -12,13 +22,12 @@ type FormState = {
   qualification: string;
   dataSource: string;
   note: string;
-  documentPath: string;
   startDate: string;
   endDate: string;
   fte: number;
 };
 
-type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'qualifications';
+type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'qualifications' | 'settings' | 'view';
 
 const statusLabels: Record<EmployeeWithPeriod['status'], string> = {
   active: 'aktiv',
@@ -31,7 +40,6 @@ const emptyForm = (year: number, defaultQualification = ''): FormState => ({
   qualification: defaultQualification,
   dataSource: '',
   note: '',
-  documentPath: '',
   startDate: `${year}-01-01`,
   endDate: '',
   fte: 1,
@@ -64,10 +72,10 @@ const Sidebar = ({
   current: Page;
   onNavigate: (page: Page) => void;
 }) => {
-  const navItems: { key: Page; label: string }[] = [
-    { key: 'dashboard', label: 'Dashboard' },
-    { key: 'list', label: 'Mitarbeitende' },
-    { key: 'qualifications', label: 'Qualifikationen' },
+  const navItems: { key: Page; label: string; icon: any }[] = [
+    { key: 'dashboard', label: 'Dashboard', icon: faGaugeHigh },
+    { key: 'list', label: 'Mitarbeitende', icon: faUsers },
+    { key: 'qualifications', label: 'Qualifikationen', icon: faGraduationCap },
   ];
 
   return (
@@ -81,16 +89,24 @@ const Sidebar = ({
       </div>
       <nav className="nav">
         {navItems.map((item) => (
-            <button
-              key={item.key}
-              className={`nav-item ${current === item.key ? 'active' : ''}`}
-              onClick={() => onNavigate(item.key)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </nav>
-      <div className="nav-hint">Links: Seiten, rechts: Jahr/Export</div>
+          <button
+            key={item.key}
+            className={`nav-item ${current === item.key ? 'active' : ''}`}
+            onClick={() => onNavigate(item.key)}
+          >
+            <FontAwesomeIcon icon={item.icon} /> {item.label}
+          </button>
+        ))}
+      </nav>
+      <div className="nav-footer">
+        <button
+          className={`nav-item ${current === 'settings' ? 'active' : ''}`}
+          onClick={() => onNavigate('settings')}
+        >
+          <FontAwesomeIcon icon={faGear} /> Einstellungen
+        </button>
+        <div className="nav-hint">Links: Seiten, rechts: Jahr/Export</div>
+      </div>
     </aside>
   );
 };
@@ -98,13 +114,11 @@ const Sidebar = ({
 const Table = ({
   employees,
   onSelect,
-  onOpenDocument,
   onDelete,
   selectedId,
 }: {
   employees: EmployeeWithPeriod[];
   onSelect: (emp: EmployeeWithPeriod) => void;
-  onOpenDocument: (path: string) => void;
   onDelete: (id: number) => void;
   selectedId?: number;
 }) => (
@@ -114,8 +128,8 @@ const Table = ({
         <tr>
           <th>Name</th>
           <th>Qualifikation</th>
-          <th>Eintritt</th>
-          <th>Austritt</th>
+          <th>Start</th>
+          <th>Ende</th>
           <th>
             <abbr className="help" title={fteHelp}>
               FTE/VZÄ
@@ -123,7 +137,6 @@ const Table = ({
           </th>
           <th>Status</th>
           <th>Quelle</th>
-          <th>Dokument</th>
           <th>Aktion</th>
         </tr>
       </thead>
@@ -150,21 +163,6 @@ const Table = ({
               <Badge status={emp.status} />
             </td>
             <td>{emp.dataSource ?? '—'}</td>
-            <td>
-              {emp.documentPath ? (
-                <button
-                  className="ghost-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenDocument(emp.documentPath ?? '');
-                  }}
-                >
-                  Öffnen
-                </button>
-              ) : (
-                '—'
-              )}
-            </td>
             <td>
               <button
                 className="ghost-button danger icon-button"
@@ -311,6 +309,7 @@ const App = () => {
   const [qualifications, setQualifications] = useState<QualificationType[]>([]);
   const [form, setForm] = useState<FormState>(emptyForm(currentYear));
   const [periods, setPeriods] = useState<EmploymentPeriod[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithPeriod | null>(null);
   const [appReady, setAppReady] = useState<{ configured: boolean; unlocked: boolean }>({
     configured: false,
     unlocked: false,
@@ -323,9 +322,26 @@ const App = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeWithPeriod['status']>('all');
   const [addNewPeriod, setAddNewPeriod] = useState(false);
   const [newQualification, setNewQualification] = useState('');
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState('');
+  const [showAddPeriodModal, setShowAddPeriodModal] = useState(false);
+  const [addPeriodForm, setAddPeriodForm] = useState<{
+    startDate: string;
+    endDate: string;
+    fte: number;
+    qualification: string;
+    periodId?: number;
+  }>({
+    startDate: `${currentYear}-01-01`,
+    endDate: '',
+    fte: 1,
+    qualification: '',
+  });
   const [confirmState, setConfirmState] = useState<{
     message: string;
     onConfirm: () => Promise<void> | void;
+    confirmLabel?: string;
+    danger?: boolean;
   } | null>(null);
 
   const handleError = (err: unknown) => {
@@ -379,6 +395,7 @@ const App = () => {
           setQualifications(list);
           if (!form.qualification) {
             setForm((prev) => ({ ...prev, qualification: list[0]?.name ?? '' }));
+            setAddPeriodForm((prev) => ({ ...prev, qualification: list[0]?.name ?? '' }));
           }
         })
         .catch(handleError);
@@ -402,7 +419,10 @@ const App = () => {
   };
 
   const handleSelect = async (emp: EmployeeWithPeriod) => {
-    setPage('edit');
+    setSelectedEmployee(emp);
+    setNameDraft(emp.name);
+    setEditingName(false);
+    setPage('view');
     setForm({
       id: emp.id,
       periodId: emp.periodId,
@@ -410,7 +430,6 @@ const App = () => {
       qualification: emp.qualification,
       dataSource: emp.dataSource ?? '',
       note: emp.note ?? '',
-      documentPath: emp.documentPath ?? '',
       startDate: emp.startDate,
       endDate: emp.endDate ?? '',
       fte: emp.fte,
@@ -419,6 +438,13 @@ const App = () => {
     try {
       const history = await window.api.listPeriods(emp.id ?? 0);
       setPeriods(history);
+      setAddPeriodForm((prev) => ({
+        ...prev,
+        startDate: history[0]?.startDate ?? `${year}-01-01`,
+        endDate: '',
+        fte: 1,
+        qualification: qualifications[0]?.name ?? emp.qualification,
+      }));
     } catch (err) {
       handleError(err);
     }
@@ -440,6 +466,7 @@ const App = () => {
     if (target === 'qualifications') {
       refreshQualifications();
     }
+    if (target === 'view' && !selectedEmployee) return;
     setPage(target);
   };
 
@@ -536,17 +563,94 @@ const App = () => {
     }
   };
 
-  const confirmAction = (message: string, action: () => Promise<void> | void) => {
-    setConfirmState({ message, onConfirm: action });
+  const confirmAction = (
+    message: string,
+    action: () => Promise<void> | void,
+    opts?: { confirmLabel?: string; danger?: boolean },
+  ) => {
+    setConfirmState({ message, onConfirm: action, confirmLabel: opts?.confirmLabel, danger: opts?.danger });
   };
 
   const confirmDeleteEmployee = (id?: number) => {
     if (!id) return;
-    confirmAction('Mitarbeiter:in und Historie wirklich löschen?', () => deleteEmployee(id));
+    confirmAction('Mitarbeiter:in und Historie wirklich löschen?', () => deleteEmployee(id), {
+      confirmLabel: 'Löschen',
+      danger: true,
+    });
   };
 
   const confirmDeleteQualification = (id: number) => {
-    confirmAction('Qualifikation wirklich löschen?', () => handleDeleteQualification(id));
+    confirmAction('Qualifikation wirklich löschen?', () => handleDeleteQualification(id), {
+      confirmLabel: 'Löschen',
+      danger: true,
+    });
+  };
+
+  const handleDbExport = async (mode: 'encrypted' | 'plain') => {
+    setDbMessage(null);
+    try {
+      const result = await window.api.exportDatabase(mode);
+      if (result.saved) {
+        setDbMessage(`Export gespeichert unter: ${result.filePath}`);
+      } else if (result.error) {
+        setDbMessage(`Export fehlgeschlagen: ${result.error}`);
+      }
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
+  const handleDbImport = async (mode: 'encrypted' | 'plain') => {
+    confirmAction(
+      'Import ersetzt die aktuelle Datenbank. Es wird vorher ein Backup erstellt. Fortfahren?',
+      async () => {
+        try {
+          const result = await window.api.importDatabase(mode);
+          if (result.imported) {
+            await refreshDataset(year);
+            const info = result.backupPath
+              ? `Import erfolgreich. Backup unter: ${result.backupPath}`
+              : 'Import erfolgreich.';
+            setToast(info);
+          } else if (result.error) {
+            setError(`Import fehlgeschlagen: ${result.error}`);
+          }
+        } catch (err) {
+          handleError(err);
+        }
+      },
+      { confirmLabel: 'Importieren', danger: true },
+    );
+  };
+
+  const handleAddPeriod = async () => {
+    if (!selectedEmployee) return;
+    if (!addPeriodForm.qualification || !addPeriodForm.startDate) return;
+    setLoading(true);
+    try {
+      const payload = {
+        id: selectedEmployee.id,
+        name: selectedEmployee.name,
+        qualification: addPeriodForm.qualification,
+        dataSource: selectedEmployee.dataSource ?? '',
+        note: selectedEmployee.note ?? '',
+        startDate: addPeriodForm.startDate,
+        endDate: addPeriodForm.endDate || null,
+        fte: Number(addPeriodForm.fte) || 0,
+        year,
+      };
+      const updated = await window.api.saveEmployee(payload);
+      setDataset(updated);
+      const history = await window.api.listPeriods(selectedEmployee.id ?? 0);
+      setPeriods(history);
+      setToast('Qualifikation/Periode hinzugefügt.');
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setLoading(false);
+      setShowAddPeriodModal(false);
+      setTimeout(() => setToast(null), 2000);
+    }
   };
 
   const filteredEmployees = useMemo(() => {
@@ -578,6 +682,8 @@ const App = () => {
     new: 'Neu anlegen',
     edit: 'Bearbeiten',
     qualifications: 'Qualifikationen',
+    settings: 'Einstellungen',
+    view: 'Details',
   };
 
   const pageSubtitle: Record<Page, string> = {
@@ -586,6 +692,8 @@ const App = () => {
     new: 'Neue Person mit Historieneintrag erfassen.',
     edit: form.id ? `Bearbeitung: ${form.name}` : 'Bitte Eintrag aus Liste wählen.',
     qualifications: 'Qualifikationstypen verwalten und im Formular nutzen.',
+    settings: 'Datenbank austauschen oder Export/Import (verschlüsselt/unkryptiert).',
+    view: selectedEmployee ? `Status: ${selectedEmployee.status}` : '',
   };
 
   const crumbs = (): { label: string; page?: Page }[] => {
@@ -601,6 +709,17 @@ const App = () => {
       return [
         { label: 'Dashboard', page: 'dashboard' },
         { label: 'Qualifikationen' },
+      ];
+    if (page === 'settings')
+      return [
+        { label: 'Dashboard', page: 'dashboard' },
+        { label: 'Einstellungen' },
+      ];
+    if (page === 'view' && selectedEmployee)
+      return [
+        { label: 'Dashboard', page: 'dashboard' },
+        { label: 'Mitarbeitende', page: 'list' },
+        { label: selectedEmployee.name },
       ];
     return [
       { label: 'Dashboard', page: 'dashboard' },
@@ -725,6 +844,103 @@ const App = () => {
           </div>
         )}
 
+        {page === 'view' && selectedEmployee && (
+          <div className="stack">
+            <div className="card detail-header">
+              <div className="detail-main">
+                <div className="detail-name">
+                  {editingName ? (
+                    <>
+                      <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} />
+                      <button
+                        className="primary"
+                        onClick={async () => {
+                          const payload = {
+                            ...form,
+                            name: nameDraft,
+                            periodId: form.periodId,
+                            endDate: form.endDate ? form.endDate : null,
+                            fte: Number(form.fte) || 0,
+                            year,
+                          };
+                          setLoading(true);
+                          try {
+                            const updated = await window.api.saveEmployee(payload);
+                            setDataset(updated);
+                            setSelectedEmployee({ ...selectedEmployee, name: nameDraft });
+                            setToast('Name gespeichert.');
+                            setEditingName(false);
+                          } catch (err) {
+                            handleError(err);
+                          } finally {
+                            setLoading(false);
+                            setTimeout(() => setToast(null), 2000);
+                          }
+                        }}
+                      >
+                        Speichern
+                      </button>
+                      <button className="ghost-button" onClick={() => setEditingName(false)}>
+                        Abbrechen
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h2>{selectedEmployee.name}</h2>
+                      <button className="ghost-button" onClick={() => setEditingName(true)} title="Bearbeiten">
+                        ✎
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="detail-meta">
+                  <span className="pill">{selectedEmployee.qualification}</span>
+                  <span className="pill">
+                    <abbr className="help" title={fteHelp}>
+                      FTE/VZÄ
+                    </abbr>{' '}
+                    {selectedEmployee.fte.toFixed(2)}
+                  </span>
+                  <span className={`badge badge-${selectedEmployee.status}`}>{statusLabels[selectedEmployee.status]}</span>
+                  <span className="muted">
+                    {selectedEmployee.startDate} – {selectedEmployee.endDate ?? 'aktuell'}
+                  </span>
+                </div>
+              </div>
+              <div className="detail-actions">
+                <button className="ghost-button" onClick={() => setPage('edit')}>
+                  Bearbeiten
+                </button>
+                <button className="primary" onClick={() => setShowAddPeriodModal(true)}>
+                  <FontAwesomeIcon icon={faPlus} /> Qualifikation hinzufügen
+                </button>
+              </div>
+            </div>
+
+            <div className="card">
+              <h3>Historie</h3>
+              <div className="timeline">
+                {periods.map((p) => (
+                  <div className="timeline-item" key={p.id ?? `${p.startDate}-${p.endDate}`}>
+                    <div className="timeline-dot" />
+                    <div className="timeline-content">
+                      <div className="timeline-title">
+                        {p.startDate} – {p.endDate ?? 'aktuell'}
+                      </div>
+                      <div className="timeline-meta">
+                        <span className="pill">{p.qualification ?? selectedEmployee.qualification}</span>
+                        <span className="pill">FTE/VZÄ {p.fte}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {periods.length === 0 && <div className="empty">Keine Historie vorhanden.</div>}
+              </div>
+            </div>
+
+          </div>
+        )}
+
         {page === 'list' && (
           <div className="stack">
             <div className="card list-toolbar">
@@ -831,6 +1047,43 @@ const App = () => {
           </div>
         )}
 
+        {page === 'settings' && (
+          <div className="grid form-layout">
+            <div className="card form-card">
+              <div className="form-header">
+                <div>
+                  <p className="eyebrow">Datenbank</p>
+                  <h3>Import / Export</h3>
+                </div>
+              </div>
+              <div className="form-grid">
+                <label className="full-width">Export</label>
+                <div className="inline-row">
+                  <button className="ghost-button" onClick={() => handleDbExport('plain')}>
+                    Unverschlüsselt exportieren (SQLite)
+                  </button>
+                  <button className="ghost-button" onClick={() => handleDbExport('encrypted')}>
+                    Verschlüsselt exportieren (.enc)
+                  </button>
+                </div>
+                <label className="full-width">Import</label>
+                <div className="inline-row">
+                  <button className="ghost-button" onClick={() => handleDbImport('plain')}>
+                    Unverschlüsselt importieren (SQLite)
+                  </button>
+                  <button className="ghost-button" onClick={() => handleDbImport('encrypted')}>
+                    Verschlüsselt importieren (.enc)
+                  </button>
+                </div>
+                <p className="subtitle small">
+                  Import ersetzt die lokale Datenbank. Verschlüsselte Importe erwarten das aktuelle App-Passwort /
+                  den geladenen Schlüssel.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {(page === 'new' || page === 'edit') && (
           <div className="grid form-layout">
             <div className="card form-card">
@@ -882,15 +1135,7 @@ const App = () => {
                   />
                 </label>
                 <label>
-                  Dokumentenpfad
-                  <input
-                    value={form.documentPath}
-                    onChange={(e) => setForm({ ...form, documentPath: e.target.value })}
-                    placeholder="Pfad zur Personalakte / Datei"
-                  />
-                </label>
-                <label>
-                  Eintritt
+                  Start
                   <input
                     type="date"
                     value={form.startDate}
@@ -898,7 +1143,7 @@ const App = () => {
                   />
                 </label>
                 <label>
-                  Austritt
+                  Ende
                   <input
                     type="date"
                     value={form.endDate}
@@ -965,13 +1210,74 @@ const App = () => {
                 Abbrechen
               </button>
               <button
-                className="ghost-button danger"
+                className={`ghost-button ${confirmState.danger ? 'danger' : ''}`}
                 onClick={() => {
                   confirmState.onConfirm();
                   setConfirmState(null);
                 }}
               >
-                <FontAwesomeIcon icon={faTrash} /> Löschen
+                {confirmState.confirmLabel ?? 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showAddPeriodModal && selectedEmployee && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-icon">
+              <FontAwesomeIcon icon={faPlus} />
+            </div>
+            <h3>Qualifikation / Periode hinzufügen</h3>
+            <div className="form-grid">
+              <label>
+                Start
+                <input
+                  type="date"
+                  value={addPeriodForm.startDate}
+                  onChange={(e) => setAddPeriodForm({ ...addPeriodForm, startDate: e.target.value })}
+                />
+              </label>
+              <label>
+                Ende
+                <input
+                  type="date"
+                  value={addPeriodForm.endDate}
+                  onChange={(e) => setAddPeriodForm({ ...addPeriodForm, endDate: e.target.value })}
+                />
+              </label>
+              <label>
+                Qualifikation
+                <select
+                  value={addPeriodForm.qualification}
+                  onChange={(e) => setAddPeriodForm({ ...addPeriodForm, qualification: e.target.value })}
+                >
+                  {qualifications.map((q) => (
+                    <option key={q.id ?? q.name} value={q.name}>
+                      {q.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <abbr className="help" title={fteHelp}>
+                  FTE / VZÄ
+                </abbr>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={addPeriodForm.fte}
+                  onChange={(e) => setAddPeriodForm({ ...addPeriodForm, fte: Number(e.target.value) })}
+                />
+              </label>
+            </div>
+            <div className="modal-actions">
+              <button className="ghost-button" onClick={() => setShowAddPeriodModal(false)}>
+                Abbrechen
+              </button>
+              <button className="primary" onClick={handleAddPeriod}>
+                Hinzufügen
               </button>
             </div>
           </div>

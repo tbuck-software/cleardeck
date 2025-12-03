@@ -33,6 +33,10 @@ export type Api = {
   listQualifications: () => Promise<QualificationType[]>;
   addQualification: (name: string) => Promise<QualificationType[]>;
   deleteQualification: (id: number) => Promise<QualificationType[]>;
+  exportDatabase: (mode: 'encrypted' | 'plain') => Promise<{ saved: boolean; filePath?: string; error?: string }>;
+  importDatabase: (
+    mode: 'encrypted' | 'plain',
+  ) => Promise<{ imported: boolean; error?: string; backupPath?: string }>;
 };
 
 const api: Api = {
@@ -48,6 +52,8 @@ const api: Api = {
   listQualifications: () => ipcRenderer.invoke('qualifications:list'),
   addQualification: (name) => ipcRenderer.invoke('qualifications:add', { name }),
   deleteQualification: (id) => ipcRenderer.invoke('qualifications:delete', { id }),
+  exportDatabase: (mode) => ipcRenderer.invoke('db:export', { mode }),
+  importDatabase: (mode) => ipcRenderer.invoke('db:import', { mode }),
 };
 
 contextBridge.exposeInMainWorld('api', api);

@@ -241,6 +241,21 @@ const ensureDbReady = (): void => {
   }
 };
 
+const backupDatabase = (): string => {
+  ensureDataDir();
+  ensureWorkingDb();
+  const backupsDir = path.join(dataDir, 'backups');
+  if (!fs.existsSync(backupsDir)) {
+    fs.mkdirSync(backupsDir, { recursive: true });
+  }
+  const source = fs.existsSync(encryptedDbPath) ? encryptedDbPath : workingDbPath;
+  const ext = path.extname(source) || '.db';
+  const filename = `employee-backup-${Date.now()}${ext}`;
+  const target = path.join(backupsDir, filename);
+  fs.copyFileSync(source, target);
+  return target;
+};
+
 const computeStatus = (startDate: string, endDate: string | null, year: number): 'active' | 'new' | 'left' => {
   const yearStart = new Date(`${year}-01-01T00:00:00`);
   const yearEnd = new Date(`${year}-12-31T23:59:59`);
@@ -429,6 +444,86 @@ const deleteQualification = (id: number): QualificationType[] => {
   ensureDbReady();
   db?.prepare('DELETE FROM qualification_types WHERE id = ?').run(id);
   return listQualifications();
+};
+
+const exportDatabase = async (
+  mode: 'encrypted' | 'plain',
+): Promise<{ saved: boolean; filePath?: string; error?: string }> => {
+  ensureDbReady();
+  ensureWorkingDb();
+  const { filePath, canceled } = await dialog.showSaveDialog({
+    title: mode === 'encrypted' ? 'Datenbank exportieren (verschlüsselt)' : 'Datenbank exportieren (unverschlüsselt)',
+    defaultPath: mode === 'encrypted' ? 'employee.db.enc' : 'employee.db',
+    filters: [
+      mode === 'encrypted'
+        ? { name: 'Verschlüsselte DB', extensions: ['enc'] }
+        : { name: 'SQLite DB', extensions: ['db', 'sqlite'] },
+    ],
+  });
+  if (canceled || !filePath) return { saved: false };
+
+  try {
+    if (mode === 'encrypted') {
+      if (!encryptionKey) throw new Error('Kein Schlüssel geladen.');
+      encryptFile(workingDbPath, filePath, encryptionKey);
+    } else {
+      fs.copyFileSync(workingDbPath, filePath);
+    }
+    return { saved: true, filePath };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Export fehlgeschlagen. Bitte Pfad/Schreibrechte prüfen.';
+    dialog.showErrorBox('Export fehlgeschlagen', message);
+    return { saved: false, error: message };
+  }
+};
+
+const closeDb = (): void => {
+  if (db) {
+    db.close();
+    db = null;
+  }
+};
+
+const importDatabase = async (
+  mode: 'encrypted' | 'plain',
+): Promise<{ imported: boolean; error?: string; backupPath?: string }> => {
+  ensureDbReady();
+  const { filePaths, canceled } = await dialog.showOpenDialog({
+    title: mode === 'encrypted' ? 'Datenbank importieren (verschlüsselt)' : 'Datenbank importieren (unverschlüsselt)',
+    properties: ['openFile'],
+    filters: [
+      mode === 'encrypted'
+        ? { name: 'Verschlüsselte DB', extensions: ['enc'] }
+        : { name: 'SQLite DB', extensions: ['db', 'sqlite'] },
+    ],
+  });
+  if (canceled || filePaths.length === 0) return { imported: false };
+
+  const source = filePaths[0];
+
+  try {
+    const backupPath = backupDatabase();
+    ensureDataDir();
+    closeDb();
+    if (mode === 'encrypted') {
+      if (!encryptionKey) throw new Error('Kein Schlüssel geladen.');
+      fs.copyFileSync(source, encryptedDbPath);
+      decryptFile(source, workingDbPath, encryptionKey);
+    } else {
+      fs.copyFileSync(source, workingDbPath);
+      if (fs.existsSync(encryptedDbPath)) {
+        fs.rmSync(encryptedDbPath);
+      }
+    }
+    openDatabase();
+    return { imported: true, backupPath };
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Import fehlgeschlagen. Datei/Schlüssel prüfen.';
+    dialog.showErrorBox('Import fehlgeschlagen', message);
+    return { imported: false, error: message };
+  }
 };
 
 const exportData = async (
@@ -662,3 +757,5 @@ ipcMain.handle('data:openDocument', async (_event, { path: filePath }: { path: s
 ipcMain.handle('qualifications:list', () => listQualifications());
 ipcMain.handle('qualifications:add', (_event, { name }: { name: string }) => addQualification(name));
 ipcMain.handle('qualifications:delete', (_event, { id }: { id: number }) => deleteQualification(id));
+ipcMain.handle('db:export', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => exportDatabase(mode));
+ipcMain.handle('db:import', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => importDatabase(mode));
