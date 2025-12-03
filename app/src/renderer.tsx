@@ -1118,20 +1118,6 @@ const App = () => {
                 <h2>Willkommen zurück</h2>
                 <p className="subtitle">Kennzahlen und Qualifikationen im gewählten Jahr.</p>
               </div>
-              <div className="quick-actions">
-                <button className="ghost-button" onClick={() => goTo('new')}>
-                  <FontAwesomeIcon icon={faPlus} /> Neu anlegen
-                </button>
-                <button className="ghost-button" onClick={() => goTo('list')}>
-                  Mitarbeitende
-                </button>
-                <button className="ghost-button" onClick={() => handleExport('csv')}>
-                  <FontAwesomeIcon icon={faDownload} /> CSV
-                </button>
-                <button className="ghost-button" onClick={() => handleExport('xlsx')}>
-                  <FontAwesomeIcon icon={faDownload} /> Excel
-                </button>
-              </div>
             </div>
 
             <div className="card">
