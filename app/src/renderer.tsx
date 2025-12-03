@@ -1145,6 +1145,9 @@ const App = () => {
     ];
   };
 
+  // Map Detail-/Bearbeitungsseiten auf den Mitarbeitenden-Tab für die Sidebar-Markierung.
+  const sidebarPage: Page = page === 'new' || page === 'edit' || page === 'view' ? 'list' : page;
+
   if (!appReady.configured) {
     return (
       <AuthScreen
@@ -1163,7 +1166,7 @@ const App = () => {
   return (
       <div className="layout">
       <Sidebar
-        current={page}
+        current={sidebarPage}
         onNavigate={goTo}
         updateStatus={updateStatus}
         onInstallUpdate={handleInstallUpdate}
