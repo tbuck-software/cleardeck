@@ -132,6 +132,10 @@ const runMigrations = (): void => {
   if (!db) return;
   db.pragma('foreign_keys = ON');
   db.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
     CREATE TABLE IF NOT EXISTS qualification_types (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT UNIQUE NOT NULL,
@@ -195,6 +199,11 @@ const runMigrations = (): void => {
   }
   try {
     db.prepare('ALTER TABLE employees ADD COLUMN weeklyHours REAL').run();
+  } catch (err) {
+    // ignore
+  }
+  try {
+    db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)').run('baseHours', '36');
   } catch (err) {
     // ignore
   }
@@ -353,6 +362,11 @@ const getYearDataset = (year: number): YearDataset => {
   const startIso = `${year}-01-01`;
   const endIso = `${year}-12-31`;
 
+  const baseHoursRow = db
+    ?.prepare("SELECT value FROM settings WHERE key = 'baseHours'")
+    .get() as { value?: string } | undefined;
+  const fullTimeHours = baseHoursRow?.value ? Number(baseHoursRow.value) || 36 : 36;
+
   const eventRows = db
     .prepare(
       `
@@ -440,6 +454,7 @@ const getYearDataset = (year: number): YearDataset => {
   return {
     employees,
     aggregation: buildAggregation(employees),
+    baseHours: fullTimeHours,
   };
 };
 
@@ -713,6 +728,21 @@ const deleteEvent = (id: number, employeeId: number): EmployeeEvent[] => {
   ensureDbReady();
   db.prepare('DELETE FROM employee_events WHERE id = ?').run(id);
   return listEvents(employeeId);
+};
+
+const getBaseHours = (): number => {
+  ensureDbReady();
+  const row = db?.prepare("SELECT value FROM settings WHERE key = 'baseHours'").get() as { value?: string } | undefined;
+  return row?.value ? Number(row.value) || 36 : 36;
+};
+
+const setBaseHours = (hours: number): number => {
+  ensureDbReady();
+  db?.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(
+    'baseHours',
+    String(hours),
+  );
+  return getBaseHours();
 };
 
 const listQualifications = (): QualificationType[] => {
@@ -1112,3 +1142,5 @@ ipcMain.handle('db:delete', () => {
   return true;
 });
 ipcMain.handle('app:reset', () => resetApplication());
+ipcMain.handle('settings:getBaseHours', () => getBaseHours());
+ipcMain.handle('settings:setBaseHours', (_event, { hours }: { hours: number }) => setBaseHours(hours));

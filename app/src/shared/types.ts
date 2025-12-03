@@ -73,6 +73,7 @@ export interface Aggregation {
 export interface YearDataset {
   employees: EmployeeWithPeriod[];
   aggregation: Aggregation;
+  baseHours?: number;
 }
 
 export interface AppState {

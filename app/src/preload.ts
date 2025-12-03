@@ -64,6 +64,8 @@ export type Api = {
   deletePeriod: (periodId: number, year: number) => Promise<YearDataset>;
   deleteDatabase: () => Promise<boolean>;
   resetApp: () => Promise<AppState>;
+  getBaseHours: () => Promise<number>;
+  setBaseHours: (hours: number) => Promise<number>;
 };
 
 const api: Api = {
@@ -89,6 +91,8 @@ const api: Api = {
   deletePeriod: (periodId, year) => ipcRenderer.invoke('period:delete', { periodId, year }),
   deleteDatabase: () => ipcRenderer.invoke('db:delete'),
   resetApp: () => ipcRenderer.invoke('app:reset'),
+  getBaseHours: () => ipcRenderer.invoke('settings:getBaseHours'),
+  setBaseHours: (hours) => ipcRenderer.invoke('settings:setBaseHours', { hours }),
 };
 
 contextBridge.exposeInMainWorld('api', api);

@@ -623,6 +623,12 @@ tbody tr.selected {
   gap: 10px;
 }
 
+.link-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .modal-actions {
   display: flex;
   justify-content: space-between;

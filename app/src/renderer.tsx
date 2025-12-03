@@ -10,6 +10,8 @@ import {
   faUsers,
   faGear,
   faPen,
+  faLink,
+  faLinkSlash,
 } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import './index.css';
@@ -236,8 +238,7 @@ const YearSelector = ({
   </div>
 );
 
-const fteHelp = 'VZÄ (Vollzeitäquivalent) auf Basis 40 Wochenstunden. 1,0 = Vollzeit, 0,5 = halbe Stelle.';
-const FULL_TIME_HOURS = 40;
+const fteHelp = 'VZÄ (Vollzeitäquivalent) auf Basis der konfigurierten Vollzeitstunden (Standard 36).';
 
 const AuthScreen = ({
   mode,
@@ -314,6 +315,8 @@ const App = () => {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState<number>(currentYear);
   const [dataset, setDataset] = useState<YearDataset | null>(null);
+  const [baseHours, setBaseHours] = useState<number>(36);
+  const [baseHoursInput, setBaseHoursInput] = useState<string>('36');
   const [qualifications, setQualifications] = useState<QualificationType[]>([]);
   const [form, setForm] = useState<FormState>(emptyForm(currentYear));
   const [periods, setPeriods] = useState<EmploymentPeriod[]>([]);
@@ -342,11 +345,18 @@ const App = () => {
     note: '',
   });
   const [dragQualificationId, setDragQualificationId] = useState<number | null>(null);
-  const [editModal, setEditModal] = useState<{ open: boolean; name: string; note: string; weeklyHours: string }>({
+  const [editModal, setEditModal] = useState<{
+    open: boolean;
+    name: string;
+    note: string;
+    weeklyHours: string;
+    linked: boolean;
+  }>({
     open: false,
     name: '',
     note: '',
     weeklyHours: '',
+    linked: true,
   });
   const [addPeriodForm, setAddPeriodForm] = useState<{
     startDate: string;
@@ -422,6 +432,13 @@ const App = () => {
       const state = await window.api.getAppState();
       setAppReady(state);
       if (state.unlocked) {
+        try {
+          const hours = await window.api.getBaseHours();
+          setBaseHours(hours || 36);
+          setBaseHoursInput(String(hours || 36));
+        } catch (err) {
+          handleError(err);
+        }
         const qualis = await window.api.listQualifications();
         setQualifications(qualis);
         const edits: Record<number, string> = {};
@@ -485,12 +502,13 @@ const App = () => {
 
   const handleSelect = async (emp: EmployeeWithPeriod) => {
     setSelectedEmployee(emp);
-    const hoursFromFte = emp.fte ? (emp.fte * FULL_TIME_HOURS).toFixed(1) : '';
+    const hoursFromFte = emp.fte ? (Math.max(emp.fte, 1) * (baseHours || 36)).toFixed(1) : '';
     setEditModal({
       open: false,
       name: emp.name,
       note: emp.note ?? '',
       weeklyHours: emp.weeklyHours ? String(emp.weeklyHours) : hoursFromFte,
+      linked: true,
     });
     setPage('view');
     setForm({
@@ -561,9 +579,12 @@ const App = () => {
     }
     setLoading(true);
     try {
-      const weeklyHoursNum = form.weeklyHours !== undefined && form.weeklyHours !== null ? Number(form.weeklyHours) : NaN;
+      const weeklyHoursNum =
+        form.weeklyHours !== undefined && form.weeklyHours !== null ? Number(form.weeklyHours) : NaN;
       const derivedFte =
-        !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0 ? Number((weeklyHoursNum / FULL_TIME_HOURS).toFixed(2)) : form.fte;
+        !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0
+          ? Math.min(1, Number((weeklyHoursNum / (baseHours || 36)).toFixed(2)))
+          : form.fte;
       const payload = {
         ...form,
         periodId: addNewPeriod ? undefined : form.periodId,
@@ -1460,6 +1481,34 @@ const App = () => {
                   Import ersetzt die lokale Datenbank. Verschlüsselte Importe erwarten das aktuelle App-Passwort /
                   den geladenen Schlüssel.
                 </p>
+                <label className="full-width">
+                  Basis-Wochenstunden für VZÄ (Default 36)
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={baseHoursInput}
+                    onChange={(e) => setBaseHoursInput(e.target.value)}
+                  />
+                </label>
+                <div className="form-actions">
+                  <button
+                    className="ghost-button"
+                    onClick={async () => {
+                      const val = Number(baseHoursInput);
+                      if (Number.isNaN(val) || val <= 0) {
+                        handleError(new Error('Bitte eine gültige Zahl > 0 eingeben.'));
+                        return;
+                      }
+                      const saved = await window.api.setBaseHours(val);
+                      setBaseHours(saved || 36);
+                      setToast(`Basis-Stunden gesetzt auf ${saved}.`);
+                      setTimeout(() => setToast(null), 2000);
+                    }}
+                  >
+                    Basiswert speichern
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1902,29 +1951,27 @@ const App = () => {
                   onChange={(e) => setEditModal({ ...editModal, name: e.target.value })}
                 />
               </label>
-              <label className="full-width">
+              <label>
                 Wochenstunden
                 <input
                   type="number"
                   min="0"
                   step="0.5"
                   value={editModal.weeklyHours}
-                  onChange={(e) => setEditModal({ ...editModal, weeklyHours: e.target.value })}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEditModal({ ...editModal, weeklyHours: val });
+                    const hoursNum = Number(val);
+                    if (!Number.isNaN(hoursNum)) {
+                      const fteVal = Math.min(1, Number((hoursNum / (baseHours || 36)).toFixed(2)));
+                      if (editModal.linked) {
+                        setForm((prev) => ({ ...prev, weeklyHours: hoursNum, fte: fteVal }));
+                      } else {
+                        setForm((prev) => ({ ...prev, weeklyHours: hoursNum }));
+                      }
+                    }
+                  }}
                   placeholder="z. B. 40"
-                />
-                <small className="muted">
-                  Ergibt VZÄ:{' '}
-                  {editModal.weeklyHours && Number(editModal.weeklyHours) > 0
-                    ? (Number(editModal.weeklyHours) / FULL_TIME_HOURS).toFixed(2)
-                    : form.fte.toFixed(2)}
-                </small>
-              </label>
-              <label className="full-width">
-                Notiz
-                <textarea
-                  value={editModal.note}
-                  onChange={(e) => setEditModal({ ...editModal, note: e.target.value })}
-                  placeholder="Fortbildungen, Besonderheiten, Ansprechpartner"
                 />
               </label>
               <label>
@@ -1934,19 +1981,47 @@ const App = () => {
                   min="0"
                   step="0.01"
                   value={(() => {
-                    const val =
+                    const weeklyNum =
                       editModal.weeklyHours && Number(editModal.weeklyHours) > 0
-                        ? (Number(editModal.weeklyHours) / FULL_TIME_HOURS).toFixed(2)
+                        ? Number(editModal.weeklyHours)
+                        : form.weeklyHours ?? 0;
+                    const val =
+                      weeklyNum && weeklyNum > 0
+                        ? Math.min(1, weeklyNum / (baseHours || 36)).toFixed(2)
                         : form.fte.toFixed(2);
                     return val;
                   })()}
                   onChange={(e) => {
                     const fteVal = Number(e.target.value);
                     if (Number.isNaN(fteVal)) return;
-                    const hours = (fteVal * FULL_TIME_HOURS).toFixed(1);
-                    setEditModal({ ...editModal, weeklyHours: hours });
-                    setForm((prev) => ({ ...prev, fte: fteVal, weeklyHours: Number(hours) }));
+                    const cappedFte = Math.min(1, fteVal);
+                    const hours = cappedFte >= 1 ? (baseHours || 36) : cappedFte * (baseHours || 36);
+                    setEditModal({ ...editModal, weeklyHours: hours.toFixed(1) });
+                    if (editModal.linked) {
+                      setForm((prev) => ({ ...prev, fte: cappedFte, weeklyHours: Number(hours.toFixed(1)) }));
+                    } else {
+                      setForm((prev) => ({ ...prev, fte: cappedFte }));
+                    }
                   }}
+                />
+              </label>
+              <div className="link-toggle">
+                <button
+                  className="ghost-button icon-button"
+                  type="button"
+                  onClick={() => setEditModal((prev) => ({ ...prev, linked: !prev.linked }))}
+                  title={editModal.linked ? 'Verknüpfung lösen' : 'Verknüpfen'}
+                >
+                  <FontAwesomeIcon icon={editModal.linked ? faLink : faLinkSlash} />
+                </button>
+                <span className="muted">{editModal.linked ? 'gekoppelt' : 'entkoppelt'}</span>
+              </div>
+              <label className="full-width">
+                Notiz
+                <textarea
+                  value={editModal.note}
+                  onChange={(e) => setEditModal({ ...editModal, note: e.target.value })}
+                  placeholder="Fortbildungen, Besonderheiten, Ansprechpartner"
                 />
               </label>
             </div>
@@ -1969,7 +2044,7 @@ const App = () => {
                         editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : form.weeklyHours ?? null;
                       const derivedFte =
                         weeklyHoursNum && weeklyHoursNum > 0
-                          ? Number((weeklyHoursNum / FULL_TIME_HOURS).toFixed(2))
+                          ? Math.min(1, Number((weeklyHoursNum / (baseHours || 36)).toFixed(2)))
                           : form.fte;
                       const payload = {
                         ...form,
