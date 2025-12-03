@@ -526,11 +526,13 @@ const saveEmployee = (input: {
   fte: number;
   year: number;
   periodNote?: string | null;
+  linked?: boolean;
 }): YearDataset => {
   ensureDbReady();
   const fullTimeHours = 40;
+  const useLinked = input.linked ?? true;
   const derivedFte =
-    input.weeklyHours !== undefined && input.weeklyHours !== null
+    useLinked && input.weeklyHours !== undefined && input.weeklyHours !== null
       ? Number((input.weeklyHours / fullTimeHours).toFixed(2))
       : input.fte;
 
