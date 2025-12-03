@@ -60,6 +60,8 @@ export type Api = {
     mode: 'encrypted' | 'plain',
   ) => Promise<{ imported: boolean; error?: string; backupPath?: string }>;
   deletePeriod: (periodId: number, year: number) => Promise<YearDataset>;
+  deleteDatabase: () => Promise<boolean>;
+  resetApp: () => Promise<AppState>;
 };
 
 const api: Api = {
@@ -83,6 +85,8 @@ const api: Api = {
   exportDatabase: (mode) => ipcRenderer.invoke('db:export', { mode }),
   importDatabase: (mode) => ipcRenderer.invoke('db:import', { mode }),
   deletePeriod: (periodId, year) => ipcRenderer.invoke('period:delete', { periodId, year }),
+  deleteDatabase: () => ipcRenderer.invoke('db:delete'),
+  resetApp: () => ipcRenderer.invoke('app:reset'),
 };
 
 contextBridge.exposeInMainWorld('api', api);

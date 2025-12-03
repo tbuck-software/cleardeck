@@ -604,6 +604,29 @@ const deletePeriod = (periodId: number, year: number): YearDataset => {
   return getYearDataset(year);
 };
 
+const deleteDatabase = (): void => {
+  if (db) {
+    db.close();
+    db = null;
+  }
+  fs.rmSync(workingDbPath, { force: true });
+  fs.rmSync(encryptedDbPath, { force: true });
+  ensureDataDir();
+};
+
+const resetApplication = (): AppState => {
+  if (db) {
+    db.close();
+    db = null;
+  }
+  encryptionKey = null;
+  unlocked = false;
+  if (fs.existsSync(dataDir)) {
+    fs.rmSync(dataDir, { recursive: true, force: true });
+  }
+  return { configured: false, unlocked: false };
+};
+
 const saveEvent = (input: {
   id?: number;
   employeeId: number;
@@ -1028,3 +1051,9 @@ ipcMain.handle(
 ipcMain.handle('events:delete', (_event, { id, employeeId }: { id: number; employeeId: number }) =>
   deleteEvent(id, employeeId),
 );
+ipcMain.handle('db:delete', () => {
+  ensureDataDir();
+  deleteDatabase();
+  return true;
+});
+ipcMain.handle('app:reset', () => resetApplication());

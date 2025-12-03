@@ -328,7 +328,6 @@ const App = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeWithPeriod['status']>('all');
   const [addNewPeriod, setAddNewPeriod] = useState(false);
-  const [showAddPeriodModal, setShowAddPeriodModal] = useState(false);
   const [qualificationEdits, setQualificationEdits] = useState<Record<number, string>>({});
   const [qualificationModal, setQualificationModal] = useState<{ open: boolean; id?: number; value: string }>({
     open: false,
@@ -365,7 +364,7 @@ const App = () => {
   }>({
     open: false,
     eventDate: new Date().toISOString().slice(0, 10),
-    type: 'custom',
+    type: 'period' as EmployeeEventType,
     title: '',
     details: '',
     previousValue: null,
@@ -714,6 +713,49 @@ const App = () => {
         }
       },
       { confirmLabel: 'Importieren', danger: true },
+    );
+  };
+
+  const handleDropDatabase = () => {
+    confirmAction(
+      'Datenbank endgültig löschen? Dies entfernt alle Einträge, behält aber das Passwort.',
+      async () => {
+        try {
+          await window.api.deleteDatabase();
+          setDataset(null);
+          setSelectedEmployee(null);
+          resetForm();
+          setPage('dashboard');
+          setToast('Datenbank gelöscht. Bitte neu importieren oder neu anlegen.');
+        } catch (err) {
+          handleError(err);
+        } finally {
+          setTimeout(() => setToast(null), 3000);
+        }
+      },
+      { confirmLabel: 'Löschen', danger: true },
+    );
+  };
+
+  const handleFullReset = () => {
+    confirmAction(
+      'App komplett zurücksetzen? Datenbank und Konfiguration werden entfernt. Die App startet wie neu.',
+      async () => {
+        try {
+          const state = await window.api.resetApp();
+          setAppReady(state);
+          setDataset(null);
+          setSelectedEmployee(null);
+          resetForm();
+          setPage('dashboard');
+          setToast('App zurückgesetzt. Bitte neu einrichten.');
+        } catch (err) {
+          handleError(err);
+        } finally {
+          setTimeout(() => setToast(null), 3000);
+        }
+      },
+      { confirmLabel: 'Zurücksetzen', danger: true },
     );
   };
 
@@ -1367,6 +1409,37 @@ const App = () => {
               </div>
             </div>
 
+            <div className="card danger-card">
+              <div className="form-header">
+                <div>
+                  <p className="eyebrow">Danger Zone</p>
+                  <h3>Unwiderrufliche Aktionen</h3>
+                </div>
+              </div>
+              <div className="danger-actions">
+                <div>
+                  <h4>Datenbank löschen</h4>
+                  <p className="subtitle small">
+                    Entfernt die lokale Datenbank, das Passwort bleibt erhalten. Import oder Neuerfassung danach nötig.
+                  </p>
+                </div>
+                <button className="ghost-button danger" onClick={handleDropDatabase}>
+                  Datenbank löschen
+                </button>
+              </div>
+              <div className="danger-actions">
+                <div>
+                  <h4>App zurücksetzen</h4>
+                  <p className="subtitle small">
+                    Löscht Datenbank und Konfiguration. Beim nächsten Start wird die Ersteinrichtung angezeigt.
+                  </p>
+                </div>
+                <button className="ghost-button danger" onClick={handleFullReset}>
+                  App zurücksetzen
+                </button>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -1659,6 +1732,26 @@ const App = () => {
                   placeholder="Optionale Beschreibung oder Notiz zum Ereignis"
                 />
               </label>
+              {eventModal.type === 'note-change' && (
+                <>
+                  <label className="full-width">
+                    Vorherige Notiz
+                    <textarea
+                      value={eventModal.previousValue ?? ''}
+                      onChange={(e) => setEventModal({ ...eventModal, previousValue: e.target.value })}
+                      placeholder="Text vor der Änderung"
+                    />
+                  </label>
+                  <label className="full-width">
+                    Neue Notiz
+                    <textarea
+                      value={eventModal.newValue ?? ''}
+                      onChange={(e) => setEventModal({ ...eventModal, newValue: e.target.value })}
+                      placeholder="Text nach der Änderung"
+                    />
+                  </label>
+                </>
+              )}
             </div>
             <div className="modal-actions">
               <div>
