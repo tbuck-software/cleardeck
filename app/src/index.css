@@ -618,6 +618,12 @@ tbody tr.selected {
   text-align: left;
 }
 
+.modal-body {
+  display: grid;
+  gap: 10px;
+  min-height: 320px;
+}
+
 .modal-actions {
   display: flex;
   justify-content: space-between;

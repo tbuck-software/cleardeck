@@ -501,6 +501,15 @@ const App = () => {
         qualification: qualifications[0]?.name ?? emp.qualification,
         periodId: undefined,
       }));
+      setEventModal((prev) => ({
+        ...prev,
+        type: 'period',
+        eventDate: new Date().toISOString().slice(0, 10),
+        title: '',
+        details: '',
+        previousValue: null,
+        newValue: null,
+      }));
     } catch (err) {
       handleError(err);
     }
@@ -784,7 +793,7 @@ const App = () => {
       handleError(err);
     } finally {
       setLoading(false);
-      setShowAddPeriodModal(false);
+      setEventModal((prev) => ({ ...prev, open: false }));
       setTimeout(() => setToast(null), 2000);
     }
   };
@@ -804,7 +813,7 @@ const App = () => {
     } finally {
       setLoading(false);
       setPeriodToDelete(null);
-      setShowAddPeriodModal(false);
+      setEventModal((prev) => ({ ...prev, open: false }));
       setTimeout(() => setToast(null), 2000);
     }
   };
@@ -1122,24 +1131,28 @@ const App = () => {
               </div>
               <div className="detail-actions">
                 <button
-                  className="ghost-button"
-                  onClick={() =>
+                  className="primary"
+                  onClick={() => {
+                    setAddPeriodForm({
+                      startDate: `${year}-01-01`,
+                      endDate: '',
+                      fte: 1,
+                      qualification: qualifications[0]?.name ?? selectedEmployee.qualification,
+                      periodId: undefined,
+                    });
                     setEventModal({
                       open: true,
                       id: undefined,
                       eventDate: new Date().toISOString().slice(0, 10),
-                      type: 'custom',
+                      type: 'period',
                       title: '',
                       details: '',
                       previousValue: null,
                       newValue: null,
-                    })
-                  }
+                    });
+                  }}
                 >
-                  <FontAwesomeIcon icon={faPlus} /> Ereignis hinzufügen
-                </button>
-                <button className="primary" onClick={() => setShowAddPeriodModal(true)}>
-                  <FontAwesomeIcon icon={faPlus} /> Qualifikation hinzufügen
+                  <FontAwesomeIcon icon={faPlus} /> Neuer Eintrag
                 </button>
               </div>
             </div>
@@ -1147,10 +1160,10 @@ const App = () => {
             <div className="card">
               <h3>Historie</h3>
             <div className="timeline">
-              {timelineItems.map((item) => {
-                if (item.kind === 'period') {
-                  const p = item.record;
-                  return (
+                {timelineItems.map((item) => {
+                  if (item.kind === 'period') {
+                    const p = item.record;
+                    return (
                       <button
                         className="timeline-item"
                         key={`p-${p.id ?? `${p.startDate}-${p.endDate}`}`}
@@ -1162,7 +1175,16 @@ const App = () => {
                             qualification: p.qualification ?? selectedEmployee.qualification,
                             periodId: p.id,
                           });
-                          setShowAddPeriodModal(true);
+                          setEventModal({
+                            open: true,
+                            id: undefined,
+                            eventDate: new Date().toISOString().slice(0, 10),
+                            type: 'period',
+                            title: '',
+                            details: '',
+                            previousValue: null,
+                            newValue: null,
+                          });
                         }}
                       >
                         <div className="timeline-dot" />
@@ -1581,126 +1603,30 @@ const App = () => {
           </div>
         </div>
       )}
-      {showAddPeriodModal && selectedEmployee && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <div className="modal-icon">
-              <FontAwesomeIcon icon={faPlus} />
-            </div>
-            <h3>{addPeriodForm.periodId ? 'Periode bearbeiten' : 'Qualifikation / Periode hinzufügen'}</h3>
-            <div className="form-grid">
-              <label>
-                Start
-                <input
-                  type="date"
-                  value={addPeriodForm.startDate}
-                  onChange={(e) => setAddPeriodForm({ ...addPeriodForm, startDate: e.target.value })}
-                />
-              </label>
-              <label>
-                Ende
-                <input
-                  type="date"
-                  value={addPeriodForm.endDate}
-                  onChange={(e) => setAddPeriodForm({ ...addPeriodForm, endDate: e.target.value })}
-                />
-              </label>
-              <label>
-                Qualifikation
-                <select
-                  value={addPeriodForm.qualification}
-                  onChange={(e) => setAddPeriodForm({ ...addPeriodForm, qualification: e.target.value })}
-                >
-                  {qualifications.map((q) => (
-                    <option key={q.id ?? q.name} value={q.name}>
-                      {q.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <abbr className="help" title={fteHelp}>
-                  FTE / VZÄ
-                </abbr>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={addPeriodForm.fte}
-                  onChange={(e) => setAddPeriodForm({ ...addPeriodForm, fte: Number(e.target.value) })}
-                />
-              </label>
-            </div>
-            <div className="modal-actions">
-              <div>
-                {addPeriodForm.periodId && (
-                  <button
-                    className="ghost-button danger icon-button"
-                    onClick={() =>
-                      setPeriodToDelete({
-                        periodId: addPeriodForm.periodId as number,
-                        label: `${addPeriodForm.startDate} – ${addPeriodForm.endDate || 'aktuell'}`,
-                      })
-                    }
-                    title="Löschen"
-                  >
-                    <FontAwesomeIcon icon={faTrash} />
-                  </button>
-                )}
-              </div>
-              <div className="inline-row compact">
-                <button className="ghost-button" onClick={() => setShowAddPeriodModal(false)}>
-                  Abbrechen
-                </button>
-                <button className="primary" onClick={handleAddPeriod}>
-                  Speichern
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
       {eventModal.open && selectedEmployee && (
         <div className="modal-backdrop">
-          <div className="modal">
-            <div className="modal-icon">
-              <FontAwesomeIcon icon={faPlus} />
-            </div>
-            <h3>{eventModal.id ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen'}</h3>
-            <div className="form-grid">
-              <label>
-                Datum
-                <input
-                  type="date"
-                  value={eventModal.eventDate}
-                  onChange={(e) => setEventModal({ ...eventModal, eventDate: e.target.value })}
-                />
-              </label>
-              <label>
+            <div className="modal">
+              <div className="modal-icon">
+                <FontAwesomeIcon icon={faPlus} />
+              </div>
+              <h3>{eventModal.id ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}</h3>
+            <div className="modal-body">
+              <label className="full-width">
                 Typ
                 <select
                   value={eventModal.type}
                   onChange={(e) => {
                     const nextType = e.target.value as EmployeeEventType;
-                    if ((nextType === 'name-change' || nextType === 'note-change') && !eventModal.id) {
-                      return;
-                    }
-                    const defaults: Record<EmployeeEventType, string> = {
-                      join: 'Eintritt',
-                      leave: 'Austritt',
-                      'name-change': 'Namensänderung',
-                      'note-change': 'Notizänderung',
-                      custom: 'Ereignis',
-                    };
-                    const shouldReplace =
-                      !eventModal.title || Object.values(defaults).includes(eventModal.title);
-                    setEventModal({
-                      ...eventModal,
+                    if ((nextType === 'name-change' || nextType === 'note-change') && !eventModal.id) return;
+                    setEventModal((prev) => ({
+                      ...prev,
                       type: nextType,
-                      title: shouldReplace ? defaults[nextType] : eventModal.title,
-                    });
+                      title: '',
+                      details: '',
+                    }));
                   }}
                 >
+                  <option value="period">Qualifikation/Periode</option>
                   <option value="join">Eintritt</option>
                   <option value="leave">Austritt</option>
                   {eventModal.id && (
@@ -1716,50 +1642,121 @@ const App = () => {
                   <option value="custom">Sonstiges</option>
                 </select>
               </label>
-              <label className="full-width">
-                Titel
-                <input
-                  value={eventModal.title}
-                  onChange={(e) => setEventModal({ ...eventModal, title: e.target.value })}
-                  placeholder="z. B. Wiedereinstieg nach Pause"
-                />
-              </label>
-              <label className="full-width">
-                Details
-                <textarea
-                  value={eventModal.details}
-                  onChange={(e) => setEventModal({ ...eventModal, details: e.target.value })}
-                  placeholder="Optionale Beschreibung oder Notiz zum Ereignis"
-                />
-              </label>
-              {eventModal.type === 'note-change' && (
-                <>
-                  <label className="full-width">
-                    Vorherige Notiz
-                    <textarea
-                      value={eventModal.previousValue ?? ''}
-                      onChange={(e) => setEventModal({ ...eventModal, previousValue: e.target.value })}
-                      placeholder="Text vor der Änderung"
+
+              {eventModal.type === 'period' ? (
+                <div className="form-grid">
+                  <label>
+                    Start
+                    <input
+                      type="date"
+                      value={addPeriodForm.startDate}
+                      onChange={(e) => setAddPeriodForm({ ...addPeriodForm, startDate: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    Ende
+                    <input
+                      type="date"
+                      value={addPeriodForm.endDate}
+                      onChange={(e) => setAddPeriodForm({ ...addPeriodForm, endDate: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    Qualifikation
+                    <select
+                      value={addPeriodForm.qualification}
+                      onChange={(e) => setAddPeriodForm({ ...addPeriodForm, qualification: e.target.value })}
+                    >
+                      {qualifications.map((q) => (
+                        <option key={q.id ?? q.name} value={q.name}>
+                          {q.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <abbr className="help" title={fteHelp}>
+                      FTE / VZÄ
+                    </abbr>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={addPeriodForm.fte}
+                      onChange={(e) => setAddPeriodForm({ ...addPeriodForm, fte: Number(e.target.value) })}
+                    />
+                  </label>
+                </div>
+              ) : (
+                <div className="form-grid">
+                  <label>
+                    Datum
+                    <input
+                      type="date"
+                      value={eventModal.eventDate}
+                      onChange={(e) => setEventModal({ ...eventModal, eventDate: e.target.value })}
                     />
                   </label>
                   <label className="full-width">
-                    Neue Notiz
-                    <textarea
-                      value={eventModal.newValue ?? ''}
-                      onChange={(e) => setEventModal({ ...eventModal, newValue: e.target.value })}
-                      placeholder="Text nach der Änderung"
+                    Titel
+                    <input
+                      value={eventModal.title}
+                      onChange={(e) => setEventModal({ ...eventModal, title: e.target.value })}
+                      placeholder="z. B. Wiedereinstieg nach Pause"
                     />
                   </label>
-                </>
+                  <label className="full-width">
+                    Details
+                    <textarea
+                      value={eventModal.details}
+                      onChange={(e) => setEventModal({ ...eventModal, details: e.target.value })}
+                      placeholder="Optionale Beschreibung oder Notiz zum Ereignis"
+                    />
+                  </label>
+                  {eventModal.type === 'note-change' && (
+                    <>
+                      <label className="full-width">
+                        Vorherige Notiz
+                        <textarea
+                          value={eventModal.previousValue ?? ''}
+                          onChange={(e) => setEventModal({ ...eventModal, previousValue: e.target.value })}
+                          placeholder="Text vor der Änderung"
+                        />
+                      </label>
+                      <label className="full-width">
+                        Neue Notiz
+                        <textarea
+                          value={eventModal.newValue ?? ''}
+                          onChange={(e) => setEventModal({ ...eventModal, newValue: e.target.value })}
+                          placeholder="Text nach der Änderung"
+                        />
+                      </label>
+                    </>
+                  )}
+                </div>
               )}
             </div>
             <div className="modal-actions">
               <div>
-                {eventModal.id && (
+                {eventModal.id && eventModal.type !== 'period' && (
                   <button
                     className="ghost-button danger icon-button"
                     onClick={() => eventModal.id && handleDeleteEvent(eventModal.id)}
                     title="Ereignis löschen"
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                )}
+                {addPeriodForm.periodId && eventModal.type === 'period' && (
+                  <button
+                    className="ghost-button danger icon-button"
+                    onClick={() =>
+                      setPeriodToDelete({
+                        periodId: addPeriodForm.periodId as number,
+                        label: `${addPeriodForm.startDate} – ${addPeriodForm.endDate || 'aktuell'}`,
+                      })
+                    }
+                    title="Periode löschen"
                   >
                     <FontAwesomeIcon icon={faTrash} />
                   </button>
@@ -1769,9 +1766,15 @@ const App = () => {
                 <button className="ghost-button" onClick={() => setEventModal((prev) => ({ ...prev, open: false }))}>
                   Abbrechen
                 </button>
-                <button className="primary" onClick={handleSaveEvent}>
-                  Speichern
-                </button>
+                {eventModal.type === 'period' ? (
+                  <button className="primary" onClick={handleAddPeriod}>
+                    Speichern
+                  </button>
+                ) : (
+                  <button className="primary" onClick={handleSaveEvent}>
+                    Speichern
+                  </button>
+                )}
               </div>
             </div>
           </div>
