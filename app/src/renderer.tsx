@@ -340,6 +340,7 @@ const App = () => {
   const [error, setError] = useState<string | null>(null);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' });
   const [dbMessage, setDbMessage] = useState<string | null>(null);
+  const [snoozeUpdates, setSnoozeUpdates] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeWithPeriod['status']>('all');
   const [qualificationFilter, setQualificationFilter] = useState<string>('all');
@@ -519,6 +520,12 @@ const App = () => {
       if (unsubscribe) unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (updateStatus.state === 'available' || updateStatus.state === 'downloaded') {
+      setSnoozeUpdates(false);
+    }
+  }, [updateStatus]);
 
   const handleLogin = async (password: string, mode: 'setup' | 'login') => {
     try {
@@ -862,6 +869,11 @@ const App = () => {
     } catch (err) {
       handleError(err);
     }
+  };
+
+  const handleSnoozeUpdate = () => {
+    setSnoozeUpdates(true);
+    setUpdateStatus((prev) => (prev.state === 'downloaded' ? prev : { state: 'idle' }));
   };
 
   const handleAddPeriod = async () => {
@@ -1760,54 +1772,55 @@ const App = () => {
         )}
       </div>
 
-      {['available', 'downloading', 'downloaded', 'error', 'checking'].includes(updateStatus.state) && (
-        <div className="update-banner">
-          <div>
-            <p className="eyebrow">Update</p>
-            <h4 className="update-title">
-              {updateStatus.state === 'available' && (
-                <>
-                  Update verfügbar {updateStatus.version ? `v${updateStatus.version}` : ''}
-                </>
-              )}
+      {!snoozeUpdates &&
+        ['available', 'downloading', 'downloaded', 'error', 'checking'].includes(updateStatus.state) && (
+          <div className="update-banner">
+            <div className="update-copy">
+              <p className="eyebrow">Update</p>
+              <h4 className="update-title">
+                {updateStatus.state === 'available' && (
+                  <>
+                    {updateStatus.version ? `v${updateStatus.version} verfügbar` : 'Update verfügbar'}
+                  </>
+                )}
+                {updateStatus.state === 'downloading' && (
+                  <>
+                    Lade {updateStatus.version ? `v${updateStatus.version}` : 'Update'}
+                  </>
+                )}
+                {updateStatus.state === 'downloaded' && (
+                  <>
+                    {updateStatus.version ? `v${updateStatus.version} verfügbar` : 'Update verfügbar'}
+                  </>
+                )}
+                {updateStatus.state === 'checking' && 'Suche nach Updates …'}
+                {updateStatus.state === 'error' && 'Update fehlgeschlagen'}
+              </h4>
               {updateStatus.state === 'downloading' && (
-                <>
-                  Lädt Update {updateStatus.version ? `v${updateStatus.version}` : ''}
-                </>
+                <div className="update-progress">
+                  <div
+                    className="update-progress-bar"
+                    style={{ width: `${Math.min(100, Math.round(updateStatus.progress ?? 0))}%` }}
+                  />
+                  <span>{Math.round(updateStatus.progress ?? 0)}%</span>
+                </div>
               )}
-              {updateStatus.state === 'downloaded' && (
-                <>
-                  Update {updateStatus.version ? `v${updateStatus.version}` : ''} bereit
-                </>
+              {updateStatus.state === 'error' && (
+                <p className="subtitle small">{updateStatus.message}</p>
               )}
-              {updateStatus.state === 'checking' && 'Suche nach Updates …'}
-              {updateStatus.state === 'error' && 'Update fehlgeschlagen'}
-            </h4>
-            {updateStatus.state === 'downloading' && (
-              <div className="update-progress">
-                <div
-                  className="update-progress-bar"
-                  style={{ width: `${Math.min(100, Math.round(updateStatus.progress ?? 0))}%` }}
-                />
-                <span>{Math.round(updateStatus.progress ?? 0)}%</span>
-              </div>
-            )}
-            {updateStatus.state === 'error' && (
-              <p className="subtitle small">{updateStatus.message}</p>
-            )}
-          </div>
-          <div className="inline-row compact">
-            <button className="ghost-button" onClick={handleCheckUpdates}>
-              Erneut prüfen
-            </button>
-            {updateStatus.state === 'downloaded' && (
-              <button className="primary" onClick={handleInstallUpdate}>
-                Neu starten & installieren
+            </div>
+            <div className="update-actions">
+              <button className="update-button" onClick={handleSnoozeUpdate}>
+                Später
               </button>
-            )}
+              {updateStatus.state === 'downloaded' && (
+                <button className="update-button primary" onClick={handleInstallUpdate}>
+                  Neu starten & installieren
+                </button>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       {toast && <div className="toast">{toast}</div>}
       {error && <div className="toast error-toast">{error}</div>}

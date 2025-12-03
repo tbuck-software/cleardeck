@@ -1023,6 +1023,7 @@ const initAutoUpdater = (): void => {
     updateFeedConfigured = true;
   }
   autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = false;
   autoUpdater.on('checking-for-update', () => sendUpdateStatus({ state: 'checking' }));
   autoUpdater.on('update-available', (info) => {
     latestUpdateVersion = info.version;
@@ -1073,6 +1074,12 @@ ipcMain.handle('app:state', (): AppState => ({
 
 ipcMain.handle('updates:check', async () => {
   if (!app.isPackaged) {
+    if (process.env.MOCK_UPDATE_BANNER === '1') {
+      sendUpdateStatus({ state: 'available', version: 'dev-demo' });
+      setTimeout(() => sendUpdateStatus({ state: 'downloading', version: 'dev-demo', progress: 42 }), 300);
+      setTimeout(() => sendUpdateStatus({ state: 'downloaded', version: 'dev-demo' }), 1200);
+      return true;
+    }
     sendUpdateStatus({ state: 'not-available' });
     return false;
   }
