@@ -17,6 +17,8 @@ import type {
   Employee,
   EmploymentPeriod,
   EmployeeWithPeriod,
+  EmployeeEvent,
+  EmployeeEventType,
   QualificationType,
   YearDataset,
 } from './shared/types';
@@ -155,6 +157,19 @@ const runMigrations = (): void => {
     );
     CREATE INDEX IF NOT EXISTS idx_periods_employee ON employment_periods(employeeId);
     CREATE INDEX IF NOT EXISTS idx_periods_dates ON employment_periods(startDate, endDate);
+    CREATE TABLE IF NOT EXISTS employee_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      employeeId INTEGER NOT NULL,
+      eventDate TEXT NOT NULL,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      details TEXT,
+      meta TEXT,
+      createdAt TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_events_employee ON employee_events(employeeId);
+    CREATE INDEX IF NOT EXISTS idx_events_date ON employee_events(eventDate);
   `);
 
   const defaults = [
@@ -307,6 +322,33 @@ const getYearDataset = (year: number): YearDataset => {
   const startIso = `${year}-01-01`;
   const endIso = `${year}-12-31`;
 
+  const eventRows = db
+    .prepare(
+      `
+      SELECT employeeId, type, eventDate
+      FROM employee_events
+      WHERE type IN ('join', 'leave')
+    `,
+    )
+    .all() as { employeeId: number; type: EmployeeEventType; eventDate: string }[];
+
+  const joinEvents = new Map<number, string>();
+  const leaveEvents = new Map<number, string>();
+  eventRows.forEach((row) => {
+    if (row.type === 'join') {
+      const existing = joinEvents.get(row.employeeId);
+      if (!existing || existing < row.eventDate) {
+        joinEvents.set(row.employeeId, row.eventDate);
+      }
+    }
+    if (row.type === 'leave') {
+      const existing = leaveEvents.get(row.employeeId);
+      if (!existing || existing < row.eventDate) {
+        leaveEvents.set(row.employeeId, row.eventDate);
+      }
+    }
+  });
+
   const rows = db
     .prepare(
       `
@@ -335,6 +377,12 @@ const getYearDataset = (year: number): YearDataset => {
   rows.forEach((row) => {
     const current = latest.get(row.employeeId);
     if (!current || new Date(row.startDate) > new Date(current.startDate)) {
+      const joinDate = joinEvents.get(row.employeeId);
+      const leaveDate = leaveEvents.get(row.employeeId);
+      const effectiveStart = joinDate && joinDate > row.startDate ? joinDate : row.startDate;
+      const effectiveEnd =
+        leaveDate && (!row.endDate || leaveDate < row.endDate) ? leaveDate : row.endDate ?? null;
+
       latest.set(row.employeeId, {
         id: row.employeeId,
         name: row.name,
@@ -342,10 +390,10 @@ const getYearDataset = (year: number): YearDataset => {
         dataSource: row.dataSource ?? undefined,
         note: row.note ?? undefined,
         documentPath: row.documentPath ?? undefined,
-        startDate: row.startDate,
-        endDate: row.endDate ?? null,
+        startDate: effectiveStart,
+        endDate: effectiveEnd ?? null,
         fte: row.fte,
-        status: computeStatus(row.startDate, row.endDate ?? null, year),
+        status: computeStatus(effectiveStart, effectiveEnd ?? null, year),
         periodId: row.periodId,
       });
     }
@@ -375,6 +423,41 @@ const listPeriods = (employeeId: number): EmploymentPeriod[] => {
   return rows;
 };
 
+const parseEventRow = (row: any): EmployeeEvent => {
+  let meta: Record<string, unknown> | null = null;
+  if (row.meta) {
+    try {
+      meta = JSON.parse(row.meta);
+    } catch (err) {
+      meta = null;
+    }
+  }
+  return {
+    id: row.id,
+    employeeId: row.employeeId,
+    eventDate: row.eventDate,
+    type: row.type as EmployeeEventType,
+    title: row.title,
+    details: row.details ?? null,
+    meta,
+  };
+};
+
+const listEvents = (employeeId: number): EmployeeEvent[] => {
+  ensureDbReady();
+  const rows = db
+    .prepare(
+      `
+      SELECT id, employeeId, eventDate, type, title, details, meta
+      FROM employee_events
+      WHERE employeeId = ?
+      ORDER BY date(eventDate) DESC, id DESC;
+    `,
+    )
+    .all(employeeId);
+  return rows.map(parseEventRow);
+};
+
 const saveEmployee = (input: {
   id?: number;
   periodId?: number;
@@ -390,6 +473,12 @@ const saveEmployee = (input: {
 }): YearDataset => {
   ensureDbReady();
   const mutation = db.transaction(() => {
+    const existing = input.id
+      ? (db
+          .prepare('SELECT name, note FROM employees WHERE id = ?')
+          .get(input.id) as { name: string; note: string | null } | undefined)
+      : undefined;
+
     const employeePayload: Employee = {
       name: input.name,
       qualification: input.qualification,
@@ -442,6 +531,50 @@ const saveEmployee = (input: {
         'INSERT INTO employment_periods (employeeId, startDate, endDate, fte, qualification) VALUES (?, ?, ?, ?, ?)',
       ).run(employeeId, input.startDate, input.endDate ?? null, input.fte, input.qualification);
     }
+
+    const today = new Date().toISOString().slice(0, 10);
+    if (!existing && employeeId) {
+      db.prepare(
+        'INSERT INTO employee_events (employeeId, eventDate, type, title, details) VALUES (?, ?, ?, ?, ?)',
+      ).run(employeeId, input.startDate || today, 'join', 'Eintritt', `Startdatum: ${input.startDate}`);
+    }
+
+    if (existing && employeeId) {
+      if (existing.name !== input.name) {
+        db.prepare(
+          'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta) VALUES (?, ?, ?, ?, ?, ?)',
+        ).run(
+          employeeId,
+          today,
+          'name-change',
+          'Name geändert',
+          `${existing.name} → ${input.name}`,
+          JSON.stringify({ from: existing.name, to: input.name }),
+        );
+      }
+      if ((existing.note ?? '') !== (input.note ?? '')) {
+        const from = existing.note ?? '';
+        const to = input.note ?? '';
+        const makeDiff = (left: string, right: string): string => {
+          const normalize = (val: string) => val.replace(/\r\n/g, '\n');
+          const leftLines = normalize(left).split('\n');
+          const rightLines = normalize(right).split('\n');
+          const minus = leftLines.map((line) => `-${line}`);
+          const plus = rightLines.map((line) => `+${line}`);
+          return ['--- vorher', '+++ nachher', '@@', ...minus, ...plus].join('\n');
+        };
+        db.prepare(
+          'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta) VALUES (?, ?, ?, ?, ?, ?)',
+        ).run(
+          employeeId,
+          today,
+          'note-change',
+          'Notiz geändert',
+          makeDiff(from, to),
+          JSON.stringify({ from, to }),
+        );
+      }
+    }
   });
 
   mutation();
@@ -458,6 +591,44 @@ const deletePeriod = (periodId: number, year: number): YearDataset => {
   ensureDbReady();
   db.prepare('DELETE FROM employment_periods WHERE id = ?').run(periodId);
   return getYearDataset(year);
+};
+
+const saveEvent = (input: {
+  id?: number;
+  employeeId: number;
+  eventDate: string;
+  type: EmployeeEventType;
+  title: string;
+  details?: string | null;
+  meta?: Record<string, unknown> | null;
+}): EmployeeEvent[] => {
+  ensureDbReady();
+  const payload = {
+    employeeId: input.employeeId,
+    eventDate: input.eventDate,
+    type: input.type,
+    title: input.title,
+    details: input.details ?? null,
+    meta: input.meta ? JSON.stringify(input.meta) : null,
+  };
+
+  if (input.id) {
+    db.prepare(
+      'UPDATE employee_events SET eventDate = @eventDate, type = @type, title = @title, details = @details, meta = @meta WHERE id = @id AND employeeId = @employeeId',
+    ).run({ ...payload, id: input.id });
+  } else {
+    db.prepare(
+      'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta) VALUES (@employeeId, @eventDate, @type, @title, @details, @meta)',
+    ).run(payload);
+  }
+
+  return listEvents(input.employeeId);
+};
+
+const deleteEvent = (id: number, employeeId: number): EmployeeEvent[] => {
+  ensureDbReady();
+  db.prepare('DELETE FROM employee_events WHERE id = ?').run(id);
+  return listEvents(employeeId);
 };
 
 const listQualifications = (): QualificationType[] => {
@@ -832,4 +1003,13 @@ ipcMain.handle('db:export', (_event, { mode }: { mode: 'encrypted' | 'plain' }) 
 ipcMain.handle('db:import', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => importDatabase(mode));
 ipcMain.handle('period:delete', (_event, { periodId, year }: { periodId: number; year: number }) =>
   deletePeriod(periodId, year),
+);
+ipcMain.handle('events:list', (_event, { employeeId }: { employeeId: number }) => listEvents(employeeId));
+ipcMain.handle(
+  'events:save',
+  (_event, input: { id?: number; employeeId: number; eventDate: string; type: EmployeeEventType; title: string; details?: string | null; meta?: Record<string, unknown> | null }) =>
+    saveEvent(input),
+);
+ipcMain.handle('events:delete', (_event, { id, employeeId }: { id: number; employeeId: number }) =>
+  deleteEvent(id, employeeId),
 );

@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AppState, EmploymentPeriod, QualificationType, YearDataset } from './shared/types';
+import type {
+  AppState,
+  EmploymentPeriod,
+  QualificationType,
+  YearDataset,
+  EmployeeEvent,
+  EmployeeEventType,
+} from './shared/types';
 
 type ExportFormat = 'csv' | 'xlsx';
 
@@ -9,6 +16,7 @@ export type Api = {
   login: (password: string) => Promise<AppState>;
   listEmployees: (year: number) => Promise<YearDataset>;
   listPeriods: (employeeId: number) => Promise<EmploymentPeriod[]>;
+  listEvents: (employeeId: number) => Promise<EmployeeEvent[]>;
   saveEmployee: (
     input: {
       id?: number;
@@ -25,6 +33,16 @@ export type Api = {
     },
   ) => Promise<YearDataset>;
   deleteEmployee: (id: number, year: number) => Promise<YearDataset>;
+  saveEvent: (input: {
+    id?: number;
+    employeeId: number;
+    eventDate: string;
+    type: EmployeeEventType;
+    title: string;
+    details?: string | null;
+    meta?: Record<string, unknown> | null;
+  }) => Promise<EmployeeEvent[]>;
+  deleteEvent: (id: number, employeeId: number) => Promise<EmployeeEvent[]>;
   exportData: (
     year: number,
     format: ExportFormat,
@@ -48,8 +66,11 @@ const api: Api = {
   login: (password) => ipcRenderer.invoke('auth:login', password),
   listEmployees: (year) => ipcRenderer.invoke('data:list', { year }),
   listPeriods: (employeeId) => ipcRenderer.invoke('data:listPeriods', { employeeId }),
+  listEvents: (employeeId) => ipcRenderer.invoke('events:list', { employeeId }),
   saveEmployee: (input) => ipcRenderer.invoke('data:save', input),
   deleteEmployee: (id, year) => ipcRenderer.invoke('data:delete', { id, year }),
+  saveEvent: (input) => ipcRenderer.invoke('events:save', input),
+  deleteEvent: (id, employeeId) => ipcRenderer.invoke('events:delete', { id, employeeId }),
   exportData: (year, format) => ipcRenderer.invoke('data:export', { year, format }),
   openDocument: (path) => ipcRenderer.invoke('data:openDocument', { path }),
   listQualifications: () => ipcRenderer.invoke('qualifications:list'),

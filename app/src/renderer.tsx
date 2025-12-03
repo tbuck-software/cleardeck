@@ -13,7 +13,14 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import './index.css';
-import type { EmploymentPeriod, EmployeeWithPeriod, QualificationType, YearDataset } from './shared/types';
+import type {
+  EmploymentPeriod,
+  EmployeeWithPeriod,
+  EmployeeEvent,
+  QualificationType,
+  YearDataset,
+  EmployeeEventType,
+} from './shared/types';
 
 type FormState = {
   id?: number;
@@ -308,6 +315,7 @@ const App = () => {
   const [qualifications, setQualifications] = useState<QualificationType[]>([]);
   const [form, setForm] = useState<FormState>(emptyForm(currentYear));
   const [periods, setPeriods] = useState<EmploymentPeriod[]>([]);
+  const [events, setEvents] = useState<EmployeeEvent[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithPeriod | null>(null);
   const [appReady, setAppReady] = useState<{ configured: boolean; unlocked: boolean }>({
     configured: false,
@@ -345,6 +353,20 @@ const App = () => {
     qualification: '',
   });
   const [periodToDelete, setPeriodToDelete] = useState<{ periodId: number; label: string } | null>(null);
+  const [eventModal, setEventModal] = useState<{
+    open: boolean;
+    id?: number;
+    eventDate: string;
+    type: EmployeeEventType;
+    title: string;
+    details: string;
+  }>({
+    open: false,
+    eventDate: new Date().toISOString().slice(0, 10),
+    type: 'custom',
+    title: '',
+    details: '',
+  });
   const [confirmState, setConfirmState] = useState<{
     message: string;
     onConfirm: () => Promise<void> | void;
@@ -367,6 +389,17 @@ const App = () => {
       handleError(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadHistory = async (employeeId: number) => {
+    try {
+      const history = await window.api.listPeriods(employeeId);
+      setPeriods(history);
+      const evs = await window.api.listEvents(employeeId);
+      setEvents(evs);
+    } catch (err) {
+      handleError(err);
     }
   };
 
@@ -455,6 +488,8 @@ const App = () => {
     try {
       const history = await window.api.listPeriods(emp.id ?? 0);
       setPeriods(history);
+      const evs = await window.api.listEvents(emp.id ?? 0);
+      setEvents(evs);
       setAddPeriodForm((prev) => ({
         ...prev,
         startDate: history[0]?.startDate ?? `${year}-01-01`,
@@ -697,8 +732,7 @@ const App = () => {
       };
       const updated = await window.api.saveEmployee(payload);
       setDataset(updated);
-      const history = await window.api.listPeriods(selectedEmployee.id ?? 0);
-      setPeriods(history);
+      await loadHistory(selectedEmployee.id ?? 0);
       setToast(addPeriodForm.periodId ? 'Periode aktualisiert.' : 'Qualifikation/Periode hinzugefügt.');
     } catch (err) {
       handleError(err);
@@ -716,8 +750,7 @@ const App = () => {
       const updated = await window.api.deletePeriod(periodToDelete.periodId, year);
       setDataset(updated);
       if (selectedEmployee?.id) {
-        const history = await window.api.listPeriods(selectedEmployee.id);
-        setPeriods(history);
+        await loadHistory(selectedEmployee.id);
       }
       setToast('Periode gelöscht.');
     } catch (err) {
@@ -728,6 +761,67 @@ const App = () => {
       setShowAddPeriodModal(false);
       setTimeout(() => setToast(null), 2000);
     }
+  };
+
+  const syncSelectedFromDataset = (data: YearDataset, id?: number) => {
+    if (!id) return;
+    const updated = data.employees.find((emp) => emp.id === id);
+    if (updated) setSelectedEmployee(updated);
+  };
+
+  const handleSaveEvent = async () => {
+    if (!selectedEmployee) return;
+    if (!eventModal.eventDate || !eventModal.title.trim()) {
+      handleError(new Error('Datum und Titel dürfen nicht leer sein.'));
+      return;
+    }
+    setLoading(true);
+    try {
+      const list = await window.api.saveEvent({
+        id: eventModal.id,
+        employeeId: selectedEmployee.id ?? 0,
+        eventDate: eventModal.eventDate,
+        type: eventModal.type,
+        title: eventModal.title.trim(),
+        details: eventModal.details.trim() ? eventModal.details.trim() : null,
+      });
+      setEvents(list);
+      const refreshed = await window.api.listEmployees(year);
+      setDataset(refreshed);
+      syncSelectedFromDataset(refreshed, selectedEmployee.id);
+      setToast('Ereignis gespeichert.');
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setLoading(false);
+      setEventModal((prev) => ({ ...prev, open: false }));
+      setTimeout(() => setToast(null), 2000);
+    }
+  };
+
+  const handleDeleteEvent = (id: number) => {
+    if (!selectedEmployee) return;
+    confirmAction(
+      'Ereignis wirklich löschen?',
+      async () => {
+        setLoading(true);
+        try {
+          const list = await window.api.deleteEvent(id, selectedEmployee.id ?? 0);
+          setEvents(list);
+          const refreshed = await window.api.listEmployees(year);
+          setDataset(refreshed);
+          syncSelectedFromDataset(refreshed, selectedEmployee.id);
+          setToast('Ereignis gelöscht.');
+        } catch (err) {
+          handleError(err);
+        } finally {
+          setLoading(false);
+          setEventModal((prev) => ({ ...prev, open: false }));
+          setTimeout(() => setToast(null), 2000);
+        }
+      },
+      { confirmLabel: 'Löschen', danger: true },
+    );
   };
 
   const filteredEmployees = useMemo(() => {
@@ -752,6 +846,14 @@ const App = () => {
       ),
     [dataset],
   );
+
+  const timelineItems = useMemo(() => {
+    const items: { kind: 'period'; date: string; record: EmploymentPeriod } | { kind: 'event'; date: string; record: EmployeeEvent }[] =
+      [];
+    periods.forEach((p) => items.push({ kind: 'period', date: p.startDate, record: p }));
+    events.forEach((ev) => items.push({ kind: 'event', date: ev.eventDate, record: ev }));
+    return items.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0));
+  }, [periods, events]);
 
   const pageTitle: Record<Page, string> = {
     dashboard: 'Dashboard',
@@ -951,6 +1053,21 @@ const App = () => {
                 </div>
               </div>
               <div className="detail-actions">
+                <button
+                  className="ghost-button"
+                  onClick={() =>
+                    setEventModal({
+                      open: true,
+                      id: undefined,
+                      eventDate: new Date().toISOString().slice(0, 10),
+                      type: 'custom',
+                      title: '',
+                      details: '',
+                    })
+                  }
+                >
+                  <FontAwesomeIcon icon={faPlus} /> Ereignis hinzufügen
+                </button>
                 <button className="primary" onClick={() => setShowAddPeriodModal(true)}>
                   <FontAwesomeIcon icon={faPlus} /> Qualifikation hinzufügen
                 </button>
@@ -960,34 +1077,86 @@ const App = () => {
             <div className="card">
               <h3>Historie</h3>
               <div className="timeline">
-                {periods.map((p) => (
-                  <button
-                    className="timeline-item"
-                    key={p.id ?? `${p.startDate}-${p.endDate}`}
-                    onClick={() => {
-                      setAddPeriodForm({
-                        startDate: p.startDate,
-                        endDate: p.endDate ?? '',
-                        fte: p.fte,
-                        qualification: p.qualification ?? selectedEmployee.qualification,
-                        periodId: p.id,
-                      });
-                      setShowAddPeriodModal(true);
-                    }}
-                  >
-                    <div className="timeline-dot" />
-                    <div className="timeline-content">
-                      <div className="timeline-title">
-                        {p.startDate} – {p.endDate ?? 'aktuell'}
+                {timelineItems.map((item) => {
+                  if (item.kind === 'period') {
+                    const p = item.record;
+                    return (
+                      <button
+                        className="timeline-item"
+                        key={`p-${p.id ?? `${p.startDate}-${p.endDate}`}`}
+                        onClick={() => {
+                          setAddPeriodForm({
+                            startDate: p.startDate,
+                            endDate: p.endDate ?? '',
+                            fte: p.fte,
+                            qualification: p.qualification ?? selectedEmployee.qualification,
+                            periodId: p.id,
+                          });
+                          setShowAddPeriodModal(true);
+                        }}
+                      >
+                        <div className="timeline-dot" />
+                        <div className="timeline-content">
+                          <div className="timeline-title">
+                            {p.startDate} – {p.endDate ?? 'aktuell'}
+                          </div>
+                          <div className="timeline-meta">
+                            <span className="pill">{p.qualification ?? selectedEmployee.qualification}</span>
+                            <span className="pill">FTE/VZÄ {p.fte}</span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  }
+                  const ev = item.record;
+                  const typeLabels: Record<EmployeeEventType, string> = {
+                    join: 'Eintritt',
+                    leave: 'Austritt',
+                    'name-change': 'Namensänderung',
+                    'note-change': 'Notizänderung',
+                    custom: 'Ereignis',
+                  };
+                  const detail =
+                    ev.type === 'name-change' && ev.meta
+                      ? `${(ev.meta as any).from ?? ''} → ${(ev.meta as any).to ?? ''}`
+                      : ev.type === 'note-change' && ev.details
+                        ? ev.details
+                        : ev.details;
+                  const isDiff = !!detail && detail.startsWith('--- vorher');
+                  return (
+                    <button
+                      className="timeline-item event"
+                      key={`e-${ev.id ?? `${ev.eventDate}-${ev.title}`}`}
+                      onClick={() =>
+                        setEventModal({
+                          open: true,
+                          id: ev.id,
+                          eventDate: ev.eventDate,
+                          type: ev.type,
+                          title: ev.title,
+                          details: ev.details ?? '',
+                        })
+                      }
+                    >
+                      <div className="timeline-dot event-dot" />
+                      <div className="timeline-content">
+                        <div className="timeline-title">
+                          {ev.eventDate} · {ev.title}
+                        </div>
+                        <div className="timeline-meta">
+                          <span className="pill pill-quiet">{typeLabels[ev.type]}</span>
+                          {detail &&
+                            (isDiff ? (
+                              <pre className="diff-text">{detail}</pre>
+                            ) : (
+                              <span className="muted">{detail}</span>
+                            ))}
+                        </div>
                       </div>
-                      <div className="timeline-meta">
-                        <span className="pill">{p.qualification ?? selectedEmployee.qualification}</span>
-                        <span className="pill">FTE/VZÄ {p.fte}</span>
-                      </div>
-                    </div>
-                  </button>
-                ))}
-                {periods.length === 0 && <div className="empty">Keine Historie vorhanden.</div>}
+                    </button>
+                  );
+                })}
+                {timelineItems.length === 0 && <div className="empty">Keine Historie vorhanden.</div>}
               </div>
             </div>
 
@@ -1372,6 +1541,92 @@ const App = () => {
           </div>
         </div>
       )}
+      {eventModal.open && selectedEmployee && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-icon">
+              <FontAwesomeIcon icon={faPlus} />
+            </div>
+            <h3>{eventModal.id ? 'Ereignis bearbeiten' : 'Ereignis hinzufügen'}</h3>
+            <div className="form-grid">
+              <label>
+                Datum
+                <input
+                  type="date"
+                  value={eventModal.eventDate}
+                  onChange={(e) => setEventModal({ ...eventModal, eventDate: e.target.value })}
+                />
+              </label>
+              <label>
+                Typ
+                <select
+                  value={eventModal.type}
+                  onChange={(e) => {
+                    const nextType = e.target.value as EmployeeEventType;
+                    const defaults: Record<EmployeeEventType, string> = {
+                      join: 'Eintritt',
+                      leave: 'Austritt',
+                      'name-change': 'Namensänderung',
+                      'note-change': 'Notizänderung',
+                      custom: 'Ereignis',
+                    };
+                    const shouldReplace =
+                      !eventModal.title || Object.values(defaults).includes(eventModal.title);
+                    setEventModal({
+                      ...eventModal,
+                      type: nextType,
+                      title: shouldReplace ? defaults[nextType] : eventModal.title,
+                    });
+                  }}
+                >
+                  <option value="join">Eintritt</option>
+                  <option value="leave">Austritt</option>
+                  <option value="name-change">Namensänderung</option>
+                  <option value="note-change">Notizänderung</option>
+                  <option value="custom">Sonstiges</option>
+                </select>
+              </label>
+              <label className="full-width">
+                Titel
+                <input
+                  value={eventModal.title}
+                  onChange={(e) => setEventModal({ ...eventModal, title: e.target.value })}
+                  placeholder="z. B. Wiedereinstieg nach Pause"
+                />
+              </label>
+              <label className="full-width">
+                Details
+                <textarea
+                  value={eventModal.details}
+                  onChange={(e) => setEventModal({ ...eventModal, details: e.target.value })}
+                  placeholder="Optionale Beschreibung oder Notiz zum Ereignis"
+                />
+              </label>
+            </div>
+            <div className="modal-actions">
+              <div>
+                {eventModal.id && (
+                  <button
+                    className="ghost-button danger icon-button"
+                    onClick={() => eventModal.id && handleDeleteEvent(eventModal.id)}
+                    title="Ereignis löschen"
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                  </button>
+                )}
+              </div>
+              <div className="inline-row compact">
+                <button className="ghost-button" onClick={() => setEventModal((prev) => ({ ...prev, open: false }))}>
+                  Abbrechen
+                </button>
+                <button className="primary" onClick={handleSaveEvent}>
+                  Speichern
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {periodToDelete && (
         <div className="modal-backdrop">
           <div className="modal">
@@ -1483,6 +1738,7 @@ const App = () => {
                         name: payload.name,
                         note: payload.note,
                       }));
+                      await loadHistory(selectedEmployee.id ?? 0);
                       setToast('Gespeichert.');
                     } catch (err) {
                       handleError(err);

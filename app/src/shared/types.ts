@@ -35,6 +35,18 @@ export interface EmployeeWithPeriod extends Employee {
   status: 'active' | 'new' | 'left';
 }
 
+export type EmployeeEventType = 'join' | 'leave' | 'name-change' | 'note-change' | 'custom';
+
+export interface EmployeeEvent {
+  id?: number;
+  employeeId?: number;
+  eventDate: string;
+  type: EmployeeEventType;
+  title: string;
+  details?: string | null;
+  meta?: Record<string, unknown> | null;
+}
+
 export interface Aggregation {
   totalHeadcount: number;
   totalFte: number;

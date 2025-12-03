@@ -468,6 +468,25 @@ tbody tr.selected {
   text-overflow: ellipsis;
 }
 
+.diff-text {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  background: #0f172a;
+  color: #e5e7eb;
+  border-radius: 10px;
+  font-family: 'Space Grotesk', 'Inter', monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  line-height: 1.4;
+  border: 1px solid #1f2937;
+}
+
+.pill-quiet {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #7c2d12;
+}
+
 .detail-actions {
   display: flex;
   gap: 8px;
@@ -509,6 +528,15 @@ tbody tr.selected {
   padding: 0;
   text-align: left;
   cursor: pointer;
+}
+
+.timeline-item.event .timeline-content {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.event-dot {
+  background: #ea580c;
 }
 
 .timeline-dot {
