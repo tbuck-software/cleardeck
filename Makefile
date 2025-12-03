@@ -17,19 +17,31 @@ release: ensure-clean build
 	@echo "Release-Build fuer Version $$( $(VERSION_CMD) ) erstellt."
 
 release-patch: ensure-clean
-	@cd $(APP_DIR) && npm version patch -m "chore: release v%s"
-	@$(MAKE) build
-	@git push && git push --tags
-	@echo "Tag v$$( $(VERSION_CMD) ) erstellt und Build erzeugt."
+	@cd $(APP_DIR) && npm version patch --no-git-tag-version
+	@VERSION=$$( $(VERSION_CMD) ); \
+	git add $(APP_DIR)/package.json $(APP_DIR)/package-lock.json; \
+	git commit -m "chore: release v$${VERSION}"; \
+	git tag v$${VERSION}; \
+	$(MAKE) build; \
+	git push && git push --tags; \
+	echo "Tag v$${VERSION} erstellt und Build erzeugt."
 
 release-minor: ensure-clean
-	@cd $(APP_DIR) && npm version minor -m "chore: release v%s"
-	@$(MAKE) build
-	@git push && git push --tags
-	@echo "Tag v$$( $(VERSION_CMD) ) erstellt und Build erzeugt."
+	@cd $(APP_DIR) && npm version minor --no-git-tag-version
+	@VERSION=$$( $(VERSION_CMD) ); \
+	git add $(APP_DIR)/package.json $(APP_DIR)/package-lock.json; \
+	git commit -m "chore: release v$${VERSION}"; \
+	git tag v$${VERSION}; \
+	$(MAKE) build; \
+	git push && git push --tags; \
+	echo "Tag v$${VERSION} erstellt und Build erzeugt."
 
 release-major: ensure-clean
-	@cd $(APP_DIR) && npm version major -m "chore: release v%s"
-	@$(MAKE) build
-	@git push && git push --tags
-	@echo "Tag v$$( $(VERSION_CMD) ) erstellt und Build erzeugt."
+	@cd $(APP_DIR) && npm version major --no-git-tag-version
+	@VERSION=$$( $(VERSION_CMD) ); \
+	git add $(APP_DIR)/package.json $(APP_DIR)/package-lock.json; \
+	git commit -m "chore: release v$${VERSION}"; \
+	git tag v$${VERSION}; \
+	$(MAKE) build; \
+	git push && git push --tags; \
+	echo "Tag v$${VERSION} erstellt und Build erzeugt."
