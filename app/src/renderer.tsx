@@ -89,11 +89,15 @@ const Sidebar = ({
   onNavigate,
   updateStatus,
   onInstallUpdate,
+  onSnoozeUpdate,
+  snoozed,
 }: {
   current: Page;
   onNavigate: (page: Page) => void;
   updateStatus: UpdateStatus;
   onInstallUpdate: () => void;
+  onSnoozeUpdate: () => void;
+  snoozed: boolean;
 }) => {
   const navItems: { key: Page; label: string; icon: any }[] = [
     { key: 'dashboard', label: 'Dashboard', icon: faGaugeHigh },
@@ -121,8 +125,11 @@ const Sidebar = ({
         ))}
       </nav>
       <div className="nav-footer">
-        {updateStatus.state === 'downloaded' && (
+        {!snoozed && updateStatus.state === 'downloaded' && (
           <div className="update-pill">
+            <button className="update-pill-close" onClick={onSnoozeUpdate} title="Schließen">
+              ×
+            </button>
             <div className="update-pill-text">
               <p className="eyebrow">Update</p>
               <strong>{updateStatus.version ? `v${updateStatus.version}` : 'Update'}</strong> bereit
@@ -527,6 +534,7 @@ const App = () => {
     });
 
     const runCheck = () => {
+      if (snoozeUpdates) return;
       window.api.checkUpdates().catch(() => {
         setUpdateStatus((prev) => prev);
       });
@@ -538,20 +546,15 @@ const App = () => {
       runCheck();
     }, 60 * 60 * 1000); // stündlich prüfen
 
-    window.addEventListener('focus', runCheck);
+    const handleFocus = () => runCheck();
+    window.addEventListener('focus', handleFocus);
 
     return () => {
       if (unsubscribe) unsubscribe();
       window.clearInterval(interval);
-      window.removeEventListener('focus', runCheck);
+      window.removeEventListener('focus', handleFocus);
     };
-  }, []);
-
-  useEffect(() => {
-    if (updateStatus.state === 'available' || updateStatus.state === 'downloaded') {
-      setSnoozeUpdates(false);
-    }
-  }, [updateStatus]);
+  }, [snoozeUpdates]);
 
   const handleLogin = async (password: string, mode: 'setup' | 'login') => {
     try {
@@ -1159,7 +1162,14 @@ const App = () => {
 
   return (
       <div className="layout">
-      <Sidebar current={page} onNavigate={goTo} updateStatus={updateStatus} onInstallUpdate={handleInstallUpdate} />
+      <Sidebar
+        current={page}
+        onNavigate={goTo}
+        updateStatus={updateStatus}
+        onInstallUpdate={handleInstallUpdate}
+        onSnoozeUpdate={handleSnoozeUpdate}
+        snoozed={snoozeUpdates}
+      />
         <div className="main">
         <header className="topbar">
           <div>
@@ -1653,6 +1663,44 @@ const App = () => {
                 </div>
               </div>
             </div>
+            <div className="card form-card">
+              <div className="form-header">
+                <div>
+                  <p className="eyebrow">Updates</p>
+                  <h3>Neue Versionen</h3>
+                </div>
+              </div>
+              <div className="form-grid">
+                <div className="inline-row">
+                  <button
+                    className="ghost-button"
+                    onClick={handleCheckUpdates}
+                    disabled={updateStatus.state === 'checking' || updateStatus.state === 'downloading'}
+                  >
+                    {updateStatus.state === 'checking' ? 'Suche …' : 'Nach Updates suchen'}
+                  </button>
+                  {updateStatus.state === 'downloaded' && (
+                    <button className="primary" onClick={handleInstallUpdate}>
+                      Neu starten & installieren
+                    </button>
+                  )}
+                </div>
+                <p className="subtitle small">
+                  {updateStatus.state === 'available' &&
+                    `Update ${updateStatus.version ? `v${updateStatus.version}` : ''} verfügbar.`}
+                  {updateStatus.state === 'downloading' &&
+                    `Lade ${updateStatus.version ? `v${updateStatus.version}` : 'Update'} (${Math.round(
+                      updateStatus.progress ?? 0,
+                    )}%) …`}
+                  {updateStatus.state === 'downloaded' &&
+                    `Update ${updateStatus.version ? `v${updateStatus.version}` : ''} heruntergeladen.`}
+                  {updateStatus.state === 'not-available' && 'Keine neueren Updates gefunden.'}
+                  {updateStatus.state === 'error' && `Update-Fehler: ${updateStatus.message}`}
+                  {updateStatus.state === 'idle' &&
+                    'Updates werden beim Start, stündlich und bei Fokus geprüft.'}
+                </p>
+              </div>
+            </div>
 
             <div className="card danger-card">
               <div className="form-header">
@@ -1797,56 +1845,6 @@ const App = () => {
           </div>
         )}
       </div>
-
-      {!snoozeUpdates &&
-        ['available', 'downloading', 'downloaded', 'error', 'checking'].includes(updateStatus.state) && (
-          <div className="update-banner">
-            <div className="update-copy">
-              <p className="eyebrow">Update</p>
-              <h4 className="update-title">
-                {updateStatus.state === 'available' && (
-                  <>
-                    {updateStatus.version ? `v${updateStatus.version} verfügbar` : 'Update verfügbar'}
-                  </>
-                )}
-                {updateStatus.state === 'downloading' && (
-                  <>
-                    Lade {updateStatus.version ? `v${updateStatus.version}` : 'Update'}
-                  </>
-                )}
-                {updateStatus.state === 'downloaded' && (
-                  <>
-                    {updateStatus.version ? `v${updateStatus.version} verfügbar` : 'Update verfügbar'}
-                  </>
-                )}
-                {updateStatus.state === 'checking' && 'Suche nach Updates …'}
-                {updateStatus.state === 'error' && 'Update fehlgeschlagen'}
-              </h4>
-              {updateStatus.state === 'downloading' && (
-                <div className="update-progress">
-                  <div
-                    className="update-progress-bar"
-                    style={{ width: `${Math.min(100, Math.round(updateStatus.progress ?? 0))}%` }}
-                  />
-                  <span>{Math.round(updateStatus.progress ?? 0)}%</span>
-                </div>
-              )}
-              {updateStatus.state === 'error' && (
-                <p className="subtitle small">{updateStatus.message}</p>
-              )}
-            </div>
-            <div className="update-actions">
-              <button className="update-button" onClick={handleSnoozeUpdate}>
-                Später
-              </button>
-              {updateStatus.state === 'downloaded' && (
-                <button className="update-button primary" onClick={handleInstallUpdate}>
-                  Neu starten & installieren
-                </button>
-              )}
-            </div>
-          </div>
-        )}
 
       {toast && <div className="toast">{toast}</div>}
       {error && <div className="toast error-toast">{error}</div>}

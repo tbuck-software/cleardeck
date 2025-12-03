@@ -930,56 +930,6 @@ h3 {
   color: #fecdd3;
 }
 
-.update-banner {
-  position: fixed;
-  left: 20px;
-  bottom: 20px;
-  background: #0f172a;
-  color: #e5e7eb;
-  border: 1px solid #1f2937;
-  border-radius: 16px;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
-  z-index: 50;
-  max-width: 420px;
-  width: fit-content;
-}
-
-.update-title {
-  margin: 4px 0;
-}
-
-.update-copy {
-  flex: 1;
-  min-width: 180px;
-}
-
-.update-progress {
-  margin-top: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-  overflow: hidden;
-  height: 10px;
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.update-progress-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #22c55e, #16a34a);
-}
-
-.update-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: stretch;
-}
-
 .update-button {
   border: 1px solid #1f2937;
   background: #e5e7eb;
@@ -1005,6 +955,7 @@ h3 {
   color: #0f172a;
   display: grid;
   gap: 8px;
+  position: relative;
 }
 
 .update-pill .primary.small {
@@ -1015,6 +966,19 @@ h3 {
 .update-pill-text {
   display: grid;
   gap: 2px;
+}
+
+.update-pill-close {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  border: none;
+  background: transparent;
+  color: #0f172a;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
 }
 
 .success-text {
