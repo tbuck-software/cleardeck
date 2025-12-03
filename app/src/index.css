@@ -394,12 +394,6 @@ tbody tr.selected {
   font-weight: 700;
 }
 
-.list-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: -4px;
-}
-
 .inline-row {
   display: grid;
   grid-template-columns: 1fr auto;

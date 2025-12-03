@@ -1393,13 +1393,6 @@ const App = () => {
               selectedId={form.id}
               onDelete={confirmDeleteEmployee}
             />
-            {form.id && (
-              <div className="list-actions">
-                <button className="ghost-button danger" onClick={() => confirmDeleteEmployee(form.id)}>
-                  <FontAwesomeIcon icon={faTrash} /> Löschen
-                </button>
-              </div>
-            )}
           </div>
         )}
 
