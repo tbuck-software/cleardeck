@@ -16,7 +16,17 @@ build:
 release: ensure-clean build
 	@echo "Release-Build fuer Version $$( $(VERSION_CMD) ) erstellt."
 
-release-%: ensure-clean
-	@cd $(APP_DIR) && npm version $* -m "chore: release v%s"
+release-patch: ensure-clean
+	@cd $(APP_DIR) && npm version patch -m "chore: release v%s"
+	@$(MAKE) build
+	@echo "Tag v$$( $(VERSION_CMD) ) erstellt und Build erzeugt."
+
+release-minor: ensure-clean
+	@cd $(APP_DIR) && npm version minor -m "chore: release v%s"
+	@$(MAKE) build
+	@echo "Tag v$$( $(VERSION_CMD) ) erstellt und Build erzeugt."
+
+release-major: ensure-clean
+	@cd $(APP_DIR) && npm version major -m "chore: release v%s"
 	@$(MAKE) build
 	@echo "Tag v$$( $(VERSION_CMD) ) erstellt und Build erzeugt."
