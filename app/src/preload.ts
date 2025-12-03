@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AppState, EmploymentPeriod, YearDataset } from './shared/types';
+import type { AppState, EmploymentPeriod, QualificationType, YearDataset } from './shared/types';
 
 type ExportFormat = 'csv' | 'xlsx';
 
@@ -30,6 +30,9 @@ export type Api = {
     format: ExportFormat,
   ) => Promise<{ saved: boolean; filePath?: string; error?: string }>;
   openDocument: (path: string) => Promise<void>;
+  listQualifications: () => Promise<QualificationType[]>;
+  addQualification: (name: string) => Promise<QualificationType[]>;
+  deleteQualification: (id: number) => Promise<QualificationType[]>;
 };
 
 const api: Api = {
@@ -42,6 +45,9 @@ const api: Api = {
   deleteEmployee: (id, year) => ipcRenderer.invoke('data:delete', { id, year }),
   exportData: (year, format) => ipcRenderer.invoke('data:export', { year, format }),
   openDocument: (path) => ipcRenderer.invoke('data:openDocument', { path }),
+  listQualifications: () => ipcRenderer.invoke('qualifications:list'),
+  addQualification: (name) => ipcRenderer.invoke('qualifications:add', { name }),
+  deleteQualification: (id) => ipcRenderer.invoke('qualifications:delete', { id }),
 };
 
 contextBridge.exposeInMainWorld('api', api);

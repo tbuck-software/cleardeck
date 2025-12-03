@@ -1,8 +1,13 @@
 export type Qualification =
-  | '3-jaehrig examiniert'
-  | '1-jaehrig examiniert'
+  | '3-jährig examiniert'
+  | '1-jährig examiniert'
   | 'Pflegekraft/-helfer'
   | 'Sonstige';
+
+export interface QualificationType {
+  id?: number;
+  name: string;
+}
 
 export interface Employee {
   id?: number;

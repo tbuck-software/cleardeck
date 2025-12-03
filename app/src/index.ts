@@ -17,6 +17,7 @@ import type {
   Employee,
   EmploymentPeriod,
   EmployeeWithPeriod,
+  QualificationType,
   YearDataset,
 } from './shared/types';
 
@@ -87,7 +88,7 @@ const encryptFile = (inputPath: string, outputPath: string, key: Buffer): void =
 const decryptFile = (inputPath: string, outputPath: string, key: Buffer): void => {
   const payload = fs.readFileSync(inputPath);
   if (payload.length < 28) {
-    throw new Error('Verschluesseltes Datenpaket ist ungueltig.');
+    throw new Error('Verschlüsseltes Datenpaket ist ungültig.');
   }
   const iv = payload.subarray(0, 12);
   const tag = payload.subarray(12, 28);
@@ -129,6 +130,10 @@ const runMigrations = (): void => {
   if (!db) return;
   db.pragma('foreign_keys = ON');
   db.exec(`
+    CREATE TABLE IF NOT EXISTS qualification_types (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS employees (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -151,6 +156,17 @@ const runMigrations = (): void => {
     CREATE INDEX IF NOT EXISTS idx_periods_dates ON employment_periods(startDate, endDate);
   `);
 
+  const defaults = [
+    '3-jährig examiniert',
+    '1-jährig examiniert',
+    'Pflegekraft/-helfer',
+    'Sonstige',
+  ];
+  const seedQuali = db.prepare(
+    'INSERT OR IGNORE INTO qualification_types (name) VALUES (?)',
+  );
+  defaults.forEach((q) => seedQuali.run(q));
+
   const row = db
     .prepare('SELECT COUNT(*) as cnt FROM employees')
     .get() as { cnt: number };
@@ -165,12 +181,12 @@ const runMigrations = (): void => {
 
       const anna = emp.run({
         name: 'Anna Beispiel',
-        qualification: '3-jaehrig examiniert',
+        qualification: '3-jährig examiniert',
         dataSource: 'Verwaltungssoftware',
         note: 'Teamleitung 1',
         documentPath: '',
       }).lastInsertRowid as number;
-      period.run(anna, '2021-05-01', null, 1.0, '3-jaehrig examiniert');
+      period.run(anna, '2021-05-01', null, 1.0, '3-jährig examiniert');
 
       const max = emp.run({
         name: 'Max Mustermann',
@@ -183,12 +199,12 @@ const runMigrations = (): void => {
 
       const lisa = emp.run({
         name: 'Lisa Referenz',
-        qualification: '1-jaehrig examiniert',
+        qualification: '1-jährig examiniert',
         dataSource: 'Verwaltungssoftware',
         note: 'Fortbildung Wundmanagement',
         documentPath: '',
       }).lastInsertRowid as number;
-      period.run(lisa, '2023-11-01', null, 0.8, '1-jaehrig examiniert');
+      period.run(lisa, '2023-11-01', null, 0.8, '1-jährig examiniert');
     });
 
     seed();
@@ -393,6 +409,28 @@ const deleteEmployee = (id: number, year: number): YearDataset => {
   return getYearDataset(year);
 };
 
+const listQualifications = (): QualificationType[] => {
+  ensureDbReady();
+  const rows = db
+    ?.prepare('SELECT id, name FROM qualification_types ORDER BY name ASC')
+    .all() as QualificationType[];
+  return rows ?? [];
+};
+
+const addQualification = (name: string): QualificationType[] => {
+  ensureDbReady();
+  const trimmed = name.trim();
+  if (!trimmed) return listQualifications();
+  db?.prepare('INSERT OR IGNORE INTO qualification_types (name) VALUES (?)').run(trimmed);
+  return listQualifications();
+};
+
+const deleteQualification = (id: number): QualificationType[] => {
+  ensureDbReady();
+  db?.prepare('DELETE FROM qualification_types WHERE id = ?').run(id);
+  return listQualifications();
+};
+
 const exportData = async (
   year: number,
   format: 'csv' | 'xlsx',
@@ -426,7 +464,7 @@ const exportData = async (
 
   const writeToPath = (targetPath: string): void => {
     if (format === 'csv') {
-      const header = 'Name;Qualifikation;Eintritt;Austritt;FTE/VZAE;Status;Quelle;Dokument\n';
+      const header = 'Name;Qualifikation;Eintritt;Austritt;FTE/VZÄ;Status;Quelle;Dokument\n';
       const lines = dataset.employees
         .map(
           (row) =>
@@ -442,7 +480,7 @@ const exportData = async (
           Qualifikation: row.qualification,
           Eintritt: row.startDate,
           Austritt: row.endDate ?? '',
-          'FTE/VZAE': row.fte,
+          'FTE/VZÄ': row.fte,
           Status: row.status,
           Quelle: row.dataSource ?? '',
           Dokument: row.documentPath ?? '',
@@ -454,7 +492,7 @@ const exportData = async (
         dataset.aggregation.categories.map((cat) => ({
           Qualifikation: cat.qualification,
           Kopfanzahl: cat.headcount,
-          'FTE/VZAE': cat.fte,
+        'FTE/VZÄ': cat.fte,
         })),
       );
       XLSX.utils.book_append_sheet(workbook, aggSheet, 'Aggregationen');
@@ -470,7 +508,7 @@ const exportData = async (
     const message =
       err instanceof Error
         ? err.message
-        : 'Export konnte nicht gespeichert werden. Bitte Pfad/Schreibrechte pruefen.';
+        : 'Export konnte nicht gespeichert werden. Bitte Pfad/Schreibrechte prüfen.';
     const fallbackPath = path.join(app.getPath('downloads'), path.basename(filePath));
     try {
       writeToPath(fallbackPath);
@@ -620,3 +658,7 @@ ipcMain.handle('data:openDocument', async (_event, { path: filePath }: { path: s
   if (!filePath) return;
   await shell.openPath(filePath);
 });
+
+ipcMain.handle('qualifications:list', () => listQualifications());
+ipcMain.handle('qualifications:add', (_event, { name }: { name: string }) => addQualification(name));
+ipcMain.handle('qualifications:delete', (_event, { id }: { id: number }) => deleteQualification(id));

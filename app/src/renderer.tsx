@@ -1,16 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faDownload, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faDownload, faCalendarDays, faTrash, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import './index.css';
-import type { EmploymentPeriod, EmployeeWithPeriod, YearDataset } from './shared/types';
-
-const qualificationOptions = [
-  '3-jaehrig examiniert',
-  '1-jaehrig examiniert',
-  'Pflegekraft/-helfer',
-  'Sonstige',
-];
+import type { EmploymentPeriod, EmployeeWithPeriod, QualificationType, YearDataset } from './shared/types';
 
 type FormState = {
   id?: number;
@@ -25,7 +18,7 @@ type FormState = {
   fte: number;
 };
 
-type Page = 'dashboard' | 'list' | 'new' | 'edit';
+type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'qualifications';
 
 const statusLabels: Record<EmployeeWithPeriod['status'], string> = {
   active: 'aktiv',
@@ -33,9 +26,9 @@ const statusLabels: Record<EmployeeWithPeriod['status'], string> = {
   left: 'ausgeschieden',
 };
 
-const emptyForm = (year: number): FormState => ({
+const emptyForm = (year: number, defaultQualification = ''): FormState => ({
   name: '',
-  qualification: qualificationOptions[0],
+  qualification: defaultQualification,
   dataSource: '',
   note: '',
   documentPath: '',
@@ -74,6 +67,7 @@ const Sidebar = ({
   const navItems: { key: Page; label: string }[] = [
     { key: 'dashboard', label: 'Dashboard' },
     { key: 'list', label: 'Mitarbeitende' },
+    { key: 'qualifications', label: 'Qualifikationen' },
   ];
 
   return (
@@ -105,11 +99,13 @@ const Table = ({
   employees,
   onSelect,
   onOpenDocument,
+  onDelete,
   selectedId,
 }: {
   employees: EmployeeWithPeriod[];
   onSelect: (emp: EmployeeWithPeriod) => void;
   onOpenDocument: (path: string) => void;
+  onDelete: (id: number) => void;
   selectedId?: number;
 }) => (
   <div className="table-wrapper">
@@ -120,17 +116,22 @@ const Table = ({
           <th>Qualifikation</th>
           <th>Eintritt</th>
           <th>Austritt</th>
-          <th>FTE/VZAE</th>
+          <th>
+            <abbr className="help" title={fteHelp}>
+              FTE/VZÄ
+            </abbr>
+          </th>
           <th>Status</th>
           <th>Quelle</th>
           <th>Dokument</th>
+          <th>Aktion</th>
         </tr>
       </thead>
       <tbody>
         {employees.length === 0 && (
           <tr>
-            <td colSpan={8} className="empty">
-              Keine Eintraege im ausgewaehlten Jahr.
+            <td colSpan={9} className="empty">
+              Keine Einträge im ausgewählten Jahr.
             </td>
           </tr>
         )}
@@ -158,11 +159,23 @@ const Table = ({
                     onOpenDocument(emp.documentPath ?? '');
                   }}
                 >
-                  Oeffnen
+                  Öffnen
                 </button>
               ) : (
                 '—'
               )}
+            </td>
+            <td>
+              <button
+                className="ghost-button danger icon-button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(emp.id ?? 0);
+                }}
+                title="Löschen"
+              >
+                <FontAwesomeIcon icon={faTrash} />
+              </button>
             </td>
           </tr>
         ))}
@@ -185,7 +198,7 @@ const HistoryList = ({ items }: { items: EmploymentPeriod[] }) => (
             {item.startDate} – {item.endDate ?? 'aktuell'}
           </div>
           <div className="history-meta">
-            FTE/VZAE: {item.fte} · Quali: {item.qualification ?? '—'}
+            FTE/VZÄ: {item.fte} · Quali: {item.qualification ?? '—'}
           </div>
         </div>
       </div>
@@ -217,6 +230,9 @@ const YearSelector = ({
   </div>
 );
 
+const fteHelp =
+  'FTE (Full Time Equivalent) entspricht VZÄ (Vollzeitäquivalent). 1,0 = Vollzeit, 0,5 = halbe Stelle.';
+
 const AuthScreen = ({
   mode,
   onSubmit,
@@ -236,7 +252,7 @@ const AuthScreen = ({
     evt.preventDefault();
     setError(null);
     if (mode === 'setup' && password !== repeat) {
-      setError('Passwoerter stimmen nicht ueberein.');
+      setError('Passwörter stimmen nicht überein.');
       return;
     }
     await onSubmit(password);
@@ -250,7 +266,7 @@ const AuthScreen = ({
         <div className="auth-title">
           <h1>{mode === 'setup' ? 'Ersteinrichtung' : 'Anmeldung'}</h1>
           <p>
-            Lokale Datenbank (SQLite) mit Dateiverschluesselung und Passwortschutz. Halte das Passwort
+            Lokale Datenbank (SQLite) mit Dateiverschlüsselung und Passwortschutz. Halte das Passwort
             sicher bereit; es wird nicht synchronisiert.
           </p>
         </div>
@@ -292,6 +308,7 @@ const App = () => {
   const currentYear = new Date().getFullYear();
   const [year, setYear] = useState<number>(currentYear);
   const [dataset, setDataset] = useState<YearDataset | null>(null);
+  const [qualifications, setQualifications] = useState<QualificationType[]>([]);
   const [form, setForm] = useState<FormState>(emptyForm(currentYear));
   const [periods, setPeriods] = useState<EmploymentPeriod[]>([]);
   const [appReady, setAppReady] = useState<{ configured: boolean; unlocked: boolean }>({
@@ -305,6 +322,11 @@ const App = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeWithPeriod['status']>('all');
   const [addNewPeriod, setAddNewPeriod] = useState(false);
+  const [newQualification, setNewQualification] = useState('');
+  const [confirmState, setConfirmState] = useState<{
+    message: string;
+    onConfirm: () => Promise<void> | void;
+  } | null>(null);
 
   const handleError = (err: unknown) => {
     const message = err instanceof Error ? err.message : 'Unbekannter Fehler';
@@ -329,6 +351,9 @@ const App = () => {
       const state = await window.api.getAppState();
       setAppReady(state);
       if (state.unlocked) {
+        const qualis = await window.api.listQualifications();
+        setQualifications(qualis);
+        setForm((prev) => ({ ...prev, qualification: qualis[0]?.name ?? prev.qualification }));
         await refreshDataset(year);
       }
     } catch (err) {
@@ -345,6 +370,20 @@ const App = () => {
       refreshDataset(year);
     }
   }, [year, appReady.unlocked]);
+
+  useEffect(() => {
+    if (appReady.unlocked) {
+      window.api
+        .listQualifications()
+        .then((list) => {
+          setQualifications(list);
+          if (!form.qualification) {
+            setForm((prev) => ({ ...prev, qualification: list[0]?.name ?? '' }));
+          }
+        })
+        .catch(handleError);
+    }
+  }, [appReady.unlocked]);
 
   const handleLogin = async (password: string, mode: 'setup' | 'login') => {
     try {
@@ -386,7 +425,7 @@ const App = () => {
   };
 
   const resetForm = () => {
-    setForm(emptyForm(year));
+    setForm(emptyForm(year, qualifications[0]?.name ?? ''));
     setPeriods([]);
     setAddNewPeriod(false);
   };
@@ -397,6 +436,9 @@ const App = () => {
     }
     if (target === 'edit' && !form.id) {
       return;
+    }
+    if (target === 'qualifications') {
+      refreshQualifications();
     }
     setPage(target);
   };
@@ -428,17 +470,14 @@ const App = () => {
     }
   };
 
-  const handleDelete = async () => {
-    if (!form.id) return;
-    const confirmed = confirm('Mitarbeiter:in und Historie wirklich loeschen?');
-    if (!confirmed) return;
+  const deleteEmployee = async (id: number) => {
     setLoading(true);
     try {
-      const updated = await window.api.deleteEmployee(form.id, year);
+      const updated = await window.api.deleteEmployee(id, year);
       setDataset(updated);
       resetForm();
       setPage('list');
-      setToast('Geloescht.');
+      setToast('Gelöscht.');
     } catch (err) {
       handleError(err);
     } finally {
@@ -459,6 +498,55 @@ const App = () => {
     } catch (err) {
       handleError(err);
     }
+  };
+
+  const refreshQualifications = async () => {
+    try {
+      const list = await window.api.listQualifications();
+      setQualifications(list);
+      if (!form.qualification && list.length > 0) {
+        setForm((prev) => ({ ...prev, qualification: list[0].name }));
+      }
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
+  const handleAddQualification = async () => {
+    if (!newQualification.trim()) return;
+    try {
+      const list = await window.api.addQualification(newQualification.trim());
+      setQualifications(list);
+      setNewQualification('');
+      setToast('Qualifikation gespeichert.');
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
+  const handleDeleteQualification = async (id: number) => {
+    try {
+      const list = await window.api.deleteQualification(id);
+      setQualifications(list);
+      setToast('Qualifikation gelöscht.');
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
+  const confirmAction = (message: string, action: () => Promise<void> | void) => {
+    setConfirmState({ message, onConfirm: action });
+  };
+
+  const confirmDeleteEmployee = (id?: number) => {
+    if (!id) return;
+    confirmAction('Mitarbeiter:in und Historie wirklich löschen?', () => deleteEmployee(id));
+  };
+
+  const confirmDeleteQualification = (id: number) => {
+    confirmAction('Qualifikation wirklich löschen?', () => handleDeleteQualification(id));
   };
 
   const filteredEmployees = useMemo(() => {
@@ -489,13 +577,15 @@ const App = () => {
     list: 'Mitarbeitende',
     new: 'Neu anlegen',
     edit: 'Bearbeiten',
+    qualifications: 'Qualifikationen',
   };
 
   const pageSubtitle: Record<Page, string> = {
-    dashboard: 'Kennzahlen und Aggregationen zum gewaehlten Jahr.',
+    dashboard: 'Kennzahlen und Aggregationen zum gewählten Jahr.',
     list: 'Liste mit Filter/Status und Doppelklick zum Bearbeiten.',
     new: 'Neue Person mit Historieneintrag erfassen.',
-    edit: form.id ? `Bearbeitung: ${form.name}` : 'Bitte Eintrag aus Liste waehlen.',
+    edit: form.id ? `Bearbeitung: ${form.name}` : 'Bitte Eintrag aus Liste wählen.',
+    qualifications: 'Qualifikationstypen verwalten und im Formular nutzen.',
   };
 
   const crumbs = (): { label: string; page?: Page }[] => {
@@ -506,6 +596,11 @@ const App = () => {
         { label: 'Dashboard', page: 'dashboard' },
         { label: 'Mitarbeitende', page: 'list' },
         { label: 'Neu anlegen' },
+      ];
+    if (page === 'qualifications')
+      return [
+        { label: 'Dashboard', page: 'dashboard' },
+        { label: 'Qualifikationen' },
       ];
     return [
       { label: 'Dashboard', page: 'dashboard' },
@@ -520,7 +615,7 @@ const App = () => {
         mode="setup"
         onSubmit={(pwd) => handleLogin(pwd, 'setup')}
         busy={loading}
-        message="Neues Passwort legt auch den lokalen Schluessel an."
+        message="Neues Passwort legt auch den lokalen Schlüssel an."
       />
     );
   }
@@ -549,7 +644,7 @@ const App = () => {
                 </span>
               ))}
             </div>
-            <p className="eyebrow">Mitarbeiter & VZAE</p>
+            <p className="eyebrow">Mitarbeiter & VZÄ</p>
             <h1>{pageTitle[page]}</h1>
             <p className="subtitle">{pageSubtitle[page]}</p>
           </div>
@@ -563,7 +658,7 @@ const App = () => {
             <section>
               <div className="grid stats-grid">
                 <StatCard
-                  label="Gesamt VZAE"
+                  label="Gesamt VZÄ"
                   value={`${dataset?.aggregation.totalFte.toFixed(2) ?? '0.00'}`}
                   sub="Summe aller Stellenanteile im Jahr"
                 />
@@ -580,7 +675,11 @@ const App = () => {
               </div>
 
               <div className="card aggregation">
-                <h3>VZAE je Qualifikation</h3>
+                <h3>
+                  <abbr className="help" title={fteHelp}>
+                    VZÄ je Qualifikation
+                  </abbr>
+                </h3>
                 <div className="aggregation-grid">
                   {(dataset?.aggregation.categories ?? []).map((cat) => (
                     <div className="agg-row" key={cat.qualification}>
@@ -599,7 +698,7 @@ const App = () => {
               <div className="form-header">
                 <div>
                   <p className="eyebrow">Status im Jahr</p>
-                  <h3>Aktivitaet</h3>
+                  <h3>Aktivität</h3>
                 </div>
                 <button className="ghost-button" onClick={() => goTo('list')}>
                   Zur Liste
@@ -620,7 +719,7 @@ const App = () => {
                 </div>
               </div>
               <p className="subtitle small">
-                Klicke auf „Zur Liste“ fuer Detailansicht oder nutze die Navigation links.
+                Klicke auf „Zur Liste“ für Detailansicht oder nutze die Navigation links.
               </p>
             </aside>
           </div>
@@ -660,7 +759,75 @@ const App = () => {
               onSelect={handleSelect}
               selectedId={form.id}
               onOpenDocument={(p) => window.api.openDocument(p)}
+              onDelete={confirmDeleteEmployee}
             />
+            {form.id && (
+              <div className="list-actions">
+                <button className="ghost-button danger" onClick={() => confirmDeleteEmployee(form.id)}>
+                  <FontAwesomeIcon icon={faTrash} /> Löschen
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {page === 'qualifications' && (
+          <div className="grid form-layout">
+            <div className="card form-card">
+              <div className="form-header">
+                <div>
+                  <p className="eyebrow">Qualifikationen</p>
+                  <h3>Typen verwalten</h3>
+                </div>
+              </div>
+              <div className="form-grid">
+                <label className="full-width">
+                  Neue Qualifikation
+                  <div className="inline-row">
+                    <input
+                      value={newQualification}
+                      onChange={(e) => setNewQualification(e.target.value)}
+                      placeholder="z. B. 3-jährig examiniert"
+                    />
+                    <button className="primary" onClick={handleAddQualification}>
+                      <FontAwesomeIcon icon={faPlus} /> Hinzufügen
+                    </button>
+                  </div>
+                </label>
+              </div>
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Aktion</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {qualifications.map((q) => (
+                      <tr key={q.id ?? q.name}>
+                        <td>{q.name}</td>
+                        <td>
+                          <button
+                            className="ghost-button danger"
+                            onClick={() => confirmDeleteQualification(q.id ?? 0)}
+                          >
+                            Löschen
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {qualifications.length === 0 && (
+                      <tr>
+                        <td colSpan={2} className="empty">
+                          Keine Qualifikationen hinterlegt.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -674,12 +841,12 @@ const App = () => {
                 </div>
                 <div className="form-actions">
                   {page === 'edit' && form.id && (
-                    <button className="danger ghost-button" onClick={handleDelete}>
-                      Loeschen
+                    <button className="ghost-button danger" onClick={() => confirmDeleteEmployee(form.id)}>
+                      <FontAwesomeIcon icon={faTrash} /> Löschen
                     </button>
                   )}
                   <button className="ghost-button" onClick={resetForm}>
-                    Zuruecksetzen
+                    Zurücksetzen
                   </button>
                 </div>
               </div>
@@ -699,9 +866,9 @@ const App = () => {
                     value={form.qualification}
                     onChange={(e) => setForm({ ...form, qualification: e.target.value })}
                   >
-                    {qualificationOptions.map((q) => (
-                      <option key={q} value={q}>
-                        {q}
+                    {qualifications.map((q) => (
+                      <option key={q.id ?? q.name} value={q.name}>
+                        {q.name}
                       </option>
                     ))}
                   </select>
@@ -739,7 +906,9 @@ const App = () => {
                   />
                 </label>
                 <label>
-                  FTE / VZAE
+                  <abbr className="help" title={fteHelp}>
+                    FTE / VZÄ
+                  </abbr>
                   <input
                     type="number"
                     min="0"
@@ -763,7 +932,7 @@ const App = () => {
                       checked={addNewPeriod}
                       onChange={(e) => setAddNewPeriod(e.target.checked)}
                     />
-                    Neue Historienperiode anlegen (bestehende Eintraege bleiben erhalten)
+                    Neue Historienperiode anlegen (bestehende Einträge bleiben erhalten)
                   </label>
                 )}
               </div>
@@ -783,6 +952,31 @@ const App = () => {
       {toast && <div className="toast">{toast}</div>}
       {error && <div className="toast error-toast">{error}</div>}
       {loading && <div className="loading">Lade / speichere …</div>}
+      {confirmState && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-icon danger">
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+            </div>
+            <h3>Bist du sicher?</h3>
+            <p className="modal-text">{confirmState.message}</p>
+            <div className="modal-actions">
+              <button className="ghost-button" onClick={() => setConfirmState(null)}>
+                Abbrechen
+              </button>
+              <button
+                className="ghost-button danger"
+                onClick={() => {
+                  confirmState.onConfirm();
+                  setConfirmState(null);
+                }}
+              >
+                <FontAwesomeIcon icon={faTrash} /> Löschen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
