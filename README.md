@@ -28,6 +28,12 @@ npm start
 
 Der erste Start fragt nach einem Passwort (setzt gleichzeitig den lokalen App-Schluessel). Danach kann die Jahresliste gefiltert, editiert und exportiert werden.
 
+## Release / Versionierung
+- `make release-patch` / `make release-minor` / `make release-major`: hebt die Semver-Version in `app/package.json` an, committet, taggt (`vX.Y.Z`) und baut die Artefakte via `npm run make`.
+- `make release`: baut nur die aktuell eingetragene Version (nuetzlich, wenn bereits ein Tag existiert).
+- `make show-version`: zeigt die aktuelle Version an.
+- Voraussetzungen: sauberes Git-Working-Tree, installierte Dependencies (`npm install` im Ordner `app/`). Artefakte landen unter `app/out` (ignored).
+
 ## Datenablage & Verschluesselung
 - Arbeits- und Konfigurationsdaten liegen unter `app.getPath('userData')/data` (OS-abhaengig).
 - Datenbank wird beim Schliessen in `employee.db.enc` (AES-GCM) verschluesselt. Entschluesselung nur nach Login.
