@@ -24,6 +24,7 @@ import type {
   EmployeeEventType,
   UpdateStatus,
 } from './shared/types';
+import type { Api } from './preload';
 
 type FormState = {
   id?: number;
@@ -529,13 +530,17 @@ const App = () => {
   }, [qualifications, qualificationFilter]);
 
   useEffect(() => {
-    const unsubscribe = window.api.onUpdateStatus((status) => {
+    const updateApi = (window as Window & { api?: Api }).api;
+    if (!updateApi || typeof updateApi.onUpdateStatus !== 'function' || typeof updateApi.checkUpdates !== 'function') {
+      return undefined;
+    }
+    const unsubscribe = updateApi.onUpdateStatus((status) => {
       setUpdateStatus(status);
     });
 
     const runCheck = () => {
       if (snoozeUpdates) return;
-      window.api.checkUpdates().catch(() => {
+      updateApi.checkUpdates().catch(() => {
         setUpdateStatus((prev) => prev);
       });
     };
