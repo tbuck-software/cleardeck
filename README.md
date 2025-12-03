@@ -4,7 +4,7 @@ Lokale Mitarbeiter- und VZAE-Uebersicht als Electron-Desktop-App mit SQLite, Exp
 
 ## Features (Stand: Prototyp)
 - Historisierte Mitarbeitenden-Tabelle (Eintritt, Austritt, Stellenanteil, Qualifikation, Quelle, Notiz, Dokumentenpfad).
-- Jahresfilter mit Status (aktiv, Neueintritt, ausgeschieden) und VZAE-Berechnung je Qualifikation + Gesamt.
+- Jahresfilter mit Status (aktiv, ausgeschieden) und VZAE-Berechnung je Qualifikation + Gesamt.
 - Historienpflege: mehrere Perioden pro Person moeglich (Toggle „Neue Historienperiode“).
 - Exporte: CSV oder Excel inkl. Aggregationen je Qualifikation.
 - Verweis auf Dokumentenpfad; Button oeffnet Datei/Ordner via Electron shell.

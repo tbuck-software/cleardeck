@@ -42,7 +42,6 @@ type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'settings' | 'view';
 
 const statusLabels: Record<EmployeeWithPeriod['status'], string> = {
   active: 'aktiv',
-  new: 'Neueintritt',
   left: 'ausgeschieden',
 };
 
@@ -970,7 +969,7 @@ const App = () => {
           acc[emp.status] += 1;
           return acc;
         },
-        { active: 0, new: 0, left: 0 } as Record<EmployeeWithPeriod['status'], number>,
+        { active: 0, left: 0 } as Record<EmployeeWithPeriod['status'], number>,
       ),
     [dataset],
   );
@@ -1028,7 +1027,7 @@ const App = () => {
     new: 'Neue Person mit Historieneintrag erfassen.',
     edit: form.id ? `Bearbeitung: ${form.name}` : 'Bitte Eintrag aus Liste wählen.',
     settings: 'Datenbank austauschen oder Export/Import (verschlüsselt/unkryptiert).',
-    view: selectedEmployee ? `Status: ${selectedEmployee.status}` : '',
+    view: selectedEmployee ? `Status: ${statusLabels[selectedEmployee.status]}` : '',
   };
 
   const crumbs = (): { label: string; page?: Page }[] => {
@@ -1159,10 +1158,6 @@ const App = () => {
                 <div className="status-tile">
                   <span>Aktiv</span>
                   <strong>{statusCounts.active}</strong>
-                </div>
-                <div className="status-tile">
-                  <span>Neueintritte</span>
-                  <strong>{statusCounts.new}</strong>
                 </div>
                 <div className="status-tile">
                   <span>Ausgeschieden</span>
@@ -1377,7 +1372,6 @@ const App = () => {
                 <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
                   <option value="all">Status: alle</option>
                   <option value="active">aktiv</option>
-                  <option value="new">Neueintritt</option>
                   <option value="left">ausgeschieden</option>
                 </select>
               </div>

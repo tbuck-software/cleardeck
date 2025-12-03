@@ -320,15 +320,11 @@ const backupDatabase = (): string => {
   return target;
 };
 
-const computeStatus = (startDate: string, endDate: string | null, year: number): 'active' | 'new' | 'left' => {
+const computeStatus = (endDate: string | null, year: number): 'active' | 'left' => {
   const yearStart = new Date(`${year}-01-01T00:00:00`);
   const yearEnd = new Date(`${year}-12-31T23:59:59`);
-  const start = new Date(`${startDate}T00:00:00`);
   const end = endDate ? new Date(`${endDate}T23:59:59`) : null;
 
-  if (start >= yearStart && start <= yearEnd) {
-    return 'new';
-  }
   if (end && end >= yearStart && end <= yearEnd) {
     return 'left';
   }
@@ -443,7 +439,7 @@ const getYearDataset = (year: number): YearDataset => {
         startDate: effectiveStart,
         endDate: effectiveEnd ?? null,
         fte: row.fte,
-        status: computeStatus(effectiveStart, effectiveEnd ?? null, year),
+        status: computeStatus(effectiveEnd ?? null, year),
         periodId: row.periodId,
         note: row.periodNote ?? row.note ?? null,
       });

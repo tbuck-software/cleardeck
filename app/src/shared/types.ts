@@ -36,7 +36,7 @@ export interface EmployeeWithPeriod extends Employee {
   startDate: string;
   endDate?: string | null;
   fte: number;
-  status: 'active' | 'new' | 'left';
+  status: 'active' | 'left';
   weeklyHours?: number | null;
 }
 
