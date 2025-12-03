@@ -9,6 +9,7 @@ import {
   faGaugeHigh,
   faUsers,
   faGear,
+  faPen,
 } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import './index.css';
@@ -919,19 +920,15 @@ const App = () => {
           <div className="stack">
             <div className="card detail-header">
               <div className="detail-main">
-                <div className="detail-name">
-                  <h2
-                    className="clickable-text"
-                    onClick={() => setEditModal({ open: true, name: selectedEmployee.name, note: selectedEmployee.note ?? '' })}
-                    title="Name und Notiz bearbeiten"
-                  >
-                    {selectedEmployee.name}
-                  </h2>
-                  <div
-                    className="note-inline clickable-text"
-                    onClick={() => setEditModal({ open: true, name: selectedEmployee.name, note: selectedEmployee.note ?? '' })}
-                    title="Name und Notiz bearbeiten"
-                  >
+                <div
+                  className="detail-name"
+                  onClick={() =>
+                    setEditModal({ open: true, name: selectedEmployee.name, note: selectedEmployee.note ?? '' })
+                  }
+                  title="Name und Notiz bearbeiten"
+                >
+                  <h2 className="clickable-text">{selectedEmployee.name}</h2>
+                  <div className="note-inline clickable-text">
                     {selectedEmployee.note && selectedEmployee.note.trim().length > 0 ? (
                       <span className="note-text-inline">{selectedEmployee.note}</span>
                     ) : (
@@ -1030,7 +1027,6 @@ const App = () => {
               employees={filteredEmployees}
               onSelect={handleSelect}
               selectedId={form.id}
-              onOpenDocument={(p) => window.api.openDocument(p)}
               onDelete={confirmDeleteEmployee}
             />
             {form.id && (
