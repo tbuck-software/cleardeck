@@ -11,7 +11,7 @@ show-version:
 	@echo "Aktuelle Version: $$( $(VERSION_CMD) )"
 
 build:
-	@cd $(APP_DIR) && npm run make
+	@cd $(APP_DIR) && SKIP_FUSES=1 npm run make
 
 release: ensure-clean build
 	@echo "Release-Build fuer Version $$( $(VERSION_CMD) ) erstellt."
