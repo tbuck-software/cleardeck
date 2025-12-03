@@ -458,8 +458,9 @@ const exportData = async (
         })),
       );
       XLSX.utils.book_append_sheet(workbook, aggSheet, 'Aggregationen');
-      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-      fs.writeFileSync(targetPath, buffer);
+      // Use type: 'array' to avoid XLSX's browser download path (write_dl) in webpack-bundled Electron
+      const arrayBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
+      fs.writeFileSync(targetPath, Buffer.from(arrayBuffer));
     }
   };
 
