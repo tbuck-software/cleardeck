@@ -34,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Build artifacts
-        run: SKIP_FUSES=1 npm run make
+        run: ${{ runner.os == 'Windows' && 'set SKIP_FUSES=1 && npm run make' || 'SKIP_FUSES=1 npm run make' }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
