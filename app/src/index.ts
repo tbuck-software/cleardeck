@@ -132,7 +132,8 @@ const runMigrations = (): void => {
   db.exec(`
     CREATE TABLE IF NOT EXISTS qualification_types (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL
+      name TEXT UNIQUE NOT NULL,
+      sortOrder INTEGER
     );
     CREATE TABLE IF NOT EXISTS employees (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -166,6 +167,14 @@ const runMigrations = (): void => {
     'INSERT OR IGNORE INTO qualification_types (name) VALUES (?)',
   );
   defaults.forEach((q) => seedQuali.run(q));
+  // ensure sortOrder exists
+  try {
+    db.prepare('ALTER TABLE qualification_types ADD COLUMN sortOrder INTEGER').run();
+  } catch (err) {
+    // ignore if exists
+  }
+  db.prepare('UPDATE qualification_types SET sortOrder = id WHERE sortOrder IS NULL').run();
+  db.prepare('CREATE INDEX IF NOT EXISTS idx_qualification_sort ON qualification_types(sortOrder)').run();
 
   const row = db
     .prepare('SELECT COUNT(*) as cnt FROM employees')
@@ -454,7 +463,7 @@ const deletePeriod = (periodId: number, year: number): YearDataset => {
 const listQualifications = (): QualificationType[] => {
   ensureDbReady();
   const rows = db
-    ?.prepare('SELECT id, name FROM qualification_types ORDER BY name ASC')
+    ?.prepare('SELECT id, name FROM qualification_types ORDER BY sortOrder ASC, name ASC')
     .all() as QualificationType[];
   return rows ?? [];
 };
@@ -463,7 +472,38 @@ const addQualification = (name: string): QualificationType[] => {
   ensureDbReady();
   const trimmed = name.trim();
   if (!trimmed) return listQualifications();
-  db?.prepare('INSERT OR IGNORE INTO qualification_types (name) VALUES (?)').run(trimmed);
+  const nextOrder = db
+    ?.prepare('SELECT COALESCE(MAX(sortOrder), 0) + 1 as nextOrder FROM qualification_types')
+    .get() as { nextOrder: number };
+  db?.prepare('INSERT OR IGNORE INTO qualification_types (name, sortOrder) VALUES (?, ?)').run(
+    trimmed,
+    nextOrder?.nextOrder ?? 1,
+  );
+  return listQualifications();
+};
+
+const updateQualification = (id: number, name: string): QualificationType[] => {
+  ensureDbReady();
+  const trimmed = name.trim();
+  if (!trimmed) return listQualifications();
+  try {
+    db?.prepare('UPDATE qualification_types SET name = ? WHERE id = ?').run(trimmed, id);
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : 'Aktualisierung fehlgeschlagen (möglicher Konflikt mit vorhandenem Namen).';
+    throw new Error(message);
+  }
+  return listQualifications();
+};
+
+const reorderQualifications = (orderedIds: number[]): QualificationType[] => {
+  ensureDbReady();
+  const tx = db?.transaction(() => {
+    orderedIds.forEach((id, idx) => {
+      db?.prepare('UPDATE qualification_types SET sortOrder = ? WHERE id = ?').run(idx + 1, id);
+    });
+  });
+  tx?.();
   return listQualifications();
 };
 
@@ -783,7 +823,11 @@ ipcMain.handle('data:openDocument', async (_event, { path: filePath }: { path: s
 
 ipcMain.handle('qualifications:list', () => listQualifications());
 ipcMain.handle('qualifications:add', (_event, { name }: { name: string }) => addQualification(name));
+ipcMain.handle('qualifications:update', (_event, { id, name }: { id: number; name: string }) =>
+  updateQualification(id, name),
+);
 ipcMain.handle('qualifications:delete', (_event, { id }: { id: number }) => deleteQualification(id));
+ipcMain.handle('qualifications:reorder', (_event, { ids }: { ids: number[] }) => reorderQualifications(ids));
 ipcMain.handle('db:export', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => exportDatabase(mode));
 ipcMain.handle('db:import', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => importDatabase(mode));
 ipcMain.handle('period:delete', (_event, { periodId, year }: { periodId: number; year: number }) =>

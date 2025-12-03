@@ -407,6 +407,23 @@ tbody tr.selected {
   align-items: center;
 }
 
+.inline-row input {
+  width: 100%;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 38px;
+}
+
+.clickable-row {
+  cursor: pointer;
+  user-select: none;
+}
+
 .detail-header {
   display: flex;
   justify-content: space-between;
@@ -425,6 +442,10 @@ tbody tr.selected {
   gap: 8px;
 }
 
+.clickable-text {
+  cursor: pointer;
+}
+
 .detail-name h2 {
   margin: 0;
 }
@@ -441,6 +462,9 @@ tbody tr.selected {
   background: #eef2ff;
   border: 1px solid #e0e7ff;
   font-size: 12px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .detail-actions {
@@ -455,6 +479,23 @@ tbody tr.selected {
   border-left: 2px solid #e5e7eb;
   display: grid;
   gap: 12px;
+}
+
+.note-actions {
+  justify-content: flex-end;
+}
+
+.note-text {
+  white-space: pre-wrap;
+}
+
+.note-inline {
+  margin-top: 6px;
+}
+
+.note-text-inline {
+  white-space: pre-wrap;
+  color: var(--text);
 }
 
 .timeline-item {

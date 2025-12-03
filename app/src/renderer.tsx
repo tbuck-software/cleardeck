@@ -8,7 +8,6 @@ import {
   faTriangleExclamation,
   faGaugeHigh,
   faUsers,
-  faGraduationCap,
   faGear,
 } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
@@ -27,7 +26,7 @@ type FormState = {
   fte: number;
 };
 
-type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'qualifications' | 'settings' | 'view';
+type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'settings' | 'view';
 
 const statusLabels: Record<EmployeeWithPeriod['status'], string> = {
   active: 'aktiv',
@@ -75,7 +74,6 @@ const Sidebar = ({
   const navItems: { key: Page; label: string; icon: any }[] = [
     { key: 'dashboard', label: 'Dashboard', icon: faGaugeHigh },
     { key: 'list', label: 'Mitarbeitende', icon: faUsers },
-    { key: 'qualifications', label: 'Qualifikationen', icon: faGraduationCap },
   ];
 
   return (
@@ -321,10 +319,18 @@ const App = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeWithPeriod['status']>('all');
   const [addNewPeriod, setAddNewPeriod] = useState(false);
-  const [newQualification, setNewQualification] = useState('');
-  const [editingName, setEditingName] = useState(false);
-  const [nameDraft, setNameDraft] = useState('');
   const [showAddPeriodModal, setShowAddPeriodModal] = useState(false);
+  const [qualificationEdits, setQualificationEdits] = useState<Record<number, string>>({});
+  const [qualificationModal, setQualificationModal] = useState<{ open: boolean; id?: number; value: string }>({
+    open: false,
+    value: '',
+  });
+  const [dragQualificationId, setDragQualificationId] = useState<number | null>(null);
+  const [editModal, setEditModal] = useState<{ open: boolean; name: string; note: string }>({
+    open: false,
+    name: '',
+    note: '',
+  });
   const [addPeriodForm, setAddPeriodForm] = useState<{
     startDate: string;
     endDate: string;
@@ -370,6 +376,11 @@ const App = () => {
       if (state.unlocked) {
         const qualis = await window.api.listQualifications();
         setQualifications(qualis);
+        const edits: Record<number, string> = {};
+        qualis.forEach((q) => {
+          if (q.id) edits[q.id] = q.name;
+        });
+        setQualificationEdits(edits);
         setForm((prev) => ({ ...prev, qualification: qualis[0]?.name ?? prev.qualification }));
         await refreshDataset(year);
       }
@@ -394,6 +405,11 @@ const App = () => {
         .listQualifications()
         .then((list) => {
           setQualifications(list);
+          const edits: Record<number, string> = {};
+          list.forEach((q) => {
+            if (q.id) edits[q.id] = q.name;
+          });
+          setQualificationEdits(edits);
           if (!form.qualification) {
             setForm((prev) => ({ ...prev, qualification: list[0]?.name ?? '' }));
             setAddPeriodForm((prev) => ({ ...prev, qualification: list[0]?.name ?? '' }));
@@ -421,8 +437,7 @@ const App = () => {
 
   const handleSelect = async (emp: EmployeeWithPeriod) => {
     setSelectedEmployee(emp);
-    setNameDraft(emp.name);
-    setEditingName(false);
+    setEditModal({ open: false, name: emp.name, note: emp.note ?? '' });
     setPage('view');
     setForm({
       id: emp.id,
@@ -533,6 +548,11 @@ const App = () => {
     try {
       const list = await window.api.listQualifications();
       setQualifications(list);
+      const edits: Record<number, string> = {};
+      list.forEach((q) => {
+        if (q.id) edits[q.id] = q.name;
+      });
+      setQualificationEdits(edits);
       if (!form.qualification && list.length > 0) {
         setForm((prev) => ({ ...prev, qualification: list[0].name }));
       }
@@ -541,12 +561,23 @@ const App = () => {
     }
   };
 
-  const handleAddQualification = async () => {
-    if (!newQualification.trim()) return;
+  const handleSaveQualificationModal = async () => {
+    const val = qualificationModal.value.trim();
+    if (!val) return;
     try {
-      const list = await window.api.addQualification(newQualification.trim());
+      let list: QualificationType[] = qualifications;
+      if (qualificationModal.id) {
+        list = await window.api.updateQualification(qualificationModal.id, val);
+      } else {
+        list = await window.api.addQualification(val);
+      }
       setQualifications(list);
-      setNewQualification('');
+      const edits: Record<number, string> = {};
+      list.forEach((q) => {
+        if (q.id) edits[q.id] = q.name;
+      });
+      setQualificationEdits(edits);
+      setQualificationModal({ open: false, value: '' });
       setToast('Qualifikation gespeichert.');
       setTimeout(() => setToast(null), 2000);
     } catch (err) {
@@ -555,14 +586,21 @@ const App = () => {
   };
 
   const handleDeleteQualification = async (id: number) => {
-    try {
-      const list = await window.api.deleteQualification(id);
-      setQualifications(list);
-      setToast('Qualifikation gelöscht.');
-      setTimeout(() => setToast(null), 2000);
-    } catch (err) {
-      handleError(err);
-    }
+    confirmAction(
+      'Qualifikation wirklich löschen?',
+      async () => {
+        try {
+          const list = await window.api.deleteQualification(id);
+          setQualifications(list);
+          setQualificationEdits({});
+          setToast('Qualifikation gelöscht.');
+          setTimeout(() => setToast(null), 2000);
+        } catch (err) {
+          handleError(err);
+        }
+      },
+      { confirmLabel: 'Löschen', danger: true },
+    );
   };
 
   const confirmAction = (
@@ -586,6 +624,20 @@ const App = () => {
       confirmLabel: 'Löschen',
       danger: true,
     });
+  };
+
+  const reorderQualification = async (orderedIds: number[]) => {
+    try {
+      const list = await window.api.reorderQualifications(orderedIds);
+      setQualifications(list);
+      const edits: Record<number, string> = {};
+      list.forEach((q) => {
+        if (q.id) edits[q.id] = q.name;
+      });
+      setQualificationEdits(edits);
+    } catch (err) {
+      handleError(err);
+    }
   };
 
   const handleDbExport = async (mode: 'encrypted' | 'plain') => {
@@ -705,7 +757,6 @@ const App = () => {
     list: 'Mitarbeitende',
     new: 'Neu anlegen',
     edit: 'Bearbeiten',
-    qualifications: 'Qualifikationen',
     settings: 'Einstellungen',
     view: 'Details',
   };
@@ -715,7 +766,6 @@ const App = () => {
     list: 'Liste mit Filter/Status und Doppelklick zum Bearbeiten.',
     new: 'Neue Person mit Historieneintrag erfassen.',
     edit: form.id ? `Bearbeitung: ${form.name}` : 'Bitte Eintrag aus Liste wählen.',
-    qualifications: 'Qualifikationstypen verwalten und im Formular nutzen.',
     settings: 'Datenbank austauschen oder Export/Import (verschlüsselt/unkryptiert).',
     view: selectedEmployee ? `Status: ${selectedEmployee.status}` : '',
   };
@@ -728,11 +778,6 @@ const App = () => {
         { label: 'Dashboard', page: 'dashboard' },
         { label: 'Mitarbeitende', page: 'list' },
         { label: 'Neu anlegen' },
-      ];
-    if (page === 'qualifications')
-      return [
-        { label: 'Dashboard', page: 'dashboard' },
-        { label: 'Qualifikationen' },
       ];
     if (page === 'settings')
       return [
@@ -791,9 +836,11 @@ const App = () => {
             <h1>{pageTitle[page]}</h1>
             <p className="subtitle">{pageSubtitle[page]}</p>
           </div>
-          <div className="controls">
-            <YearSelector year={year} onChange={setYear} currentYear={currentYear} />
-          </div>
+          {page !== 'settings' && (
+            <div className="controls">
+              <YearSelector year={year} onChange={setYear} currentYear={currentYear} />
+            </div>
+          )}
         </header>
 
         {page === 'dashboard' && (
@@ -873,49 +920,24 @@ const App = () => {
             <div className="card detail-header">
               <div className="detail-main">
                 <div className="detail-name">
-                  {editingName ? (
-                    <>
-                      <input value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} />
-                      <button
-                        className="primary"
-                        onClick={async () => {
-                          const payload = {
-                            ...form,
-                            name: nameDraft,
-                            periodId: form.periodId,
-                            endDate: form.endDate ? form.endDate : null,
-                            fte: Number(form.fte) || 0,
-                            year,
-                          };
-                          setLoading(true);
-                          try {
-                            const updated = await window.api.saveEmployee(payload);
-                            setDataset(updated);
-                            setSelectedEmployee({ ...selectedEmployee, name: nameDraft });
-                            setToast('Name gespeichert.');
-                            setEditingName(false);
-                          } catch (err) {
-                            handleError(err);
-                          } finally {
-                            setLoading(false);
-                            setTimeout(() => setToast(null), 2000);
-                          }
-                        }}
-                      >
-                        Speichern
-                      </button>
-                      <button className="ghost-button" onClick={() => setEditingName(false)}>
-                        Abbrechen
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <h2>{selectedEmployee.name}</h2>
-                      <button className="ghost-button" onClick={() => setEditingName(true)} title="Bearbeiten">
-                        ✎
-                      </button>
-                    </>
-                  )}
+                  <h2
+                    className="clickable-text"
+                    onClick={() => setEditModal({ open: true, name: selectedEmployee.name, note: selectedEmployee.note ?? '' })}
+                    title="Name und Notiz bearbeiten"
+                  >
+                    {selectedEmployee.name}
+                  </h2>
+                  <div
+                    className="note-inline clickable-text"
+                    onClick={() => setEditModal({ open: true, name: selectedEmployee.name, note: selectedEmployee.note ?? '' })}
+                    title="Name und Notiz bearbeiten"
+                  >
+                    {selectedEmployee.note && selectedEmployee.note.trim().length > 0 ? (
+                      <span className="note-text-inline">{selectedEmployee.note}</span>
+                    ) : (
+                      <span className="muted">Notiz hinzufügen</span>
+                    )}
+                  </div>
                 </div>
                 <div className="detail-meta">
                   <span className="pill">{selectedEmployee.qualification}</span>
@@ -932,9 +954,6 @@ const App = () => {
                 </div>
               </div>
               <div className="detail-actions">
-                <button className="ghost-button" onClick={() => setPage('edit')}>
-                  Bearbeiten
-                </button>
                 <button className="primary" onClick={() => setShowAddPeriodModal(true)}>
                   <FontAwesomeIcon icon={faPlus} /> Qualifikation hinzufügen
                 </button>
@@ -1024,49 +1043,72 @@ const App = () => {
           </div>
         )}
 
-        {page === 'qualifications' && (
-          <div className="grid form-layout">
+        {page === 'settings' && (
+          <div className="stack">
             <div className="card form-card">
               <div className="form-header">
                 <div>
                   <p className="eyebrow">Qualifikationen</p>
                   <h3>Typen verwalten</h3>
                 </div>
-              </div>
-              <div className="form-grid">
-                <label className="full-width">
-                  Neue Qualifikation
-                  <div className="inline-row">
-                    <input
-                      value={newQualification}
-                      onChange={(e) => setNewQualification(e.target.value)}
-                      placeholder="z. B. 3-jährig examiniert"
-                    />
-                    <button className="primary" onClick={handleAddQualification}>
-                      <FontAwesomeIcon icon={faPlus} /> Speichern
-                    </button>
-                  </div>
-                </label>
+                <button
+                  className="primary"
+                  onClick={() => setQualificationModal({ open: true, value: '', id: undefined })}
+                >
+                  <FontAwesomeIcon icon={faPlus} /> Neu
+                </button>
               </div>
               <div className="table-wrapper">
                 <table>
                   <thead>
                     <tr>
                       <th>Name</th>
-                      <th>Aktion</th>
+                      <th style={{ width: 80 }}>Aktionen</th>
                     </tr>
                   </thead>
                   <tbody>
                     {qualifications.map((q) => (
-                      <tr key={q.id ?? q.name}>
+                      <tr
+                        key={q.id ?? q.name}
+                        className="clickable-row"
+                        draggable={!!q.id}
+                        onDragStart={() => setDragQualificationId(q.id ?? null)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (!dragQualificationId || !q.id || dragQualificationId === q.id) return;
+                          const orderedIds = qualifications.map((item) => item.id!).filter(Boolean);
+                          const from = orderedIds.indexOf(dragQualificationId);
+                          const to = orderedIds.indexOf(q.id);
+                          if (from === -1 || to === -1) return;
+                          const reordered = [...orderedIds];
+                          const [moved] = reordered.splice(from, 1);
+                          reordered.splice(to, 0, moved);
+                          reorderQualification(reordered);
+                        }}
+                        onClick={() =>
+                          q.id &&
+                          setQualificationModal({
+                            open: true,
+                            id: q.id as number,
+                            value: qualificationEdits[q.id as number] ?? q.name,
+                          })
+                        }
+                      >
                         <td>{q.name}</td>
                         <td>
-                          <button
-                            className="ghost-button danger"
-                            onClick={() => confirmDeleteQualification(q.id ?? 0)}
-                          >
-                            Löschen
-                          </button>
+                          {q.id && (
+                            <button
+                              className="ghost-button danger icon-button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmDeleteQualification(q.id as number);
+                              }}
+                              title="Löschen"
+                            >
+                              <FontAwesomeIcon icon={faTrash} />
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1081,11 +1123,6 @@ const App = () => {
                 </table>
               </div>
             </div>
-          </div>
-        )}
-
-        {page === 'settings' && (
-          <div className="grid form-layout">
             <div className="card form-card">
               <div className="form-header">
                 <div>
@@ -1118,6 +1155,7 @@ const App = () => {
                 </p>
               </div>
             </div>
+
           </div>
         )}
 
@@ -1313,15 +1351,16 @@ const App = () => {
               <div>
                 {addPeriodForm.periodId && (
                   <button
-                    className="ghost-button danger"
+                    className="ghost-button danger icon-button"
                     onClick={() =>
                       setPeriodToDelete({
                         periodId: addPeriodForm.periodId as number,
                         label: `${addPeriodForm.startDate} – ${addPeriodForm.endDate || 'aktuell'}`,
                       })
                     }
+                    title="Löschen"
                   >
-                    Löschen
+                    <FontAwesomeIcon icon={faTrash} />
                   </button>
                 )}
               </div>
@@ -1356,6 +1395,111 @@ const App = () => {
               <button className="ghost-button danger" onClick={handleDeletePeriod}>
                 Löschen
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {qualificationModal.open && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-icon">
+              <FontAwesomeIcon icon={qualificationModal.id ? faPen : faPlus} />
+            </div>
+            <h3>{qualificationModal.id ? 'Qualifikation bearbeiten' : 'Neue Qualifikation'}</h3>
+            <div className="form-grid">
+              <label className="full-width">
+                Bezeichnung
+                <input
+                  value={qualificationModal.value}
+                  onChange={(e) => setQualificationModal({ ...qualificationModal, value: e.target.value })}
+                  placeholder="z. B. 3-jährig examiniert"
+                />
+              </label>
+            </div>
+            <div className="modal-actions">
+              <div></div>
+              <div className="inline-row compact">
+                <button className="ghost-button" onClick={() => setQualificationModal({ open: false, value: '' })}>
+                  Abbrechen
+                </button>
+                <button className="primary" onClick={handleSaveQualificationModal}>
+                  Speichern
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {editModal.open && selectedEmployee && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-icon">
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+            </div>
+            <h3>Name & Notiz bearbeiten</h3>
+            <div className="form-grid">
+              <label className="full-width">
+                Name
+                <input
+                  value={editModal.name}
+                  onChange={(e) => setEditModal({ ...editModal, name: e.target.value })}
+                />
+              </label>
+              <label className="full-width">
+                Notiz
+                <textarea
+                  value={editModal.note}
+                  onChange={(e) => setEditModal({ ...editModal, note: e.target.value })}
+                  placeholder="Fortbildungen, Besonderheiten, Ansprechpartner"
+                />
+              </label>
+            </div>
+            <div className="modal-actions">
+              <div></div>
+              <div className="inline-row compact">
+                <button className="ghost-button" onClick={() => setEditModal({ open: false, name: '', note: '' })}>
+                  Abbrechen
+                </button>
+                <button
+                  className="primary"
+                  onClick={async () => {
+                    if (!selectedEmployee) return;
+                    setLoading(true);
+                    try {
+                      const payload = {
+                        ...form,
+                        name: editModal.name,
+                        note: editModal.note,
+                        periodId: form.periodId,
+                        endDate: form.endDate ? form.endDate : null,
+                        fte: Number(form.fte) || 0,
+                        year,
+                      };
+                      const updated = await window.api.saveEmployee(payload);
+                      setDataset(updated);
+                      setSelectedEmployee({
+                        ...selectedEmployee,
+                        name: payload.name,
+                        note: payload.note,
+                      });
+                      setForm((prev) => ({
+                        ...prev,
+                        name: payload.name,
+                        note: payload.note,
+                      }));
+                      setToast('Gespeichert.');
+                    } catch (err) {
+                      handleError(err);
+                    } finally {
+                      setLoading(false);
+                      setEditModal({ open: false, name: '', note: '' });
+                      setTimeout(() => setToast(null), 2000);
+                    }
+                  }}
+                >
+                  Speichern
+                </button>
+              </div>
             </div>
           </div>
         </div>
