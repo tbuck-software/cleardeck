@@ -66,7 +66,7 @@ const StatCard = ({
   value: string;
   sub?: string;
 }) => (
-  <div className="card stat-card">
+  <div className="stat-card">
     <div className="stat-label">{label}</div>
     <div className="stat-value">{value}</div>
     {sub && <div className="stat-sub">{sub}</div>}
@@ -973,17 +973,13 @@ const App = () => {
     });
   }, [dataset, search, statusFilter, qualificationFilter]);
 
-  const statusCounts = useMemo(
-    () =>
-      (dataset?.employees ?? []).reduce(
-        (acc, emp) => {
-          acc[emp.status] += 1;
-          return acc;
-        },
-        { active: 0, left: 0 } as Record<EmployeeWithPeriod['status'], number>,
-      ),
-    [dataset],
-  );
+  const averageFte = useMemo(() => {
+    const headcount = dataset?.aggregation.totalHeadcount ?? 0;
+    if (!headcount) return 0;
+    return dataset.aggregation.totalFte / headcount;
+  }, [dataset]);
+  const totalFte = dataset?.aggregation.totalFte ?? 0;
+  const totalHeadcount = dataset?.aggregation.totalHeadcount ?? 0;
 
   const displayStart = useMemo(() => {
     if (!selectedEmployee) return '';
@@ -1115,70 +1111,94 @@ const App = () => {
         </header>
 
         {page === 'dashboard' && (
-          <div className="grid two-columns">
-            <section>
-              <div className="grid stats-grid">
+          <div className="stack dashboard">
+            <div className="card dashboard-hero">
+              <div>
+                <p className="eyebrow">Übersicht {year}</p>
+                <h2>Willkommen zurück</h2>
+                <p className="subtitle">Kennzahlen und Qualifikationen im gewählten Jahr.</p>
+              </div>
+              <div className="quick-actions">
+                <button className="ghost-button" onClick={() => goTo('new')}>
+                  <FontAwesomeIcon icon={faPlus} /> Neu anlegen
+                </button>
+                <button className="ghost-button" onClick={() => goTo('list')}>
+                  Mitarbeitende
+                </button>
+                <button className="ghost-button" onClick={() => handleExport('csv')}>
+                  <FontAwesomeIcon icon={faDownload} /> CSV
+                </button>
+                <button className="ghost-button" onClick={() => handleExport('xlsx')}>
+                  <FontAwesomeIcon icon={faDownload} /> Excel
+                </button>
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="form-header">
+                <div>
+                  <p className="eyebrow">Kennzahlen</p>
+                  <h3>Jahr im Blick</h3>
+                </div>
+              </div>
+              <div className="grid stats-grid dashboard-stats">
                 <StatCard
                   label="Gesamt VZÄ"
-                  value={`${dataset?.aggregation.totalFte.toFixed(2) ?? '0.00'}`}
-                  sub="Summe aller Stellenanteile im Jahr"
+                  value={`${totalFte.toFixed(2)}`}
+                  sub="Summe aller Stellenanteile"
                 />
                 <StatCard
                   label="Mitarbeitende"
-                  value={`${dataset?.aggregation.totalHeadcount ?? 0}`}
-                  sub="alle Kategorien"
+                  value={`${totalHeadcount}`}
+                  sub="im gewählten Jahr"
                 />
                 <StatCard
-                  label="Kategorien"
+                  label="Ø VZÄ je Person"
+                  value={averageFte.toFixed(2)}
+                  sub="Durchschnittliche Auslastung"
+                />
+                <StatCard
+                  label="Qualifikationen"
                   value={`${dataset?.aggregation.categories.length ?? 0}`}
-                  sub="nach Qualifikation"
+                  sub="mit VZÄ im Jahr"
+                />
+                <StatCard
+                  label="Basis-Stunden"
+                  value={`${baseHours || 36}`}
+                  sub="Grundlage VZÄ-Berechnung"
                 />
               </div>
+            </div>
 
-              <div className="card aggregation">
-                <h3>
-                  <abbr className="help" title={fteHelp}>
-                    VZÄ je Qualifikation
-                  </abbr>
-                </h3>
-                <div className="aggregation-grid">
-                  {(dataset?.aggregation.categories ?? []).map((cat) => (
-                    <div className="agg-row" key={cat.qualification}>
-                      <div>
-                        <div className="agg-title">{cat.qualification}</div>
-                        <div className="agg-sub">{cat.headcount} Personen</div>
-                      </div>
-                      <div className="agg-value">{cat.fte.toFixed(2)}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <aside className="card form-card">
+            <div className="card">
               <div className="form-header">
                 <div>
-                  <p className="eyebrow">Status im Jahr</p>
-                  <h3>Aktivität</h3>
-                </div>
-                <button className="ghost-button" onClick={() => goTo('list')}>
-                  Zur Liste
-                </button>
-              </div>
-              <div className="status-grid">
-                <div className="status-tile">
-                  <span>Aktiv</span>
-                  <strong>{statusCounts.active}</strong>
-                </div>
-                <div className="status-tile">
-                  <span>Ausgeschieden</span>
-                  <strong>{statusCounts.left}</strong>
+                  <p className="eyebrow">Qualifikationen</p>
+                  <h3>VZÄ je Qualifikation</h3>
                 </div>
               </div>
-              <p className="subtitle small">
-                Klicke auf „Zur Liste“ für Detailansicht oder nutze die Navigation links.
-              </p>
-            </aside>
+              <div className="qual-grid">
+                {(dataset?.aggregation.categories ?? []).length > 0 ? (
+                  dataset?.aggregation.categories.map((cat) => {
+                    const percent = totalFte > 0 ? Math.min(100, (cat.fte / totalFte) * 100) : 0;
+                    return (
+                      <div className="qual-card" key={cat.qualification}>
+                        <div className="qual-card-head">
+                          <div className="qual-title">{cat.qualification}</div>
+                          <div className="qual-meta">{cat.headcount} Personen</div>
+                        </div>
+                        <div className="qual-fte">{cat.fte.toFixed(2)} VZÄ</div>
+                        <div className="qual-progress">
+                          <div className="qual-progress-bar" style={{ width: `${percent}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="empty">Keine Qualifikationen mit VZÄ im gewählten Jahr.</div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -1222,37 +1242,39 @@ const App = () => {
                   </span>
                 </div>
               </div>
-              <div className="detail-actions">
-                <button
-                  className="primary"
-                  onClick={() => {
-                    setAddPeriodForm({
-                      startDate: `${year}-01-01`,
-                      endDate: '',
-                      fte: 1,
-                      qualification: qualifications[0]?.name ?? selectedEmployee.qualification,
-                      periodId: undefined,
-                    });
-                    setEventModal({
-                      open: true,
-                      id: undefined,
-                      eventDate: new Date().toISOString().slice(0, 10),
-                      type: 'period',
-                      title: '',
-                      details: '',
-                      previousValue: null,
-                      newValue: null,
-                    });
-                  }}
-                >
-                  <FontAwesomeIcon icon={faPlus} /> Neuer Eintrag
-                </button>
-              </div>
             </div>
 
             <div className="card">
-              <h3>Historie</h3>
-            <div className="timeline">
+              <div className="form-header">
+                <h3>Historie</h3>
+                <div className="detail-actions">
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      setAddPeriodForm({
+                        startDate: `${year}-01-01`,
+                        endDate: '',
+                        fte: 1,
+                        qualification: qualifications[0]?.name ?? selectedEmployee.qualification,
+                        periodId: undefined,
+                      });
+                      setEventModal({
+                        open: true,
+                        id: undefined,
+                        eventDate: new Date().toISOString().slice(0, 10),
+                        type: 'period',
+                        title: '',
+                        details: '',
+                        previousValue: null,
+                        newValue: null,
+                      });
+                    }}
+                  >
+                    <FontAwesomeIcon icon={faPlus} /> Neuer Eintrag
+                  </button>
+                </div>
+              </div>
+              <div className="timeline">
                 {timelineItems.map((item) => {
                   if (item.kind === 'period') {
                     const p = item.record;
@@ -1394,24 +1416,32 @@ const App = () => {
                   ))}
                 </select>
               </div>
-              <div className="toolbar-actions">
-                <button className="ghost-button" onClick={() => handleExport('csv')}>
-                  <FontAwesomeIcon icon={faDownload} /> CSV
-                </button>
-                <button className="ghost-button" onClick={() => handleExport('xlsx')}>
-                  <FontAwesomeIcon icon={faDownload} /> Excel
-                </button>
-                <button className="primary" onClick={() => goTo('new')}>
-                  <FontAwesomeIcon icon={faPlus} /> Neu anlegen
-                </button>
-              </div>
             </div>
-            <Table
-              employees={filteredEmployees}
-              onSelect={handleSelect}
-              selectedId={form.id}
-              onDelete={confirmDeleteEmployee}
-            />
+            <div className="card">
+              <div className="form-header">
+                <div>
+                  <p className="eyebrow">Mitarbeitende</p>
+                  <h3>Liste</h3>
+                </div>
+                <div className="toolbar-actions">
+                  <button className="ghost-button" onClick={() => handleExport('csv')}>
+                    <FontAwesomeIcon icon={faDownload} /> CSV
+                  </button>
+                  <button className="ghost-button" onClick={() => handleExport('xlsx')}>
+                    <FontAwesomeIcon icon={faDownload} /> Excel
+                  </button>
+                  <button className="primary" onClick={() => goTo('new')}>
+                    <FontAwesomeIcon icon={faPlus} /> Neu anlegen
+                  </button>
+                </div>
+              </div>
+              <Table
+                employees={filteredEmployees}
+                onSelect={handleSelect}
+                selectedId={form.id}
+                onDelete={confirmDeleteEmployee}
+              />
+            </div>
           </div>
         )}
 

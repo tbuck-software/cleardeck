@@ -223,11 +223,21 @@ button:active {
   border: 1px solid var(--card-border);
   border-radius: 16px;
   padding: 16px;
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.stat-sub {
+  color: var(--muted);
 }
 
 .stat-card {
-  background: var(--panel-strong);
+  display: grid;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 14px;
+  box-shadow: none;
 }
 
 .stat-label {
@@ -236,12 +246,9 @@ button:active {
 }
 
 .stat-value {
-  font-size: 32px;
+  font-size: 30px;
   font-weight: 700;
-}
-
-.stat-sub {
-  color: var(--muted);
+  color: var(--text);
 }
 
 .grid {
@@ -254,7 +261,7 @@ button:active {
 }
 
 .stats-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 .filter-bar {
@@ -393,6 +400,94 @@ tbody tr.selected {
 
 .agg-value {
   font-weight: 700;
+}
+
+.qual-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.qual-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.qual-title {
+  font-weight: 700;
+}
+
+.qual-meta {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.qual-fte {
+  font-weight: 800;
+  font-size: 20px;
+  color: var(--accent-strong);
+}
+
+.qual-progress {
+  height: 8px;
+  background: #eef2ff;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid #e0e7ff;
+}
+
+.qual-progress-bar {
+  height: 100%;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+}
+
+.dashboard-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  background: linear-gradient(135deg, #eef2ff, #f8fafc);
+}
+
+.dashboard-hero h2 {
+  margin: 4px 0;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.quick-actions .ghost-button {
+  background: #ffffff;
+  border-color: #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.quick-actions .ghost-button:hover {
+  background: #f3f4f6;
+}
+
+.dashboard-stats {
+  margin-top: 8px;
+}
+
+.dashboard .card + .card {
+  margin-top: 4px;
+}
+
+.qual-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: flex-start;
 }
 
 .inline-row {
