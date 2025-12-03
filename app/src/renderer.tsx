@@ -333,6 +333,7 @@ const App = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeWithPeriod['status']>('all');
+  const [qualificationFilter, setQualificationFilter] = useState<string>('all');
   const [addNewPeriod, setAddNewPeriod] = useState(false);
   const [qualificationEdits, setQualificationEdits] = useState<Record<number, string>>({});
   const [qualificationModal, setQualificationModal] = useState<{
@@ -486,6 +487,14 @@ const App = () => {
         .catch(handleError);
     }
   }, [appReady.unlocked]);
+
+  useEffect(() => {
+    if (qualificationFilter === 'all') return;
+    const exists = qualifications.some((q) => q.name === qualificationFilter);
+    if (!exists) {
+      setQualificationFilter('all');
+    }
+  }, [qualifications, qualificationFilter]);
 
   const handleLogin = async (password: string, mode: 'setup' | 'login') => {
     try {
@@ -958,9 +967,11 @@ const App = () => {
         emp.name.toLowerCase().includes(search.toLowerCase()) ||
         emp.qualification.toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === 'all' ? true : emp.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesQualification =
+        qualificationFilter === 'all' ? true : emp.qualification === qualificationFilter;
+      return matchesSearch && matchesStatus && matchesQualification;
     });
-  }, [dataset, search, statusFilter]);
+  }, [dataset, search, statusFilter, qualificationFilter]);
 
   const statusCounts = useMemo(
     () =>
@@ -1373,6 +1384,14 @@ const App = () => {
                   <option value="all">Status: alle</option>
                   <option value="active">aktiv</option>
                   <option value="left">ausgeschieden</option>
+                </select>
+                <select value={qualificationFilter} onChange={(e) => setQualificationFilter(e.target.value)}>
+                  <option value="all">Qualifikation: alle</option>
+                  {qualifications.map((q) => (
+                    <option key={q.id ?? q.name} value={q.name}>
+                      {q.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="toolbar-actions">

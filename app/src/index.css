@@ -281,8 +281,9 @@ button:active {
 
 .filters {
   display: grid;
-  grid-template-columns: 1fr 180px;
+  grid-template-columns: minmax(220px, 1.3fr) repeat(2, minmax(180px, 1fr));
   gap: 10px;
+  width: 100%;
 }
 
 .toolbar-actions {
