@@ -165,6 +165,8 @@ const runMigrations = (): void => {
       title TEXT NOT NULL,
       details TEXT,
       meta TEXT,
+      previousValue TEXT,
+      newValue TEXT,
       createdAt TEXT DEFAULT (datetime('now')),
       FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE
     );
@@ -190,6 +192,17 @@ const runMigrations = (): void => {
   }
   db.prepare('UPDATE qualification_types SET sortOrder = id WHERE sortOrder IS NULL').run();
   db.prepare('CREATE INDEX IF NOT EXISTS idx_qualification_sort ON qualification_types(sortOrder)').run();
+  // add columns for event history details if missing
+  try {
+    db.prepare('ALTER TABLE employee_events ADD COLUMN previousValue TEXT').run();
+  } catch (err) {
+    // ignore
+  }
+  try {
+    db.prepare('ALTER TABLE employee_events ADD COLUMN newValue TEXT').run();
+  } catch (err) {
+    // ignore
+  }
 
   const row = db
     .prepare('SELECT COUNT(*) as cnt FROM employees')
@@ -440,6 +453,8 @@ const parseEventRow = (row: any): EmployeeEvent => {
     title: row.title,
     details: row.details ?? null,
     meta,
+    previousValue: row.previousValue ?? null,
+    newValue: row.newValue ?? null,
   };
 };
 
@@ -448,7 +463,7 @@ const listEvents = (employeeId: number): EmployeeEvent[] => {
   const rows = db
     .prepare(
       `
-      SELECT id, employeeId, eventDate, type, title, details, meta
+      SELECT id, employeeId, eventDate, type, title, details, meta, previousValue, newValue
       FROM employee_events
       WHERE employeeId = ?
       ORDER BY date(eventDate) DESC, id DESC;
@@ -542,7 +557,7 @@ const saveEmployee = (input: {
     if (existing && employeeId) {
       if (existing.name !== input.name) {
         db.prepare(
-          'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta) VALUES (?, ?, ?, ?, ?, ?)',
+          'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta, previousValue, newValue) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         ).run(
           employeeId,
           today,
@@ -550,28 +565,24 @@ const saveEmployee = (input: {
           'Name geändert',
           `${existing.name} → ${input.name}`,
           JSON.stringify({ from: existing.name, to: input.name }),
+          existing.name,
+          input.name,
         );
       }
       if ((existing.note ?? '') !== (input.note ?? '')) {
         const from = existing.note ?? '';
         const to = input.note ?? '';
-        const makeDiff = (left: string, right: string): string => {
-          const normalize = (val: string) => val.replace(/\r\n/g, '\n');
-          const leftLines = normalize(left).split('\n');
-          const rightLines = normalize(right).split('\n');
-          const minus = leftLines.map((line) => `-${line}`);
-          const plus = rightLines.map((line) => `+${line}`);
-          return ['--- vorher', '+++ nachher', '@@', ...minus, ...plus].join('\n');
-        };
         db.prepare(
-          'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta) VALUES (?, ?, ?, ?, ?, ?)',
+          'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta, previousValue, newValue) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         ).run(
           employeeId,
           today,
           'note-change',
           'Notiz geändert',
-          makeDiff(from, to),
+          'Notiz aktualisiert',
           JSON.stringify({ from, to }),
+          from,
+          to,
         );
       }
     }
@@ -601,6 +612,8 @@ const saveEvent = (input: {
   title: string;
   details?: string | null;
   meta?: Record<string, unknown> | null;
+  previousValue?: string | null;
+  newValue?: string | null;
 }): EmployeeEvent[] => {
   ensureDbReady();
   const payload = {
@@ -610,15 +623,17 @@ const saveEvent = (input: {
     title: input.title,
     details: input.details ?? null,
     meta: input.meta ? JSON.stringify(input.meta) : null,
+    previousValue: input.previousValue ?? null,
+    newValue: input.newValue ?? null,
   };
 
   if (input.id) {
     db.prepare(
-      'UPDATE employee_events SET eventDate = @eventDate, type = @type, title = @title, details = @details, meta = @meta WHERE id = @id AND employeeId = @employeeId',
+      'UPDATE employee_events SET eventDate = @eventDate, type = @type, title = @title, details = @details, meta = @meta, previousValue = @previousValue, newValue = @newValue WHERE id = @id AND employeeId = @employeeId',
     ).run({ ...payload, id: input.id });
   } else {
     db.prepare(
-      'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta) VALUES (@employeeId, @eventDate, @type, @title, @details, @meta)',
+      'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta, previousValue, newValue) VALUES (@employeeId, @eventDate, @type, @title, @details, @meta, @previousValue, @newValue)',
     ).run(payload);
   }
 

@@ -481,10 +481,33 @@ tbody tr.selected {
   border: 1px solid #1f2937;
 }
 
+.diff-line {
+  display: block;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.diff-del {
+  background: rgba(220, 38, 38, 0.15);
+  color: #fecaca;
+}
+
+.diff-add {
+  background: rgba(22, 163, 74, 0.15);
+  color: #bbf7d0;
+}
+
+.diff-same {
+  background: rgba(15, 23, 42, 0.35);
+  color: #cbd5e1;
+}
+
 .pill-quiet {
   background: #fff7ed;
   border-color: #fed7aa;
   color: #7c2d12;
+  align-self: flex-start;
+  margin-top: 4px;
 }
 
 .detail-actions {
@@ -564,6 +587,7 @@ tbody tr.selected {
   gap: 8px;
   flex-wrap: wrap;
   margin-top: 4px;
+  align-items: flex-start;
 }
 
 .help {

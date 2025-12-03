@@ -45,6 +45,8 @@ export interface EmployeeEvent {
   title: string;
   details?: string | null;
   meta?: Record<string, unknown> | null;
+  previousValue?: string | null;
+  newValue?: string | null;
 }
 
 export interface Aggregation {

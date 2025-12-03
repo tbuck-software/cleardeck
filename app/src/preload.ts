@@ -41,6 +41,8 @@ export type Api = {
     title: string;
     details?: string | null;
     meta?: Record<string, unknown> | null;
+    previousValue?: string | null;
+    newValue?: string | null;
   }) => Promise<EmployeeEvent[]>;
   deleteEvent: (id: number, employeeId: number) => Promise<EmployeeEvent[]>;
   exportData: (

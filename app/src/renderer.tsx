@@ -360,12 +360,16 @@ const App = () => {
     type: EmployeeEventType;
     title: string;
     details: string;
+    previousValue?: string | null;
+    newValue?: string | null;
   }>({
     open: false,
     eventDate: new Date().toISOString().slice(0, 10),
     type: 'custom',
     title: '',
     details: '',
+    previousValue: null,
+    newValue: null,
   });
   const [confirmState, setConfirmState] = useState<{
     message: string;
@@ -784,6 +788,8 @@ const App = () => {
         type: eventModal.type,
         title: eventModal.title.trim(),
         details: eventModal.details.trim() ? eventModal.details.trim() : null,
+        previousValue: eventModal.previousValue ?? null,
+        newValue: eventModal.newValue ?? null,
       });
       setEvents(list);
       const refreshed = await window.api.listEmployees(year);
@@ -854,6 +860,26 @@ const App = () => {
     events.forEach((ev) => items.push({ kind: 'event', date: ev.eventDate, record: ev }));
     return items.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0));
   }, [periods, events]);
+
+  const buildNoteDiff = (prev: string, next: string): { text: string; kind: 'del' | 'add' | 'same' }[] => {
+    const left = prev.split('\n');
+    const right = next.split('\n');
+    const max = Math.max(left.length, right.length);
+    const rows: { text: string; kind: 'del' | 'add' | 'same' }[] = [];
+    for (let i = 0; i < max; i += 1) {
+      const a = left[i] ?? '';
+      const b = right[i] ?? '';
+      if (a === b) {
+        if (a.trim().length > 0) {
+          rows.push({ text: a, kind: 'same' });
+        }
+      } else {
+        if (a) rows.push({ text: a, kind: 'del' });
+        if (b) rows.push({ text: b, kind: 'add' });
+      }
+    }
+    return rows.length > 0 ? rows : [{ text: 'Keine Änderungen', kind: 'same' }];
+  };
 
   const pageTitle: Record<Page, string> = {
     dashboard: 'Dashboard',
@@ -1063,6 +1089,8 @@ const App = () => {
                       type: 'custom',
                       title: '',
                       details: '',
+                      previousValue: null,
+                      newValue: null,
                     })
                   }
                 >
@@ -1076,11 +1104,11 @@ const App = () => {
 
             <div className="card">
               <h3>Historie</h3>
-              <div className="timeline">
-                {timelineItems.map((item) => {
-                  if (item.kind === 'period') {
-                    const p = item.record;
-                    return (
+            <div className="timeline">
+              {timelineItems.map((item) => {
+                if (item.kind === 'period') {
+                  const p = item.record;
+                  return (
                       <button
                         className="timeline-item"
                         key={`p-${p.id ?? `${p.startDate}-${p.endDate}`}`}
@@ -1116,13 +1144,20 @@ const App = () => {
                     'note-change': 'Notizänderung',
                     custom: 'Ereignis',
                   };
+                  const prevFallback =
+                    ev.previousValue ??
+                    (ev.meta && (ev.meta as any).from ? String((ev.meta as any).from) : undefined);
+                  const newFallback =
+                    ev.newValue ?? (ev.meta && (ev.meta as any).to ? String((ev.meta as any).to) : undefined);
+                  const hasDiffValues = prevFallback !== undefined || newFallback !== undefined;
                   const detail =
-                    ev.type === 'name-change' && ev.meta
-                      ? `${(ev.meta as any).from ?? ''} → ${(ev.meta as any).to ?? ''}`
-                      : ev.type === 'note-change' && ev.details
-                        ? ev.details
-                        : ev.details;
-                  const isDiff = !!detail && detail.startsWith('--- vorher');
+                    ev.type === 'name-change' && (prevFallback || newFallback)
+                      ? `${prevFallback ?? ''} → ${newFallback ?? ''}`
+                      : ev.details;
+                  const isDiff = ev.type === 'note-change' && hasDiffValues;
+                  const prevVal = prevFallback ?? '';
+                  const newVal = newFallback ?? '';
+                  const diffLines = isDiff ? buildNoteDiff(prevVal, newVal) : [];
                   return (
                     <button
                       className="timeline-item event"
@@ -1135,6 +1170,8 @@ const App = () => {
                           type: ev.type,
                           title: ev.title,
                           details: ev.details ?? '',
+                          previousValue: ev.previousValue ?? null,
+                          newValue: ev.newValue ?? null,
                         })
                       }
                     >
@@ -1147,7 +1184,16 @@ const App = () => {
                           <span className="pill pill-quiet">{typeLabels[ev.type]}</span>
                           {detail &&
                             (isDiff ? (
-                              <pre className="diff-text">{detail}</pre>
+                              <pre className="diff-text">
+                                {diffLines.map((line, idx) => (
+                                  <span
+                                    key={`${line.text}-${idx}`}
+                                    className={`diff-line ${line.kind === 'del' ? 'diff-del' : ''} ${line.kind === 'add' ? 'diff-add' : ''} ${line.kind === 'same' ? 'diff-same' : ''}`}
+                                  >
+                                    {line.kind === 'del' ? `-${line.text}` : line.kind === 'add' ? `+${line.text}` : line.text}
+                                  </span>
+                                ))}
+                              </pre>
                             ) : (
                               <span className="muted">{detail}</span>
                             ))}
@@ -1563,6 +1609,9 @@ const App = () => {
                   value={eventModal.type}
                   onChange={(e) => {
                     const nextType = e.target.value as EmployeeEventType;
+                    if ((nextType === 'name-change' || nextType === 'note-change') && !eventModal.id) {
+                      return;
+                    }
                     const defaults: Record<EmployeeEventType, string> = {
                       join: 'Eintritt',
                       leave: 'Austritt',
@@ -1581,8 +1630,16 @@ const App = () => {
                 >
                   <option value="join">Eintritt</option>
                   <option value="leave">Austritt</option>
-                  <option value="name-change">Namensänderung</option>
-                  <option value="note-change">Notizänderung</option>
+                  {eventModal.id && (
+                    <option value="name-change" disabled={eventModal.type !== 'name-change'}>
+                      Namensänderung
+                    </option>
+                  )}
+                  {eventModal.id && (
+                    <option value="note-change" disabled={eventModal.type !== 'note-change'}>
+                      Notizänderung
+                    </option>
+                  )}
                   <option value="custom">Sonstiges</option>
                 </select>
               </label>
