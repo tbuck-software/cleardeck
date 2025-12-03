@@ -408,6 +408,27 @@ const saveEmployee = (input: {
         'UPDATE employment_periods SET startDate = ?, endDate = ?, fte = ?, qualification = ? WHERE id = ? AND employeeId = ?',
       ).run(input.startDate, input.endDate ?? null, input.fte, input.qualification, input.periodId, employeeId);
     } else {
+      const openPeriod = db
+        .prepare(
+          `
+          SELECT id, startDate
+          FROM employment_periods
+          WHERE employeeId = ?
+            AND (endDate IS NULL OR endDate = '')
+            AND date(startDate) <= date(?)
+          ORDER BY date(startDate) DESC
+          LIMIT 1;
+        `,
+        )
+        .get(employeeId, input.startDate) as { id: number; startDate: string } | undefined;
+
+      if (openPeriod?.id) {
+        const prevEnd = new Date(`${input.startDate}T00:00:00`);
+        prevEnd.setDate(prevEnd.getDate() - 1);
+        const prevEndIso = prevEnd.toISOString().slice(0, 10);
+        db.prepare('UPDATE employment_periods SET endDate = ? WHERE id = ?').run(prevEndIso, openPeriod.id);
+      }
+
       db.prepare(
         'INSERT INTO employment_periods (employeeId, startDate, endDate, fte, qualification) VALUES (?, ?, ?, ?, ?)',
       ).run(employeeId, input.startDate, input.endDate ?? null, input.fte, input.qualification);
@@ -421,6 +442,12 @@ const saveEmployee = (input: {
 const deleteEmployee = (id: number, year: number): YearDataset => {
   ensureDbReady();
   db.prepare('DELETE FROM employees WHERE id = ?').run(id);
+  return getYearDataset(year);
+};
+
+const deletePeriod = (periodId: number, year: number): YearDataset => {
+  ensureDbReady();
+  db.prepare('DELETE FROM employment_periods WHERE id = ?').run(periodId);
   return getYearDataset(year);
 };
 
@@ -759,3 +786,6 @@ ipcMain.handle('qualifications:add', (_event, { name }: { name: string }) => add
 ipcMain.handle('qualifications:delete', (_event, { id }: { id: number }) => deleteQualification(id));
 ipcMain.handle('db:export', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => exportDatabase(mode));
 ipcMain.handle('db:import', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => importDatabase(mode));
+ipcMain.handle('period:delete', (_event, { periodId, year }: { periodId: number; year: number }) =>
+  deletePeriod(periodId, year),
+);

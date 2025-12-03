@@ -337,6 +337,7 @@ const App = () => {
     fte: 1,
     qualification: '',
   });
+  const [periodToDelete, setPeriodToDelete] = useState<{ periodId: number; label: string } | null>(null);
   const [confirmState, setConfirmState] = useState<{
     message: string;
     onConfirm: () => Promise<void> | void;
@@ -444,6 +445,7 @@ const App = () => {
         endDate: '',
         fte: 1,
         qualification: qualifications[0]?.name ?? emp.qualification,
+        periodId: undefined,
       }));
     } catch (err) {
       handleError(err);
@@ -637,17 +639,39 @@ const App = () => {
         startDate: addPeriodForm.startDate,
         endDate: addPeriodForm.endDate || null,
         fte: Number(addPeriodForm.fte) || 0,
+        periodId: addPeriodForm.periodId,
         year,
       };
       const updated = await window.api.saveEmployee(payload);
       setDataset(updated);
       const history = await window.api.listPeriods(selectedEmployee.id ?? 0);
       setPeriods(history);
-      setToast('Qualifikation/Periode hinzugefügt.');
+      setToast(addPeriodForm.periodId ? 'Periode aktualisiert.' : 'Qualifikation/Periode hinzugefügt.');
     } catch (err) {
       handleError(err);
     } finally {
       setLoading(false);
+      setShowAddPeriodModal(false);
+      setTimeout(() => setToast(null), 2000);
+    }
+  };
+
+  const handleDeletePeriod = async () => {
+    if (!periodToDelete) return;
+    setLoading(true);
+    try {
+      const updated = await window.api.deletePeriod(periodToDelete.periodId, year);
+      setDataset(updated);
+      if (selectedEmployee?.id) {
+        const history = await window.api.listPeriods(selectedEmployee.id);
+        setPeriods(history);
+      }
+      setToast('Periode gelöscht.');
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setLoading(false);
+      setPeriodToDelete(null);
       setShowAddPeriodModal(false);
       setTimeout(() => setToast(null), 2000);
     }
@@ -921,7 +945,20 @@ const App = () => {
               <h3>Historie</h3>
               <div className="timeline">
                 {periods.map((p) => (
-                  <div className="timeline-item" key={p.id ?? `${p.startDate}-${p.endDate}`}>
+                  <button
+                    className="timeline-item"
+                    key={p.id ?? `${p.startDate}-${p.endDate}`}
+                    onClick={() => {
+                      setAddPeriodForm({
+                        startDate: p.startDate,
+                        endDate: p.endDate ?? '',
+                        fte: p.fte,
+                        qualification: p.qualification ?? selectedEmployee.qualification,
+                        periodId: p.id,
+                      });
+                      setShowAddPeriodModal(true);
+                    }}
+                  >
                     <div className="timeline-dot" />
                     <div className="timeline-content">
                       <div className="timeline-title">
@@ -932,7 +969,7 @@ const App = () => {
                         <span className="pill">FTE/VZÄ {p.fte}</span>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
                 {periods.length === 0 && <div className="empty">Keine Historie vorhanden.</div>}
               </div>
@@ -1006,7 +1043,7 @@ const App = () => {
                       placeholder="z. B. 3-jährig examiniert"
                     />
                     <button className="primary" onClick={handleAddQualification}>
-                      <FontAwesomeIcon icon={faPlus} /> Hinzufügen
+                      <FontAwesomeIcon icon={faPlus} /> Speichern
                     </button>
                   </div>
                 </label>
@@ -1228,7 +1265,7 @@ const App = () => {
             <div className="modal-icon">
               <FontAwesomeIcon icon={faPlus} />
             </div>
-            <h3>Qualifikation / Periode hinzufügen</h3>
+            <h3>{addPeriodForm.periodId ? 'Periode bearbeiten' : 'Qualifikation / Periode hinzufügen'}</h3>
             <div className="form-grid">
               <label>
                 Start
@@ -1273,11 +1310,51 @@ const App = () => {
               </label>
             </div>
             <div className="modal-actions">
-              <button className="ghost-button" onClick={() => setShowAddPeriodModal(false)}>
+              <div>
+                {addPeriodForm.periodId && (
+                  <button
+                    className="ghost-button danger"
+                    onClick={() =>
+                      setPeriodToDelete({
+                        periodId: addPeriodForm.periodId as number,
+                        label: `${addPeriodForm.startDate} – ${addPeriodForm.endDate || 'aktuell'}`,
+                      })
+                    }
+                  >
+                    Löschen
+                  </button>
+                )}
+              </div>
+              <div className="inline-row compact">
+                <button className="ghost-button" onClick={() => setShowAddPeriodModal(false)}>
+                  Abbrechen
+                </button>
+                <button className="primary" onClick={handleAddPeriod}>
+                  Speichern
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {periodToDelete && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-icon danger">
+              <FontAwesomeIcon icon={faTriangleExclamation} />
+            </div>
+            <h3>Periode löschen?</h3>
+            <p className="modal-text">
+              {periodToDelete.label}
+              <br />
+              Wird endgültig entfernt.
+            </p>
+            <div className="modal-actions">
+              <button className="ghost-button" onClick={() => setPeriodToDelete(null)}>
                 Abbrechen
               </button>
-              <button className="primary" onClick={handleAddPeriod}>
-                Hinzufügen
+              <button className="ghost-button danger" onClick={handleDeletePeriod}>
+                Löschen
               </button>
             </div>
           </div>

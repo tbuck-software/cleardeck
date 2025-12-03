@@ -37,6 +37,7 @@ export type Api = {
   importDatabase: (
     mode: 'encrypted' | 'plain',
   ) => Promise<{ imported: boolean; error?: string; backupPath?: string }>;
+  deletePeriod: (periodId: number, year: number) => Promise<YearDataset>;
 };
 
 const api: Api = {
@@ -54,6 +55,7 @@ const api: Api = {
   deleteQualification: (id) => ipcRenderer.invoke('qualifications:delete', { id }),
   exportDatabase: (mode) => ipcRenderer.invoke('db:export', { mode }),
   importDatabase: (mode) => ipcRenderer.invoke('db:import', { mode }),
+  deletePeriod: (periodId, year) => ipcRenderer.invoke('period:delete', { periodId, year }),
 };
 
 contextBridge.exposeInMainWorld('api', api);
