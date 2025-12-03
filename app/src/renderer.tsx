@@ -1107,7 +1107,7 @@ const App = () => {
             <h1>{pageTitle[page]}</h1>
             <p className="subtitle">{pageSubtitle[page]}</p>
           </div>
-          {page !== 'settings' && (
+          {page !== 'settings' && page !== 'view' && (
             <div className="controls">
               <YearSelector year={year} onChange={setYear} currentYear={currentYear} />
             </div>
