@@ -403,6 +403,7 @@ const getYearDataset = (year: number): YearDataset => {
              e.dataSource,
              e.note,
              e.weeklyHours,
+             e.createdAt,
              e.documentPath,
              p.id as periodId,
              p.startDate,
@@ -418,7 +419,7 @@ const getYearDataset = (year: number): YearDataset => {
     `,
     )
     .all({ startIso, endIso }) as (Employee &
-      EmploymentPeriod & { employeeId: number; periodId: number; periodNote?: string | null })[];
+      EmploymentPeriod & { employeeId: number; periodId: number; periodNote?: string | null; createdAt?: string })[];
 
   const latest = new Map<number, EmployeeWithPeriod>();
   rows.forEach((row) => {
@@ -438,6 +439,7 @@ const getYearDataset = (year: number): YearDataset => {
         note: row.note ?? undefined,
         weeklyHours: row.weeklyHours ?? null,
         documentPath: row.documentPath ?? undefined,
+        createdAt: row.createdAt,
         startDate: effectiveStart,
         endDate: effectiveEnd ?? null,
         fte: row.fte,

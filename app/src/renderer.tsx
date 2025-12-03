@@ -950,6 +950,16 @@ const App = () => {
     [dataset],
   );
 
+  const displayStart = useMemo(() => {
+    if (!selectedEmployee) return '';
+    const joinDates = events
+      .filter((ev) => ev.type === 'join')
+      .map((ev) => ev.eventDate)
+      .sort();
+    if (joinDates.length > 0) return joinDates[0];
+    return selectedEmployee.createdAt ?? selectedEmployee.startDate;
+  }, [events, selectedEmployee]);
+
   const timelineItems = useMemo(() => {
     const items: { kind: 'period'; date: string; record: EmploymentPeriod } | { kind: 'event'; date: string; record: EmployeeEvent }[] =
       [];
@@ -1171,7 +1181,7 @@ const App = () => {
                   </span>
                   <span className={`badge badge-${selectedEmployee.status}`}>{statusLabels[selectedEmployee.status]}</span>
                   <span className="muted">
-                    {selectedEmployee.startDate} – {selectedEmployee.endDate ?? 'aktuell'}
+                    {displayStart} – {selectedEmployee.endDate ?? 'aktuell'}
                   </span>
                 </div>
               </div>
@@ -1951,70 +1961,71 @@ const App = () => {
                   onChange={(e) => setEditModal({ ...editModal, name: e.target.value })}
                 />
               </label>
-              <label>
-                Wochenstunden
-                <input
-                  type="number"
-                  min="0"
-                  step="0.5"
-                  value={editModal.weeklyHours}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setEditModal({ ...editModal, weeklyHours: val });
-                    const hoursNum = Number(val);
-                    if (!Number.isNaN(hoursNum)) {
-                      const fteVal = Math.min(1, Number((hoursNum / (baseHours || 36)).toFixed(2)));
-                      if (editModal.linked) {
-                        setForm((prev) => ({ ...prev, weeklyHours: hoursNum, fte: fteVal }));
-                      } else {
-                        setForm((prev) => ({ ...prev, weeklyHours: hoursNum }));
+              <div className="link-row full-width">
+                <label>
+                  Wochenstunden
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    value={editModal.weeklyHours}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditModal({ ...editModal, weeklyHours: val });
+                      const hoursNum = Number(val);
+                      if (!Number.isNaN(hoursNum)) {
+                        const fteVal = Math.min(1, Number((hoursNum / (baseHours || 36)).toFixed(2)));
+                        if (editModal.linked) {
+                          setForm((prev) => ({ ...prev, weeklyHours: hoursNum, fte: fteVal }));
+                        } else {
+                          setForm((prev) => ({ ...prev, weeklyHours: hoursNum }));
+                        }
                       }
-                    }
-                  }}
-                  placeholder="z. B. 40"
-                />
-              </label>
-              <label>
-                VZÄ
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={(() => {
-                    const weeklyNum =
-                      editModal.weeklyHours && Number(editModal.weeklyHours) > 0
-                        ? Number(editModal.weeklyHours)
-                        : form.weeklyHours ?? 0;
-                    const val =
-                      weeklyNum && weeklyNum > 0
-                        ? Math.min(1, weeklyNum / (baseHours || 36)).toFixed(2)
-                        : form.fte.toFixed(2);
-                    return val;
-                  })()}
-                  onChange={(e) => {
-                    const fteVal = Number(e.target.value);
-                    if (Number.isNaN(fteVal)) return;
-                    const cappedFte = Math.min(1, fteVal);
-                    const hours = cappedFte >= 1 ? (baseHours || 36) : cappedFte * (baseHours || 36);
-                    setEditModal({ ...editModal, weeklyHours: hours.toFixed(1) });
-                    if (editModal.linked) {
-                      setForm((prev) => ({ ...prev, fte: cappedFte, weeklyHours: Number(hours.toFixed(1)) }));
-                    } else {
-                      setForm((prev) => ({ ...prev, fte: cappedFte }));
-                    }
-                  }}
-                />
-              </label>
-              <div className="link-toggle">
-                <button
-                  className="ghost-button icon-button"
-                  type="button"
-                  onClick={() => setEditModal((prev) => ({ ...prev, linked: !prev.linked }))}
-                  title={editModal.linked ? 'Verknüpfung lösen' : 'Verknüpfen'}
-                >
-                  <FontAwesomeIcon icon={editModal.linked ? faLink : faLinkSlash} />
-                </button>
-                <span className="muted">{editModal.linked ? 'gekoppelt' : 'entkoppelt'}</span>
+                    }}
+                    placeholder="z. B. 40"
+                  />
+                </label>
+                <div className="link-toggle compact">
+                  <button
+                    className="ghost-button icon-button"
+                    type="button"
+                    onClick={() => setEditModal((prev) => ({ ...prev, linked: !prev.linked }))}
+                    title={editModal.linked ? 'Verknüpfung lösen' : 'Verknüpfen'}
+                  >
+                    <FontAwesomeIcon icon={editModal.linked ? faLink : faLinkSlash} />
+                  </button>
+                </div>
+                <label>
+                  VZÄ
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={(() => {
+                      const weeklyNum =
+                        editModal.weeklyHours && Number(editModal.weeklyHours) > 0
+                          ? Number(editModal.weeklyHours)
+                          : form.weeklyHours ?? 0;
+                      const val =
+                        weeklyNum && weeklyNum > 0
+                          ? Math.min(1, weeklyNum / (baseHours || 36)).toFixed(2)
+                          : form.fte.toFixed(2);
+                      return val;
+                    })()}
+                    onChange={(e) => {
+                      const fteVal = Number(e.target.value);
+                      if (Number.isNaN(fteVal)) return;
+                      const cappedFte = Math.min(1, fteVal);
+                      const hours = cappedFte >= 1 ? (baseHours || 36) : cappedFte * (baseHours || 36);
+                      setEditModal({ ...editModal, weeklyHours: hours.toFixed(1) });
+                      if (editModal.linked) {
+                        setForm((prev) => ({ ...prev, fte: cappedFte, weeklyHours: Number(hours.toFixed(1)) }));
+                      } else {
+                        setForm((prev) => ({ ...prev, fte: cappedFte }));
+                      }
+                    }}
+                  />
+                </label>
               </div>
               <label className="full-width">
                 Notiz

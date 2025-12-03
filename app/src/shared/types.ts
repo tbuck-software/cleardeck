@@ -18,6 +18,7 @@ export interface Employee {
   note?: string;
   documentPath?: string;
   weeklyHours?: number | null;
+  createdAt?: string;
 }
 
 export interface EmploymentPeriod {

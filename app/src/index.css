@@ -629,6 +629,22 @@ tbody tr.selected {
   gap: 8px;
 }
 
+.link-toggle.compact {
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.link-row {
+  display: grid;
+  grid-template-columns: 1.2fr auto 1.4fr;
+  gap: 10px;
+  align-items: end;
+}
+
+.link-row.full-width {
+  grid-column: 1 / -1;
+}
+
 .modal-actions {
   display: flex;
   justify-content: space-between;
