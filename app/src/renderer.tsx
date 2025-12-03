@@ -87,9 +87,13 @@ const Badge = ({ status }: { status: EmployeeWithPeriod['status'] }) => (
 const Sidebar = ({
   current,
   onNavigate,
+  updateStatus,
+  onInstallUpdate,
 }: {
   current: Page;
   onNavigate: (page: Page) => void;
+  updateStatus: UpdateStatus;
+  onInstallUpdate: () => void;
 }) => {
   const navItems: { key: Page; label: string; icon: any }[] = [
     { key: 'dashboard', label: 'Dashboard', icon: faGaugeHigh },
@@ -117,6 +121,17 @@ const Sidebar = ({
         ))}
       </nav>
       <div className="nav-footer">
+        {updateStatus.state === 'downloaded' && (
+          <div className="update-pill">
+            <div className="update-pill-text">
+              <p className="eyebrow">Update</p>
+              <strong>{updateStatus.version ? `v${updateStatus.version}` : 'Update'}</strong> bereit
+            </div>
+            <button className="primary small" onClick={onInstallUpdate} title="Neustart und Installation">
+              Installieren
+            </button>
+          </div>
+        )}
         <button
           className={`nav-item ${current === 'settings' ? 'active' : ''}`}
           onClick={() => onNavigate('settings')}
@@ -509,15 +524,26 @@ const App = () => {
   useEffect(() => {
     const unsubscribe = window.api.onUpdateStatus((status) => {
       setUpdateStatus(status);
-      if (status.state === 'downloaded') {
-        setToast(`Update ${status.version ? `v${status.version} ` : ''}heruntergeladen. Neu starten zum Installieren.`);
-      }
     });
-    window.api.checkUpdates().catch(() => {
-      setUpdateStatus((prev) => prev);
-    });
+
+    const runCheck = () => {
+      window.api.checkUpdates().catch(() => {
+        setUpdateStatus((prev) => prev);
+      });
+    };
+
+    runCheck();
+
+    const interval = window.setInterval(() => {
+      runCheck();
+    }, 60 * 60 * 1000); // stündlich prüfen
+
+    window.addEventListener('focus', runCheck);
+
     return () => {
       if (unsubscribe) unsubscribe();
+      window.clearInterval(interval);
+      window.removeEventListener('focus', runCheck);
     };
   }, []);
 
@@ -1133,7 +1159,7 @@ const App = () => {
 
   return (
       <div className="layout">
-        <Sidebar current={page} onNavigate={goTo} />
+      <Sidebar current={page} onNavigate={goTo} updateStatus={updateStatus} onInstallUpdate={handleInstallUpdate} />
         <div className="main">
         <header className="topbar">
           <div>
