@@ -25,7 +25,10 @@ export type Api = {
     },
   ) => Promise<YearDataset>;
   deleteEmployee: (id: number, year: number) => Promise<YearDataset>;
-  exportData: (year: number, format: ExportFormat) => Promise<{ saved: boolean; filePath?: string }>;
+  exportData: (
+    year: number,
+    format: ExportFormat,
+  ) => Promise<{ saved: boolean; filePath?: string; error?: string }>;
   openDocument: (path: string) => Promise<void>;
 };
 

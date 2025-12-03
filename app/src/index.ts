@@ -288,7 +288,8 @@ const getYearDataset = (year: number): YearDataset => {
       ORDER BY e.id ASC, p.startDate DESC;
     `,
     )
-    .all({ startIso, endIso }) as (Employee & EmploymentPeriod & { employeeId: number })[];
+    .all({ startIso, endIso }) as (Employee &
+      EmploymentPeriod & { employeeId: number; periodId: number })[];
 
   const latest = new Map<number, EmployeeWithPeriod>();
   rows.forEach((row) => {
@@ -392,7 +393,10 @@ const deleteEmployee = (id: number, year: number): YearDataset => {
   return getYearDataset(year);
 };
 
-const exportData = async (year: number, format: 'csv' | 'xlsx'): Promise<{ saved: boolean; filePath?: string }> => {
+const exportData = async (
+  year: number,
+  format: 'csv' | 'xlsx',
+): Promise<{ saved: boolean; filePath?: string; error?: string }> => {
   ensureDbReady();
   const dataset = getYearDataset(year);
   const { filePath, canceled } = await dialog.showSaveDialog({
@@ -409,40 +413,78 @@ const exportData = async (year: number, format: 'csv' | 'xlsx'): Promise<{ saved
     return { saved: false };
   }
 
-  if (format === 'csv') {
-    const header = 'Name;Qualifikation;Eintritt;Austritt;FTE/VZAE;Status;Quelle;Dokument\n';
-    const lines = dataset.employees
-      .map(
-        (row) =>
-          `${row.name};${row.qualification};${row.startDate};${row.endDate ?? ''};${row.fte};${row.status};${row.dataSource ?? ''};${row.documentPath ?? ''}`,
-      )
-      .join('\n');
-    fs.writeFileSync(filePath, `${header}${lines}`);
-  } else {
-    const workbook = XLSX.utils.book_new();
-    const dataSheet = XLSX.utils.json_to_sheet(
-      dataset.employees.map((row) => ({
-        Name: row.name,
-        Qualifikation: row.qualification,
-        Eintritt: row.startDate,
-        Austritt: row.endDate ?? '',
-        'FTE/VZAE': row.fte,
-        Status: row.status,
-        Quelle: row.dataSource ?? '',
-        Dokument: row.documentPath ?? '',
-      })),
-    );
-    XLSX.utils.book_append_sheet(workbook, dataSheet, `Mitarbeitende ${year}`);
+  try {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Ordner konnte nicht erstellt werden.';
+    dialog.showErrorBox('Export fehlgeschlagen', message);
+    return { saved: false, error: message };
+  }
 
-    const aggSheet = XLSX.utils.json_to_sheet(
-      dataset.aggregation.categories.map((cat) => ({
-        Qualifikation: cat.qualification,
-        Kopfanzahl: cat.headcount,
-        'FTE/VZAE': cat.fte,
-      })),
-    );
-    XLSX.utils.book_append_sheet(workbook, aggSheet, 'Aggregationen');
-    XLSX.writeFile(workbook, filePath);
+  const writeToPath = (targetPath: string): void => {
+    if (format === 'csv') {
+      const header = 'Name;Qualifikation;Eintritt;Austritt;FTE/VZAE;Status;Quelle;Dokument\n';
+      const lines = dataset.employees
+        .map(
+          (row) =>
+            `${row.name};${row.qualification};${row.startDate};${row.endDate ?? ''};${row.fte};${row.status};${row.dataSource ?? ''};${row.documentPath ?? ''}`,
+        )
+        .join('\n');
+      fs.writeFileSync(targetPath, `${header}${lines}`);
+    } else {
+      const workbook = XLSX.utils.book_new();
+      const dataSheet = XLSX.utils.json_to_sheet(
+        dataset.employees.map((row) => ({
+          Name: row.name,
+          Qualifikation: row.qualification,
+          Eintritt: row.startDate,
+          Austritt: row.endDate ?? '',
+          'FTE/VZAE': row.fte,
+          Status: row.status,
+          Quelle: row.dataSource ?? '',
+          Dokument: row.documentPath ?? '',
+        })),
+      );
+      XLSX.utils.book_append_sheet(workbook, dataSheet, `Mitarbeitende ${year}`);
+
+      const aggSheet = XLSX.utils.json_to_sheet(
+        dataset.aggregation.categories.map((cat) => ({
+          Qualifikation: cat.qualification,
+          Kopfanzahl: cat.headcount,
+          'FTE/VZAE': cat.fte,
+        })),
+      );
+      XLSX.utils.book_append_sheet(workbook, aggSheet, 'Aggregationen');
+      const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+      fs.writeFileSync(targetPath, buffer);
+    }
+  };
+
+  try {
+    writeToPath(filePath);
+  } catch (err) {
+    const message =
+      err instanceof Error
+        ? err.message
+        : 'Export konnte nicht gespeichert werden. Bitte Pfad/Schreibrechte pruefen.';
+    const fallbackPath = path.join(app.getPath('downloads'), path.basename(filePath));
+    try {
+      writeToPath(fallbackPath);
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Export umgeleitet',
+        message: `Export konnte nicht unter ${filePath} gespeichert werden.\n\nStattdessen gespeichert unter:\n${fallbackPath}`,
+      });
+      return { saved: true, filePath: fallbackPath };
+    } catch (secondErr) {
+      const secondMessage =
+        secondErr instanceof Error ? secondErr.message : `${message} (Fallback fehlgeschlagen)`;
+      dialog.showErrorBox('Export fehlgeschlagen', secondMessage);
+      return { saved: false, error: secondMessage };
+    }
   }
 
   return { saved: true, filePath };

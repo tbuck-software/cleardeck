@@ -87,16 +87,15 @@ const Sidebar = ({
       </div>
       <nav className="nav">
         {navItems.map((item) => (
-          <button
-            key={item.key}
-            className={`nav-item ${current === item.key ? 'active' : ''}`}
-            onClick={() => onNavigate(item.key)}
-            disabled={item.disabled}
-          >
-            {item.label}
-          </button>
-        ))}
-      </nav>
+            <button
+              key={item.key}
+              className={`nav-item ${current === item.key ? 'active' : ''}`}
+              onClick={() => onNavigate(item.key)}
+            >
+              {item.label}
+            </button>
+          ))}
+        </nav>
       <div className="nav-hint">Links: Seiten, rechts: Jahr/Export</div>
     </aside>
   );
@@ -454,6 +453,8 @@ const App = () => {
       if (result.saved) {
         setToast(`Export gespeichert: ${result.filePath}`);
         setTimeout(() => setToast(null), 2800);
+      } else if (result.error) {
+        handleError(new Error(result.error));
       }
     } catch (err) {
       handleError(err);
