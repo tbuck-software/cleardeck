@@ -155,7 +155,7 @@ const Table = ({
       <tbody>
         {employees.length === 0 && (
           <tr>
-            <td colSpan={9} className="empty">
+            <td colSpan={8} className="empty">
               Keine Einträge im ausgewählten Jahr.
             </td>
           </tr>
@@ -1181,7 +1181,10 @@ const App = () => {
                   }
                   title="Name und Notiz bearbeiten"
                 >
-                  <h2 className="clickable-text">{selectedEmployee.name}</h2>
+                  <div className="detail-name-title clickable-text">
+                    <h2>{selectedEmployee.name}</h2>
+                    <FontAwesomeIcon icon={faPen} className="edit-inline-icon" />
+                  </div>
                   <div className="note-inline clickable-text">
                     {selectedEmployee.note && selectedEmployee.note.trim().length > 0 ? (
                       <span className="note-text-inline">{selectedEmployee.note}</span>

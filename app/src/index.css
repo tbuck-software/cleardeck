@@ -447,8 +447,19 @@ tbody tr.selected {
   cursor: pointer;
 }
 
+.detail-name-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .detail-name h2 {
   margin: 0;
+}
+
+.edit-inline-icon {
+  font-size: 14px;
+  color: #6b7280;
 }
 
 .detail-meta {
