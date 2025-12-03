@@ -934,6 +934,24 @@ const App = () => {
     );
   };
 
+  const openEditModal = () => {
+    if (!selectedEmployee) return;
+    const computedWeeklyHours =
+      selectedEmployee.weeklyHours !== null && selectedEmployee.weeklyHours !== undefined
+        ? String(selectedEmployee.weeklyHours)
+        : selectedEmployee.fte
+          ? (selectedEmployee.fte * (baseHours || 36)).toFixed(1)
+          : '';
+    setEditModal({
+      open: true,
+      name: selectedEmployee.name,
+      note: selectedEmployee.note ?? '',
+      weeklyHours: computedWeeklyHours,
+      fteValue: selectedEmployee.fte.toFixed(2),
+      linked: true,
+    });
+  };
+
   const filteredEmployees = useMemo(() => {
     if (!dataset) return [];
     return dataset.employees.filter((emp) => {
@@ -1164,21 +1182,7 @@ const App = () => {
               <div className="detail-main">
                 <div
                   className="detail-name"
-                  onClick={() =>
-                    setEditModal({
-                      open: true,
-                      name: selectedEmployee.name,
-                      note: selectedEmployee.note ?? '',
-                      weeklyHours:
-                        selectedEmployee.weeklyHours !== null && selectedEmployee.weeklyHours !== undefined
-                          ? String(selectedEmployee.weeklyHours)
-                          : selectedEmployee.fte
-                            ? (selectedEmployee.fte * (baseHours || 36)).toFixed(1)
-                            : '',
-                      fteValue: selectedEmployee.fte.toFixed(2),
-                      linked: true,
-                    })
-                  }
+                  onClick={openEditModal}
                   title="Name und Notiz bearbeiten"
                 >
                   <div className="detail-name-title clickable-text">
@@ -1196,9 +1200,11 @@ const App = () => {
                 <div className="detail-meta">
                   <span className="pill">{selectedEmployee.qualification}</span>
                   {selectedEmployee.weeklyHours !== null && selectedEmployee.weeklyHours !== undefined && (
-                    <span className="pill">Wochenstunden {selectedEmployee.weeklyHours}</span>
+                    <span className="pill editable-pill" onClick={openEditModal} title="Name/Notiz bearbeiten">
+                      Wochenstunden {selectedEmployee.weeklyHours}
+                    </span>
                   )}
-                  <span className="pill">
+                  <span className="pill editable-pill" onClick={openEditModal} title="Name/Notiz bearbeiten">
                     <abbr className="help" title={fteHelp}>
                       VZÄ
                     </abbr>{' '}

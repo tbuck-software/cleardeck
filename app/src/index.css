@@ -479,6 +479,10 @@ tbody tr.selected {
   text-overflow: ellipsis;
 }
 
+.editable-pill {
+  cursor: pointer;
+}
+
 .diff-text {
   margin: 4px 0 0;
   padding: 8px 10px;
