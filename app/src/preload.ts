@@ -25,11 +25,13 @@ export type Api = {
       qualification: string;
       dataSource?: string;
       note?: string;
+      weeklyHours?: number | null;
       documentPath?: string;
       startDate: string;
       endDate?: string | null;
       fte: number;
       year: number;
+      periodNote?: string | null;
     },
   ) => Promise<YearDataset>;
   deleteEmployee: (id: number, year: number) => Promise<YearDataset>;
@@ -51,8 +53,8 @@ export type Api = {
   ) => Promise<{ saved: boolean; filePath?: string; error?: string }>;
   openDocument: (path: string) => Promise<void>;
   listQualifications: () => Promise<QualificationType[]>;
-  addQualification: (name: string) => Promise<QualificationType[]>;
-  updateQualification: (id: number, name: string) => Promise<QualificationType[]>;
+  addQualification: (name: string, note?: string | null) => Promise<QualificationType[]>;
+  updateQualification: (id: number, name: string, note?: string | null) => Promise<QualificationType[]>;
   deleteQualification: (id: number) => Promise<QualificationType[]>;
   reorderQualifications: (ids: number[]) => Promise<QualificationType[]>;
   exportDatabase: (mode: 'encrypted' | 'plain') => Promise<{ saved: boolean; filePath?: string; error?: string }>;
@@ -78,8 +80,8 @@ const api: Api = {
   exportData: (year, format) => ipcRenderer.invoke('data:export', { year, format }),
   openDocument: (path) => ipcRenderer.invoke('data:openDocument', { path }),
   listQualifications: () => ipcRenderer.invoke('qualifications:list'),
-  addQualification: (name) => ipcRenderer.invoke('qualifications:add', { name }),
-  updateQualification: (id, name) => ipcRenderer.invoke('qualifications:update', { id, name }),
+  addQualification: (name, note) => ipcRenderer.invoke('qualifications:add', { name, note }),
+  updateQualification: (id, name, note) => ipcRenderer.invoke('qualifications:update', { id, name, note }),
   deleteQualification: (id) => ipcRenderer.invoke('qualifications:delete', { id }),
   reorderQualifications: (ids) => ipcRenderer.invoke('qualifications:reorder', { ids }),
   exportDatabase: (mode) => ipcRenderer.invoke('db:export', { mode }),

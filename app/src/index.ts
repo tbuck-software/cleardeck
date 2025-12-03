@@ -135,7 +135,8 @@ const runMigrations = (): void => {
     CREATE TABLE IF NOT EXISTS qualification_types (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT UNIQUE NOT NULL,
-      sortOrder INTEGER
+      sortOrder INTEGER,
+      note TEXT
     );
     CREATE TABLE IF NOT EXISTS employees (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -143,6 +144,7 @@ const runMigrations = (): void => {
       qualification TEXT NOT NULL,
       dataSource TEXT,
       note TEXT,
+      weeklyHours REAL,
       documentPath TEXT,
       createdAt TEXT DEFAULT (datetime('now'))
     );
@@ -153,6 +155,7 @@ const runMigrations = (): void => {
       endDate TEXT,
       fte REAL NOT NULL,
       qualification TEXT,
+      note TEXT,
       FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE
     );
     CREATE INDEX IF NOT EXISTS idx_periods_employee ON employment_periods(employeeId);
@@ -187,6 +190,21 @@ const runMigrations = (): void => {
   // ensure sortOrder exists
   try {
     db.prepare('ALTER TABLE qualification_types ADD COLUMN sortOrder INTEGER').run();
+  } catch (err) {
+    // ignore if exists
+  }
+  try {
+    db.prepare('ALTER TABLE employees ADD COLUMN weeklyHours REAL').run();
+  } catch (err) {
+    // ignore
+  }
+  try {
+    db.prepare('ALTER TABLE employment_periods ADD COLUMN note TEXT').run();
+  } catch (err) {
+    // ignore if exists
+  }
+  try {
+    db.prepare('ALTER TABLE qualification_types ADD COLUMN note TEXT').run();
   } catch (err) {
     // ignore if exists
   }
@@ -370,12 +388,14 @@ const getYearDataset = (year: number): YearDataset => {
              e.qualification as baseQualification,
              e.dataSource,
              e.note,
+             e.weeklyHours,
              e.documentPath,
              p.id as periodId,
              p.startDate,
              p.endDate,
              p.fte,
-             COALESCE(p.qualification, e.qualification) as qualification
+             COALESCE(p.qualification, e.qualification) as qualification,
+             p.note as periodNote
       FROM employees e
       INNER JOIN employment_periods p ON p.employeeId = e.id
       WHERE date(p.startDate) <= date(@endIso)
@@ -384,7 +404,7 @@ const getYearDataset = (year: number): YearDataset => {
     `,
     )
     .all({ startIso, endIso }) as (Employee &
-      EmploymentPeriod & { employeeId: number; periodId: number })[];
+      EmploymentPeriod & { employeeId: number; periodId: number; periodNote?: string | null })[];
 
   const latest = new Map<number, EmployeeWithPeriod>();
   rows.forEach((row) => {
@@ -402,12 +422,14 @@ const getYearDataset = (year: number): YearDataset => {
         qualification: row.qualification,
         dataSource: row.dataSource ?? undefined,
         note: row.note ?? undefined,
+        weeklyHours: row.weeklyHours ?? null,
         documentPath: row.documentPath ?? undefined,
         startDate: effectiveStart,
         endDate: effectiveEnd ?? null,
         fte: row.fte,
         status: computeStatus(effectiveStart, effectiveEnd ?? null, year),
         periodId: row.periodId,
+        note: row.periodNote ?? row.note ?? null,
       });
     }
   });
@@ -426,7 +448,7 @@ const listPeriods = (employeeId: number): EmploymentPeriod[] => {
   const rows = db
     .prepare(
       `
-      SELECT id, startDate, endDate, fte, qualification
+      SELECT id, startDate, endDate, fte, qualification, note
       FROM employment_periods
       WHERE employeeId = ?
       ORDER BY startDate DESC;
@@ -480,13 +502,21 @@ const saveEmployee = (input: {
   qualification: string;
   dataSource?: string;
   note?: string;
+  weeklyHours?: number | null;
   documentPath?: string;
   startDate: string;
   endDate?: string | null;
   fte: number;
   year: number;
+  periodNote?: string | null;
 }): YearDataset => {
   ensureDbReady();
+  const fullTimeHours = 40;
+  const derivedFte =
+    input.weeklyHours !== undefined && input.weeklyHours !== null
+      ? Number((input.weeklyHours / fullTimeHours).toFixed(2))
+      : input.fte;
+
   const mutation = db.transaction(() => {
     const existing = input.id
       ? (db
@@ -499,18 +529,19 @@ const saveEmployee = (input: {
       qualification: input.qualification,
       dataSource: input.dataSource ?? null,
       note: input.note ?? null,
+      weeklyHours: input.weeklyHours ?? null,
       documentPath: input.documentPath ?? null,
     };
 
     let employeeId = input.id;
     if (employeeId) {
       db.prepare(
-        'UPDATE employees SET name = @name, qualification = @qualification, dataSource = @dataSource, note = @note, documentPath = @documentPath WHERE id = @id',
+        'UPDATE employees SET name = @name, qualification = @qualification, dataSource = @dataSource, note = @note, weeklyHours = @weeklyHours, documentPath = @documentPath WHERE id = @id',
       ).run({ ...employeePayload, id: employeeId });
     } else {
       const result = db
         .prepare(
-          'INSERT INTO employees (name, qualification, dataSource, note, documentPath) VALUES (@name, @qualification, @dataSource, @note, @documentPath)',
+          'INSERT INTO employees (name, qualification, dataSource, note, weeklyHours, documentPath) VALUES (@name, @qualification, @dataSource, @note, @weeklyHours, @documentPath)',
         )
         .run(employeePayload);
       employeeId = Number(result.lastInsertRowid);
@@ -518,8 +549,16 @@ const saveEmployee = (input: {
 
     if (input.periodId) {
       db.prepare(
-        'UPDATE employment_periods SET startDate = ?, endDate = ?, fte = ?, qualification = ? WHERE id = ? AND employeeId = ?',
-      ).run(input.startDate, input.endDate ?? null, input.fte, input.qualification, input.periodId, employeeId);
+        'UPDATE employment_periods SET startDate = ?, endDate = ?, fte = ?, qualification = ?, note = ? WHERE id = ? AND employeeId = ?',
+      ).run(
+        input.startDate,
+        input.endDate ?? null,
+        derivedFte,
+        input.qualification,
+        input.periodNote ?? null,
+        input.periodId,
+        employeeId,
+      );
     } else {
       const openPeriod = db
         .prepare(
@@ -543,8 +582,15 @@ const saveEmployee = (input: {
       }
 
       db.prepare(
-        'INSERT INTO employment_periods (employeeId, startDate, endDate, fte, qualification) VALUES (?, ?, ?, ?, ?)',
-      ).run(employeeId, input.startDate, input.endDate ?? null, input.fte, input.qualification);
+        'INSERT INTO employment_periods (employeeId, startDate, endDate, fte, qualification, note) VALUES (?, ?, ?, ?, ?, ?)',
+      ).run(
+        employeeId,
+        input.startDate,
+        input.endDate ?? null,
+        derivedFte,
+        input.qualification,
+        input.periodNote ?? null,
+      );
     }
 
     const today = new Date().toISOString().slice(0, 10);
@@ -672,12 +718,12 @@ const deleteEvent = (id: number, employeeId: number): EmployeeEvent[] => {
 const listQualifications = (): QualificationType[] => {
   ensureDbReady();
   const rows = db
-    ?.prepare('SELECT id, name FROM qualification_types ORDER BY sortOrder ASC, name ASC')
+    ?.prepare('SELECT id, name, note FROM qualification_types ORDER BY sortOrder ASC, name ASC')
     .all() as QualificationType[];
   return rows ?? [];
 };
 
-const addQualification = (name: string): QualificationType[] => {
+const addQualification = (name: string, note?: string | null): QualificationType[] => {
   ensureDbReady();
   const trimmed = name.trim();
   if (!trimmed) return listQualifications();
@@ -688,15 +734,22 @@ const addQualification = (name: string): QualificationType[] => {
     trimmed,
     nextOrder?.nextOrder ?? 1,
   );
+  if (note && note.trim()) {
+    db?.prepare('UPDATE qualification_types SET note = ? WHERE name = ?').run(note.trim(), trimmed);
+  }
   return listQualifications();
 };
 
-const updateQualification = (id: number, name: string): QualificationType[] => {
+const updateQualification = (id: number, name: string, note?: string | null): QualificationType[] => {
   ensureDbReady();
   const trimmed = name.trim();
   if (!trimmed) return listQualifications();
   try {
-    db?.prepare('UPDATE qualification_types SET name = ? WHERE id = ?').run(trimmed, id);
+    db?.prepare('UPDATE qualification_types SET name = ?, note = ? WHERE id = ?').run(
+      trimmed,
+      note?.trim() ?? null,
+      id,
+    );
   } catch (err) {
     const message =
       err instanceof Error ? err.message : 'Aktualisierung fehlgeschlagen (möglicher Konflikt mit vorhandenem Namen).';
@@ -1031,9 +1084,11 @@ ipcMain.handle('data:openDocument', async (_event, { path: filePath }: { path: s
 });
 
 ipcMain.handle('qualifications:list', () => listQualifications());
-ipcMain.handle('qualifications:add', (_event, { name }: { name: string }) => addQualification(name));
-ipcMain.handle('qualifications:update', (_event, { id, name }: { id: number; name: string }) =>
-  updateQualification(id, name),
+ipcMain.handle('qualifications:add', (_event, { name, note }: { name: string; note?: string | null }) =>
+  addQualification(name, note),
+);
+ipcMain.handle('qualifications:update', (_event, { id, name, note }: { id: number; name: string; note?: string | null }) =>
+  updateQualification(id, name, note),
 );
 ipcMain.handle('qualifications:delete', (_event, { id }: { id: number }) => deleteQualification(id));
 ipcMain.handle('qualifications:reorder', (_event, { ids }: { ids: number[] }) => reorderQualifications(ids));

@@ -32,6 +32,7 @@ type FormState = {
   startDate: string;
   endDate: string;
   fte: number;
+  weeklyHours?: number | null;
 };
 
 type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'settings' | 'view';
@@ -50,6 +51,7 @@ const emptyForm = (year: number, defaultQualification = ''): FormState => ({
   startDate: `${year}-01-01`,
   endDate: '',
   fte: 1,
+  weeklyHours: null,
 });
 
 const StatCard = ({
@@ -138,7 +140,7 @@ const Table = ({
           <th>Ende</th>
           <th>
             <abbr className="help" title={fteHelp}>
-              FTE/VZÄ
+              VZÄ
             </abbr>
           </th>
           <th>Status</th>
@@ -234,8 +236,8 @@ const YearSelector = ({
   </div>
 );
 
-const fteHelp =
-  'FTE (Full Time Equivalent) entspricht VZÄ (Vollzeitäquivalent). 1,0 = Vollzeit, 0,5 = halbe Stelle.';
+const fteHelp = 'VZÄ (Vollzeitäquivalent) auf Basis 40 Wochenstunden. 1,0 = Vollzeit, 0,5 = halbe Stelle.';
+const FULL_TIME_HOURS = 40;
 
 const AuthScreen = ({
   mode,
@@ -329,15 +331,22 @@ const App = () => {
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeWithPeriod['status']>('all');
   const [addNewPeriod, setAddNewPeriod] = useState(false);
   const [qualificationEdits, setQualificationEdits] = useState<Record<number, string>>({});
-  const [qualificationModal, setQualificationModal] = useState<{ open: boolean; id?: number; value: string }>({
+  const [qualificationModal, setQualificationModal] = useState<{
+    open: boolean;
+    id?: number;
+    value: string;
+    note: string;
+  }>({
     open: false,
     value: '',
+    note: '',
   });
   const [dragQualificationId, setDragQualificationId] = useState<number | null>(null);
-  const [editModal, setEditModal] = useState<{ open: boolean; name: string; note: string }>({
+  const [editModal, setEditModal] = useState<{ open: boolean; name: string; note: string; weeklyHours: string }>({
     open: false,
     name: '',
     note: '',
+    weeklyHours: '',
   });
   const [addPeriodForm, setAddPeriodForm] = useState<{
     startDate: string;
@@ -345,11 +354,13 @@ const App = () => {
     fte: number;
     qualification: string;
     periodId?: number;
+    note?: string;
   }>({
     startDate: `${currentYear}-01-01`,
     endDate: '',
     fte: 1,
     qualification: '',
+    note: '',
   });
   const [periodToDelete, setPeriodToDelete] = useState<{ periodId: number; label: string } | null>(null);
   const [eventModal, setEventModal] = useState<{
@@ -474,7 +485,13 @@ const App = () => {
 
   const handleSelect = async (emp: EmployeeWithPeriod) => {
     setSelectedEmployee(emp);
-    setEditModal({ open: false, name: emp.name, note: emp.note ?? '' });
+    const hoursFromFte = emp.fte ? (emp.fte * FULL_TIME_HOURS).toFixed(1) : '';
+    setEditModal({
+      open: false,
+      name: emp.name,
+      note: emp.note ?? '',
+      weeklyHours: emp.weeklyHours ? String(emp.weeklyHours) : hoursFromFte,
+    });
     setPage('view');
     setForm({
       id: emp.id,
@@ -486,6 +503,7 @@ const App = () => {
       startDate: emp.startDate,
       endDate: emp.endDate ?? '',
       fte: emp.fte,
+      weeklyHours: emp.weeklyHours ?? null,
     });
     setAddNewPeriod(false);
     try {
@@ -500,6 +518,7 @@ const App = () => {
         fte: 1,
         qualification: qualifications[0]?.name ?? emp.qualification,
         periodId: undefined,
+        note: '',
       }));
       setEventModal((prev) => ({
         ...prev,
@@ -542,11 +561,15 @@ const App = () => {
     }
     setLoading(true);
     try {
+      const weeklyHoursNum = form.weeklyHours !== undefined && form.weeklyHours !== null ? Number(form.weeklyHours) : NaN;
+      const derivedFte =
+        !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0 ? Number((weeklyHoursNum / FULL_TIME_HOURS).toFixed(2)) : form.fte;
       const payload = {
         ...form,
         periodId: addNewPeriod ? undefined : form.periodId,
+        periodNote: addPeriodForm.note ?? null,
         endDate: form.endDate ? form.endDate : null,
-        fte: Number(form.fte) || 0,
+        fte: Number(derivedFte) || 0,
         year,
       };
       const updated = await window.api.saveEmployee(payload);
@@ -615,9 +638,9 @@ const App = () => {
     try {
       let list: QualificationType[] = qualifications;
       if (qualificationModal.id) {
-        list = await window.api.updateQualification(qualificationModal.id, val);
+        list = await window.api.updateQualification(qualificationModal.id, val, qualificationModal.note);
       } else {
-        list = await window.api.addQualification(val);
+        list = await window.api.addQualification(val, qualificationModal.note);
       }
       setQualifications(list);
       const edits: Record<number, string> = {};
@@ -625,7 +648,7 @@ const App = () => {
         if (q.id) edits[q.id] = q.name;
       });
       setQualificationEdits(edits);
-      setQualificationModal({ open: false, value: '' });
+      setQualificationModal({ open: false, value: '', note: '' });
       setToast('Qualifikation gespeichert.');
       setTimeout(() => setToast(null), 2000);
     } catch (err) {
@@ -779,11 +802,13 @@ const App = () => {
         qualification: addPeriodForm.qualification,
         dataSource: selectedEmployee.dataSource ?? '',
         note: selectedEmployee.note ?? '',
+        weeklyHours: form.weeklyHours ?? selectedEmployee.weeklyHours ?? null,
         startDate: addPeriodForm.startDate,
         endDate: addPeriodForm.endDate || null,
         fte: Number(addPeriodForm.fte) || 0,
         periodId: addPeriodForm.periodId,
         year,
+        periodNote: addPeriodForm.note ?? null,
       };
       const updated = await window.api.saveEmployee(payload);
       setDataset(updated);
@@ -1119,7 +1144,7 @@ const App = () => {
                   <span className="pill">{selectedEmployee.qualification}</span>
                   <span className="pill">
                     <abbr className="help" title={fteHelp}>
-                      FTE/VZÄ
+                      VZÄ
                     </abbr>{' '}
                     {selectedEmployee.fte.toFixed(2)}
                   </span>
@@ -1168,15 +1193,16 @@ const App = () => {
                         className="timeline-item"
                         key={`p-${p.id ?? `${p.startDate}-${p.endDate}`}`}
                         onClick={() => {
-                          setAddPeriodForm({
-                            startDate: p.startDate,
-                            endDate: p.endDate ?? '',
-                            fte: p.fte,
-                            qualification: p.qualification ?? selectedEmployee.qualification,
-                            periodId: p.id,
-                          });
-                          setEventModal({
-                            open: true,
+                      setAddPeriodForm({
+                        startDate: p.startDate,
+                        endDate: p.endDate ?? '',
+                        fte: p.fte,
+                        qualification: p.qualification ?? selectedEmployee.qualification,
+                        periodId: p.id,
+                        note: p.note ?? '',
+                      });
+                      setEventModal({
+                        open: true,
                             id: undefined,
                             eventDate: new Date().toISOString().slice(0, 10),
                             type: 'period',
@@ -1194,10 +1220,11 @@ const App = () => {
                           </div>
                           <div className="timeline-meta">
                             <span className="pill">{p.qualification ?? selectedEmployee.qualification}</span>
-                            <span className="pill">FTE/VZÄ {p.fte}</span>
-                          </div>
-                        </div>
-                      </button>
+                        <span className="pill">VZÄ {p.fte}</span>
+                        {p.note && <span className="muted">{p.note}</span>}
+                      </div>
+                    </div>
+                  </button>
                     );
                   }
                   const ev = item.record;
@@ -1206,6 +1233,8 @@ const App = () => {
                     leave: 'Austritt',
                     'name-change': 'Namensänderung',
                     'note-change': 'Notizänderung',
+                    'care-visit': 'Pflegevisite',
+                    'emergency-training': 'Notfallschulung',
                     custom: 'Ereignis',
                   };
                   const prevFallback =
@@ -1328,7 +1357,7 @@ const App = () => {
                 </div>
                 <button
                   className="primary"
-                  onClick={() => setQualificationModal({ open: true, value: '', id: undefined })}
+                  onClick={() => setQualificationModal({ open: true, value: '', note: '', id: undefined })}
                 >
                   <FontAwesomeIcon icon={faPlus} /> Neu
                 </button>
@@ -1338,6 +1367,7 @@ const App = () => {
                   <thead>
                     <tr>
                       <th>Name</th>
+                      <th>Notiz</th>
                       <th style={{ width: 80 }}>Aktionen</th>
                     </tr>
                   </thead>
@@ -1367,10 +1397,12 @@ const App = () => {
                             open: true,
                             id: q.id as number,
                             value: qualificationEdits[q.id as number] ?? q.name,
+                            note: q.note ?? '',
                           })
                         }
                       >
                         <td>{q.name}</td>
+                        <td className="muted">{q.note ?? '—'}</td>
                         <td>
                           {q.id && (
                             <button
@@ -1389,7 +1421,7 @@ const App = () => {
                     ))}
                     {qualifications.length === 0 && (
                       <tr>
-                        <td colSpan={2} className="empty">
+                        <td colSpan={3} className="empty">
                           Keine Qualifikationen hinterlegt.
                         </td>
                       </tr>
@@ -1629,6 +1661,8 @@ const App = () => {
                   <option value="period">Qualifikation/Periode</option>
                   <option value="join">Eintritt</option>
                   <option value="leave">Austritt</option>
+                  <option value="care-visit">Pflegevisite</option>
+                  <option value="emergency-training">Notfallschulung</option>
                   {eventModal.id && (
                     <option value="name-change" disabled={eventModal.type !== 'name-change'}>
                       Namensänderung
@@ -1684,6 +1718,14 @@ const App = () => {
                       step="0.1"
                       value={addPeriodForm.fte}
                       onChange={(e) => setAddPeriodForm({ ...addPeriodForm, fte: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label className="full-width">
+                    Notiz
+                    <textarea
+                      value={addPeriodForm.note ?? ''}
+                      onChange={(e) => setAddPeriodForm({ ...addPeriodForm, note: e.target.value })}
+                      placeholder="Optional: Kontext zur Qualifikation/Periode"
                     />
                   </label>
                 </div>
@@ -1819,11 +1861,22 @@ const App = () => {
                   placeholder="z. B. 3-jährig examiniert"
                 />
               </label>
+              <label className="full-width">
+                Notiz
+                <textarea
+                  value={qualificationModal.note}
+                  onChange={(e) => setQualificationModal({ ...qualificationModal, note: e.target.value })}
+                  placeholder="Optional: Besonderheiten, Zertifizierungen, Einsatzbereiche"
+                />
+              </label>
             </div>
             <div className="modal-actions">
               <div></div>
               <div className="inline-row compact">
-                <button className="ghost-button" onClick={() => setQualificationModal({ open: false, value: '' })}>
+                <button
+                  className="ghost-button"
+                  onClick={() => setQualificationModal({ open: false, value: '', note: '' })}
+                >
                   Abbrechen
                 </button>
                 <button className="primary" onClick={handleSaveQualificationModal}>
@@ -1850,6 +1903,23 @@ const App = () => {
                 />
               </label>
               <label className="full-width">
+                Wochenstunden
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={editModal.weeklyHours}
+                  onChange={(e) => setEditModal({ ...editModal, weeklyHours: e.target.value })}
+                  placeholder="z. B. 40"
+                />
+                <small className="muted">
+                  Ergibt VZÄ:{' '}
+                  {editModal.weeklyHours && Number(editModal.weeklyHours) > 0
+                    ? (Number(editModal.weeklyHours) / FULL_TIME_HOURS).toFixed(2)
+                    : form.fte.toFixed(2)}
+                </small>
+              </label>
+              <label className="full-width">
                 Notiz
                 <textarea
                   value={editModal.note}
@@ -1857,11 +1927,36 @@ const App = () => {
                   placeholder="Fortbildungen, Besonderheiten, Ansprechpartner"
                 />
               </label>
+              <label>
+                VZÄ
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={(() => {
+                    const val =
+                      editModal.weeklyHours && Number(editModal.weeklyHours) > 0
+                        ? (Number(editModal.weeklyHours) / FULL_TIME_HOURS).toFixed(2)
+                        : form.fte.toFixed(2);
+                    return val;
+                  })()}
+                  onChange={(e) => {
+                    const fteVal = Number(e.target.value);
+                    if (Number.isNaN(fteVal)) return;
+                    const hours = (fteVal * FULL_TIME_HOURS).toFixed(1);
+                    setEditModal({ ...editModal, weeklyHours: hours });
+                    setForm((prev) => ({ ...prev, fte: fteVal, weeklyHours: Number(hours) }));
+                  }}
+                />
+              </label>
             </div>
             <div className="modal-actions">
               <div></div>
               <div className="inline-row compact">
-                <button className="ghost-button" onClick={() => setEditModal({ open: false, name: '', note: '' })}>
+                <button
+                  className="ghost-button"
+                  onClick={() => setEditModal({ open: false, name: '', note: '', weeklyHours: '' })}
+                >
                   Abbrechen
                 </button>
                 <button
@@ -1870,13 +1965,20 @@ const App = () => {
                     if (!selectedEmployee) return;
                     setLoading(true);
                     try {
+                      const weeklyHoursNum =
+                        editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : form.weeklyHours ?? null;
+                      const derivedFte =
+                        weeklyHoursNum && weeklyHoursNum > 0
+                          ? Number((weeklyHoursNum / FULL_TIME_HOURS).toFixed(2))
+                          : form.fte;
                       const payload = {
                         ...form,
                         name: editModal.name,
                         note: editModal.note,
                         periodId: form.periodId,
                         endDate: form.endDate ? form.endDate : null,
-                        fte: Number(form.fte) || 0,
+                        weeklyHours: weeklyHoursNum ?? null,
+                        fte: Number(derivedFte) || 0,
                         year,
                       };
                       const updated = await window.api.saveEmployee(payload);
@@ -1885,11 +1987,15 @@ const App = () => {
                         ...selectedEmployee,
                         name: payload.name,
                         note: payload.note,
+                        weeklyHours: weeklyHoursNum ?? null,
+                        fte: payload.fte,
                       });
                       setForm((prev) => ({
                         ...prev,
                         name: payload.name,
                         note: payload.note,
+                        weeklyHours: weeklyHoursNum ?? prev.weeklyHours ?? null,
+                        fte: payload.fte,
                       }));
                       await loadHistory(selectedEmployee.id ?? 0);
                       setToast('Gespeichert.');
@@ -1897,7 +2003,7 @@ const App = () => {
                       handleError(err);
                     } finally {
                       setLoading(false);
-                      setEditModal({ open: false, name: '', note: '' });
+                      setEditModal({ open: false, name: '', note: '', weeklyHours: '' });
                       setTimeout(() => setToast(null), 2000);
                     }
                   }}

@@ -7,6 +7,7 @@ export type Qualification =
 export interface QualificationType {
   id?: number;
   name: string;
+  note?: string | null;
 }
 
 export interface Employee {
@@ -16,6 +17,7 @@ export interface Employee {
   dataSource?: string;
   note?: string;
   documentPath?: string;
+  weeklyHours?: number | null;
 }
 
 export interface EmploymentPeriod {
@@ -25,6 +27,7 @@ export interface EmploymentPeriod {
   endDate?: string | null;
   fte: number;
   qualification?: Qualification | string | null;
+  note?: string | null;
 }
 
 export interface EmployeeWithPeriod extends Employee {
@@ -33,9 +36,17 @@ export interface EmployeeWithPeriod extends Employee {
   endDate?: string | null;
   fte: number;
   status: 'active' | 'new' | 'left';
+  weeklyHours?: number | null;
 }
 
-export type EmployeeEventType = 'join' | 'leave' | 'name-change' | 'note-change' | 'custom';
+export type EmployeeEventType =
+  | 'join'
+  | 'leave'
+  | 'name-change'
+  | 'note-change'
+  | 'care-visit'
+  | 'emergency-training'
+  | 'custom';
 
 export interface EmployeeEvent {
   id?: number;

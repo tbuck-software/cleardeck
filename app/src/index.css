@@ -621,7 +621,6 @@ tbody tr.selected {
 .modal-body {
   display: grid;
   gap: 10px;
-  min-height: 320px;
 }
 
 .modal-actions {
