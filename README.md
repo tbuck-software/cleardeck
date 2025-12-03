@@ -32,6 +32,7 @@ Der erste Start fragt nach einem Passwort (setzt gleichzeitig den lokalen App-Sc
 - `make release-patch` / `make release-minor` / `make release-major`: hebt die Semver-Version in `app/package.json` an, committet, taggt (`vX.Y.Z`) und baut die Artefakte via `npm run make`.
 - `make release`: baut nur die aktuell eingetragene Version (nuetzlich, wenn bereits ein Tag existiert).
 - `make show-version`: zeigt die aktuelle Version an.
+- Releases pushen automatisch Commit + Tag ins Remote.
 - Voraussetzungen: sauberes Git-Working-Tree, installierte Dependencies (`npm install` im Ordner `app/`). Artefakte landen unter `app/out` (ignored).
 
 ### CI-Releases (GitHub Actions)
