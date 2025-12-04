@@ -7,6 +7,7 @@ import type {
   EmployeeEvent,
   EmployeeEventType,
   UpdateStatus,
+  RecoveryInfo,
 } from './shared/types';
 
 type ExportFormat = 'csv' | 'xlsx';
@@ -15,6 +16,8 @@ export type Api = {
   getAppState: () => Promise<AppState>;
   register: (password: string) => Promise<AppState>;
   login: (password: string) => Promise<AppState>;
+  getRecoveryKey: () => Promise<RecoveryInfo>;
+  recoverWithKey: (input: { recoveryKey: string; newPassword: string }) => Promise<AppState>;
   listEmployees: (year: number) => Promise<YearDataset>;
   listPeriods: (employeeId: number) => Promise<EmploymentPeriod[]>;
   listEvents: (employeeId: number) => Promise<EmployeeEvent[]>;
@@ -77,6 +80,8 @@ const api: Api = {
   getAppState: () => ipcRenderer.invoke('app:state'),
   register: (password) => ipcRenderer.invoke('auth:register', password),
   login: (password) => ipcRenderer.invoke('auth:login', password),
+  getRecoveryKey: () => ipcRenderer.invoke('auth:recoveryKey'),
+  recoverWithKey: (input) => ipcRenderer.invoke('auth:recover', input),
   listEmployees: (year) => ipcRenderer.invoke('data:list', { year }),
   listPeriods: (employeeId) => ipcRenderer.invoke('data:listPeriods', { employeeId }),
   listEvents: (employeeId) => ipcRenderer.invoke('events:list', { employeeId }),

@@ -82,6 +82,11 @@ export interface AppState {
   unlocked: boolean;
 }
 
+export interface RecoveryInfo {
+  recoveryKey: string;
+  fingerprint: string;
+}
+
 export type UpdateStatus =
   | { state: 'idle' }
   | { state: 'checking' }

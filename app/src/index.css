@@ -721,6 +721,8 @@ tbody tr.selected {
   width: min(420px, 90vw);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   text-align: left;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .modal-body {
@@ -778,6 +780,21 @@ tbody tr.selected {
 
 .modal-text {
   color: var(--muted);
+}
+
+.mono-block {
+  font-family: 'Space Grotesk', 'Inter', monospace;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  background: #f3f4f6;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.long-text {
+  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 .eyebrow {

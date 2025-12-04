@@ -12,6 +12,8 @@ import {
   faPen,
   faLink,
   faLinkSlash,
+  faKey,
+  faCopy,
 } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import './index.css';
@@ -23,6 +25,7 @@ import type {
   YearDataset,
   EmployeeEventType,
   UpdateStatus,
+  RecoveryInfo,
 } from './shared/types';
 import type { Api } from './preload';
 
@@ -276,11 +279,15 @@ const AuthScreen = ({
   onSubmit,
   busy,
   message,
+  onForgotPassword,
+  globalError,
 }: {
   mode: 'setup' | 'login';
   onSubmit: (password: string) => Promise<void>;
   busy: boolean;
   message?: string | null;
+  onForgotPassword?: () => void;
+  globalError?: string | null;
 }) => {
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
@@ -297,6 +304,8 @@ const AuthScreen = ({
     setPassword('');
     setRepeat('');
   };
+
+  const displayError = error ?? globalError ?? null;
 
   return (
     <div className="auth-screen">
@@ -331,11 +340,16 @@ const AuthScreen = ({
               />
             </label>
           )}
-          {error && <div className="error">{error}</div>}
+          {displayError && <div className="error">{displayError}</div>}
           {message && <div className="info">{message}</div>}
           <button type="submit" className="primary" disabled={busy}>
             {busy ? 'Bitte warten…' : mode === 'setup' ? 'Passwort setzen' : 'Login'}
           </button>
+          {mode === 'login' && onForgotPassword && (
+            <button className="ghost-button" type="button" onClick={onForgotPassword}>
+              Passwort vergessen? Recovery Key nutzen
+            </button>
+          )}
         </form>
       </div>
     </div>
@@ -434,6 +448,28 @@ const App = () => {
     confirmLabel?: string;
     danger?: boolean;
   } | null>(null);
+  const [recoveryKeyModal, setRecoveryKeyModal] = useState<{
+    open: boolean;
+    info: RecoveryInfo | null;
+    source: 'setup' | 'settings';
+  }>({
+    open: false,
+    info: null,
+    source: 'settings',
+  });
+  const [recoveryReset, setRecoveryReset] = useState<{
+    open: boolean;
+    recoveryKey: string;
+    newPassword: string;
+    repeat: string;
+    error?: string | null;
+  }>({
+    open: false,
+    recoveryKey: '',
+    newPassword: '',
+    repeat: '',
+    error: null,
+  });
 
   const handleError = (err: unknown) => {
     const message = err instanceof Error ? err.message : 'Unbekannter Fehler';
@@ -500,6 +536,17 @@ const App = () => {
       refreshDataset(year);
     }
   }, [year, appReady.unlocked]);
+
+  useEffect(() => {
+    if (!appReady.unlocked) return;
+    window.api
+      .getBaseHours()
+      .then((hours) => {
+        setBaseHours(hours || 36);
+        setBaseHoursInput(String(hours || 36));
+      })
+      .catch(handleError);
+  }, [appReady.unlocked]);
 
   useEffect(() => {
     if (appReady.unlocked) {
@@ -569,6 +616,9 @@ const App = () => {
       setAppReady(state);
       if (state.unlocked) {
         await refreshDataset(year);
+        if (mode === 'setup') {
+          await openRecoveryKey('setup');
+        }
       }
     } catch (err) {
       handleError(err);
@@ -779,6 +829,162 @@ const App = () => {
   ) => {
     setConfirmState({ message, onConfirm: action, confirmLabel: opts?.confirmLabel, danger: opts?.danger });
   };
+
+  const openRecoveryKey = async (source: 'setup' | 'settings') => {
+    try {
+      const info = await window.api.getRecoveryKey();
+      setRecoveryKeyModal({ open: true, info, source });
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
+  const handleCopyRecoveryKey = async (key: string) => {
+    try {
+      await navigator.clipboard.writeText(key);
+      setToast('Recovery Key kopiert.');
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
+  const startRecoveryReset = () => {
+    setRecoveryReset({ open: true, recoveryKey: '', newPassword: '', repeat: '', error: null });
+  };
+
+  const handleRecoveryReset = async () => {
+    if (!recoveryReset.recoveryKey.trim()) {
+      setRecoveryReset((prev) => ({ ...prev, error: 'Bitte Recovery Key eingeben.' }));
+      return;
+    }
+    if (!recoveryReset.newPassword.trim()) {
+      setRecoveryReset((prev) => ({ ...prev, error: 'Bitte neues Passwort eingeben.' }));
+      return;
+    }
+    if (recoveryReset.newPassword !== recoveryReset.repeat) {
+      setRecoveryReset((prev) => ({ ...prev, error: 'Passwörter stimmen nicht überein.' }));
+      return;
+    }
+    setRecoveryReset((prev) => ({ ...prev, error: null }));
+    setLoading(true);
+    try {
+      const state = await window.api.recoverWithKey({
+        recoveryKey: recoveryReset.recoveryKey,
+        newPassword: recoveryReset.newPassword,
+      });
+      setAppReady(state);
+      if (state.unlocked) {
+        await refreshDataset(year);
+      }
+      setRecoveryReset({ open: false, recoveryKey: '', newPassword: '', repeat: '', error: null });
+      setToast('Passwort zurückgesetzt. Recovery Key sicher aufbewahren.');
+      setTimeout(() => setToast(null), 2200);
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderRecoveryModals = () => (
+    <>
+      {recoveryKeyModal.open && recoveryKeyModal.info && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-icon">
+              <FontAwesomeIcon icon={faKey} />
+            </div>
+            <h3>Recovery Key sichern</h3>
+            <div className="modal-body">
+              <p className="modal-text">
+                {recoveryKeyModal.source === 'setup'
+                  ? 'Bitte direkt nach der Einrichtung offline speichern. Wer den Key hat, kann die Datenbank entschlüsseln.'
+                  : 'Aktueller Schlüssel der Datenbank. Nur lokal speichern und nicht weitergeben.'}
+              </p>
+              <div className="mono-block">
+                {recoveryKeyModal.info.recoveryKey}
+              </div>
+              <p className="subtitle small long-text">
+                Fingerprint: {recoveryKeyModal.info.fingerprint}
+              </p>
+            </div>
+            <div className="modal-actions">
+              <button
+                className="ghost-button"
+                onClick={() => setRecoveryKeyModal({ open: false, info: null, source: 'settings' })}
+              >
+                Schließen
+              </button>
+              <button
+                className="primary"
+                onClick={() => handleCopyRecoveryKey(recoveryKeyModal.info?.recoveryKey ?? '')}
+              >
+                <FontAwesomeIcon icon={faCopy} /> Kopieren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {recoveryReset.open && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-icon">
+              <FontAwesomeIcon icon={faKey} />
+            </div>
+            <h3>Passwort mit Recovery Key setzen</h3>
+            <div className="modal-body">
+              <p className="modal-text">
+                Setzt ein neues Passwort. Der Recovery Key bleibt derselbe und sollte sicher aufbewahrt sein.
+              </p>
+              <label className="full-width">
+                Recovery Key
+                <textarea
+                  value={recoveryReset.recoveryKey}
+                  onChange={(e) => setRecoveryReset((prev) => ({ ...prev, recoveryKey: e.target.value }))}
+                  rows={3}
+                  placeholder="Base64 oder Hex"
+                  className="long-text"
+                />
+              </label>
+              <label className="full-width">
+                Neues Passwort
+                <input
+                  type="password"
+                  value={recoveryReset.newPassword}
+                  onChange={(e) => setRecoveryReset((prev) => ({ ...prev, newPassword: e.target.value }))}
+                  placeholder="Neues Passwort"
+                />
+              </label>
+              <label className="full-width">
+                Wiederholen
+                <input
+                  type="password"
+                  value={recoveryReset.repeat}
+                  onChange={(e) => setRecoveryReset((prev) => ({ ...prev, repeat: e.target.value }))}
+                  placeholder="Wiederholen"
+                />
+              </label>
+              {recoveryReset.error && <div className="error">{recoveryReset.error}</div>}
+            </div>
+            <div className="modal-actions">
+              <button
+                className="ghost-button"
+                onClick={() =>
+                  setRecoveryReset({ open: false, recoveryKey: '', newPassword: '', repeat: '', error: null })
+                }
+              >
+                Abbrechen
+              </button>
+              <button className="primary" onClick={handleRecoveryReset} disabled={loading}>
+                Zurücksetzen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
 
   const confirmDeleteEmployee = (id?: number) => {
     if (!id) return;
@@ -1153,19 +1359,28 @@ const App = () => {
   // Map Detail-/Bearbeitungsseiten auf den Mitarbeitenden-Tab für die Sidebar-Markierung.
   const sidebarPage: Page = page === 'new' || page === 'edit' || page === 'view' ? 'list' : page;
 
-  if (!appReady.configured) {
+  if (!appReady.configured || !appReady.unlocked) {
+    const authMode: 'setup' | 'login' = appReady.configured ? 'login' : 'setup';
     return (
-      <AuthScreen
-        mode="setup"
-        onSubmit={(pwd) => handleLogin(pwd, 'setup')}
-        busy={loading}
-        message="Neues Passwort legt auch den lokalen Schlüssel an."
-      />
+      <>
+        <AuthScreen
+          mode={authMode}
+          onSubmit={(pwd) => handleLogin(pwd, authMode)}
+          busy={loading}
+          message={
+            authMode === 'setup'
+              ? 'Neues Passwort legt auch den lokalen Schlüssel an.'
+              : undefined
+          }
+          onForgotPassword={appReady.configured ? startRecoveryReset : undefined}
+          globalError={error}
+        />
+        {renderRecoveryModals()}
+        {toast && <div className="toast">{toast}</div>}
+        {error && <div className="toast error-toast">{error}</div>}
+        {loading && <div className="loading">Lade / speichere …</div>}
+      </>
     );
-  }
-
-  if (!appReady.unlocked) {
-    return <AuthScreen mode="login" onSubmit={(pwd) => handleLogin(pwd, 'login')} busy={loading} />;
   }
 
   return (
@@ -1674,6 +1889,27 @@ const App = () => {
             <div className="card form-card">
               <div className="form-header">
                 <div>
+                  <p className="eyebrow">Sicherheit</p>
+                  <h3>Recovery Key</h3>
+                </div>
+              </div>
+              <div className="form-grid">
+                <p className="subtitle small">
+                  Recovery Key entsperrt die Datenbank auch ohne Passwort. Sicher offline ablegen, nicht weitergeben.
+                </p>
+                <div className="inline-row">
+                  <button className="ghost-button" onClick={() => openRecoveryKey('settings')}>
+                    <FontAwesomeIcon icon={faKey} /> Recovery Key anzeigen
+                  </button>
+                </div>
+                <p className="subtitle small">
+                  Tipp: Direkt nach der Einrichtung speichern. Wer den Key besitzt, kann alle Daten lesen.
+                </p>
+              </div>
+            </div>
+            <div className="card form-card">
+              <div className="form-header">
+                <div>
                   <p className="eyebrow">Updates</p>
                   <h3>Neue Versionen</h3>
                 </div>
@@ -1854,6 +2090,7 @@ const App = () => {
         )}
       </div>
 
+      {renderRecoveryModals()}
       {toast && <div className="toast">{toast}</div>}
       {error && <div className="toast error-toast">{error}</div>}
       {loading && <div className="loading">Lade / speichere …</div>}

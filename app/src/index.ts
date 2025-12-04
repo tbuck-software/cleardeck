@@ -40,6 +40,7 @@ type AppConfig = {
   encryptedKey: string;
   keyIv: string;
   keyTag: string;
+  keyFingerprint?: string;
   configVersion: number;
 };
 
@@ -67,6 +68,30 @@ const deriveKey = (password: string, salt: string): Buffer =>
 
 const hashPassword = (password: string, salt: string): string =>
   crypto.pbkdf2Sync(password, salt, 220_000, 64, 'sha512').toString('hex');
+
+const fingerprintKey = (key: Buffer): string =>
+  crypto.createHash('sha256').update(key).digest('hex');
+
+const parseRecoveryKey = (input: string): Buffer => {
+  const trimmed = input.trim();
+  try {
+    const buf = Buffer.from(trimmed, 'base64');
+    if (buf.length === 32) {
+      return buf;
+    }
+  } catch (err) {
+    // ignore
+  }
+  try {
+    const buf = Buffer.from(trimmed, 'hex');
+    if (buf.length === 32) {
+      return buf;
+    }
+  } catch (err) {
+    // ignore
+  }
+  throw new Error('Recovery Key hat ein ungültiges Format (erwartet Base64 oder Hex, 32 Byte).');
+};
 
 const encryptBuffer = (data: Buffer, key: Buffer): { iv: Buffer; tag: Buffer; content: Buffer } => {
   const iv = crypto.randomBytes(12);
@@ -1117,6 +1142,7 @@ ipcMain.handle('auth:register', (_event, password: string): AppState => {
   const passwordKey = deriveKey(password, salt);
   const keyBytes = crypto.randomBytes(32);
   const encrypted = encryptBuffer(keyBytes, passwordKey);
+  const keyFingerprint = fingerprintKey(keyBytes);
 
   const config: AppConfig = {
     salt,
@@ -1124,7 +1150,8 @@ ipcMain.handle('auth:register', (_event, password: string): AppState => {
     encryptedKey: encrypted.content.toString('base64'),
     keyIv: encrypted.iv.toString('base64'),
     keyTag: encrypted.tag.toString('base64'),
-    configVersion: 1,
+    keyFingerprint,
+    configVersion: 2,
   };
   writeConfig(config);
 
@@ -1155,11 +1182,82 @@ ipcMain.handle('auth:login', (_event, password: string): AppState => {
     derived,
   );
 
+  const keyFingerprint = fingerprintKey(keyBytes);
+  if (!config.keyFingerprint || (config.configVersion ?? 1) < 2) {
+    const upgraded: AppConfig = {
+      ...config,
+      keyFingerprint,
+      configVersion: 2,
+    };
+    writeConfig(upgraded);
+  }
+
   encryptionKey = keyBytes;
   unlocked = true;
   openDatabase();
   return { configured: true, unlocked: true };
 });
+
+ipcMain.handle('auth:recoveryKey', (): { recoveryKey: string; fingerprint: string } => {
+  if (!unlocked || !encryptionKey) {
+    throw new Error('Bitte zuerst anmelden.');
+  }
+  return {
+    recoveryKey: encryptionKey.toString('base64'),
+    fingerprint: fingerprintKey(encryptionKey),
+  };
+});
+
+ipcMain.handle(
+  'auth:recover',
+  (_event, payload: { recoveryKey: string; newPassword: string }): AppState => {
+    const config = readConfig();
+    if (!config) {
+      throw new Error('Noch nicht eingerichtet.');
+    }
+    const { recoveryKey, newPassword } = payload;
+    if (!recoveryKey || recoveryKey.trim().length === 0) {
+      throw new Error('Recovery Key fehlt.');
+    }
+    if (!newPassword || newPassword.trim().length === 0) {
+      throw new Error('Neues Passwort fehlt.');
+    }
+
+    const keyBytes = parseRecoveryKey(recoveryKey);
+    const fingerprint = fingerprintKey(keyBytes);
+    if (config.keyFingerprint && config.keyFingerprint !== fingerprint) {
+      throw new Error('Recovery Key passt nicht zu dieser Installation.');
+    }
+
+    try {
+      encryptionKey = keyBytes;
+      unlocked = true;
+      openDatabase();
+    } catch (err) {
+      encryptionKey = null;
+      unlocked = false;
+      throw err;
+    }
+
+    const salt = crypto.randomBytes(16).toString('hex');
+    const passwordHash = hashPassword(newPassword, salt);
+    const passwordKey = deriveKey(newPassword, salt);
+    const encrypted = encryptBuffer(keyBytes, passwordKey);
+
+    const nextConfig: AppConfig = {
+      salt,
+      passwordHash,
+      encryptedKey: encrypted.content.toString('base64'),
+      keyIv: encrypted.iv.toString('base64'),
+      keyTag: encrypted.tag.toString('base64'),
+      keyFingerprint: fingerprint,
+      configVersion: Math.max(config.configVersion ?? 1, 2),
+    };
+    writeConfig(nextConfig);
+
+    return { configured: true, unlocked: true };
+  },
+);
 
 ipcMain.handle('data:list', (_event, { year }: { year: number }): YearDataset => {
   ensureDbReady();
