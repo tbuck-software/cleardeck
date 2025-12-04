@@ -1,20 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faPlus,
-  faDownload,
-  faCalendarDays,
-  faTrash,
-  faTriangleExclamation,
-  faGaugeHigh,
-  faUsers,
-  faGear,
-  faPen,
-  faLink,
-  faLinkSlash,
-  faKey,
-  faCopy,
-} from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faTrash, faTriangleExclamation, faLink, faLinkSlash } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import type {
@@ -23,38 +9,24 @@ import type {
   EmployeeEvent,
   QualificationType,
   YearDataset,
-  EmployeeEventType,
   UpdateStatus,
   RecoveryInfo,
 } from './shared/types';
 import type { Api } from './preload';
-
-type FormState = {
-  id?: number;
-  periodId?: number;
-  name: string;
-  qualification: string;
-  dataSource: string;
-  note: string;
-  startDate: string;
-  endDate: string;
-  fte: number;
-  weeklyHours?: number | null;
-  linked?: boolean;
-};
-
-type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'settings' | 'view';
-
-type EventModalType = EmployeeEventType | 'period';
-
-type TimelineItem =
-  | { kind: 'period'; date: string; record: EmploymentPeriod }
-  | { kind: 'event'; date: string; record: EmployeeEvent };
-
-const statusLabels: Record<EmployeeWithPeriod['status'], string> = {
-  active: 'aktiv',
-  left: 'ausgeschieden',
-};
+import { statusLabels, fteHelp } from './constants';
+import type { EventModalType, FormState, Page, TimelineItem } from './types/ui';
+import AuthScreen from './components/auth/AuthScreen';
+import Sidebar from './components/layout/Sidebar';
+import YearSelector from './components/ui/YearSelector';
+import Dashboard from './components/pages/Dashboard';
+import EmployeeList from './components/pages/EmployeeList';
+import EmployeeForm from './components/pages/EmployeeForm';
+import EmployeeDetail from './components/pages/EmployeeDetail';
+import SettingsPage from './components/pages/SettingsPage';
+import ConfirmModal, { ConfirmState } from './components/modals/ConfirmModal';
+import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
+import RecoveryResetModal, { RecoveryResetState } from './components/modals/RecoveryResetModal';
+import QualificationModal, { QualificationModalState } from './components/modals/QualificationModal';
 
 const emptyForm = (year: number, defaultQualification = ''): FormState => ({
   name: '',
@@ -67,294 +39,6 @@ const emptyForm = (year: number, defaultQualification = ''): FormState => ({
   weeklyHours: null,
   linked: true,
 });
-
-const StatCard = ({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-}) => (
-  <div className="stat-card">
-    <div className="stat-label">{label}</div>
-    <div className="stat-value">{value}</div>
-    {sub && <div className="stat-sub">{sub}</div>}
-  </div>
-);
-
-const Badge = ({ status }: { status: EmployeeWithPeriod['status'] }) => (
-  <span className={`badge badge-${status}`}>{statusLabels[status]}</span>
-);
-
-const Sidebar = ({
-  current,
-  onNavigate,
-  updateStatus,
-  onInstallUpdate,
-  onSnoozeUpdate,
-  snoozed,
-}: {
-  current: Page;
-  onNavigate: (page: Page) => void;
-  updateStatus: UpdateStatus;
-  onInstallUpdate: () => void;
-  onSnoozeUpdate: () => void;
-  snoozed: boolean;
-}) => {
-  const navItems: { key: Page; label: string; icon: any }[] = [
-    { key: 'dashboard', label: 'Dashboard', icon: faGaugeHigh },
-    { key: 'list', label: 'Mitarbeitende', icon: faUsers },
-  ];
-
-  return (
-    <aside className="sidebar">
-      <div className="brand">
-        <div className="brand-mark">DB</div>
-        <div>
-          <div className="brand-title">Employee DB</div>
-          <div className="brand-sub">VZAE & Historie</div>
-        </div>
-      </div>
-      <nav className="nav">
-        {navItems.map((item) => (
-          <button
-            key={item.key}
-            className={`nav-item ${current === item.key ? 'active' : ''}`}
-            onClick={() => onNavigate(item.key)}
-          >
-            <FontAwesomeIcon icon={item.icon} /> {item.label}
-          </button>
-        ))}
-      </nav>
-      <div className="nav-footer">
-        {!snoozed && updateStatus.state === 'downloaded' && (
-          <div className="update-pill">
-            <button className="update-pill-close" onClick={onSnoozeUpdate} title="Schließen">
-              ×
-            </button>
-            <div className="update-pill-text">
-              <p className="eyebrow">Update</p>
-              <strong>{updateStatus.version ? `v${updateStatus.version}` : 'Update'}</strong> bereit
-            </div>
-            <button className="primary small" onClick={onInstallUpdate} title="Neustart und Installation">
-              Installieren
-            </button>
-          </div>
-        )}
-        <button
-          className={`nav-item ${current === 'settings' ? 'active' : ''}`}
-          onClick={() => onNavigate('settings')}
-        >
-          <FontAwesomeIcon icon={faGear} /> Einstellungen
-        </button>
-        <div className="nav-hint">Links: Seiten, rechts: Jahr/Export</div>
-      </div>
-    </aside>
-  );
-};
-
-const Table = ({
-  employees,
-  onSelect,
-  onDelete,
-  selectedId,
-}: {
-  employees: EmployeeWithPeriod[];
-  onSelect: (emp: EmployeeWithPeriod) => void;
-  onDelete: (id: number) => void;
-  selectedId?: number;
-}) => (
-  <div className="table-wrapper">
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Qualifikation</th>
-          <th>Start</th>
-          <th>Ende</th>
-          <th>
-            <abbr className="help" title={fteHelp}>
-              VZÄ
-            </abbr>
-          </th>
-          <th>Status</th>
-          <th>Quelle</th>
-          <th>Aktion</th>
-        </tr>
-      </thead>
-      <tbody>
-        {employees.length === 0 && (
-          <tr>
-            <td colSpan={8} className="empty">
-              Keine Einträge im ausgewählten Jahr.
-            </td>
-          </tr>
-        )}
-        {employees.map((emp) => (
-          <tr
-            key={`${emp.id}-${emp.periodId}`}
-            onClick={() => onSelect(emp)}
-            className={selectedId === emp.id ? 'selected' : undefined}
-          >
-            <td>{emp.name}</td>
-            <td>{emp.qualification}</td>
-            <td>{emp.startDate}</td>
-            <td>{emp.endDate ?? '—'}</td>
-            <td>{emp.fte.toFixed(2)}</td>
-            <td>
-              <Badge status={emp.status} />
-            </td>
-            <td>{emp.dataSource ?? '—'}</td>
-            <td>
-              <button
-                className="ghost-button danger icon-button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(emp.id ?? 0);
-                }}
-                title="Löschen"
-              >
-                <FontAwesomeIcon icon={faTrash} />
-              </button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-);
-
-const HistoryList = ({ items }: { items: EmploymentPeriod[] }) => (
-  <div className="history">
-    <div className="history-header">
-      <span>Historie</span>
-      <small>Stellenanteil pro Zeitraum</small>
-    </div>
-    {items.length === 0 && <div className="history-empty">Keine Historie hinterlegt.</div>}
-    {items.map((item) => (
-      <div className="history-row" key={item.id ?? `${item.startDate}-${item.endDate}`}>
-        <div>
-          <div className="history-title">
-            {item.startDate} – {item.endDate ?? 'aktuell'}
-          </div>
-          <div className="history-meta">
-            FTE/VZÄ: {item.fte} · Quali: {item.qualification ?? '—'}
-          </div>
-        </div>
-      </div>
-    ))}
-  </div>
-);
-
-const YearSelector = ({
-  year,
-  onChange,
-  currentYear,
-}: {
-  year: number;
-  onChange: (y: number) => void;
-  currentYear: number;
-}) => (
-  <div className="year-selector">
-    <FontAwesomeIcon icon={faCalendarDays} />
-    <input
-      type="number"
-      value={year}
-      onChange={(e) => onChange(Number(e.target.value))}
-      min={2000}
-      max={2099}
-    />
-    <button className="ghost-button" onClick={() => onChange(currentYear)}>
-      aktuelles Jahr
-    </button>
-  </div>
-);
-
-const fteHelp = 'VZÄ (Vollzeitäquivalent) auf Basis der konfigurierten Vollzeitstunden (Standard 36).';
-
-const AuthScreen = ({
-  mode,
-  onSubmit,
-  busy,
-  message,
-  onForgotPassword,
-  globalError,
-}: {
-  mode: 'setup' | 'login';
-  onSubmit: (password: string) => Promise<void>;
-  busy: boolean;
-  message?: string | null;
-  onForgotPassword?: () => void;
-  globalError?: string | null;
-}) => {
-  const [password, setPassword] = useState('');
-  const [repeat, setRepeat] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  const handleSubmit = async (evt: React.FormEvent) => {
-    evt.preventDefault();
-    setError(null);
-    if (mode === 'setup' && password !== repeat) {
-      setError('Passwörter stimmen nicht überein.');
-      return;
-    }
-    await onSubmit(password);
-    setPassword('');
-    setRepeat('');
-  };
-
-  const displayError = error ?? globalError ?? null;
-
-  return (
-    <div className="auth-screen">
-      <div className="card auth-card">
-        <div className="auth-title">
-          <h1>{mode === 'setup' ? 'Ersteinrichtung' : 'Anmeldung'}</h1>
-          <p>
-            Lokale Datenbank (SQLite) mit Dateiverschlüsselung und Passwortschutz. Halte das Passwort
-            sicher bereit; es wird nicht synchronisiert.
-          </p>
-        </div>
-        <form onSubmit={handleSubmit} className="auth-form">
-          <label>
-            Passwort
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="••••••••"
-            />
-          </label>
-          {mode === 'setup' && (
-            <label>
-              Passwort wiederholen
-              <input
-                type="password"
-                value={repeat}
-                onChange={(e) => setRepeat(e.target.value)}
-                required
-                placeholder="••••••••"
-              />
-            </label>
-          )}
-          {displayError && <div className="error">{displayError}</div>}
-          {message && <div className="info">{message}</div>}
-          <button type="submit" className="primary" disabled={busy}>
-            {busy ? 'Bitte warten…' : mode === 'setup' ? 'Passwort setzen' : 'Login'}
-          </button>
-          {mode === 'login' && onForgotPassword && (
-            <button className="ghost-button" type="button" onClick={onForgotPassword}>
-              Passwort vergessen? Recovery Key nutzen
-            </button>
-          )}
-        </form>
-      </div>
-    </div>
-  );
-};
 
 const App = () => {
   const currentYear = new Date().getFullYear();
@@ -383,17 +67,11 @@ const App = () => {
   const [qualificationFilter, setQualificationFilter] = useState<string>('all');
   const [addNewPeriod, setAddNewPeriod] = useState(false);
   const [qualificationEdits, setQualificationEdits] = useState<Record<number, string>>({});
-  const [qualificationModal, setQualificationModal] = useState<{
-    open: boolean;
-    id?: number;
-    value: string;
-    note: string;
-  }>({
+  const [qualificationModal, setQualificationModal] = useState<QualificationModalState>({
     open: false,
     value: '',
     note: '',
   });
-  const [dragQualificationId, setDragQualificationId] = useState<number | null>(null);
   const [editModal, setEditModal] = useState<{
     open: boolean;
     name: string;
@@ -442,12 +120,7 @@ const App = () => {
     previousValue: null,
     newValue: null,
   });
-  const [confirmState, setConfirmState] = useState<{
-    message: string;
-    onConfirm: () => Promise<void> | void;
-    confirmLabel?: string;
-    danger?: boolean;
-  } | null>(null);
+  const [confirmState, setConfirmState] = useState<ConfirmState>(null);
   const [recoveryKeyModal, setRecoveryKeyModal] = useState<{
     open: boolean;
     info: RecoveryInfo | null;
@@ -457,13 +130,7 @@ const App = () => {
     info: null,
     source: 'settings',
   });
-  const [recoveryReset, setRecoveryReset] = useState<{
-    open: boolean;
-    recoveryKey: string;
-    newPassword: string;
-    repeat: string;
-    error?: string | null;
-  }>({
+  const [recoveryReset, setRecoveryReset] = useState<RecoveryResetState>({
     open: false,
     recoveryKey: '',
     newPassword: '',
@@ -763,23 +430,6 @@ const App = () => {
     }
   };
 
-  const refreshQualifications = async () => {
-    try {
-      const list = await window.api.listQualifications();
-      setQualifications(list);
-      const edits: Record<number, string> = {};
-      list.forEach((q) => {
-        if (q.id) edits[q.id] = q.name;
-      });
-      setQualificationEdits(edits);
-      if (!form.qualification && list.length > 0) {
-        setForm((prev) => ({ ...prev, qualification: list[0].name }));
-      }
-    } catch (err) {
-      handleError(err);
-    }
-  };
-
   const handleSaveQualificationModal = async () => {
     const val = qualificationModal.value.trim();
     if (!val) return;
@@ -887,105 +537,6 @@ const App = () => {
     }
   };
 
-  const renderRecoveryModals = () => (
-    <>
-      {recoveryKeyModal.open && recoveryKeyModal.info && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <div className="modal-icon">
-              <FontAwesomeIcon icon={faKey} />
-            </div>
-            <h3>Recovery Key sichern</h3>
-            <div className="modal-body">
-              <p className="modal-text">
-                {recoveryKeyModal.source === 'setup'
-                  ? 'Bitte direkt nach der Einrichtung offline speichern. Wer den Key hat, kann die Datenbank entschlüsseln.'
-                  : 'Aktueller Schlüssel der Datenbank. Nur lokal speichern und nicht weitergeben.'}
-              </p>
-              <div className="mono-block">
-                {recoveryKeyModal.info.recoveryKey}
-              </div>
-              <p className="subtitle small long-text">
-                Fingerprint: {recoveryKeyModal.info.fingerprint}
-              </p>
-            </div>
-            <div className="modal-actions">
-              <button
-                className="ghost-button"
-                onClick={() => setRecoveryKeyModal({ open: false, info: null, source: 'settings' })}
-              >
-                Schließen
-              </button>
-              <button
-                className="primary"
-                onClick={() => handleCopyRecoveryKey(recoveryKeyModal.info?.recoveryKey ?? '')}
-              >
-                <FontAwesomeIcon icon={faCopy} /> Kopieren
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {recoveryReset.open && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <div className="modal-icon">
-              <FontAwesomeIcon icon={faKey} />
-            </div>
-            <h3>Passwort mit Recovery Key setzen</h3>
-            <div className="modal-body">
-              <p className="modal-text">
-                Setzt ein neues Passwort. Der Recovery Key bleibt derselbe und sollte sicher aufbewahrt sein.
-              </p>
-              <label className="full-width">
-                Recovery Key
-                <textarea
-                  value={recoveryReset.recoveryKey}
-                  onChange={(e) => setRecoveryReset((prev) => ({ ...prev, recoveryKey: e.target.value }))}
-                  rows={3}
-                  placeholder="Base64 oder Hex"
-                  className="long-text"
-                />
-              </label>
-              <label className="full-width">
-                Neues Passwort
-                <input
-                  type="password"
-                  value={recoveryReset.newPassword}
-                  onChange={(e) => setRecoveryReset((prev) => ({ ...prev, newPassword: e.target.value }))}
-                  placeholder="Neues Passwort"
-                />
-              </label>
-              <label className="full-width">
-                Wiederholen
-                <input
-                  type="password"
-                  value={recoveryReset.repeat}
-                  onChange={(e) => setRecoveryReset((prev) => ({ ...prev, repeat: e.target.value }))}
-                  placeholder="Wiederholen"
-                />
-              </label>
-              {recoveryReset.error && <div className="error">{recoveryReset.error}</div>}
-            </div>
-            <div className="modal-actions">
-              <button
-                className="ghost-button"
-                onClick={() =>
-                  setRecoveryReset({ open: false, recoveryKey: '', newPassword: '', repeat: '', error: null })
-                }
-              >
-                Abbrechen
-              </button>
-              <button className="primary" onClick={handleRecoveryReset} disabled={loading}>
-                Zurücksetzen
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  );
-
   const confirmDeleteEmployee = (id?: number) => {
     if (!id) return;
     confirmAction('Mitarbeiter:in und Historie wirklich löschen?', () => deleteEmployee(id), {
@@ -1050,6 +601,22 @@ const App = () => {
       },
       { confirmLabel: 'Importieren', danger: true },
     );
+  };
+
+  const handleSaveBaseHoursValue = async () => {
+    const val = Number(baseHoursInput);
+    if (Number.isNaN(val) || val <= 0) {
+      handleError(new Error('Bitte eine gültige Zahl > 0 eingeben.'));
+      return;
+    }
+    try {
+      const saved = await window.api.setBaseHours(val);
+      setBaseHours(saved || 36);
+      setToast(`Basis-Stunden gesetzt auf ${saved}.`);
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      handleError(err);
+    }
   };
 
   const handleDropDatabase = () => {
@@ -1235,6 +802,63 @@ const App = () => {
     );
   };
 
+  const openNewPeriodModal = () => {
+    if (!selectedEmployee) return;
+    setAddPeriodForm({
+      startDate: `${year}-01-01`,
+      endDate: '',
+      fte: 1,
+      qualification: qualifications[0]?.name ?? selectedEmployee.qualification,
+      periodId: undefined,
+      note: '',
+    });
+    setEventModal({
+      open: true,
+      id: undefined,
+      eventDate: new Date().toISOString().slice(0, 10),
+      type: 'period',
+      title: '',
+      details: '',
+      previousValue: null,
+      newValue: null,
+    });
+  };
+
+  const openExistingPeriodModal = (period: EmploymentPeriod) => {
+    if (!selectedEmployee) return;
+    setAddPeriodForm({
+      startDate: period.startDate,
+      endDate: period.endDate ?? '',
+      fte: period.fte,
+      qualification: period.qualification ?? selectedEmployee.qualification,
+      periodId: period.id,
+      note: period.note ?? '',
+    });
+    setEventModal({
+      open: true,
+      id: undefined,
+      eventDate: new Date().toISOString().slice(0, 10),
+      type: 'period',
+      title: '',
+      details: '',
+      previousValue: null,
+      newValue: null,
+    });
+  };
+
+  const openEventModalForEvent = (ev: EmployeeEvent) => {
+    setEventModal({
+      open: true,
+      id: ev.id,
+      eventDate: ev.eventDate,
+      type: ev.type,
+      title: ev.title,
+      details: ev.details ?? '',
+      previousValue: ev.previousValue ?? null,
+      newValue: ev.newValue ?? null,
+    });
+  };
+
   const openEditModal = () => {
     if (!selectedEmployee) return;
     const computedWeeklyHours =
@@ -1290,26 +914,6 @@ const App = () => {
     events.forEach((ev) => items.push({ kind: 'event', date: ev.eventDate, record: ev }));
     return items.sort((a, b) => (a.date > b.date ? -1 : a.date < b.date ? 1 : 0));
   }, [periods, events]);
-
-  const buildNoteDiff = (prev: string, next: string): { text: string; kind: 'del' | 'add' | 'same' }[] => {
-    const left = prev.split('\n');
-    const right = next.split('\n');
-    const max = Math.max(left.length, right.length);
-    const rows: { text: string; kind: 'del' | 'add' | 'same' }[] = [];
-    for (let i = 0; i < max; i += 1) {
-      const a = left[i] ?? '';
-      const b = right[i] ?? '';
-      if (a === b) {
-        if (a.trim().length > 0) {
-          rows.push({ text: a, kind: 'same' });
-        }
-      } else {
-        if (a) rows.push({ text: a, kind: 'del' });
-        if (b) rows.push({ text: b, kind: 'add' });
-      }
-    }
-    return rows.length > 0 ? rows : [{ text: 'Keine Änderungen', kind: 'same' }];
-  };
 
   const pageTitle: Record<Page, string> = {
     dashboard: 'Dashboard',
@@ -1375,7 +979,20 @@ const App = () => {
           onForgotPassword={appReady.configured ? startRecoveryReset : undefined}
           globalError={error}
         />
-        {renderRecoveryModals()}
+        <RecoveryKeyModal
+          open={recoveryKeyModal.open}
+          info={recoveryKeyModal.info}
+          source={recoveryKeyModal.source}
+          onClose={() => setRecoveryKeyModal({ open: false, info: null, source: 'settings' })}
+          onCopy={handleCopyRecoveryKey}
+        />
+        <RecoveryResetModal
+          state={recoveryReset}
+          loading={loading}
+          onChange={(next) => setRecoveryReset((prev) => ({ ...prev, ...next }))}
+          onClose={() => setRecoveryReset({ open: false, recoveryKey: '', newPassword: '', repeat: '', error: null })}
+          onSubmit={handleRecoveryReset}
+        />
         {toast && <div className="toast">{toast}</div>}
         {error && <div className="toast error-toast">{error}</div>}
         {loading && <div className="loading">Lade / speichere …</div>}
@@ -1422,703 +1039,110 @@ const App = () => {
         </header>
 
         {page === 'dashboard' && (
-          <div className="stack dashboard">
-            <div className="card dashboard-hero">
-              <div>
-                <p className="eyebrow">Übersicht {year}</p>
-                <h2>Willkommen zurück</h2>
-                <p className="subtitle">Kennzahlen und Qualifikationen im gewählten Jahr.</p>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">Kennzahlen</p>
-                  <h3>Jahr im Blick</h3>
-                </div>
-              </div>
-              <div className="grid stats-grid dashboard-stats">
-                <StatCard
-                  label="Gesamt VZÄ"
-                  value={`${totalFte.toFixed(2)}`}
-                  sub="Summe aller Stellenanteile"
-                />
-                <StatCard
-                  label="Mitarbeitende"
-                  value={`${totalHeadcount}`}
-                  sub="im gewählten Jahr"
-                />
-                <StatCard
-                  label="Ø VZÄ je Person"
-                  value={averageFte.toFixed(2)}
-                  sub="Durchschnittliche Auslastung"
-                />
-                <StatCard
-                  label="Qualifikationen"
-                  value={`${dataset?.aggregation.categories.length ?? 0}`}
-                  sub="mit VZÄ im Jahr"
-                />
-                <StatCard
-                  label="Basis-Stunden"
-                  value={`${baseHours || 36}`}
-                  sub="Grundlage VZÄ-Berechnung"
-                />
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">Qualifikationen</p>
-                  <h3>VZÄ je Qualifikation</h3>
-                </div>
-              </div>
-              <div className="qual-grid">
-                {(dataset?.aggregation.categories ?? []).length > 0 ? (
-                  dataset?.aggregation.categories.map((cat) => {
-                    const percent = totalFte > 0 ? Math.min(100, (cat.fte / totalFte) * 100) : 0;
-                    return (
-                      <div className="qual-card" key={cat.qualification}>
-                        <div className="qual-card-head">
-                          <div className="qual-title">{cat.qualification}</div>
-                          <div className="qual-meta">{cat.headcount} Personen</div>
-                        </div>
-                        <div className="qual-fte">{cat.fte.toFixed(2)} VZÄ</div>
-                        <div className="qual-progress">
-                          <div className="qual-progress-bar" style={{ width: `${percent}%` }} />
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="empty">Keine Qualifikationen mit VZÄ im gewählten Jahr.</div>
-                )}
-              </div>
-            </div>
-          </div>
+          <Dashboard
+            year={year}
+            dataset={dataset}
+            baseHours={baseHours}
+            averageFte={averageFte}
+            totalFte={totalFte}
+            totalHeadcount={totalHeadcount}
+          />
         )}
 
         {page === 'view' && selectedEmployee && (
-          <div className="stack">
-            <div className="card detail-header">
-              <div className="detail-main">
-                <div
-                  className="detail-name"
-                  onClick={openEditModal}
-                  title="Name und Notiz bearbeiten"
-                >
-                  <div className="detail-name-title clickable-text">
-                    <h2>{selectedEmployee.name}</h2>
-                    <FontAwesomeIcon icon={faPen} className="edit-inline-icon" />
-                  </div>
-                  <div className="note-inline clickable-text">
-                    {selectedEmployee.note && selectedEmployee.note.trim().length > 0 ? (
-                      <span className="note-text-inline">{selectedEmployee.note}</span>
-                    ) : (
-                      <span className="muted">Notiz hinzufügen</span>
-                    )}
-                  </div>
-                </div>
-                <div className="detail-meta">
-                  <span className="pill">{selectedEmployee.qualification}</span>
-                  {selectedEmployee.weeklyHours !== null && selectedEmployee.weeklyHours !== undefined && (
-                    <span className="pill editable-pill" onClick={openEditModal} title="Name/Notiz bearbeiten">
-                      Wochenstunden {selectedEmployee.weeklyHours}
-                    </span>
-                  )}
-                  <span className="pill editable-pill" onClick={openEditModal} title="Name/Notiz bearbeiten">
-                    <abbr className="help" title={fteHelp}>
-                      VZÄ
-                    </abbr>{' '}
-                    {selectedEmployee.fte.toFixed(2)}
-                  </span>
-                  <span className={`badge badge-${selectedEmployee.status}`}>{statusLabels[selectedEmployee.status]}</span>
-                  <span className="muted">
-                    {displayStart} – {selectedEmployee.endDate ?? 'aktuell'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="card">
-              <div className="form-header">
-                <h3>Historie</h3>
-                <div className="detail-actions">
-                  <button
-                    className="primary"
-                    onClick={() => {
-                      setAddPeriodForm({
-                        startDate: `${year}-01-01`,
-                        endDate: '',
-                        fte: 1,
-                        qualification: qualifications[0]?.name ?? selectedEmployee.qualification,
-                        periodId: undefined,
-                      });
-                      setEventModal({
-                        open: true,
-                        id: undefined,
-                        eventDate: new Date().toISOString().slice(0, 10),
-                        type: 'period',
-                        title: '',
-                        details: '',
-                        previousValue: null,
-                        newValue: null,
-                      });
-                    }}
-                  >
-                    <FontAwesomeIcon icon={faPlus} /> Neuer Eintrag
-                  </button>
-                </div>
-              </div>
-              <div className="timeline">
-                {timelineItems.map((item) => {
-                  if (item.kind === 'period') {
-                    const p = item.record;
-                    return (
-                      <button
-                        className="timeline-item"
-                        key={`p-${p.id ?? `${p.startDate}-${p.endDate}`}`}
-                        onClick={() => {
-                      setAddPeriodForm({
-                        startDate: p.startDate,
-                        endDate: p.endDate ?? '',
-                        fte: p.fte,
-                        qualification: p.qualification ?? selectedEmployee.qualification,
-                        periodId: p.id,
-                        note: p.note ?? '',
-                      });
-                      setEventModal({
-                        open: true,
-                            id: undefined,
-                            eventDate: new Date().toISOString().slice(0, 10),
-                            type: 'period',
-                            title: '',
-                            details: '',
-                            previousValue: null,
-                            newValue: null,
-                          });
-                        }}
-                      >
-                        <div className="timeline-dot" />
-                        <div className="timeline-content">
-                          <div className="timeline-title">
-                            {p.startDate} – {p.endDate ?? 'aktuell'}
-                          </div>
-                          <div className="timeline-meta">
-                            <span className="pill">{p.qualification ?? selectedEmployee.qualification}</span>
-                        <span className="pill">VZÄ {p.fte}</span>
-                        {p.note && <span className="muted">{p.note}</span>}
-                      </div>
-                    </div>
-                  </button>
-                    );
-                  }
-                  const ev = item.record;
-                  const typeLabels: Record<EmployeeEventType, string> = {
-                    join: 'Eintritt',
-                    leave: 'Austritt',
-                    'name-change': 'Namensänderung',
-                    'note-change': 'Notizänderung',
-                    'care-visit': 'Pflegevisite',
-                    'emergency-training': 'Notfallschulung',
-                    custom: 'Ereignis',
-                  };
-                  const prevFallback =
-                    ev.previousValue ??
-                    (ev.meta && (ev.meta as any).from ? String((ev.meta as any).from) : undefined);
-                  const newFallback =
-                    ev.newValue ?? (ev.meta && (ev.meta as any).to ? String((ev.meta as any).to) : undefined);
-                  const hasDiffValues = prevFallback !== undefined || newFallback !== undefined;
-                  const detail =
-                    ev.type === 'name-change' && (prevFallback || newFallback)
-                      ? `${prevFallback ?? ''} → ${newFallback ?? ''}`
-                      : ev.details;
-                  const isDiff = ev.type === 'note-change' && hasDiffValues;
-                  const prevVal = prevFallback ?? '';
-                  const newVal = newFallback ?? '';
-                  const diffLines = isDiff ? buildNoteDiff(prevVal, newVal) : [];
-                  return (
-                    <button
-                      className="timeline-item event"
-                      key={`e-${ev.id ?? `${ev.eventDate}-${ev.title}`}`}
-                      onClick={() =>
-                        setEventModal({
-                          open: true,
-                          id: ev.id,
-                          eventDate: ev.eventDate,
-                          type: ev.type,
-                          title: ev.title,
-                          details: ev.details ?? '',
-                          previousValue: ev.previousValue ?? null,
-                          newValue: ev.newValue ?? null,
-                        })
-                      }
-                    >
-                      <div className="timeline-dot event-dot" />
-                      <div className="timeline-content">
-                        <div className="timeline-title">
-                          {ev.eventDate} · {ev.title}
-                        </div>
-                        <div className="timeline-meta">
-                          <span className="pill pill-quiet">{typeLabels[ev.type]}</span>
-                          {detail &&
-                            (isDiff ? (
-                              <pre className="diff-text">
-                                {diffLines.map((line, idx) => (
-                                  <span
-                                    key={`${line.text}-${idx}`}
-                                    className={`diff-line ${line.kind === 'del' ? 'diff-del' : ''} ${line.kind === 'add' ? 'diff-add' : ''} ${line.kind === 'same' ? 'diff-same' : ''}`}
-                                  >
-                                    {line.kind === 'del' ? `-${line.text}` : line.kind === 'add' ? `+${line.text}` : line.text}
-                                  </span>
-                                ))}
-                              </pre>
-                            ) : (
-                              <span className="muted">{detail}</span>
-                            ))}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-                {timelineItems.length === 0 && <div className="empty">Keine Historie vorhanden.</div>}
-              </div>
-            </div>
-
-          </div>
+          <EmployeeDetail
+            employee={selectedEmployee}
+            displayStart={displayStart}
+            timelineItems={timelineItems}
+            onOpenEditModal={openEditModal}
+            onStartNewPeriod={openNewPeriodModal}
+            onSelectPeriod={openExistingPeriodModal}
+            onSelectEvent={openEventModalForEvent}
+          />
         )}
 
         {page === 'list' && (
-          <div className="stack">
-            <div className="card list-toolbar">
-              <div className="filters">
-                <input
-                  type="search"
-                  placeholder="Suchen (Name oder Qualifikation)…"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as any)}>
-                  <option value="all">Status: alle</option>
-                  <option value="active">aktiv</option>
-                  <option value="left">ausgeschieden</option>
-                </select>
-                <select value={qualificationFilter} onChange={(e) => setQualificationFilter(e.target.value)}>
-                  <option value="all">Qualifikation: alle</option>
-                  {qualifications.map((q) => (
-                    <option key={q.id ?? q.name} value={q.name}>
-                      {q.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">Mitarbeitende</p>
-                  <h3>Liste</h3>
-                </div>
-                <div className="toolbar-actions">
-                  <button className="ghost-button" onClick={() => handleExport('csv')}>
-                    <FontAwesomeIcon icon={faDownload} /> CSV
-                  </button>
-                  <button className="ghost-button" onClick={() => handleExport('xlsx')}>
-                    <FontAwesomeIcon icon={faDownload} /> Excel
-                  </button>
-                  <button className="primary" onClick={() => goTo('new')}>
-                    <FontAwesomeIcon icon={faPlus} /> Neu anlegen
-                  </button>
-                </div>
-              </div>
-              <Table
-                employees={filteredEmployees}
-                onSelect={handleSelect}
-                selectedId={form.id}
-                onDelete={confirmDeleteEmployee}
-              />
-            </div>
-          </div>
+          <EmployeeList
+            search={search}
+            statusFilter={statusFilter}
+            qualificationFilter={qualificationFilter}
+            qualifications={qualifications}
+            filteredEmployees={filteredEmployees}
+            selectedId={form.id}
+            onSearchChange={setSearch}
+            onStatusChange={(val) => setStatusFilter(val)}
+            onQualificationChange={setQualificationFilter}
+            onExport={handleExport}
+            onCreate={() => goTo('new')}
+            onSelect={handleSelect}
+            onDelete={confirmDeleteEmployee}
+          />
         )}
 
         {page === 'settings' && (
-          <div className="stack">
-            <div className="card form-card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">Qualifikationen</p>
-                  <h3>Typen verwalten</h3>
-                </div>
-                <button
-                  className="primary"
-                  onClick={() => setQualificationModal({ open: true, value: '', note: '', id: undefined })}
-                >
-                  <FontAwesomeIcon icon={faPlus} /> Neu
-                </button>
-              </div>
-              <div className="table-wrapper">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Notiz</th>
-                      <th style={{ width: 80 }}>Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {qualifications.map((q) => (
-                      <tr
-                        key={q.id ?? q.name}
-                        className="clickable-row"
-                        draggable={!!q.id}
-                        onDragStart={() => setDragQualificationId(q.id ?? null)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          if (!dragQualificationId || !q.id || dragQualificationId === q.id) return;
-                          const orderedIds = qualifications.map((item) => item.id!).filter(Boolean);
-                          const from = orderedIds.indexOf(dragQualificationId);
-                          const to = orderedIds.indexOf(q.id);
-                          if (from === -1 || to === -1) return;
-                          const reordered = [...orderedIds];
-                          const [moved] = reordered.splice(from, 1);
-                          reordered.splice(to, 0, moved);
-                          reorderQualification(reordered);
-                        }}
-                        onClick={() =>
-                          q.id &&
-                          setQualificationModal({
-                            open: true,
-                            id: q.id as number,
-                            value: qualificationEdits[q.id as number] ?? q.name,
-                            note: q.note ?? '',
-                          })
-                        }
-                      >
-                        <td>{q.name}</td>
-                        <td className="muted">{q.note ?? '—'}</td>
-                        <td>
-                          {q.id && (
-                            <button
-                              className="ghost-button danger icon-button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                confirmDeleteQualification(q.id as number);
-                              }}
-                              title="Löschen"
-                            >
-                              <FontAwesomeIcon icon={faTrash} />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                    {qualifications.length === 0 && (
-                      <tr>
-                        <td colSpan={3} className="empty">
-                          Keine Qualifikationen hinterlegt.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div className="card form-card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">Datenbank</p>
-                  <h3>Import / Export</h3>
-                </div>
-              </div>
-              <div className="form-grid">
-                <label className="full-width">Export</label>
-                <div className="inline-row">
-                  <button className="ghost-button" onClick={() => handleDbExport('plain')}>
-                    Unverschlüsselt exportieren (SQLite)
-                  </button>
-                  <button className="ghost-button" onClick={() => handleDbExport('encrypted')}>
-                    Verschlüsselt exportieren (.enc)
-                  </button>
-                </div>
-                <label className="full-width">Import</label>
-                <div className="inline-row">
-                  <button className="ghost-button" onClick={() => handleDbImport('plain')}>
-                    Unverschlüsselt importieren (SQLite)
-                  </button>
-                  <button className="ghost-button" onClick={() => handleDbImport('encrypted')}>
-                    Verschlüsselt importieren (.enc)
-                  </button>
-                </div>
-                <p className="subtitle small">
-                  Import ersetzt die lokale Datenbank. Verschlüsselte Importe erwarten das aktuelle App-Passwort /
-                  den geladenen Schlüssel.
-                </p>
-                {dbMessage && <p className="subtitle small success-text">{dbMessage}</p>}
-                <label className="full-width">
-                  Basis-Wochenstunden für VZÄ (Default 36)
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={baseHoursInput}
-                    onChange={(e) => setBaseHoursInput(e.target.value)}
-                  />
-                </label>
-                <div className="form-actions">
-                  <button
-                    className="ghost-button"
-                    onClick={async () => {
-                      const val = Number(baseHoursInput);
-                      if (Number.isNaN(val) || val <= 0) {
-                        handleError(new Error('Bitte eine gültige Zahl > 0 eingeben.'));
-                        return;
-                      }
-                      const saved = await window.api.setBaseHours(val);
-                      setBaseHours(saved || 36);
-                      setToast(`Basis-Stunden gesetzt auf ${saved}.`);
-                      setTimeout(() => setToast(null), 2000);
-                    }}
-                  >
-                    Basiswert speichern
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div className="card form-card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">Sicherheit</p>
-                  <h3>Recovery Key</h3>
-                </div>
-              </div>
-              <div className="form-grid">
-                <p className="subtitle small">
-                  Recovery Key entsperrt die Datenbank auch ohne Passwort. Sicher offline ablegen, nicht weitergeben.
-                </p>
-                <div className="inline-row">
-                  <button className="ghost-button" onClick={() => openRecoveryKey('settings')}>
-                    <FontAwesomeIcon icon={faKey} /> Recovery Key anzeigen
-                  </button>
-                </div>
-                <p className="subtitle small">
-                  Tipp: Direkt nach der Einrichtung speichern. Wer den Key besitzt, kann alle Daten lesen.
-                </p>
-              </div>
-            </div>
-            <div className="card form-card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">Updates</p>
-                  <h3>Neue Versionen</h3>
-                </div>
-              </div>
-              <div className="form-grid">
-                <div className="inline-row">
-                  <button
-                    className="ghost-button"
-                    onClick={handleCheckUpdates}
-                    disabled={updateStatus.state === 'checking' || updateStatus.state === 'downloading'}
-                  >
-                    {updateStatus.state === 'checking' ? 'Suche …' : 'Nach Updates suchen'}
-                  </button>
-                  {updateStatus.state === 'downloaded' && (
-                    <button className="primary" onClick={handleInstallUpdate}>
-                      Neu starten & installieren
-                    </button>
-                  )}
-                </div>
-                <p className="subtitle small">
-                  {updateStatus.state === 'available' &&
-                    `Update ${updateStatus.version ? `v${updateStatus.version}` : ''} verfügbar.`}
-                  {updateStatus.state === 'downloading' &&
-                    `Lade ${updateStatus.version ? `v${updateStatus.version}` : 'Update'} (${Math.round(
-                      updateStatus.progress ?? 0,
-                    )}%) …`}
-                  {updateStatus.state === 'downloaded' &&
-                    `Update ${updateStatus.version ? `v${updateStatus.version}` : ''} heruntergeladen.`}
-                  {updateStatus.state === 'not-available' && 'Keine neueren Updates gefunden.'}
-                  {updateStatus.state === 'error' && `Update-Fehler: ${updateStatus.message}`}
-                  {updateStatus.state === 'idle' &&
-                    'Updates werden beim Start, stündlich und bei Fokus geprüft.'}
-                </p>
-              </div>
-            </div>
-
-            <div className="card danger-card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">Danger Zone</p>
-                  <h3>Unwiderrufliche Aktionen</h3>
-                </div>
-              </div>
-              <div className="danger-actions">
-                <div>
-                  <h4>Datenbank löschen</h4>
-                  <p className="subtitle small">
-                    Entfernt die lokale Datenbank, das Passwort bleibt erhalten. Import oder Neuerfassung danach nötig.
-                  </p>
-                </div>
-                <button className="ghost-button danger" onClick={handleDropDatabase}>
-                  Datenbank löschen
-                </button>
-              </div>
-              <div className="danger-actions">
-                <div>
-                  <h4>App zurücksetzen</h4>
-                  <p className="subtitle small">
-                    Löscht Datenbank und Konfiguration. Beim nächsten Start wird die Ersteinrichtung angezeigt.
-                  </p>
-                </div>
-                <button className="ghost-button danger" onClick={handleFullReset}>
-                  App zurücksetzen
-                </button>
-              </div>
-            </div>
-
-          </div>
+          <SettingsPage
+            qualifications={qualifications}
+            qualificationEdits={qualificationEdits}
+            dbMessage={dbMessage}
+            baseHoursInput={baseHoursInput}
+            updateStatus={updateStatus}
+            onOpenQualificationModal={(payload) =>
+              setQualificationModal({
+                open: true,
+                id: payload.id,
+                value: payload.value,
+                note: payload.note,
+              })
+            }
+            onReorderQualification={reorderQualification}
+            onDeleteQualification={confirmDeleteQualification}
+            onBaseHoursInputChange={setBaseHoursInput}
+            onSaveBaseHours={handleSaveBaseHoursValue}
+            onDbExport={handleDbExport}
+            onDbImport={handleDbImport}
+            onOpenRecoveryKey={() => openRecoveryKey('settings')}
+            onCheckUpdates={handleCheckUpdates}
+            onInstallUpdate={handleInstallUpdate}
+            onDropDatabase={handleDropDatabase}
+            onFullReset={handleFullReset}
+          />
         )}
 
         {(page === 'new' || page === 'edit') && (
-          <div className="grid form-layout">
-            <div className="card form-card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">Erfassen / Bearbeiten</p>
-                  <h3>{page === 'edit' ? 'Datensatz aktualisieren' : 'Neue Person'}</h3>
-                </div>
-                <div className="form-actions">
-                  {page === 'edit' && form.id && (
-                    <button className="ghost-button danger" onClick={() => confirmDeleteEmployee(form.id)}>
-                      <FontAwesomeIcon icon={faTrash} /> Löschen
-                    </button>
-                  )}
-                  <button className="ghost-button" onClick={resetForm}>
-                    Zurücksetzen
-                  </button>
-                </div>
-              </div>
-
-              <div className="form-grid">
-                <label>
-                  Name*
-                  <input
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Vor- und Nachname"
-                  />
-                </label>
-                <label>
-                  Qualifikation
-                  <select
-                    value={form.qualification}
-                    onChange={(e) => setForm({ ...form, qualification: e.target.value })}
-                  >
-                    {qualifications.map((q) => (
-                      <option key={q.id ?? q.name} value={q.name}>
-                        {q.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Quelle / Herkunft
-                  <input
-                    value={form.dataSource}
-                    onChange={(e) => setForm({ ...form, dataSource: e.target.value })}
-                    placeholder="Verwaltungssoftware, NAS, ..."
-                  />
-                </label>
-                <label>
-                  Start
-                  <input
-                    type="date"
-                    value={form.startDate}
-                    onChange={(e) => setForm({ ...form, startDate: e.target.value })}
-                  />
-                </label>
-                <label>
-                  Ende
-                  <input
-                    type="date"
-                    value={form.endDate}
-                    onChange={(e) => setForm({ ...form, endDate: e.target.value })}
-                  />
-                </label>
-                <label>
-                  <abbr className="help" title={fteHelp}>
-                    FTE / VZÄ
-                  </abbr>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={form.fte}
-                    onChange={(e) => setForm({ ...form, fte: Number(e.target.value) })}
-                  />
-                </label>
-                <label className="full-width">
-                  Notiz / Bemerkung
-                  <textarea
-                    value={form.note}
-                    onChange={(e) => setForm({ ...form, note: e.target.value })}
-                    placeholder="Fortbildungen, Besonderheiten, Ansprechpartner"
-                  />
-                </label>
-                {page === 'edit' && form.id && (
-                  <label className="full-width checkbox">
-                    <input
-                      type="checkbox"
-                      checked={addNewPeriod}
-                      onChange={(e) => setAddNewPeriod(e.target.checked)}
-                    />
-                    Neue Historienperiode anlegen (bestehende Einträge bleiben erhalten)
-                  </label>
-                )}
-              </div>
-
-              <div className="form-actions">
-                <button className="primary" onClick={handleSave} disabled={loading}>
-                  {loading ? 'Speichern…' : 'Speichern'}
-                </button>
-              </div>
-            </div>
-
-            {page === 'edit' && <HistoryList items={periods} />}
-          </div>
+          <EmployeeForm
+            page={page}
+            form={form}
+            qualifications={qualifications}
+            addNewPeriod={addNewPeriod}
+            periods={periods}
+            loading={loading}
+            onChange={setForm}
+            onReset={resetForm}
+            onSave={handleSave}
+            onToggleAddPeriod={setAddNewPeriod}
+            onDelete={form.id ? () => confirmDeleteEmployee(form.id) : undefined}
+          />
         )}
       </div>
 
-      {renderRecoveryModals()}
+      <RecoveryKeyModal
+        open={recoveryKeyModal.open}
+        info={recoveryKeyModal.info}
+        source={recoveryKeyModal.source}
+        onClose={() => setRecoveryKeyModal({ open: false, info: null, source: 'settings' })}
+        onCopy={handleCopyRecoveryKey}
+      />
+      <RecoveryResetModal
+        state={recoveryReset}
+        loading={loading}
+        onChange={(next) => setRecoveryReset((prev) => ({ ...prev, ...next }))}
+        onClose={() => setRecoveryReset({ open: false, recoveryKey: '', newPassword: '', repeat: '', error: null })}
+        onSubmit={handleRecoveryReset}
+      />
       {toast && <div className="toast">{toast}</div>}
       {error && <div className="toast error-toast">{error}</div>}
       {loading && <div className="loading">Lade / speichere …</div>}
-      {confirmState && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <div className="modal-icon danger">
-              <FontAwesomeIcon icon={faTriangleExclamation} />
-            </div>
-            <h3>Bist du sicher?</h3>
-            <p className="modal-text">{confirmState.message}</p>
-            <div className="modal-actions">
-              <button className="ghost-button" onClick={() => setConfirmState(null)}>
-                Abbrechen
-              </button>
-              <button
-                className={`ghost-button ${confirmState.danger ? 'danger' : ''}`}
-                onClick={() => {
-                  confirmState.onConfirm();
-                  setConfirmState(null);
-                }}
-              >
-                {confirmState.confirmLabel ?? 'OK'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
       {eventModal.open && selectedEmployee && (
         <div className="modal-backdrop">
             <div className="modal">
@@ -2329,48 +1353,12 @@ const App = () => {
           </div>
         </div>
       )}
-      {qualificationModal.open && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <div className="modal-icon">
-              <FontAwesomeIcon icon={qualificationModal.id ? faPen : faPlus} />
-            </div>
-            <h3>{qualificationModal.id ? 'Qualifikation bearbeiten' : 'Neue Qualifikation'}</h3>
-            <div className="form-grid">
-              <label className="full-width">
-                Bezeichnung
-                <input
-                  value={qualificationModal.value}
-                  onChange={(e) => setQualificationModal({ ...qualificationModal, value: e.target.value })}
-                  placeholder="z. B. 3-jährig examiniert"
-                />
-              </label>
-              <label className="full-width">
-                Notiz
-                <textarea
-                  value={qualificationModal.note}
-                  onChange={(e) => setQualificationModal({ ...qualificationModal, note: e.target.value })}
-                  placeholder="Optional: Besonderheiten, Zertifizierungen, Einsatzbereiche"
-                />
-              </label>
-            </div>
-            <div className="modal-actions">
-              <div></div>
-              <div className="inline-row compact">
-                <button
-                  className="ghost-button"
-                  onClick={() => setQualificationModal({ open: false, value: '', note: '' })}
-                >
-                  Abbrechen
-                </button>
-                <button className="primary" onClick={handleSaveQualificationModal}>
-                  Speichern
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <QualificationModal
+        state={qualificationModal}
+        onChange={(next) => setQualificationModal((prev) => ({ ...prev, ...next }))}
+        onClose={() => setQualificationModal({ open: false, value: '', note: '', id: undefined })}
+        onSave={handleSaveQualificationModal}
+      />
       {editModal.open && selectedEmployee && (
         <div className="modal-backdrop">
           <div className="modal">
