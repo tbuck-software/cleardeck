@@ -13,7 +13,6 @@ export interface QualificationType {
 export interface Employee {
   id?: number;
   name: string;
-  qualification: Qualification | string;
   note?: string;
   weeklyHours?: number | null;
   createdAt?: string;
@@ -26,7 +25,7 @@ export interface EmploymentPeriod {
   endDate?: string | null;
   fte: number;
   weeklyHours?: number | null;
-  qualification?: Qualification | string | null;
+  qualification: Qualification | string;
   note?: string | null;
 }
 
@@ -37,6 +36,7 @@ export interface EmployeeWithPeriod extends Employee {
   fte: number;
   status: 'active' | 'left';
   weeklyHours?: number | null;
+  qualification: Qualification | string;
 }
 
 export type EmployeeEventType =

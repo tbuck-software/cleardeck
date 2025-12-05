@@ -13,6 +13,7 @@ import { v003_fte } from './v003_fte';
 import { v004_drop_weeklyhours } from './v004_drop_weeklyhours';
 import { v005_drop_datasource } from './v005_drop_datasource';
 import { v006_drop_documentpath } from './v006_drop_documentpath';
+import { v007_drop_employee_qualification } from './v007_drop_employee_qualification';
 
 export type Migration = {
   version: number;
@@ -31,6 +32,7 @@ export const migrations: Migration[] = [
   v004_drop_weeklyhours,
   v005_drop_datasource,
   v006_drop_documentpath,
+  v007_drop_employee_qualification,
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations.length;

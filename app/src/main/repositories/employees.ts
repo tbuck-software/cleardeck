@@ -99,7 +99,6 @@ export const getYearDataset = (year: number): YearDataset => {
       `
       SELECT e.id as employeeId,
              e.name,
-             e.qualification as baseQualification,
              e.note,
              p.weeklyHours,
              e.createdAt,
@@ -107,7 +106,7 @@ export const getYearDataset = (year: number): YearDataset => {
              p.startDate,
              p.endDate,
              p.fte,
-             COALESCE(p.qualification, e.qualification) as qualification,
+             p.qualification as qualification,
              p.note as periodNote
       FROM employees e
       INNER JOIN employment_periods p ON p.employeeId = e.id
@@ -183,19 +182,18 @@ export const saveEmployee = (input: {
   id?: number;
   periodId?: number;
   name: string;
-  qualification: string;
   fte: number;
   weeklyHours?: number | null;
   startDate: string;
   endDate?: string | null;
   note?: string | null;
   year: number;
+  qualification: string;
 }): YearDataset => {
   const db = getDb();
 
   const employeePayload = {
     name: input.name,
-    qualification: input.qualification,
     note: input.note ?? null,
   };
 
@@ -211,7 +209,7 @@ export const saveEmployee = (input: {
   if (input.id) {
     db.prepare(
       `UPDATE employees
-       SET name = @name, qualification = @qualification, note = @note
+       SET name = @name, note = @note
        WHERE id = @id`,
     ).run({ ...employeePayload, id: input.id });
 
@@ -230,8 +228,8 @@ export const saveEmployee = (input: {
   } else {
     const empResult = db
       .prepare(
-        `INSERT INTO employees (name, qualification, note)
-         VALUES (@name, @qualification, @note)`,
+        `INSERT INTO employees (name, note)
+         VALUES (@name, @note)`,
       )
       .run(employeePayload);
     const newId = empResult.lastInsertRowid as number;
