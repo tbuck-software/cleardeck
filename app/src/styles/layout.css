@@ -156,27 +156,35 @@
   gap: 12px;
 }
 
+/* List & Filters */
 .list-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1 1 460px;
-  flex-wrap: wrap;
+  background: transparent;
+  border: none;
+  padding: 0;
+  box-shadow: none;
+  margin-bottom: 16px;
 }
 
 .filters {
-  display: grid;
-  grid-template-columns: minmax(220px, 1.3fr) repeat(2, minmax(180px, 1fr));
-  gap: 10px;
-  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.filters input,
+.filters select {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--card-border);
+  min-width: 200px;
+  flex: 1;
+}
+
+.filters input:focus,
+.filters select:focus {
+  border-color: var(--accent);
+  outline: 3px solid rgba(37, 99, 235, 0.1);
 }
 
 .toolbar-actions {
@@ -191,41 +199,76 @@
   gap: 14px;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+/* Table Modernization */
+.table-wrapper {
+  overflow: auto;
+  border-radius: 16px;
+  border: 1px solid var(--card-border);
+  background: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  margin-top: 24px;
 }
 
-th,
-td {
-  text-align: left;
-  padding: 10px 12px;
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 14px;
+}
+
+thead {
+  background: #f8fafc;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 th {
-  color: var(--muted);
+  text-align: left;
+  padding: 14px 16px;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   border-bottom: 1px solid var(--card-border);
+  white-space: nowrap;
+}
+
+td {
+  text-align: left;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  transition: background 0.1s;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
 }
 
 tbody tr {
-  border-bottom: 1px solid #111827;
   cursor: pointer;
+  transition: background 0.15s ease;
 }
 
 tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: #f1f5f9;
 }
 
 tbody tr.selected {
-  background: rgba(56, 189, 248, 0.09);
+  background: #eff6ff;
 }
 
-.table-wrapper {
-  overflow: auto;
-  border-radius: 14px;
-  border: 1px solid var(--card-border);
-  background: #ffffff;
+tbody tr.selected td {
+  color: #1e40af;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 48px;
+  font-style: italic;
 }
 
 .aggregation {
