@@ -554,11 +554,11 @@ const saveEmployee = (input: {
   linked?: boolean;
 }): YearDataset => {
   ensureDbReady();
-  const fullTimeHours = 40;
+  const fullTimeHours = getBaseHours();
   const useLinked = input.linked ?? true;
   const derivedFte =
     useLinked && input.weeklyHours !== undefined && input.weeklyHours !== null
-      ? Number((input.weeklyHours / fullTimeHours).toFixed(2))
+      ? Math.min(1, Number((input.weeklyHours / fullTimeHours).toFixed(2)))
       : input.fte;
 
   const mutation = db.transaction(() => {

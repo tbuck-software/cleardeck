@@ -50,7 +50,7 @@ const EmployeeTable = ({ employees, onSelect, onDelete, selectedId }: EmployeeTa
             <td>{emp.qualification}</td>
             <td>{emp.startDate}</td>
             <td>{emp.endDate ?? '—'}</td>
-            <td>{emp.fte.toFixed(2)}</td>
+            <td>{emp.fte !== undefined && emp.fte !== null ? Number(emp.fte).toFixed(2) : '—'}</td>
             <td>{emp.weeklyHours ?? '—'}</td>
             <td>
               <Badge status={emp.status} />

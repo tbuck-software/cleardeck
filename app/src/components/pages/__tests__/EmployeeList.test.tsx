@@ -15,6 +15,16 @@ const employees: EmployeeWithPeriod[] = [
     weeklyHours: 30,
     status: 'active',
   },
+  {
+    id: 2,
+    name: 'Bruno Stringwert',
+    qualification: 'Admin',
+    startDate: '2024-01-01',
+    endDate: '',
+    fte: '0.5' as unknown as number,
+    weeklyHours: 20,
+    status: 'left',
+  },
 ];
 
 const qualifications: QualificationType[] = [
@@ -72,5 +82,7 @@ describe('EmployeeList', () => {
     expect(onSelect).toHaveBeenCalledWith(employees[0]);
 
     expect(screen.getByText('30')).toBeInTheDocument();
+    expect(screen.getByText('20')).toBeInTheDocument();
+    expect(screen.getAllByText('0.50').length).toBeGreaterThan(0);
   });
 });
