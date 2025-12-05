@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import api from '../services/api';
 import type { AppState, UpdateStatus } from '../shared/types';
 import type { ConfirmActionOptions } from '../types/ui';
-import type { Api } from '../preload';
 
 type UseSettingsDbParams = {
   year: number;
@@ -44,7 +44,7 @@ const useSettingsDb = ({
       return;
     }
     try {
-      const saved = await window.api.setBaseHours(val);
+      const saved = await api.settings.setBaseHours(val);
       hydrateBaseHours(saved);
       onToast(`Basis-Stunden gesetzt auf ${saved}.`);
       setTimeout(() => onToast(null), 2000);
@@ -57,7 +57,7 @@ const useSettingsDb = ({
     async (mode: 'encrypted' | 'plain') => {
       setDbMessage(null);
       try {
-        const result = await window.api.exportDatabase(mode);
+        const result = await api.db.export(mode);
         if (result.saved) {
           setDbMessage(`Export gespeichert unter: ${result.filePath}`);
         } else if (result.error) {
@@ -76,7 +76,7 @@ const useSettingsDb = ({
         'Import ersetzt die aktuelle Datenbank. Es wird vorher ein Backup erstellt. Fortfahren?',
         async () => {
           try {
-            const result = await window.api.importDatabase(mode);
+            const result = await api.db.import(mode);
             if (result.imported) {
               await refreshDataset(year);
               const info = result.backupPath
@@ -101,7 +101,7 @@ const useSettingsDb = ({
       'Datenbank endgültig löschen? Dies entfernt alle Einträge, behält aber das Passwort.',
       async () => {
         try {
-          await window.api.deleteDatabase();
+          await api.db.delete();
           onAfterDrop();
           onToast('Datenbank gelöscht. Bitte neu importieren oder neu anlegen.');
         } catch (err) {
@@ -119,7 +119,7 @@ const useSettingsDb = ({
       'App komplett zurücksetzen? Datenbank und Konfiguration werden entfernt. Die App startet wie neu.',
       async () => {
         try {
-          const state = await window.api.resetApp();
+          const state = await api.db.reset();
           onAfterReset(state);
           onToast('App zurückgesetzt. Bitte neu einrichten.');
         } catch (err) {
@@ -134,7 +134,7 @@ const useSettingsDb = ({
 
   const handleCheckUpdates = useCallback(async () => {
     try {
-      await window.api.checkUpdates();
+      await api.updates.check();
     } catch (err) {
       onError(err);
     }
@@ -142,7 +142,7 @@ const useSettingsDb = ({
 
   const handleInstallUpdate = useCallback(async () => {
     try {
-      await window.api.installUpdate();
+      await api.updates.install();
     } catch (err) {
       onError(err);
     }
@@ -154,17 +154,13 @@ const useSettingsDb = ({
   }, []);
 
   useEffect(() => {
-    const updateApi = (window as Window & { api?: Api }).api;
-    if (!updateApi || typeof updateApi.onUpdateStatus !== 'function' || typeof updateApi.checkUpdates !== 'function') {
-      return undefined;
-    }
-    const unsubscribe = updateApi.onUpdateStatus((status) => {
+    const unsubscribe = api.updates.onStatus((status) => {
       setUpdateStatus(status);
     });
 
     const runCheck = () => {
       if (snoozeUpdates) return;
-      updateApi.checkUpdates().catch(() => {
+      api.updates.check().catch(() => {
         setUpdateStatus((prev) => prev);
       });
     };
@@ -186,7 +182,7 @@ const useSettingsDb = ({
 
   const hydrateFromApi = useCallback(async () => {
     try {
-      const hours = await window.api.getBaseHours();
+      const hours = await api.settings.getBaseHours();
       hydrateBaseHours(hours);
     } catch (err) {
       onError(err);

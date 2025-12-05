@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import api from '../services/api';
 import type { RecoveryKeyModalState, RecoveryResetState } from '../types/ui';
 
 const initialRecoveryResetState: RecoveryResetState = {
@@ -31,7 +32,7 @@ const useRecovery = ({
 
   const openRecoveryKey = async (source: 'setup' | 'settings') => {
     try {
-      const info = await window.api.getRecoveryKey();
+      const info = await api.recovery.getKey();
       setRecoveryKeyModal({ open: true, info, source });
     } catch (err) {
       onError(err);
@@ -67,7 +68,7 @@ const useRecovery = ({
     setRecoveryReset((prev) => ({ ...prev, error: null }));
     setLoading(true);
     try {
-      const state = await window.api.recoverWithKey({
+      const state = await api.recovery.recover({
         recoveryKey: recoveryReset.recoveryKey,
         newPassword: recoveryReset.newPassword,
       });

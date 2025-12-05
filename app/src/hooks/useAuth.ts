@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import api from '../services/api';
 import type { AppState, QualificationType } from '../shared/types';
 import type { FormState } from '../types/ui';
 
@@ -45,16 +46,16 @@ const useAuth = ({
 
   const bootstrap = useCallback(async () => {
     try {
-      const state = await window.api.getAppState();
+      const state = await api.auth.getState();
       setAppReady(state);
       if (state.unlocked) {
         try {
-          const hours = await window.api.getBaseHours();
+          const hours = await api.settings.getBaseHours();
           hydrateBaseHours(hours);
         } catch (err) {
           handleError(err);
         }
-        const qualis = await window.api.listQualifications();
+        const qualis = await api.qualifications.list();
         hydrateQualifications(qualis);
         await refreshDataset(year);
       }
@@ -75,8 +76,8 @@ const useAuth = ({
 
   useEffect(() => {
     if (!appReady.unlocked) return;
-    window.api
-      .listQualifications()
+    api.qualifications
+      .list()
       .then((list) => {
         hydrateQualifications(list);
       })
@@ -87,7 +88,8 @@ const useAuth = ({
     async (password: string, mode: 'setup' | 'login') => {
       try {
         setLoading(true);
-        const state = mode === 'setup' ? await window.api.register(password) : await window.api.login(password);
+        const state =
+          mode === 'setup' ? await api.auth.register(password) : await api.auth.login(password);
         setAppReady(state);
         if (state.unlocked) {
           await refreshDataset(year);

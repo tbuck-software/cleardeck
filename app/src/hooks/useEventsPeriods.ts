@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import api from '../services/api';
 import type {
   EmploymentPeriod,
   EmployeeEvent,
@@ -75,9 +76,9 @@ const useEventsPeriods = ({
   const loadHistory = useCallback(
     async (employeeId: number) => {
       try {
-        const history = await window.api.listPeriods(employeeId);
+        const history = await api.employees.listPeriods(employeeId);
         setPeriods(history);
-        const evs = await window.api.listEvents(employeeId);
+        const evs = await api.employees.listEvents(employeeId);
         setEvents(evs);
       } catch (err) {
         handleError(err);
@@ -149,7 +150,7 @@ const useEventsPeriods = ({
         year,
         periodNote: addPeriodForm.note ?? null,
       };
-      const updated = await window.api.saveEmployee(payload);
+      const updated = await api.employees.save(payload);
       setDataset(updated);
       await loadHistory(selectedEmployee.id ?? 0);
       setToast(addPeriodForm.periodId ? 'Periode aktualisiert.' : 'Qualifikation/Periode hinzugefügt.');
@@ -181,7 +182,7 @@ const useEventsPeriods = ({
     if (!periodToDelete) return;
     setLoading(true);
     try {
-      const updated = await window.api.deletePeriod(periodToDelete.periodId, year);
+      const updated = await api.periods.delete(periodToDelete.periodId, year);
       setDataset(updated);
       if (selectedEmployee?.id) {
         await loadHistory(selectedEmployee.id);
@@ -209,7 +210,7 @@ const useEventsPeriods = ({
     }
     setLoading(true);
     try {
-      const list = await window.api.saveEvent({
+      const list = await api.events.save({
         id: eventModal.id,
         employeeId: selectedEmployee.id ?? 0,
         eventDate: eventModal.eventDate,
@@ -220,7 +221,7 @@ const useEventsPeriods = ({
         newValue: eventModal.newValue ?? null,
       });
       setEvents(list);
-      const refreshed = await window.api.listEmployees(year);
+      const refreshed = await api.employees.list(year);
       setDataset(refreshed);
       syncSelectedFromDataset(refreshed, selectedEmployee.id);
       setToast('Ereignis gespeichert.');
@@ -257,9 +258,9 @@ const useEventsPeriods = ({
         async () => {
           setLoading(true);
           try {
-            const list = await window.api.deleteEvent(id, selectedEmployee.id ?? 0);
+            const list = await api.events.delete(id, selectedEmployee.id ?? 0);
             setEvents(list);
-            const refreshed = await window.api.listEmployees(year);
+            const refreshed = await api.employees.list(year);
             setDataset(refreshed);
             syncSelectedFromDataset(refreshed, selectedEmployee.id);
             setToast('Ereignis gelöscht.');

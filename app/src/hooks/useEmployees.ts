@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import api from '../services/api';
 import type { EmployeeWithPeriod, QualificationType, YearDataset } from '../shared/types';
 import type { ConfirmActionOptions, EditModalState, FormState, Page, QualificationModalState } from '../types/ui';
 import { statusLabels } from '../constants';
@@ -75,7 +76,7 @@ const useEmployees = ({
     async (targetYear: number) => {
       setLoading(true);
       try {
-        const data = await window.api.listEmployees(targetYear);
+        const data = await api.employees.list(targetYear);
         setDataset(data);
       } catch (err) {
         handleError(err);
@@ -150,7 +151,7 @@ const useEmployees = ({
         useLinked && !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0
           ? Math.min(1, Number((weeklyHoursNum / (baseHours || 36)).toFixed(2)))
           : form.fte;
-      const payload: Parameters<typeof window.api.saveEmployee>[0] = {
+      const payload: Parameters<typeof api.employees.save>[0] = {
         ...form,
         periodId: addNewPeriod ? undefined : form.periodId,
         periodNote: null,
@@ -158,7 +159,7 @@ const useEmployees = ({
         fte: Number(derivedFte) || 0,
         year,
       };
-      const updated = await window.api.saveEmployee(payload);
+      const updated = await api.employees.save(payload);
       setDataset(updated);
       setToast('Gespeichert.');
       setPage('list');
@@ -175,7 +176,7 @@ const useEmployees = ({
     async (id: number) => {
       setLoading(true);
       try {
-        const updated = await window.api.deleteEmployee(id, year);
+        const updated = await api.employees.delete(id, year);
         setDataset(updated);
         resetForm();
         setPage('list');
@@ -204,7 +205,7 @@ const useEmployees = ({
   const handleExport = useCallback(
     async (format: 'csv' | 'xlsx') => {
       try {
-        const result = await window.api.exportData(year, format);
+        const result = await api.data.export(year, format);
         if (result.saved) {
           setToast(`Export gespeichert: ${result.filePath}`);
           setTimeout(() => setToast(null), 2800);
@@ -224,9 +225,9 @@ const useEmployees = ({
     try {
       let list: QualificationType[] = qualifications;
       if (qualificationModal.id) {
-        list = await window.api.updateQualification(qualificationModal.id, val, qualificationModal.note);
+        list = await api.qualifications.update(qualificationModal.id, val, qualificationModal.note);
       } else {
-        list = await window.api.addQualification(val, qualificationModal.note);
+        list = await api.qualifications.add(val, qualificationModal.note);
       }
       setQualifications(list);
       const edits: Record<number, string> = {};
@@ -245,7 +246,7 @@ const useEmployees = ({
   const handleDeleteQualification = useCallback(
     async (id: number) => {
       try {
-        const list = await window.api.deleteQualification(id);
+        const list = await api.qualifications.delete(id);
         setQualifications(list);
         setQualificationEdits({});
         setToast('Qualifikation gelöscht.');
@@ -270,7 +271,7 @@ const useEmployees = ({
   const reorderQualification = useCallback(
     async (orderedIds: number[]) => {
       try {
-        const list = await window.api.reorderQualifications(orderedIds);
+        const list = await api.qualifications.reorder(orderedIds);
         setQualifications(list);
         const edits: Record<number, string> = {};
         list.forEach((q) => {
@@ -325,7 +326,7 @@ const useEmployees = ({
         year,
         linked: useLinked,
       };
-      const updated = await window.api.saveEmployee(payload);
+      const updated = await api.employees.save(payload);
       setDataset(updated);
       setSelectedEmployee({
         ...selectedEmployee,
