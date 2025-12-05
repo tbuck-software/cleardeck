@@ -111,7 +111,7 @@ export const exportData = async (
   const ext = format === 'csv' ? 'csv' : 'xlsx';
   const { canceled, filePath } = await dialog.showSaveDialog({
     title: `Daten als ${ext.toUpperCase()} exportieren`,
-    defaultPath: `mitarbeitende-${year}.${ext}`,
+    defaultPath: `team-${year}.${ext}`,
     filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
   });
 
@@ -132,7 +132,7 @@ export const exportData = async (
 
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb, ws, 'Mitarbeitende');
+  XLSX.utils.book_append_sheet(wb, ws, 'Team');
 
   const writeToPath = (target: string) => {
     if (format === 'csv') {

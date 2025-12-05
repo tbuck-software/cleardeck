@@ -37,7 +37,7 @@ type UseEmployeesParams = {
 
 const pageTitle: Record<Page, string> = {
   dashboard: 'Dashboard',
-  list: 'Mitarbeitende',
+  list: 'Team',
   new: 'Neu anlegen',
   edit: 'Bearbeiten',
   settings: 'Einstellungen',
@@ -202,7 +202,7 @@ const useEmployees = ({
   const confirmDeleteEmployee = useCallback(
     (id?: number) => {
       if (!id) return;
-      confirmAction('Mitarbeiter:in und Historie wirklich löschen?', () => deleteEmployee(id), {
+      confirmAction('Teammitglied und Historie wirklich löschen?', () => deleteEmployee(id), {
         confirmLabel: 'Löschen',
         danger: true,
       });
@@ -459,11 +459,11 @@ const useEmployees = ({
   const crumbs = useCallback(
     (): { label: string; page?: Page }[] => {
       if (page === 'dashboard') return [{ label: 'Dashboard' }];
-      if (page === 'list') return [{ label: 'Dashboard', page: 'dashboard' }, { label: 'Mitarbeitende' }];
+      if (page === 'list') return [{ label: 'Dashboard', page: 'dashboard' }, { label: 'Team' }];
       if (page === 'new')
         return [
           { label: 'Dashboard', page: 'dashboard' },
-          { label: 'Mitarbeitende', page: 'list' },
+          { label: 'Team', page: 'list' },
           { label: 'Neu anlegen' },
         ];
       if (page === 'settings')
@@ -474,12 +474,12 @@ const useEmployees = ({
       if (page === 'view' && selectedEmployee)
         return [
           { label: 'Dashboard', page: 'dashboard' },
-          { label: 'Mitarbeitende', page: 'list' },
+          { label: 'Team', page: 'list' },
           { label: selectedEmployee.name },
         ];
       return [
         { label: 'Dashboard', page: 'dashboard' },
-        { label: 'Mitarbeitende', page: 'list' },
+        { label: 'Team', page: 'list' },
         { label: 'Bearbeiten' },
       ];
     },

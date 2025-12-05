@@ -62,7 +62,7 @@ const EmployeeList = ({
     <div className="card">
       <div className="form-header">
         <div>
-          <p className="eyebrow">Mitarbeitende</p>
+            <p className="eyebrow">Team</p>
           <h3>Liste</h3>
         </div>
         <div className="toolbar-actions">

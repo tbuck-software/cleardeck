@@ -67,7 +67,7 @@ const Dashboard = ({
                 icon={faChartPie}
               />
               <StatCard
-                label="Mitarbeitende"
+                label="Team"
                 value={`${totalHeadcount}`}
                 sub="im gewählten Jahr"
                 icon={faUsers}

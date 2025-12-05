@@ -23,7 +23,7 @@ const Sidebar = ({
 }: SidebarProps) => {
   const navItems: { key: Page; label: string; icon: any }[] = [
     { key: 'dashboard', label: 'Dashboard', icon: faGaugeHigh },
-    { key: 'list', label: 'Mitarbeitende', icon: faUsers },
+    { key: 'list', label: 'Team', icon: faUsers },
   ];
 
   return (

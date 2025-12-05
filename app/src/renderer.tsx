@@ -224,7 +224,7 @@ const App = () => {
                 </span>
               ))}
             </div>
-            <p className="eyebrow">Mitarbeiter & VZÄ</p>
+            <p className="eyebrow">Team & VZÄ</p>
             <h1>{pageTitle[page]}</h1>
             <p className="subtitle">{pageSubtitle[page]}</p>
           </div>
@@ -347,7 +347,7 @@ const App = () => {
             <div className="modal-icon">
               <FontAwesomeIcon icon={isCreateMode ? faPlus : faPen} />
             </div>
-            <h3>{isCreateMode ? 'Mitarbeiter:in anlegen' : 'Mitarbeiter:in bearbeiten'}</h3>
+            <h3>{isCreateMode ? 'Teammitglied anlegen' : 'Teammitglied bearbeiten'}</h3>
             <div className="modal-body">
               {isCreateMode && (
                 <div className="form-grid">

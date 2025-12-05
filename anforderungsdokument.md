@@ -1,18 +1,18 @@
-# Anforderungsdokument: Mitarbeiter- und FTE-Uebersicht
+# Anforderungsdokument: Team- und FTE-Uebersicht
 
 ## Zweck und Zielbild
-- Zentrale, einfach pflegbare Tabelle fuer alle jemals beschaeftigten Mitarbeitenden.
+- Zentrale, einfach pflegbare Tabelle fuer alle jemals beschaeftigten Teammitglieder.
 - Schnelle Erstellung der Nachweise fuer den Krankenkassenverband zum zuletzt abgeschlossenen Geschaeftsjahr.
 - Auswertungen nach Jahr, Qualifikation und Vollzeitaequivalent (VZAE) ohne manuelle Recherchen in verschiedenen Systemen.
 
 ## Ausgangslage / Schmerzpunkte
-- Verwaltungssoftware liefert nur aktuelle bzw. inaktive Mitarbeitende, aber keine Jahresfilter oder Historie.
-- Export aus der Software zeigt Stellenanteile nur fuer aktuelle Mitarbeitende; vergangene Jahre muessen manuell recherchiert werden.
+- Verwaltungssoftware liefert nur aktuelle bzw. inaktive Teammitglieder, aber keine Jahresfilter oder Historie.
+- Export aus der Software zeigt Stellenanteile nur fuer aktuelle Teammitglieder; vergangene Jahre muessen manuell recherchiert werden.
 - Historische Daten liegen verstreut in NAS-Personalordnern (gescannte Personalfrageboegen, Vertraege, Kuendigungen); Start- und Enddaten muessen dort einzeln gesucht werden.
 - Bisherige Excel-Listen wurden begonnen, aber nicht fertiggestellt oder gingen verloren.
 
 ## Scope
-- Abdeckung aller Mitarbeitenden (aktiv, inaktiv, ausgeschieden) mit historischer Sicht.
+- Abdeckung aller Teammitglieder (aktiv, inaktiv, ausgeschieden) mit historischer Sicht.
 - Schwerpunktjahr zunaechst 2024; andere Jahre sollen filter- und auswertbar sein.
 - Zielplattform: lokal nutzbare Tabelle (Excel/Sheets-kompatibel); cloudunabhaengig, um Upload-Probleme und Datenvolumen zu vermeiden.
 - Umsetzung als Desktop-App mit Electron (moderner, leicht bedienbarer UI).
@@ -22,14 +22,14 @@
 - Name
 - Qualifikationskategorie: `3-jaehrig examiniert`, `1-jaehrig examiniert`, `Pflegekraft/-helfer` (plus optionale Spezialqualifikationen)
 - Eintrittsdatum
-- Austrittsdatum (leer bei aktiven Mitarbeitenden)
+- Austrittsdatum (leer bei aktiven Teammitgliedern)
 - Stellenanteil (z. B. 1,0; 0,5)
 - Status abgeleitet aus Datum + Jahr (aktiv im Zieljahr, ausgeschieden, neu gestartet)
 - Datenquelle/Herkunft (z. B. Verwaltungssoftware, Personalakte/NAS)
 - Freitext-Bemerkung
 
 ## Funktionen
-- **Jahresfilter**: Auswahl eines Zieljahres (z. B. 2024) zeigt alle Mitarbeitenden, die im Jahr ganz oder teilweise beschaeftigt waren.
+- **Jahresfilter**: Auswahl eines Zieljahres (z. B. 2024) zeigt alle Teammitglieder, die im Jahr ganz oder teilweise beschaeftigt waren.
 - **FTE/VZAE-Berechnung**: Summen pro Jahr und Qualifikationskategorie auf Basis des Stellenanteils; Darstellung der Gesamt-VZAE.
 - **Aggregationen**: Kopfkennzahlen pro Jahr (Anzahl Personen pro Kategorie, VZAE pro Kategorie, Gesamt-VZAE).
 - **Detailansicht**: Listendarstellung mit allen Datenfeldern; Export als Excel/CSV.
@@ -46,7 +46,7 @@
 - Keine Abbildung komplexer Vertragsversionen; es reicht ein konsistenter Satz Eintritt/Austritt/Stellenanteil pro Person (manuell pflegbar).
 
 ## Datenquellen und Erfassung
-- Verwaltungssoftware: Export der aktuellen Mitarbeitenden inkl. Stellenanteil (keine Historie); dient als Ausgangspunkt fuer aktive Personen.
+- Verwaltungssoftware: Export der aktuellen Teammitglieder inkl. Stellenanteil (keine Historie); dient als Ausgangspunkt fuer aktive Personen.
 - NAS-Personalordner: manuelle Sichtung von Personalfrageboegen, Vertraegen, Kuendigungen fuer historische Start-/Enddaten.
 - Laufende Pflege: Neueintritte und Austritte sofort in der Tabelle nachtragen; Stellenanteils-Aenderungen erfassen, damit VZAE stimmt.
 - Dokumente lesen: Wichtige Metadaten (Eintritt, Austritt, Stellenanteil, Qualifikation) aus gescannten/abgelegten Dateien extrahieren (halbautomatisch), um Nachpflege zu beschleunigen.
@@ -58,7 +58,7 @@
 
 ## Architektur / Technik
 - Electron-Desktop-App (UI modern, touch/mausfreundlich), lokal lauffaehig ohne permanente Cloud-Abhaengigkeiten.
-- Datenhaltung: SQLite (lokal, relational, unterstuetzt 1:n und m:n Tabellen fuer Mitarbeitende, Qualifikationen, Fortbildungen, Dokumentverweise etc.).
+- Datenhaltung: SQLite (lokal, relational, unterstuetzt 1:n und m:n Tabellen fuer Teammitglieder, Qualifikationen, Fortbildungen, Dokumentverweise etc.).
 - Export: Excel/CSV; optional PDF-Report spaeter.
 - Auto-Update: bevorzugt private GitHub-Releases (nicht oeffentlicher Feed, Auth/Token); alternativ eigener PHP-Server als Update-Host.
 - Deployment: Signierte Builds pro OS (mind. Windows; macOS via Electron moeglich). Update-Kanal: Stable (evtl. spaeter Beta).

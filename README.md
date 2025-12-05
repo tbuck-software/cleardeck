@@ -1,9 +1,9 @@
 # Employee DB – Electron Desktop App
 
-Lokale Mitarbeiter- und VZAE-Uebersicht als Electron-Desktop-App mit SQLite, Export (CSV/Excel) und Passwortschutz.
+Lokale Team- und VZAE-Uebersicht als Electron-Desktop-App mit SQLite, Export (CSV/Excel) und Passwortschutz.
 
 ## Features (Stand: Prototyp)
-- Historisierte Mitarbeitenden-Tabelle (Eintritt, Austritt, Stellenanteil, Qualifikation, Quelle, Notiz, Dokumentenpfad).
+- Historisierte Team-Tabelle (Eintritt, Austritt, Stellenanteil, Qualifikation, Quelle, Notiz, Dokumentenpfad).
 - Jahresfilter mit Status (aktiv, ausgeschieden) und VZAE-Berechnung je Qualifikation + Gesamt.
 - Historienpflege: mehrere Perioden pro Person moeglich (Toggle „Neue Historienperiode“).
 - Exporte: CSV oder Excel inkl. Aggregationen je Qualifikation.
