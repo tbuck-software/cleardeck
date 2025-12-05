@@ -1,0 +1,21 @@
+.sort-header {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sort-header:hover {
+  color: var(--accent-strong);
+}
+
+.sort-icon {
+  font-size: 11px;
+  opacity: 0.5;
+}
+
+.sort-header.active .sort-icon {
+  opacity: 1;
+  color: var(--accent);
+}

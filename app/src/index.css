@@ -2,6 +2,8 @@
 @import './styles/layout.css';
 @import './styles/forms.css';
 @import './styles/modals.css';
+@import './styles/table-sort.css';
+
 
 :root {
   --bg: #f5f7fb;
