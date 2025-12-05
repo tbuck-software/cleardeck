@@ -1,0 +1,163 @@
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--card-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text);
+  font-size: 14px;
+}
+
+textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+button {
+  border: none;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  transition: transform 0.05s ease, background 0.1s ease;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+.primary {
+  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  color: #0f172a;
+}
+
+.ghost-button {
+  background: #eef2ff;
+  color: var(--text);
+  border: 1px solid #e0e7ff;
+}
+
+.danger {
+  color: var(--danger);
+}
+
+.form-card {
+  background: var(--panel-strong);
+}
+
+.danger-card {
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  background: #fff1f2;
+}
+
+.danger-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid #fecdd3;
+}
+
+.danger-actions:first-of-type {
+  border-top: none;
+}
+
+.form-layout {
+  grid-template-columns: 1.2fr 0.8fr;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.form-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.inline-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.inline-row input {
+  width: 100%;
+}
+
+.inline-row.compact {
+  grid-template-columns: repeat(2, auto);
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 38px;
+}
+
+.link-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.link-toggle.compact {
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.link-row {
+  display: grid;
+  grid-template-columns: 1.2fr auto 1.4fr;
+  gap: 10px;
+  align-items: end;
+}
+
+.link-row.full-width {
+  grid-column: 1 / -1;
+}
+
+.inline {
+  width: 120px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
