@@ -6,7 +6,14 @@ import type {
   QualificationType,
   YearDataset,
 } from '../shared/types';
-import type { AddPeriodFormState, EventModalState, FormState, TimelineItem } from '../types/ui';
+import type {
+  AddPeriodFormState,
+  ConfirmActionOptions,
+  EventModalState,
+  FormState,
+  PeriodToDeleteState,
+  TimelineItem,
+} from '../types/ui';
 
 type UseEventsPeriodsParams = {
   year: number;
@@ -21,7 +28,7 @@ type UseEventsPeriodsParams = {
   confirmAction: (
     message: string,
     action: () => Promise<void> | void,
-    opts?: { confirmLabel?: string; danger?: boolean },
+    opts?: ConfirmActionOptions,
   ) => void;
 };
 
@@ -62,7 +69,7 @@ const useEventsPeriods = ({
   const [addPeriodForm, setAddPeriodForm] = useState<AddPeriodFormState>(
     initialAddPeriodForm(year, qualifications[0]?.name ?? ''),
   );
-  const [periodToDelete, setPeriodToDelete] = useState<{ periodId: number; label: string } | null>(null);
+  const [periodToDelete, setPeriodToDelete] = useState<PeriodToDeleteState>(null);
   const [eventModal, setEventModal] = useState<EventModalState>(initialEventModal());
 
   const loadHistory = useCallback(

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { QualificationType } from '../shared/types';
+import type { AppState, QualificationType } from '../shared/types';
 import type { FormState } from '../types/ui';
 
 type UseAuthParams = {
@@ -25,7 +25,7 @@ const useAuth = ({
   setQualificationEdits,
   hydrateBaseHours,
 }: UseAuthParams) => {
-  const [appReady, setAppReady] = useState<{ configured: boolean; unlocked: boolean }>({
+  const [appReady, setAppReady] = useState<AppState>({
     configured: false,
     unlocked: false,
   });

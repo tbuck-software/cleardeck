@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { UpdateStatus } from '../shared/types';
+import type { AppState, UpdateStatus } from '../shared/types';
+import type { ConfirmActionOptions } from '../types/ui';
 import type { Api } from '../preload';
 
 type UseSettingsDbParams = {
@@ -10,10 +11,10 @@ type UseSettingsDbParams = {
   confirmAction: (
     message: string,
     action: () => Promise<void> | void,
-    opts?: { confirmLabel?: string; danger?: boolean },
+    opts?: ConfirmActionOptions,
   ) => void;
   onAfterDrop: () => void;
-  onAfterReset: (state: { configured: boolean; unlocked: boolean }) => void;
+  onAfterReset: (state: AppState) => void;
 };
 
 const useSettingsDb = ({

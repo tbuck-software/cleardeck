@@ -30,6 +30,8 @@ export type QualificationModalState = {
   note: string;
 };
 
+export type QualificationModalPayload = Pick<QualificationModalState, 'id' | 'value' | 'note'>;
+
 export type RecoveryResetState = {
   open: boolean;
   recoveryKey: string;
@@ -42,6 +44,11 @@ export type RecoveryKeyModalState = {
   open: boolean;
   info: RecoveryInfo | null;
   source: 'setup' | 'settings';
+};
+
+export type ConfirmActionOptions = {
+  confirmLabel?: string;
+  danger?: boolean;
 };
 
 export type ConfirmState = {
@@ -79,3 +86,5 @@ export type EventModalState = {
   previousValue?: string | null;
   newValue?: string | null;
 };
+
+export type PeriodToDeleteState = { periodId: number; label: string } | null;

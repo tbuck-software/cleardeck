@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react';
-import type { ConfirmState } from '../components/modals/ConfirmModal';
+import type { ConfirmActionOptions, ConfirmState } from '../types/ui';
 
 const useConfirmations = () => {
   const [confirmState, setConfirmState] = useState<ConfirmState>(null);
 
   const confirmAction = useCallback(
-    (message: string, action: () => Promise<void> | void, opts?: { confirmLabel?: string; danger?: boolean }) => {
+    (message: string, action: () => Promise<void> | void, opts?: ConfirmActionOptions) => {
       setConfirmState({ message, onConfirm: action, confirmLabel: opts?.confirmLabel, danger: opts?.danger });
     },
     [],

@@ -1,18 +1,16 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faKey, faCopy } from '@fortawesome/free-solid-svg-icons';
-import type { RecoveryInfo } from '../../shared/types';
+import type { RecoveryKeyModalState } from '../../types/ui';
 
 type RecoveryKeyModalProps = {
-  open: boolean;
-  info: RecoveryInfo | null;
-  source: 'setup' | 'settings';
+  state: RecoveryKeyModalState;
   onClose: () => void;
   onCopy: (key: string) => void;
 };
 
-const RecoveryKeyModal = ({ open, info, source, onClose, onCopy }: RecoveryKeyModalProps) => {
-  if (!open || !info) return null;
+const RecoveryKeyModal = ({ state, onClose, onCopy }: RecoveryKeyModalProps) => {
+  if (!state.open || !state.info) return null;
 
   return (
     <div className="modal-backdrop">
@@ -23,18 +21,18 @@ const RecoveryKeyModal = ({ open, info, source, onClose, onCopy }: RecoveryKeyMo
         <h3>Recovery Key sichern</h3>
         <div className="modal-body">
           <p className="modal-text">
-            {source === 'setup'
+            {state.source === 'setup'
               ? 'Bitte direkt nach der Einrichtung offline speichern. Wer den Key hat, kann die Datenbank entschlüsseln.'
               : 'Aktueller Schlüssel der Datenbank. Nur lokal speichern und nicht weitergeben.'}
           </p>
-          <div className="mono-block">{info.recoveryKey}</div>
-          <p className="subtitle small long-text">Fingerprint: {info.fingerprint}</p>
+          <div className="mono-block">{state.info.recoveryKey}</div>
+          <p className="subtitle small long-text">Fingerprint: {state.info.fingerprint}</p>
         </div>
         <div className="modal-actions">
           <button className="ghost-button" onClick={onClose}>
             Schließen
           </button>
-          <button className="primary" onClick={() => onCopy(info.recoveryKey)}>
+          <button className="primary" onClick={() => onCopy(state.info.recoveryKey)}>
             <FontAwesomeIcon icon={faCopy} /> Kopieren
           </button>
         </div>

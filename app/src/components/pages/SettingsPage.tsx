@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash, faKey } from '@fortawesome/free-solid-svg-icons';
 import type { QualificationType, UpdateStatus } from '../../shared/types';
+import type { QualificationModalPayload } from '../../types/ui';
 
 type SettingsPageProps = {
   qualifications: QualificationType[];
@@ -9,7 +10,7 @@ type SettingsPageProps = {
   dbMessage: string | null;
   baseHoursInput: string;
   updateStatus: UpdateStatus;
-  onOpenQualificationModal: (payload: { id?: number; value: string; note: string }) => void;
+  onOpenQualificationModal: (payload: QualificationModalPayload) => void;
   onReorderQualification: (orderedIds: number[]) => void | Promise<void>;
   onDeleteQualification: (id: number) => void;
   onBaseHoursInputChange: (val: string) => void;

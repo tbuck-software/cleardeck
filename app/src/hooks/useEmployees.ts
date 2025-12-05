@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { EmployeeWithPeriod, QualificationType, YearDataset } from '../shared/types';
-import type { EditModalState, FormState, Page, QualificationModalState } from '../types/ui';
+import type { ConfirmActionOptions, EditModalState, FormState, Page, QualificationModalState } from '../types/ui';
 import { statusLabels } from '../constants';
 
 export const emptyForm = (year: number, defaultQualification = ''): FormState => ({
@@ -25,7 +25,7 @@ type UseEmployeesParams = {
   confirmAction: (
     message: string,
     action: () => Promise<void> | void,
-    opts?: { confirmLabel?: string; danger?: boolean },
+    opts?: ConfirmActionOptions,
   ) => void;
 };
 
@@ -150,7 +150,7 @@ const useEmployees = ({
         useLinked && !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0
           ? Math.min(1, Number((weeklyHoursNum / (baseHours || 36)).toFixed(2)))
           : form.fte;
-      const payload = {
+      const payload: Parameters<typeof window.api.saveEmployee>[0] = {
         ...form,
         periodId: addNewPeriod ? undefined : form.periodId,
         periodNote: null,

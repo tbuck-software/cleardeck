@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { EmployeeWithPeriod } from '../shared/types';
+import type { AppState, EmployeeWithPeriod } from '../shared/types';
 import { statusLabels, fteHelp } from '../constants';
 import useConfirmations from './useConfirmations';
 import useRecovery from './useRecovery';
@@ -71,7 +71,7 @@ const useAppLogic = () => {
     setLoading,
   });
 
-  const appReadySetterRef = useRef<(state: { configured: boolean; unlocked: boolean }) => void>((state) => {
+  const appReadySetterRef = useRef<(state: AppState) => void>((state) => {
     void state;
   });
 

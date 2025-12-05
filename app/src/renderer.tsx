@@ -119,10 +119,8 @@ const App = () => {
           globalError={error}
         />
         <RecoveryKeyModal
-          open={recoveryKeyModal.open}
-          info={recoveryKeyModal.info}
-          source={recoveryKeyModal.source}
-          onClose={() => setRecoveryKeyModal({ open: false, info: null, source: 'settings' })}
+          state={recoveryKeyModal}
+          onClose={() => setRecoveryKeyModal((prev) => ({ ...prev, open: false, info: null }))}
           onCopy={handleCopyRecoveryKey}
         />
         <RecoveryResetModal
@@ -265,10 +263,8 @@ const App = () => {
       </div>
 
       <RecoveryKeyModal
-        open={recoveryKeyModal.open}
-        info={recoveryKeyModal.info}
-        source={recoveryKeyModal.source}
-        onClose={() => setRecoveryKeyModal({ open: false, info: null, source: 'settings' })}
+        state={recoveryKeyModal}
+        onClose={() => setRecoveryKeyModal((prev) => ({ ...prev, open: false, info: null }))}
         onCopy={handleCopyRecoveryKey}
       />
       <RecoveryResetModal

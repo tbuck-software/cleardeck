@@ -1,15 +1,7 @@
 import { useState } from 'react';
-import type { RecoveryInfo } from '../shared/types';
+import type { RecoveryKeyModalState, RecoveryResetState } from '../types/ui';
 
-type RecoveryState = {
-  open: boolean;
-  recoveryKey: string;
-  newPassword: string;
-  repeat: string;
-  error?: string | null;
-};
-
-const initialRecoveryState: RecoveryState = {
+const initialRecoveryResetState: RecoveryResetState = {
   open: false,
   recoveryKey: '',
   newPassword: '',
@@ -30,12 +22,12 @@ const useRecovery = ({
   year: number;
   setLoading: (val: boolean) => void;
 }) => {
-  const [recoveryKeyModal, setRecoveryKeyModal] = useState<{ open: boolean; info: RecoveryInfo | null; source: 'setup' | 'settings' }>({
+  const [recoveryKeyModal, setRecoveryKeyModal] = useState<RecoveryKeyModalState>({
     open: false,
     info: null,
     source: 'settings',
   });
-  const [recoveryReset, setRecoveryReset] = useState<RecoveryState>(initialRecoveryState);
+  const [recoveryReset, setRecoveryReset] = useState<RecoveryResetState>(initialRecoveryResetState);
 
   const openRecoveryKey = async (source: 'setup' | 'settings') => {
     try {
@@ -56,7 +48,7 @@ const useRecovery = ({
   };
 
   const startRecoveryReset = () => {
-    setRecoveryReset({ ...initialRecoveryState, open: true });
+    setRecoveryReset({ ...initialRecoveryResetState, open: true });
   };
 
   const handleRecoveryReset = async () => {
@@ -82,7 +74,7 @@ const useRecovery = ({
       if (state.unlocked) {
         await refreshDataset(year);
       }
-      setRecoveryReset(initialRecoveryState);
+      setRecoveryReset(initialRecoveryResetState);
       onToast('Passwort zurückgesetzt. Recovery Key sicher aufbewahren.', 2200);
     } catch (err) {
       onError(err);
