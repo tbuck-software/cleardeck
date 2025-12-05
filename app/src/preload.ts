@@ -27,10 +27,8 @@ export type Api = {
       periodId?: number;
       name: string;
       qualification: string;
-      dataSource?: string;
       note?: string;
       weeklyHours?: number | null;
-      documentPath?: string;
       startDate: string;
       endDate?: string | null;
       fte: number;

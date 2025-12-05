@@ -100,11 +100,9 @@ export const getYearDataset = (year: number): YearDataset => {
       SELECT e.id as employeeId,
              e.name,
              e.qualification as baseQualification,
-             e.dataSource,
              e.note,
              p.weeklyHours,
              e.createdAt,
-             e.documentPath,
              p.id as periodId,
              p.startDate,
              p.endDate,
@@ -140,9 +138,7 @@ export const getYearDataset = (year: number): YearDataset => {
         id: row.employeeId,
         name: row.name,
         qualification: row.qualification,
-        dataSource: row.dataSource ?? undefined,
         weeklyHours: row.weeklyHours ?? null,
-        documentPath: row.documentPath ?? undefined,
         createdAt: row.createdAt,
         startDate: effectiveStart,
         endDate: effectiveEnd ?? null,
@@ -192,9 +188,7 @@ export const saveEmployee = (input: {
   weeklyHours?: number | null;
   startDate: string;
   endDate?: string | null;
-  dataSource?: string | null;
   note?: string | null;
-  documentPath?: string | null;
   year: number;
 }): YearDataset => {
   const db = getDb();
@@ -202,9 +196,7 @@ export const saveEmployee = (input: {
   const employeePayload = {
     name: input.name,
     qualification: input.qualification,
-    dataSource: input.dataSource ?? null,
     note: input.note ?? null,
-    documentPath: input.documentPath ?? null,
   };
 
   const periodPayload = {
@@ -219,7 +211,7 @@ export const saveEmployee = (input: {
   if (input.id) {
     db.prepare(
       `UPDATE employees
-       SET name = @name, qualification = @qualification, dataSource = @dataSource, note = @note, documentPath = @documentPath
+       SET name = @name, qualification = @qualification, note = @note
        WHERE id = @id`,
     ).run({ ...employeePayload, id: input.id });
 
@@ -238,8 +230,8 @@ export const saveEmployee = (input: {
   } else {
     const empResult = db
       .prepare(
-        `INSERT INTO employees (name, qualification, dataSource, note, documentPath)
-         VALUES (@name, @qualification, @dataSource, @note, @documentPath)`,
+        `INSERT INTO employees (name, qualification, note)
+         VALUES (@name, @qualification, @note)`,
       )
       .run(employeePayload);
     const newId = empResult.lastInsertRowid as number;

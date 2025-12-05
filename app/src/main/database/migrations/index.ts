@@ -10,6 +10,9 @@ import type { Database as DatabaseType } from 'better-sqlite3';
 import { v001_initial } from './v001_initial';
 import { v002_columns } from './v002_columns';
 import { v003_fte } from './v003_fte';
+import { v004_drop_weeklyhours } from './v004_drop_weeklyhours';
+import { v005_drop_datasource } from './v005_drop_datasource';
+import { v006_drop_documentpath } from './v006_drop_documentpath';
 
 export type Migration = {
   version: number;
@@ -21,7 +24,14 @@ export type Migration = {
  * All migrations in order
  * Add new migrations at the end of this array
  */
-export const migrations: Migration[] = [v001_initial, v002_columns, v003_fte];
+export const migrations: Migration[] = [
+  v001_initial,
+  v002_columns,
+  v003_fte,
+  v004_drop_weeklyhours,
+  v005_drop_datasource,
+  v006_drop_documentpath,
+];
 
 export const CURRENT_SCHEMA_VERSION = migrations.length;
 

@@ -28,7 +28,6 @@ const EmployeeTable = ({ employees, onSelect, onDelete, selectedId }: EmployeeTa
           </th>
           <th>Wochenstunden</th>
           <th>Status</th>
-          <th>Quelle</th>
           <th>Aktion</th>
         </tr>
       </thead>
@@ -55,7 +54,6 @@ const EmployeeTable = ({ employees, onSelect, onDelete, selectedId }: EmployeeTa
             <td>
               <Badge status={emp.status} />
             </td>
-            <td>{emp.dataSource ?? '—'}</td>
             <td>
               <button
                 className="ghost-button danger icon-button"

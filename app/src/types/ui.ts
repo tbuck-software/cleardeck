@@ -14,7 +14,6 @@ export type FormState = {
   periodId?: number;
   name: string;
   qualification: string;
-  dataSource: string;
   note: string;
   startDate: string;
   endDate: string;

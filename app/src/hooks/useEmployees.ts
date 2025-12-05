@@ -8,7 +8,6 @@ import { deriveFteFromWeeklyHours } from '../utils/fte';
 export const emptyForm = (year: number, defaultQualification = ''): FormState => ({
   name: '',
   qualification: defaultQualification,
-  dataSource: '',
   note: '',
   startDate: `${year}-01-01`,
   endDate: '',
@@ -132,7 +131,6 @@ const useEmployees = ({
         periodId: emp.periodId,
         name: emp.name,
         qualification: emp.qualification,
-        dataSource: emp.dataSource ?? '',
         note: emp.note ?? '',
         startDate: emp.startDate,
         endDate: emp.endDate ?? '',

@@ -72,14 +72,6 @@ const EmployeeForm = ({
           </select>
         </label>
         <label>
-          Quelle / Herkunft
-          <input
-            value={form.dataSource}
-            onChange={(e) => onChange({ ...form, dataSource: e.target.value })}
-            placeholder="Verwaltungssoftware, NAS, ..."
-          />
-        </label>
-        <label>
           Start
           <input
             type="date"

@@ -128,7 +128,6 @@ export const exportData = async (
     'End-Datum': emp.endDate ?? '',
     Status: emp.status,
     Notiz: emp.note ?? '',
-    Datenquelle: emp.dataSource ?? '',
   }));
 
   const wb = XLSX.utils.book_new();

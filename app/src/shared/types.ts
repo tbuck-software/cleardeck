@@ -14,9 +14,7 @@ export interface Employee {
   id?: number;
   name: string;
   qualification: Qualification | string;
-  dataSource?: string;
   note?: string;
-  documentPath?: string;
   weeklyHours?: number | null;
   createdAt?: string;
 }

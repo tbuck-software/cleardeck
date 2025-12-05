@@ -140,7 +140,6 @@ const useEventsPeriods = ({
         id: selectedEmployee.id,
         name: selectedEmployee.name,
         qualification: addPeriodForm.qualification,
-        dataSource: selectedEmployee.dataSource ?? '',
         note: selectedEmployee.note ?? '',
         weeklyHours: form.weeklyHours ?? selectedEmployee.weeklyHours ?? null,
         startDate: addPeriodForm.startDate,

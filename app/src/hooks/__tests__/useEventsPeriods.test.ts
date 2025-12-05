@@ -38,7 +38,6 @@ const selectedEmployee: EmployeeWithPeriod = {
 const form = {
   name: '',
   qualification: 'Pflegekraft',
-  dataSource: '',
   note: '',
   startDate: '2024-01-01',
   endDate: '',
