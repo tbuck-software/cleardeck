@@ -1,13 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faPlus } from '@fortawesome/free-solid-svg-icons';
-
-export type QualificationModalState = {
-  open: boolean;
-  id?: number;
-  value: string;
-  note: string;
-};
+import type { QualificationModalState } from '../../types/ui';
 
 type QualificationModalProps = {
   state: QualificationModalState;

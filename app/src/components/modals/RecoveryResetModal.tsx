@@ -1,14 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faKey } from '@fortawesome/free-solid-svg-icons';
-
-export type RecoveryResetState = {
-  open: boolean;
-  recoveryKey: string;
-  newPassword: string;
-  repeat: string;
-  error?: string | null;
-};
+import type { RecoveryResetState } from '../../types/ui';
 
 type RecoveryResetModalProps = {
   state: RecoveryResetState;

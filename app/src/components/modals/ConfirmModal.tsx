@@ -1,13 +1,7 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
-
-export type ConfirmState = {
-  message: string;
-  onConfirm: () => Promise<void> | void;
-  confirmLabel?: string;
-  danger?: boolean;
-} | null;
+import type { ConfirmState } from '../../types/ui';
 
 type ConfirmModalProps = {
   state: ConfirmState;
