@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faTrash, faTriangleExclamation, faLink, faLinkSlash } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faTrash, faTriangleExclamation, faLink, faLinkSlash, faPen } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import AuthScreen from './components/auth/AuthScreen';
@@ -107,6 +107,61 @@ const App = () => {
       resetForm,
     },
   } = useAppLogic();
+
+  const updateWeeklyHours = (value: string) => {
+    setEditModal((prev) => {
+      const next = { ...prev, weeklyHours: value };
+      if (prev.linked) {
+        const hoursNum = Number(value);
+        if (!Number.isNaN(hoursNum) && hoursNum > 0) {
+          const fteVal = deriveFteFromWeeklyHours(hoursNum, baseHours || 36);
+          next.fteValue = fteVal ? fteVal.toFixed(2) : '';
+        } else {
+          next.fteValue = '';
+        }
+      }
+      return next;
+    });
+  };
+
+  const updateFteValue = (value: string) => {
+    setEditModal((prev) => {
+      const next = { ...prev, fteValue: value };
+      if (prev.linked) {
+        const fteNum = Number(value);
+        if (!Number.isNaN(fteNum) && fteNum > 0) {
+          const hoursVal = deriveWeeklyHoursFromFte(fteNum, baseHours || 36);
+          next.weeklyHours = hoursVal ? hoursVal.toFixed(1) : '';
+        } else {
+          next.weeklyHours = '';
+        }
+      }
+      return next;
+    });
+  };
+
+  const toggleLinked = (checked: boolean) => {
+    setEditModal((prev) => {
+      const next = { ...prev, linked: checked };
+      if (checked) {
+        // Recompute derived value when re-linking
+        if (prev.weeklyHours) {
+          const hoursNum = Number(prev.weeklyHours);
+          if (!Number.isNaN(hoursNum) && hoursNum > 0) {
+            const fteVal = deriveFteFromWeeklyHours(hoursNum, baseHours || 36);
+            next.fteValue = fteVal ? fteVal.toFixed(2) : '';
+          }
+        } else if (prev.fteValue) {
+          const fteNum = Number(prev.fteValue);
+          if (!Number.isNaN(fteNum) && fteNum > 0) {
+            const hoursVal = deriveWeeklyHoursFromFte(fteNum, baseHours || 36);
+            next.weeklyHours = hoursVal ? hoursVal.toFixed(1) : '';
+          }
+        }
+      }
+      return next;
+    });
+  };
 
   if (!appReady.configured || !appReady.unlocked) {
     const authMode: 'setup' | 'login' = appReady.configured ? 'login' : 'setup';
@@ -283,6 +338,86 @@ const App = () => {
       {error && <div className="toast error-toast">{error}</div>}
       {loading && <div className="loading">Lade / speichere …</div>}
       <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
+      {editModal.open && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-icon">
+              <FontAwesomeIcon icon={faPen} />
+            </div>
+            <h3>Mitarbeiter:in bearbeiten</h3>
+            <div className="modal-body">
+              <label className="full-width">
+                Name*
+                <input
+                  value={editModal.name}
+                  onChange={(e) => setEditModal((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Vor- und Nachname"
+                />
+              </label>
+              <div
+                className="inline-row compact"
+                style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0.75rem', alignItems: 'end' }}
+              >
+                <label className="grow">
+                  Wochenstunden
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={editModal.weeklyHours}
+                    onChange={(e) => updateWeeklyHours(e.target.value)}
+                    placeholder="z. B. 36"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="ghost-button icon-button"
+                  onClick={() => toggleLinked(!editModal.linked)}
+                  title={
+                    editModal.linked
+                      ? 'Verknüpfung aktiv – VZÄ wird aus Wochenstunden berechnet'
+                      : 'Verknüpfung aus – Felder manuell pflegen'
+                  }
+                >
+                  <FontAwesomeIcon icon={editModal.linked ? faLink : faLinkSlash} />
+                </button>
+                <label className="grow">
+                  <abbr className="help" title={fteHelp}>
+                    FTE / VZÄ
+                  </abbr>
+                  <input
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.01"
+                    value={editModal.fteValue}
+                    onChange={(e) => updateFteValue(e.target.value)}
+                    disabled={editModal.linked}
+                  />
+                </label>
+              </div>
+              <label className="full-width">
+                Notiz / Bemerkung
+                <textarea
+                  value={editModal.note}
+                  onChange={(e) => setEditModal((prev) => ({ ...prev, note: e.target.value }))}
+                  placeholder="Fortbildungen, Besonderheiten, Ansprechpartner"
+                />
+              </label>
+            </div>
+            <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div className="inline-row compact">
+                <button className="ghost-button" onClick={() => setEditModal((prev) => ({ ...prev, open: false }))}>
+                  Abbrechen
+                </button>
+                <button className="primary" onClick={handleEditModalSave}>
+                  Speichern
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {eventModal.open && selectedEmployee && (
         <div className="modal-backdrop">
           <div className="modal">

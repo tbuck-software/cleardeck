@@ -1,9 +1,17 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPen, faPlus } from '@fortawesome/free-solid-svg-icons';
+import {
+  faPen,
+  faPlus,
+  faGraduationCap,
+  faClock,
+  faChartPie,
+  faUserTag,
+} from '@fortawesome/free-solid-svg-icons';
 import type { EmployeeEvent, EmployeeWithPeriod, EmploymentPeriod } from '../../shared/types';
 import type { TimelineItem } from '../../types/ui';
-import { statusLabels, fteHelp } from '../../constants';
+import { fteHelp } from '../../constants';
+import Badge from '../ui/Badge';
 
 type EmployeeDetailProps = {
   employee: EmployeeWithPeriod;
@@ -55,39 +63,111 @@ const EmployeeDetail = ({
   onStartNewPeriod,
   onSelectPeriod,
   onSelectEvent,
-}: EmployeeDetailProps) => (
-  <div className="stack">
+}: EmployeeDetailProps) => {
+  const handleOpenEditModal = () => onOpenEditModal();
+
+  const handleEnterSpace = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onOpenEditModal();
+    }
+  };
+
+  return (
+    <div className="stack">
     <div className="card detail-header">
       <div className="detail-main">
-        <div className="detail-name" onClick={onOpenEditModal} title="Name und Notiz bearbeiten">
-          <div className="detail-name-title clickable-text">
+        <div
+          role="button"
+          tabIndex={0}
+          className="detail-name-block"
+          onClick={handleOpenEditModal}
+          onKeyDown={handleEnterSpace}
+          title="Name und Notiz bearbeiten"
+        >
+          <div className="detail-name-content">
             <h2>{employee.name}</h2>
-            <FontAwesomeIcon icon={faPen} className="edit-inline-icon" />
+            <div className="note-inline">
+              {employee.note && employee.note.trim().length > 0 ? (
+                <span className="note-text-inline">{employee.note}</span>
+              ) : (
+                <span className="muted">Notiz hinzufügen</span>
+              )}
+            </div>
           </div>
-          <div className="note-inline clickable-text">
-            {employee.note && employee.note.trim().length > 0 ? (
-              <span className="note-text-inline">{employee.note}</span>
-            ) : (
-              <span className="muted">Notiz hinzufügen</span>
-            )}
+          <div className="detail-edit-icon">
+            <FontAwesomeIcon icon={faPen} />
           </div>
         </div>
-        <div className="detail-meta">
-          <span className="pill">{employee.qualification}</span>
-          {employee.weeklyHours !== null && employee.weeklyHours !== undefined && (
-            <span className="pill editable-pill" onClick={onOpenEditModal} title="Name/Notiz bearbeiten">
-              Wochenstunden {employee.weeklyHours}
-            </span>
-          )}
-          <span className="pill editable-pill" onClick={onOpenEditModal} title="Name/Notiz bearbeiten">
-            <abbr className="help" title={fteHelp}>
-              VZÄ
-            </abbr>{' '}
-            {employee.fte.toFixed(2)}
-          </span>
-          <span className={`badge badge-${employee.status}`}>{statusLabels[employee.status]}</span>
+
+        <div className="detail-grid">
+          <div className="detail-item" title="Qualifikation">
+            <div className="detail-icon">
+              <FontAwesomeIcon icon={faGraduationCap} />
+            </div>
+            <div className="detail-content">
+              <span className="detail-label">Qualifikation</span>
+              <span className="detail-value">{employee.qualification}</span>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            className="detail-item clickable"
+            onClick={handleOpenEditModal}
+            onKeyDown={handleEnterSpace}
+            title="Wochenstunden bearbeiten"
+          >
+            <div className="detail-icon">
+              <FontAwesomeIcon icon={faClock} />
+            </div>
+            <div className="detail-content">
+              <span className="detail-label">Stunden</span>
+              <span className="detail-value">
+                {employee.weeklyHours !== null && employee.weeklyHours !== undefined
+                  ? `${employee.weeklyHours} h`
+                  : '—'}
+              </span>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className="detail-item clickable"
+            onClick={handleOpenEditModal}
+            onKeyDown={handleEnterSpace}
+            title="VZÄ bearbeiten"
+          >
+            <div className="detail-icon">
+              <FontAwesomeIcon icon={faChartPie} />
+            </div>
+            <div className="detail-content">
+              <span className="detail-label">
+                <abbr className="help" title={fteHelp}>
+                  VZÄ
+                </abbr>
+              </span>
+              <span className="detail-value">{employee.fte.toFixed(2)}</span>
+            </div>
+          </button>
+
+          <div className="detail-item">
+            <div className="detail-icon">
+              <FontAwesomeIcon icon={faUserTag} />
+            </div>
+            <div className="detail-content">
+              <span className="detail-label">Status</span>
+              <div className="detail-value">
+                <Badge status={employee.status} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="detail-footer">
           <span className="muted">
-            {displayStart} – {employee.endDate ?? 'aktuell'}
+            Im Unternehmen seit: {displayStart}{' '}
+            {employee.endDate ? `– ausgetreten: ${employee.endDate}` : '– heute'}
           </span>
         </div>
       </div>
@@ -134,7 +214,8 @@ const EmployeeDetail = ({
           const ev = item.record;
           const prevFallback =
             ev.previousValue ?? (ev.meta && (ev.meta as any).from ? String((ev.meta as any).from) : undefined);
-          const newFallback = ev.newValue ?? (ev.meta && (ev.meta as any).to ? String((ev.meta as any).to) : undefined);
+          const newFallback =
+            ev.newValue ?? (ev.meta && (ev.meta as any).to ? String((ev.meta as any).to) : undefined);
           const hasDiffValues = prevFallback !== undefined || newFallback !== undefined;
           const detail =
             ev.type === 'name-change' && (prevFallback || newFallback)
@@ -180,7 +261,8 @@ const EmployeeDetail = ({
         {timelineItems.length === 0 && <div className="empty">Keine Historie vorhanden.</div>}
       </div>
     </div>
-  </div>
-);
+    </div>
+  );
+};
 
 export default EmployeeDetail;
