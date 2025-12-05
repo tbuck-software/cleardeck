@@ -64,9 +64,33 @@ button:active {
   background: var(--panel-strong);
 }
 
-.danger-card {
-  border: 1px solid rgba(220, 38, 38, 0.3);
-  background: #fff1f2;
+.card.danger-card {
+  border: 1px solid #b91c1c;
+  background: linear-gradient(145deg, #dc2626, #b91c1c);
+  color: white;
+}
+
+.danger-card .eyebrow {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.danger-card h3,
+.danger-card h4 {
+  color: white;
+}
+
+.danger-card .subtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.danger-card .ghost-button.danger {
+  background: white;
+  color: #dc2626;
+  border: none;
+}
+
+.danger-card .ghost-button.danger:hover {
+  background: #fef2f2;
 }
 
 .danger-actions {
@@ -75,7 +99,7 @@ button:active {
   align-items: center;
   gap: 12px;
   padding: 12px 0;
-  border-top: 1px solid #fecdd3;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .danger-actions:first-of-type {
@@ -91,6 +115,7 @@ button:active {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  margin-bottom: 24px;
 }
 
 .form-grid {
