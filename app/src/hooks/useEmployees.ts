@@ -3,6 +3,7 @@ import api from '../services/api';
 import type { EmployeeWithPeriod, QualificationType, YearDataset } from '../shared/types';
 import type { ConfirmActionOptions, EditModalState, FormState, Page, QualificationModalState } from '../types/ui';
 import { statusLabels } from '../constants';
+import { deriveFteFromWeeklyHours } from '../utils/fte';
 
 export const emptyForm = (year: number, defaultQualification = ''): FormState => ({
   name: '',
@@ -15,6 +16,11 @@ export const emptyForm = (year: number, defaultQualification = ''): FormState =>
   weeklyHours: null,
   linked: true,
 });
+
+const clampFte = (val?: number | null) => {
+  if (val === undefined || val === null || Number.isNaN(val)) return 0;
+  return Math.min(1, val);
+};
 
 type UseEmployeesParams = {
   year: number;
@@ -37,6 +43,7 @@ const pageTitle: Record<Page, string> = {
   edit: 'Bearbeiten',
   settings: 'Einstellungen',
   view: 'Details',
+  dev: 'Entwickler',
 };
 
 const useEmployees = ({
@@ -109,14 +116,15 @@ const useEmployees = ({
   const handleSelect = useCallback(
     async (emp: EmployeeWithPeriod) => {
       setSelectedEmployee(emp);
-      const hoursFromFte = emp.fte ? (Math.max(emp.fte, 1) * (baseHours || 36)).toFixed(1) : '';
+      const cappedFte = clampFte(emp.fte);
+      const hoursFromFte = cappedFte ? (cappedFte * (baseHours || 36)).toFixed(1) : '';
       setEditModal({
         open: false,
         name: emp.name,
         note: emp.note ?? '',
         weeklyHours: emp.weeklyHours ? String(emp.weeklyHours) : hoursFromFte,
         linked: true,
-        fteValue: emp.fte ? emp.fte.toFixed(2) : '',
+        fteValue: emp.fte ? clampFte(emp.fte).toFixed(2) : '',
       });
       setPage('view');
       setForm({
@@ -128,7 +136,7 @@ const useEmployees = ({
         note: emp.note ?? '',
         startDate: emp.startDate,
         endDate: emp.endDate ?? '',
-        fte: emp.fte,
+        fte: clampFte(emp.fte),
         weeklyHours: emp.weeklyHours ?? null,
         linked: true,
       });
@@ -149,14 +157,14 @@ const useEmployees = ({
       const useLinked = form.linked ?? true;
       const derivedFte =
         useLinked && !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0
-          ? Math.min(1, Number((weeklyHoursNum / (baseHours || 36)).toFixed(2)))
+          ? deriveFteFromWeeklyHours(weeklyHoursNum, baseHours)
           : form.fte;
       const payload: Parameters<typeof api.employees.save>[0] = {
         ...form,
         periodId: addNewPeriod ? undefined : form.periodId,
         periodNote: null,
         endDate: form.endDate ? form.endDate : null,
-        fte: Number(derivedFte) || 0,
+        fte: Math.min(1, Number(derivedFte) || 0),
         year,
       };
       const updated = await api.employees.save(payload);
@@ -287,18 +295,19 @@ const useEmployees = ({
 
   const openEditModal = useCallback(() => {
     if (!selectedEmployee) return;
+    const cappedSelectedFte = clampFte(selectedEmployee.fte);
     const computedWeeklyHours =
       selectedEmployee.weeklyHours !== null && selectedEmployee.weeklyHours !== undefined
         ? String(selectedEmployee.weeklyHours)
-        : selectedEmployee.fte
-          ? (selectedEmployee.fte * (baseHours || 36)).toFixed(1)
+        : cappedSelectedFte
+          ? (cappedSelectedFte * (baseHours || 36)).toFixed(1)
           : '';
     setEditModal({
       open: true,
       name: selectedEmployee.name,
       note: selectedEmployee.note ?? '',
       weeklyHours: computedWeeklyHours,
-      fteValue: selectedEmployee.fte.toFixed(2),
+      fteValue: cappedSelectedFte ? cappedSelectedFte.toFixed(2) : '',
       linked: true,
     });
   }, [baseHours, selectedEmployee]);
@@ -310,11 +319,12 @@ const useEmployees = ({
       const weeklyHoursNum = editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : form.weeklyHours ?? null;
       const useLinked = editModal.linked ?? true;
       const derivedFte =
-        useLinked && weeklyHoursNum && weeklyHoursNum > 0
-          ? Math.min(1, Number((weeklyHoursNum / (baseHours || 36)).toFixed(2)))
+        useLinked && typeof weeklyHoursNum === 'number' && !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0
+          ? deriveFteFromWeeklyHours(weeklyHoursNum, baseHours)
           : editModal.fteValue
             ? Number(editModal.fteValue)
             : form.fte;
+      const fteValue = Math.min(1, Number(derivedFte) || 0);
       const payload = {
         ...form,
         name: editModal.name,
@@ -322,7 +332,7 @@ const useEmployees = ({
         periodId: form.periodId,
         endDate: form.endDate ? form.endDate : null,
         weeklyHours: weeklyHoursNum ?? null,
-        fte: Number(derivedFte) || 0,
+        fte: fteValue,
         year,
         linked: useLinked,
       };
@@ -419,6 +429,7 @@ const useEmployees = ({
     edit: form.id ? `Bearbeitung: ${form.name}` : 'Bitte Eintrag aus Liste wählen.',
     settings: 'Datenbank austauschen oder Export/Import (verschlüsselt/unkryptiert).',
     view: selectedEmployee ? `Status: ${statusLabels[selectedEmployee.status]}` : '',
+    dev: 'Rohe Datenbank-Tabellen und Debug-Informationen.',
   };
 
   return {

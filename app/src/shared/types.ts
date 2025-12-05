@@ -27,6 +27,7 @@ export interface EmploymentPeriod {
   startDate: string;
   endDate?: string | null;
   fte: number;
+  weeklyHours?: number | null;
   qualification?: Qualification | string | null;
   note?: string | null;
 }

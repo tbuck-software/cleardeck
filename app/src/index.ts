@@ -158,107 +158,214 @@ const ensureWorkingDb = (): void => {
   }
 };
 
+// =============================================================================
+// VERSIONED MIGRATIONS
+// =============================================================================
+// Each migration runs exactly once. Add new migrations at the end with incrementing version.
+// Migrations are run in order from the current schema version to the latest.
+
+type Migration = {
+  version: number;
+  description: string;
+  up: () => void;
+};
+
+const getSchemaVersion = (): number => {
+  if (!db) return 0;
+  try {
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as { value?: string } | undefined;
+    return row?.value ? Number(row.value) : 0;
+  } catch {
+    return 0; // settings table doesn't exist yet
+  }
+};
+
+const setSchemaVersion = (version: number): void => {
+  if (!db) return;
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('schema_version', ?)").run(String(version));
+};
+
+const migrations: Migration[] = [
+  {
+    version: 1,
+    description: 'Initial schema with all tables',
+    up: () => {
+      db!.exec(`
+        CREATE TABLE IF NOT EXISTS settings (
+          key TEXT PRIMARY KEY,
+          value TEXT
+        );
+        CREATE TABLE IF NOT EXISTS qualification_types (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT UNIQUE NOT NULL,
+          sortOrder INTEGER,
+          note TEXT
+        );
+        CREATE TABLE IF NOT EXISTS employees (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          qualification TEXT NOT NULL,
+          dataSource TEXT,
+          note TEXT,
+          weeklyHours REAL,
+          documentPath TEXT,
+          createdAt TEXT DEFAULT (datetime('now'))
+        );
+        CREATE TABLE IF NOT EXISTS employment_periods (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          employeeId INTEGER NOT NULL,
+          startDate TEXT NOT NULL,
+          endDate TEXT,
+          fte REAL NOT NULL,
+          qualification TEXT,
+          note TEXT,
+          weeklyHours REAL,
+          FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_periods_employee ON employment_periods(employeeId);
+        CREATE INDEX IF NOT EXISTS idx_periods_dates ON employment_periods(startDate, endDate);
+        CREATE TABLE IF NOT EXISTS employee_events (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          employeeId INTEGER NOT NULL,
+          eventDate TEXT NOT NULL,
+          type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          details TEXT,
+          meta TEXT,
+          previousValue TEXT,
+          newValue TEXT,
+          createdAt TEXT DEFAULT (datetime('now')),
+          FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE
+        );
+        CREATE INDEX IF NOT EXISTS idx_events_employee ON employee_events(employeeId);
+        CREATE INDEX IF NOT EXISTS idx_events_date ON employee_events(eventDate);
+      `);
+
+      // Seed default qualifications
+      const defaults = ['3-jährig examiniert', '1-jährig examiniert', 'Pflegekraft/-helfer', 'Sonstige'];
+      const seedQuali = db!.prepare('INSERT OR IGNORE INTO qualification_types (name) VALUES (?)');
+      defaults.forEach((q) => seedQuali.run(q));
+
+      // Set default baseHours
+      db!.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('baseHours', '36')").run();
+
+      // Initialize sortOrder
+      db!.prepare('UPDATE qualification_types SET sortOrder = id WHERE sortOrder IS NULL').run();
+      db!.prepare('CREATE INDEX IF NOT EXISTS idx_qualification_sort ON qualification_types(sortOrder)').run();
+    },
+  },
+  {
+    version: 2,
+    description: 'Add missing columns for legacy databases (sortOrder, notes, weeklyHours, event history)',
+    up: () => {
+      // These use try/catch for backwards compatibility with existing databases
+      const addColumnIfMissing = (table: string, column: string, type: string) => {
+        try {
+          db!.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+        } catch {
+          // Column already exists
+        }
+      };
+
+      addColumnIfMissing('qualification_types', 'sortOrder', 'INTEGER');
+      addColumnIfMissing('qualification_types', 'note', 'TEXT');
+      addColumnIfMissing('employees', 'weeklyHours', 'REAL');
+      addColumnIfMissing('employment_periods', 'note', 'TEXT');
+      addColumnIfMissing('employment_periods', 'weeklyHours', 'REAL');
+      addColumnIfMissing('employee_events', 'previousValue', 'TEXT');
+      addColumnIfMissing('employee_events', 'newValue', 'TEXT');
+
+      // Ensure sortOrder and index
+      db!.prepare('UPDATE qualification_types SET sortOrder = id WHERE sortOrder IS NULL').run();
+      db!.prepare('CREATE INDEX IF NOT EXISTS idx_qualification_sort ON qualification_types(sortOrder)').run();
+    },
+  },
+  {
+    version: 3,
+    description: 'Migrate weeklyHours to periods and recalculate FTE with 36h threshold',
+    up: () => {
+      const baseHoursRow = db!.prepare("SELECT value FROM settings WHERE key = 'baseHours'").get() as { value?: string } | undefined;
+      const baseHours = baseHoursRow?.value ? Number(baseHoursRow.value) || 36 : 36;
+      const FULL_TIME_THRESHOLD = 36;
+
+      // 1. Copy weeklyHours from employees to periods where missing
+      db!.prepare(`
+        UPDATE employment_periods
+        SET weeklyHours = (SELECT e.weeklyHours FROM employees e WHERE e.id = employment_periods.employeeId)
+        WHERE weeklyHours IS NULL
+      `).run();
+
+      // 2. If weeklyHours is still NULL but FTE exists, calculate weeklyHours from FTE
+      db!.prepare(`
+        UPDATE employment_periods
+        SET weeklyHours = CASE
+          WHEN fte >= 1.0 THEN ?
+          ELSE ROUND(fte * ?, 1)
+        END
+        WHERE weeklyHours IS NULL AND fte IS NOT NULL
+      `).run(baseHours, baseHours);
+
+      // 3. Recalculate FTE for all periods where weeklyHours is set (using 36h threshold)
+      db!.prepare(`
+        UPDATE employment_periods
+        SET fte = CASE
+          WHEN weeklyHours >= ? THEN 1.0
+          ELSE MIN(1.0, ROUND(weeklyHours / ?, 2))
+        END
+        WHERE weeklyHours IS NOT NULL
+      `).run(FULL_TIME_THRESHOLD, baseHours);
+    },
+  },
+];
+
+const CURRENT_SCHEMA_VERSION = migrations.length;
+
+const detectLegacyDatabaseVersion = (): number => {
+  if (!db) return 0;
+  try {
+    // Check if this is a v1.2.0 database (has tables but no schema_version)
+    const hasEmployees = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='employees'").get();
+    if (!hasEmployees) return 0; // Fresh database
+
+    // Check for migration markers from old system
+    const hasFteMigration = db.prepare("SELECT value FROM settings WHERE key = 'migration_fte_recalc_v1'").get();
+    if (hasFteMigration) return 3; // Already ran the FTE migration
+
+    // Has the weeklyHours column in employment_periods? (added in later versions)
+    try {
+      db.prepare('SELECT weeklyHours FROM employment_periods LIMIT 1').get();
+      return 2; // Has the column, so migrations 1-2 are done
+    } catch {
+      return 1; // Basic schema exists
+    }
+  } catch {
+    return 0;
+  }
+};
+
 const runMigrations = (): void => {
   if (!db) return;
   db.pragma('foreign_keys = ON');
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS settings (
-      key TEXT PRIMARY KEY,
-      value TEXT
-    );
-    CREATE TABLE IF NOT EXISTS qualification_types (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      sortOrder INTEGER,
-      note TEXT
-    );
-    CREATE TABLE IF NOT EXISTS employees (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      qualification TEXT NOT NULL,
-      dataSource TEXT,
-      note TEXT,
-      weeklyHours REAL,
-      documentPath TEXT,
-      createdAt TEXT DEFAULT (datetime('now'))
-    );
-    CREATE TABLE IF NOT EXISTS employment_periods (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      employeeId INTEGER NOT NULL,
-      startDate TEXT NOT NULL,
-      endDate TEXT,
-      fte REAL NOT NULL,
-      qualification TEXT,
-      note TEXT,
-      FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE
-    );
-    CREATE INDEX IF NOT EXISTS idx_periods_employee ON employment_periods(employeeId);
-    CREATE INDEX IF NOT EXISTS idx_periods_dates ON employment_periods(startDate, endDate);
-    CREATE TABLE IF NOT EXISTS employee_events (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      employeeId INTEGER NOT NULL,
-      eventDate TEXT NOT NULL,
-      type TEXT NOT NULL,
-      title TEXT NOT NULL,
-      details TEXT,
-      meta TEXT,
-      previousValue TEXT,
-      newValue TEXT,
-      createdAt TEXT DEFAULT (datetime('now')),
-      FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE
-    );
-    CREATE INDEX IF NOT EXISTS idx_events_employee ON employee_events(employeeId);
-    CREATE INDEX IF NOT EXISTS idx_events_date ON employee_events(eventDate);
-  `);
 
-  const defaults = [
-    '3-jährig examiniert',
-    '1-jährig examiniert',
-    'Pflegekraft/-helfer',
-    'Sonstige',
-  ];
-  const seedQuali = db.prepare(
-    'INSERT OR IGNORE INTO qualification_types (name) VALUES (?)',
-  );
-  defaults.forEach((q) => seedQuali.run(q));
-  // ensure sortOrder exists
-  try {
-    db.prepare('ALTER TABLE qualification_types ADD COLUMN sortOrder INTEGER').run();
-  } catch (err) {
-    // ignore if exists
+  let currentVersion = getSchemaVersion();
+
+  // For legacy databases without schema_version, detect their actual state
+  if (currentVersion === 0) {
+    const legacyVersion = detectLegacyDatabaseVersion();
+    if (legacyVersion > 0) {
+      console.log(`Detected legacy database at version ${legacyVersion}, updating schema_version`);
+      currentVersion = legacyVersion;
+      setSchemaVersion(legacyVersion);
+    }
   }
-  try {
-    db.prepare('ALTER TABLE employees ADD COLUMN weeklyHours REAL').run();
-  } catch (err) {
-    // ignore
-  }
-  try {
-    db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)').run('baseHours', '36');
-  } catch (err) {
-    // ignore
-  }
-  try {
-    db.prepare('ALTER TABLE employment_periods ADD COLUMN note TEXT').run();
-  } catch (err) {
-    // ignore if exists
-  }
-  try {
-    db.prepare('ALTER TABLE qualification_types ADD COLUMN note TEXT').run();
-  } catch (err) {
-    // ignore if exists
-  }
-  db.prepare('UPDATE qualification_types SET sortOrder = id WHERE sortOrder IS NULL').run();
-  db.prepare('CREATE INDEX IF NOT EXISTS idx_qualification_sort ON qualification_types(sortOrder)').run();
-  // add columns for event history details if missing
-  try {
-    db.prepare('ALTER TABLE employee_events ADD COLUMN previousValue TEXT').run();
-  } catch (err) {
-    // ignore
-  }
-  try {
-    db.prepare('ALTER TABLE employee_events ADD COLUMN newValue TEXT').run();
-  } catch (err) {
-    // ignore
+
+  // Run all migrations that haven't been applied yet
+  for (const migration of migrations) {
+    if (migration.version > currentVersion) {
+      console.log(`Running migration v${migration.version}: ${migration.description}`);
+      migration.up();
+      setSchemaVersion(migration.version);
+    }
   }
 
   const row = db
@@ -270,7 +377,7 @@ const runMigrations = (): void => {
         'INSERT INTO employees (name, qualification, dataSource, note, documentPath) VALUES (@name, @qualification, @dataSource, @note, @documentPath)',
       );
       const period = db.prepare(
-        'INSERT INTO employment_periods (employeeId, startDate, endDate, fte, qualification) VALUES (?, ?, ?, ?, ?)',
+        'INSERT INTO employment_periods (employeeId, startDate, endDate, fte, weeklyHours, qualification) VALUES (?, ?, ?, ?, ?, ?)',
       );
 
       const anna = emp.run({
@@ -280,7 +387,7 @@ const runMigrations = (): void => {
         note: 'Teamleitung 1',
         documentPath: '',
       }).lastInsertRowid as number;
-      period.run(anna, '2021-05-01', null, 1.0, '3-jährig examiniert');
+      period.run(anna, '2021-05-01', null, 1.0, 36, '3-jährig examiniert');
 
       const max = emp.run({
         name: 'Max Mustermann',
@@ -289,7 +396,7 @@ const runMigrations = (): void => {
         note: 'Teilzeit',
         documentPath: '',
       }).lastInsertRowid as number;
-      period.run(max, '2020-03-15', '2024-03-31', 0.6, 'Pflegekraft/-helfer');
+      period.run(max, '2020-03-15', '2024-03-31', 0.6, 21.6, 'Pflegekraft/-helfer');
 
       const lisa = emp.run({
         name: 'Lisa Referenz',
@@ -298,7 +405,7 @@ const runMigrations = (): void => {
         note: 'Fortbildung Wundmanagement',
         documentPath: '',
       }).lastInsertRowid as number;
-      period.run(lisa, '2023-11-01', null, 0.8, '1-jährig examiniert');
+      period.run(lisa, '2023-11-01', null, 0.8, 28.8, '1-jährig examiniert');
     });
 
     seed();
@@ -428,7 +535,7 @@ const getYearDataset = (year: number): YearDataset => {
              e.qualification as baseQualification,
              e.dataSource,
              e.note,
-             e.weeklyHours,
+             p.weeklyHours,
              e.createdAt,
              e.documentPath,
              p.id as periodId,
@@ -490,7 +597,7 @@ const listPeriods = (employeeId: number): EmploymentPeriod[] => {
   const rows = db
     .prepare(
       `
-      SELECT id, startDate, endDate, fte, qualification, note
+      SELECT id, startDate, endDate, fte, weeklyHours, qualification, note
       FROM employment_periods
       WHERE employeeId = ?
       ORDER BY startDate DESC;
@@ -568,24 +675,23 @@ const saveEmployee = (input: {
           .get(input.id) as { name: string; note: string | null } | undefined)
       : undefined;
 
-    const employeePayload: Employee = {
+    const employeePayload = {
       name: input.name,
       qualification: input.qualification,
       dataSource: input.dataSource ?? null,
       note: input.note ?? null,
-      weeklyHours: input.weeklyHours ?? null,
       documentPath: input.documentPath ?? null,
     };
 
     let employeeId = input.id;
     if (employeeId) {
       db.prepare(
-        'UPDATE employees SET name = @name, qualification = @qualification, dataSource = @dataSource, note = @note, weeklyHours = @weeklyHours, documentPath = @documentPath WHERE id = @id',
+        'UPDATE employees SET name = @name, qualification = @qualification, dataSource = @dataSource, note = @note, documentPath = @documentPath WHERE id = @id',
       ).run({ ...employeePayload, id: employeeId });
     } else {
       const result = db
         .prepare(
-          'INSERT INTO employees (name, qualification, dataSource, note, weeklyHours, documentPath) VALUES (@name, @qualification, @dataSource, @note, @weeklyHours, @documentPath)',
+          'INSERT INTO employees (name, qualification, dataSource, note, documentPath) VALUES (@name, @qualification, @dataSource, @note, @documentPath)',
         )
         .run(employeePayload);
       employeeId = Number(result.lastInsertRowid);
@@ -593,11 +699,12 @@ const saveEmployee = (input: {
 
     if (input.periodId) {
       db.prepare(
-        'UPDATE employment_periods SET startDate = ?, endDate = ?, fte = ?, qualification = ?, note = ? WHERE id = ? AND employeeId = ?',
+        'UPDATE employment_periods SET startDate = ?, endDate = ?, fte = ?, weeklyHours = ?, qualification = ?, note = ? WHERE id = ? AND employeeId = ?',
       ).run(
         input.startDate,
         input.endDate ?? null,
         derivedFte,
+        input.weeklyHours ?? null,
         input.qualification,
         input.periodNote ?? null,
         input.periodId,
@@ -626,12 +733,13 @@ const saveEmployee = (input: {
       }
 
       db.prepare(
-        'INSERT INTO employment_periods (employeeId, startDate, endDate, fte, qualification, note) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO employment_periods (employeeId, startDate, endDate, fte, weeklyHours, qualification, note) VALUES (?, ?, ?, ?, ?, ?, ?)',
       ).run(
         employeeId,
         input.startDate,
         input.endDate ?? null,
         derivedFte,
+        input.weeklyHours ?? null,
         input.qualification,
         input.periodNote ?? null,
       );
@@ -1320,3 +1428,16 @@ ipcMain.handle('db:delete', () => {
 ipcMain.handle('app:reset', () => resetApplication());
 ipcMain.handle('settings:getBaseHours', () => getBaseHours());
 ipcMain.handle('settings:setBaseHours', (_event, { hours }: { hours: number }) => setBaseHours(hours));
+
+// DEV: Raw table data - dynamically discovers all tables
+ipcMain.handle('dev:tables', () => {
+  if (!db) return {};
+  const tables = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+    .all() as { name: string }[];
+  const result: Record<string, unknown[]> = {};
+  for (const { name } of tables) {
+    result[name] = db.prepare(`SELECT * FROM "${name}"`).all();
+  }
+  return result;
+});

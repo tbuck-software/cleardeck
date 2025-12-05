@@ -633,3 +633,61 @@ tbody tr.selected {
     justify-content: flex-start;
   }
 }
+
+/* DEV Page */
+.dev-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.dev-tabs .ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dev-tabs .ghost-button.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.dev-tabs .badge-count {
+  background: rgba(0, 0, 0, 0.15);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.dev-tabs .ghost-button.active .badge-count {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dev-table {
+  overflow-x: auto;
+}
+
+.dev-table table {
+  font-size: 12px;
+}
+
+.dev-table th,
+.dev-table td {
+  white-space: nowrap;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dev-table code {
+  font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
+  font-size: 11px;
+  background: var(--surface);
+  padding: 2px 4px;
+  border-radius: 3px;
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGaugeHigh, faUsers, faGear } from '@fortawesome/free-solid-svg-icons';
+import { faGaugeHigh, faUsers, faGear, faCode } from '@fortawesome/free-solid-svg-icons';
 import type { Page } from '../../types/ui';
 import type { UpdateStatus } from '../../shared/types';
 
@@ -64,6 +64,11 @@ const Sidebar = ({
         <button className={`nav-item ${current === 'settings' ? 'active' : ''}`} onClick={() => onNavigate('settings')}>
           <FontAwesomeIcon icon={faGear} /> Einstellungen
         </button>
+        {process.env.NODE_ENV === 'development' && (
+          <button className={`nav-item ${current === 'dev' ? 'active' : ''}`} onClick={() => onNavigate('dev')}>
+            <FontAwesomeIcon icon={faCode} /> DEV
+          </button>
+        )}
         <div className="nav-hint">Links: Seiten, rechts: Jahr/Export</div>
       </div>
     </aside>

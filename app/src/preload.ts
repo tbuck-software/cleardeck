@@ -74,6 +74,7 @@ export type Api = {
   checkUpdates: () => Promise<boolean>;
   installUpdate: () => Promise<boolean>;
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
+  getDevTables: () => Promise<Record<string, Record<string, unknown>[]>>;
 };
 
 const api: Api = {
@@ -110,6 +111,7 @@ const api: Api = {
     ipcRenderer.on('updates:status', listener);
     return () => ipcRenderer.removeListener('updates:status', listener);
   },
+  getDevTables: () => ipcRenderer.invoke('dev:tables'),
 };
 
 contextBridge.exposeInMainWorld('api', api);

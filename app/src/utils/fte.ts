@@ -1,6 +1,9 @@
+const FULL_TIME_THRESHOLD = 36;
+
 export const deriveFteFromWeeklyHours = (weeklyHours: number, baseHours: number): number => {
   if (!weeklyHours || Number.isNaN(weeklyHours)) return 0;
-  const divisor = baseHours || 36;
+  if (weeklyHours >= FULL_TIME_THRESHOLD) return 1;
+  const divisor = baseHours || FULL_TIME_THRESHOLD;
   const raw = weeklyHours / divisor;
   return Math.min(1, Number(raw.toFixed(2)));
 };

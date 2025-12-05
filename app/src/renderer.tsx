@@ -11,6 +11,7 @@ import EmployeeList from './components/pages/EmployeeList';
 import EmployeeForm from './components/pages/EmployeeForm';
 import EmployeeDetail from './components/pages/EmployeeDetail';
 import SettingsPage from './components/pages/SettingsPage';
+import DevPage from './components/pages/DevPage';
 import ConfirmModal from './components/modals/ConfirmModal';
 import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
@@ -245,6 +246,8 @@ const App = () => {
             onFullReset={handleFullReset}
           />
         )}
+
+        {page === 'dev' && <DevPage />}
 
         {(page === 'new' || page === 'edit') && (
           <EmployeeForm
@@ -558,7 +561,7 @@ const App = () => {
                                 : form.weeklyHours ?? 0;
                             const val =
                               weeklyNum && weeklyNum > 0
-                                ? Math.min(1, weeklyNum / (baseHours || 36)).toFixed(2)
+                                ? deriveFteFromWeeklyHours(weeklyNum, baseHours).toFixed(2)
                                 : form.fte.toFixed(2);
                             return val;
                           })()

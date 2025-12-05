@@ -78,6 +78,9 @@ export const api = {
     install: () => call('installUpdate', baseApi.installUpdate),
     onStatus: (cb: (status: UpdateStatus) => void) => baseApi.onUpdateStatus(cb),
   },
+  dev: {
+    getTables: () => call('getDevTables', baseApi.getDevTables),
+  },
 };
 
 export type AppApi = typeof api;

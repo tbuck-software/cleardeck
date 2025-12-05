@@ -7,6 +7,7 @@ describe('FTE/WeeklyHours helpers (Modal-Logik)', () => {
     expect(deriveFteFromWeeklyHours(36, 36)).toBe(1);
     expect(deriveFteFromWeeklyHours(18, 36)).toBe(0.5);
     expect(deriveFteFromWeeklyHours(20, 40)).toBe(0.5);
+    expect(deriveFteFromWeeklyHours(36, 40)).toBe(1); // Schwelle immer bei 36h
     expect(deriveFteFromWeeklyHours(50, 36)).toBe(1); // capped
   });
 
