@@ -69,7 +69,9 @@ const Sidebar = ({
             <FontAwesomeIcon icon={faCode} /> DEV
           </button>
         )}
-        <div className="nav-hint">Links: Seiten, rechts: Jahr/Export</div>
+        <div className="nav-hint">
+          &copy; {new Date().getFullYear()} Torben Buck
+        </div>
       </div>
     </aside>
   );
