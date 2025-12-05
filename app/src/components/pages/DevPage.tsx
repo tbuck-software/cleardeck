@@ -5,17 +5,6 @@ import api from '../../services/api';
 
 type TableData = Record<string, Record<string, unknown>[]>;
 
-// Bekannte Tabellen bekommen ein deutsches Label, neue Tabellen zeigen ihren Namen
-const knownLabels: Record<string, string> = {
-  settings: 'Settings',
-  qualification_types: 'Qualifikationen',
-  employees: 'Mitarbeitende',
-  employment_periods: 'Beschäftigungsperioden',
-  employee_events: 'Ereignisse',
-};
-
-const getLabel = (tableName: string): string => knownLabels[tableName] ?? tableName;
-
 const DevPage = () => {
   const [tables, setTables] = useState<TableData | null>(null);
   const [activeTable, setActiveTable] = useState<string | null>(null);
@@ -71,7 +60,7 @@ const DevPage = () => {
               className={`ghost-button ${activeTable === name ? 'active' : ''}`}
               onClick={() => setActiveTable(name)}
             >
-              {getLabel(name)}
+              {name}
               <span className="badge-count">{tables?.[name]?.length ?? 0}</span>
             </button>
           ))}
