@@ -1,17 +1,17 @@
-import {
-  app,
-  BrowserWindow,
-  dialog,
-  ipcMain,
-  shell,
-} from 'electron';
+/**
+ * Electron Main Process
+ *
+ * This is the entry point for the Electron main process.
+ * It handles window management, IPC handlers, and app lifecycle.
+ */
+
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
-import Database from 'better-sqlite3';
-import type { Database as DatabaseType } from 'better-sqlite3';
+import path from 'path';
+import fs from 'fs';
 import * as XLSX from 'xlsx';
+
 import type {
   Aggregation,
   AppState,
@@ -25,6 +25,35 @@ import type {
   UpdateStatus,
 } from './shared/types';
 
+// Database & Crypto modules
+import {
+  getDb,
+  isDbOpen,
+  setEncryptionKey,
+  getEncryptionKey,
+  openDatabase,
+  persistEncryptedDb,
+  closeDb,
+  deleteDatabase as deleteDbFiles,
+  backupDatabase,
+  dataDir,
+  ensureDataDir,
+} from './main/database/connection';
+
+import {
+  type AppConfig,
+  deriveKey,
+  hashPassword,
+  fingerprintKey,
+  parseRecoveryKey,
+  encryptBuffer,
+  decryptBuffer,
+  isConfigured,
+  readConfig,
+  writeConfig,
+  deleteConfig,
+} from './main/crypto';
+
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 
@@ -34,429 +63,35 @@ if (require('electron-squirrel-startup')) {
   app.quit();
 }
 
-type AppConfig = {
-  salt: string;
-  passwordHash: string;
-  encryptedKey: string;
-  keyIv: string;
-  keyTag: string;
-  keyFingerprint?: string;
-  configVersion: number;
-};
-
-const dataDir = path.join(app.getPath('userData'), 'data');
-const encryptedDbPath = path.join(dataDir, 'employee.db.enc');
-const workingDbPath = path.join(dataDir, 'employee.db');
-const configPath = path.join(dataDir, 'config.json');
+// =============================================================================
+// APPLICATION STATE
+// =============================================================================
 
 let mainWindow: BrowserWindow | null = null;
-let db: DatabaseType | null = null;
-let encryptionKey: Buffer | null = null;
 let unlocked = false;
 let updaterInitialized = false;
 let updateFeedConfigured = false;
 let latestUpdateVersion: string | undefined;
 
-const ensureDataDir = (): void => {
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
-  }
-};
-
-const deriveKey = (password: string, salt: string): Buffer =>
-  crypto.pbkdf2Sync(password, salt, 200_000, 32, 'sha512');
-
-const hashPassword = (password: string, salt: string): string =>
-  crypto.pbkdf2Sync(password, salt, 220_000, 64, 'sha512').toString('hex');
-
-const fingerprintKey = (key: Buffer): string =>
-  crypto.createHash('sha256').update(key).digest('hex');
-
-const parseRecoveryKey = (input: string): Buffer => {
-  const trimmed = input.trim();
-  try {
-    const buf = Buffer.from(trimmed, 'base64');
-    if (buf.length === 32) {
-      return buf;
-    }
-  } catch (err) {
-    // ignore
-  }
-  try {
-    const buf = Buffer.from(trimmed, 'hex');
-    if (buf.length === 32) {
-      return buf;
-    }
-  } catch (err) {
-    // ignore
-  }
-  throw new Error('Recovery Key hat ein ungültiges Format (erwartet Base64 oder Hex, 32 Byte).');
-};
-
-const encryptBuffer = (data: Buffer, key: Buffer): { iv: Buffer; tag: Buffer; content: Buffer } => {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-  const content = Buffer.concat([cipher.update(data), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  return { iv, tag, content };
-};
-
-const decryptBuffer = (
-  payload: { iv: Buffer; tag: Buffer; content: Buffer },
-  key: Buffer,
-): Buffer => {
-  const decipher = crypto.createDecipheriv('aes-256-gcm', key, payload.iv);
-  decipher.setAuthTag(payload.tag);
-  return Buffer.concat([decipher.update(payload.content), decipher.final()]);
-};
-
-const encryptFile = (inputPath: string, outputPath: string, key: Buffer): void => {
-  const data = fs.readFileSync(inputPath);
-  const payload = encryptBuffer(data, key);
-  const combined = Buffer.concat([payload.iv, payload.tag, payload.content]);
-  fs.writeFileSync(outputPath, combined);
-};
-
-const decryptFile = (inputPath: string, outputPath: string, key: Buffer): void => {
-  const payload = fs.readFileSync(inputPath);
-  if (payload.length < 28) {
-    throw new Error('Verschlüsseltes Datenpaket ist ungültig.');
-  }
-  const iv = payload.subarray(0, 12);
-  const tag = payload.subarray(12, 28);
-  const content = payload.subarray(28);
-  const data = decryptBuffer({ iv, tag, content }, key);
-  fs.writeFileSync(outputPath, data);
-};
-
-const readConfig = (): AppConfig | null => {
-  try {
-    const content = fs.readFileSync(configPath, 'utf8');
-    return JSON.parse(content) as AppConfig;
-  } catch (error) {
-    return null;
-  }
-};
-
-const writeConfig = (config: AppConfig): void => {
-  ensureDataDir();
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-};
-
-const isConfigured = (): boolean => fs.existsSync(configPath);
-
-const ensureWorkingDb = (): void => {
-  ensureDataDir();
-  if (fs.existsSync(workingDbPath)) {
-    return;
-  }
-
-  if (fs.existsSync(encryptedDbPath) && encryptionKey) {
-    decryptFile(encryptedDbPath, workingDbPath, encryptionKey);
-  } else if (!fs.existsSync(workingDbPath)) {
-    fs.writeFileSync(workingDbPath, '');
-  }
-};
-
 // =============================================================================
-// VERSIONED MIGRATIONS
+// DATABASE HELPER FUNCTIONS
 // =============================================================================
-// Each migration runs exactly once. Add new migrations at the end with incrementing version.
-// Migrations are run in order from the current schema version to the latest.
 
-type Migration = {
-  version: number;
-  description: string;
-  up: () => void;
-};
-
-const getSchemaVersion = (): number => {
-  if (!db) return 0;
-  try {
-    const row = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as { value?: string } | undefined;
-    return row?.value ? Number(row.value) : 0;
-  } catch {
-    return 0; // settings table doesn't exist yet
-  }
-};
-
-const setSchemaVersion = (version: number): void => {
-  if (!db) return;
-  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('schema_version', ?)").run(String(version));
-};
-
-const migrations: Migration[] = [
-  {
-    version: 1,
-    description: 'Initial schema with all tables',
-    up: () => {
-      db!.exec(`
-        CREATE TABLE IF NOT EXISTS settings (
-          key TEXT PRIMARY KEY,
-          value TEXT
-        );
-        CREATE TABLE IF NOT EXISTS qualification_types (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT UNIQUE NOT NULL,
-          sortOrder INTEGER,
-          note TEXT
-        );
-        CREATE TABLE IF NOT EXISTS employees (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          qualification TEXT NOT NULL,
-          dataSource TEXT,
-          note TEXT,
-          weeklyHours REAL,
-          documentPath TEXT,
-          createdAt TEXT DEFAULT (datetime('now'))
-        );
-        CREATE TABLE IF NOT EXISTS employment_periods (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          employeeId INTEGER NOT NULL,
-          startDate TEXT NOT NULL,
-          endDate TEXT,
-          fte REAL NOT NULL,
-          qualification TEXT,
-          note TEXT,
-          weeklyHours REAL,
-          FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_periods_employee ON employment_periods(employeeId);
-        CREATE INDEX IF NOT EXISTS idx_periods_dates ON employment_periods(startDate, endDate);
-        CREATE TABLE IF NOT EXISTS employee_events (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          employeeId INTEGER NOT NULL,
-          eventDate TEXT NOT NULL,
-          type TEXT NOT NULL,
-          title TEXT NOT NULL,
-          details TEXT,
-          meta TEXT,
-          previousValue TEXT,
-          newValue TEXT,
-          createdAt TEXT DEFAULT (datetime('now')),
-          FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE
-        );
-        CREATE INDEX IF NOT EXISTS idx_events_employee ON employee_events(employeeId);
-        CREATE INDEX IF NOT EXISTS idx_events_date ON employee_events(eventDate);
-      `);
-
-      // Seed default qualifications
-      const defaults = ['3-jährig examiniert', '1-jährig examiniert', 'Pflegekraft/-helfer', 'Sonstige'];
-      const seedQuali = db!.prepare('INSERT OR IGNORE INTO qualification_types (name) VALUES (?)');
-      defaults.forEach((q) => seedQuali.run(q));
-
-      // Set default baseHours
-      db!.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES ('baseHours', '36')").run();
-
-      // Initialize sortOrder
-      db!.prepare('UPDATE qualification_types SET sortOrder = id WHERE sortOrder IS NULL').run();
-      db!.prepare('CREATE INDEX IF NOT EXISTS idx_qualification_sort ON qualification_types(sortOrder)').run();
-    },
-  },
-  {
-    version: 2,
-    description: 'Add missing columns for legacy databases (sortOrder, notes, weeklyHours, event history)',
-    up: () => {
-      // These use try/catch for backwards compatibility with existing databases
-      const addColumnIfMissing = (table: string, column: string, type: string) => {
-        try {
-          db!.prepare(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
-        } catch {
-          // Column already exists
-        }
-      };
-
-      addColumnIfMissing('qualification_types', 'sortOrder', 'INTEGER');
-      addColumnIfMissing('qualification_types', 'note', 'TEXT');
-      addColumnIfMissing('employees', 'weeklyHours', 'REAL');
-      addColumnIfMissing('employment_periods', 'note', 'TEXT');
-      addColumnIfMissing('employment_periods', 'weeklyHours', 'REAL');
-      addColumnIfMissing('employee_events', 'previousValue', 'TEXT');
-      addColumnIfMissing('employee_events', 'newValue', 'TEXT');
-
-      // Ensure sortOrder and index
-      db!.prepare('UPDATE qualification_types SET sortOrder = id WHERE sortOrder IS NULL').run();
-      db!.prepare('CREATE INDEX IF NOT EXISTS idx_qualification_sort ON qualification_types(sortOrder)').run();
-    },
-  },
-  {
-    version: 3,
-    description: 'Migrate weeklyHours to periods and recalculate FTE with 36h threshold',
-    up: () => {
-      const baseHoursRow = db!.prepare("SELECT value FROM settings WHERE key = 'baseHours'").get() as { value?: string } | undefined;
-      const baseHours = baseHoursRow?.value ? Number(baseHoursRow.value) || 36 : 36;
-      const FULL_TIME_THRESHOLD = 36;
-
-      // 1. Copy weeklyHours from employees to periods where missing
-      db!.prepare(`
-        UPDATE employment_periods
-        SET weeklyHours = (SELECT e.weeklyHours FROM employees e WHERE e.id = employment_periods.employeeId)
-        WHERE weeklyHours IS NULL
-      `).run();
-
-      // 2. If weeklyHours is still NULL but FTE exists, calculate weeklyHours from FTE
-      db!.prepare(`
-        UPDATE employment_periods
-        SET weeklyHours = CASE
-          WHEN fte >= 1.0 THEN ?
-          ELSE ROUND(fte * ?, 1)
-        END
-        WHERE weeklyHours IS NULL AND fte IS NOT NULL
-      `).run(baseHours, baseHours);
-
-      // 3. Recalculate FTE for all periods where weeklyHours is set (using 36h threshold)
-      db!.prepare(`
-        UPDATE employment_periods
-        SET fte = CASE
-          WHEN weeklyHours >= ? THEN 1.0
-          ELSE MIN(1.0, ROUND(weeklyHours / ?, 2))
-        END
-        WHERE weeklyHours IS NOT NULL
-      `).run(FULL_TIME_THRESHOLD, baseHours);
-    },
-  },
-];
-
-const CURRENT_SCHEMA_VERSION = migrations.length;
-
-const detectLegacyDatabaseVersion = (): number => {
-  if (!db) return 0;
-  try {
-    // Check if this is a v1.2.0 database (has tables but no schema_version)
-    const hasEmployees = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='employees'").get();
-    if (!hasEmployees) return 0; // Fresh database
-
-    // Check for migration markers from old system
-    const hasFteMigration = db.prepare("SELECT value FROM settings WHERE key = 'migration_fte_recalc_v1'").get();
-    if (hasFteMigration) return 3; // Already ran the FTE migration
-
-    // Has the weeklyHours column in employment_periods? (added in later versions)
-    try {
-      db.prepare('SELECT weeklyHours FROM employment_periods LIMIT 1').get();
-      return 2; // Has the column, so migrations 1-2 are done
-    } catch {
-      return 1; // Basic schema exists
-    }
-  } catch {
-    return 0;
-  }
-};
-
-const runMigrations = (): void => {
-  if (!db) return;
-  db.pragma('foreign_keys = ON');
-
-  let currentVersion = getSchemaVersion();
-
-  // For legacy databases without schema_version, detect their actual state
-  if (currentVersion === 0) {
-    const legacyVersion = detectLegacyDatabaseVersion();
-    if (legacyVersion > 0) {
-      console.log(`Detected legacy database at version ${legacyVersion}, updating schema_version`);
-      currentVersion = legacyVersion;
-      setSchemaVersion(legacyVersion);
-    }
-  }
-
-  // Run all migrations that haven't been applied yet
-  for (const migration of migrations) {
-    if (migration.version > currentVersion) {
-      console.log(`Running migration v${migration.version}: ${migration.description}`);
-      migration.up();
-      setSchemaVersion(migration.version);
-    }
-  }
-
-  const row = db
-    .prepare('SELECT COUNT(*) as cnt FROM employees')
-    .get() as { cnt: number };
-  if (row.cnt === 0) {
-    const seed = db.transaction(() => {
-      const emp = db.prepare(
-        'INSERT INTO employees (name, qualification, dataSource, note, documentPath) VALUES (@name, @qualification, @dataSource, @note, @documentPath)',
-      );
-      const period = db.prepare(
-        'INSERT INTO employment_periods (employeeId, startDate, endDate, fte, weeklyHours, qualification) VALUES (?, ?, ?, ?, ?, ?)',
-      );
-
-      const anna = emp.run({
-        name: 'Anna Beispiel',
-        qualification: '3-jährig examiniert',
-        dataSource: 'Verwaltungssoftware',
-        note: 'Teamleitung 1',
-        documentPath: '',
-      }).lastInsertRowid as number;
-      period.run(anna, '2021-05-01', null, 1.0, 36, '3-jährig examiniert');
-
-      const max = emp.run({
-        name: 'Max Mustermann',
-        qualification: 'Pflegekraft/-helfer',
-        dataSource: 'NAS',
-        note: 'Teilzeit',
-        documentPath: '',
-      }).lastInsertRowid as number;
-      period.run(max, '2020-03-15', '2024-03-31', 0.6, 21.6, 'Pflegekraft/-helfer');
-
-      const lisa = emp.run({
-        name: 'Lisa Referenz',
-        qualification: '1-jährig examiniert',
-        dataSource: 'Verwaltungssoftware',
-        note: 'Fortbildung Wundmanagement',
-        documentPath: '',
-      }).lastInsertRowid as number;
-      period.run(lisa, '2023-11-01', null, 0.8, 28.8, '1-jährig examiniert');
-    });
-
-    seed();
-  }
-};
-
-const openDatabase = (): void => {
-  if (!encryptionKey) {
-    throw new Error('Datenbank ist gesperrt.');
-  }
-  ensureWorkingDb();
-  db = new Database(workingDbPath);
-  runMigrations();
-};
-
-const persistEncryptedDb = (): void => {
-  if (!encryptionKey) return;
-  if (db) {
-    db.close();
-    db = null;
-  }
-  if (fs.existsSync(workingDbPath)) {
-    encryptFile(workingDbPath, encryptedDbPath, encryptionKey);
-    fs.rmSync(workingDbPath, { force: true });
-  }
-};
-
+/**
+ * Ensure database is ready for operations
+ */
 const ensureDbReady = (): void => {
-  if (!unlocked || !encryptionKey) {
+  if (!unlocked || !getEncryptionKey()) {
     throw new Error('Bitte zuerst anmelden.');
   }
-  if (!db) {
+  if (!isDbOpen()) {
     openDatabase();
   }
 };
 
-const backupDatabase = (): string => {
-  ensureDataDir();
-  ensureWorkingDb();
-  const backupsDir = path.join(dataDir, 'backups');
-  if (!fs.existsSync(backupsDir)) {
-    fs.mkdirSync(backupsDir, { recursive: true });
-  }
-  const source = fs.existsSync(encryptedDbPath) ? encryptedDbPath : workingDbPath;
-  const ext = path.extname(source) || '.db';
-  const filename = `employee-backup-${Date.now()}${ext}`;
-  const target = path.join(backupsDir, filename);
-  fs.copyFileSync(source, target);
-  return target;
-};
-
+/**
+ * Compute employee status for a given year
+ */
 const computeStatus = (endDate: string | null, year: number): 'active' | 'left' => {
   const yearStart = new Date(`${year}-01-01T00:00:00`);
   const yearEnd = new Date(`${year}-12-31T23:59:59`);
@@ -468,6 +103,9 @@ const computeStatus = (endDate: string | null, year: number): 'active' | 'left' 
   return 'active';
 };
 
+/**
+ * Build aggregation data from employee list
+ */
 const buildAggregation = (employees: EmployeeWithPeriod[]): Aggregation => {
   let totalFte = 0;
   const categories = new Map<string, { headcount: number; fte: number }>();
@@ -490,13 +128,18 @@ const buildAggregation = (employees: EmployeeWithPeriod[]): Aggregation => {
   };
 };
 
+// =============================================================================
+// DATA ACCESS FUNCTIONS
+// =============================================================================
+
 const getYearDataset = (year: number): YearDataset => {
   ensureDbReady();
+  const db = getDb();
   const startIso = `${year}-01-01`;
   const endIso = `${year}-12-31`;
 
   const baseHoursRow = db
-    ?.prepare("SELECT value FROM settings WHERE key = 'baseHours'")
+    .prepare("SELECT value FROM settings WHERE key = 'baseHours'")
     .get() as { value?: string } | undefined;
   const fullTimeHours = baseHoursRow?.value ? Number(baseHoursRow.value) || 36 : 36;
 
@@ -552,7 +195,12 @@ const getYearDataset = (year: number): YearDataset => {
     `,
     )
     .all({ startIso, endIso }) as (Employee &
-      EmploymentPeriod & { employeeId: number; periodId: number; periodNote?: string | null; createdAt?: string })[];
+    EmploymentPeriod & {
+      employeeId: number;
+      periodId: number;
+      periodNote?: string | null;
+      createdAt?: string;
+    })[];
 
   const latest = new Map<number, EmployeeWithPeriod>();
   rows.forEach((row) => {
@@ -582,9 +230,7 @@ const getYearDataset = (year: number): YearDataset => {
     }
   });
 
-  const employees = Array.from(latest.values()).sort((a, b) =>
-    a.name.localeCompare(b.name, 'de'),
-  );
+  const employees = Array.from(latest.values()).sort((a, b) => a.name.localeCompare(b.name, 'de'));
   return {
     employees,
     aggregation: buildAggregation(employees),
@@ -594,6 +240,7 @@ const getYearDataset = (year: number): YearDataset => {
 
 const listPeriods = (employeeId: number): EmploymentPeriod[] => {
   ensureDbReady();
+  const db = getDb();
   const rows = db
     .prepare(
       `
@@ -612,7 +259,7 @@ const parseEventRow = (row: any): EmployeeEvent => {
   if (row.meta) {
     try {
       meta = JSON.parse(row.meta);
-    } catch (err) {
+    } catch {
       meta = null;
     }
   }
@@ -631,6 +278,7 @@ const parseEventRow = (row: any): EmployeeEvent => {
 
 const listEvents = (employeeId: number): EmployeeEvent[] => {
   ensureDbReady();
+  const db = getDb();
   const rows = db
     .prepare(
       `
@@ -649,179 +297,97 @@ const saveEmployee = (input: {
   periodId?: number;
   name: string;
   qualification: string;
-  dataSource?: string;
-  note?: string;
+  fte: number;
   weeklyHours?: number | null;
-  documentPath?: string;
   startDate: string;
   endDate?: string | null;
-  fte: number;
+  dataSource?: string | null;
+  note?: string | null;
+  documentPath?: string | null;
   year: number;
-  periodNote?: string | null;
-  linked?: boolean;
 }): YearDataset => {
   ensureDbReady();
-  const fullTimeHours = getBaseHours();
-  const useLinked = input.linked ?? true;
-  const derivedFte =
-    useLinked && input.weeklyHours !== undefined && input.weeklyHours !== null
-      ? Math.min(1, Number((input.weeklyHours / fullTimeHours).toFixed(2)))
-      : input.fte;
+  const db = getDb();
 
-  const mutation = db.transaction(() => {
-    const existing = input.id
-      ? (db
-          .prepare('SELECT name, note FROM employees WHERE id = ?')
-          .get(input.id) as { name: string; note: string | null } | undefined)
-      : undefined;
+  const employeePayload = {
+    name: input.name,
+    qualification: input.qualification,
+    dataSource: input.dataSource ?? null,
+    note: input.note ?? null,
+    documentPath: input.documentPath ?? null,
+  };
 
-    const employeePayload = {
-      name: input.name,
-      qualification: input.qualification,
-      dataSource: input.dataSource ?? null,
-      note: input.note ?? null,
-      documentPath: input.documentPath ?? null,
-    };
+  const periodPayload = {
+    startDate: input.startDate,
+    endDate: input.endDate ?? null,
+    fte: input.fte,
+    weeklyHours: input.weeklyHours ?? null,
+    qualification: input.qualification,
+    note: input.note ?? null,
+  };
 
-    let employeeId = input.id;
-    if (employeeId) {
-      db.prepare(
-        'UPDATE employees SET name = @name, qualification = @qualification, dataSource = @dataSource, note = @note, documentPath = @documentPath WHERE id = @id',
-      ).run({ ...employeePayload, id: employeeId });
-    } else {
-      const result = db
-        .prepare(
-          'INSERT INTO employees (name, qualification, dataSource, note, documentPath) VALUES (@name, @qualification, @dataSource, @note, @documentPath)',
-        )
-        .run(employeePayload);
-      employeeId = Number(result.lastInsertRowid);
-    }
+  if (input.id) {
+    db.prepare(
+      `UPDATE employees
+       SET name = @name, qualification = @qualification, dataSource = @dataSource, note = @note, documentPath = @documentPath
+       WHERE id = @id`,
+    ).run({ ...employeePayload, id: input.id });
 
     if (input.periodId) {
       db.prepare(
-        'UPDATE employment_periods SET startDate = ?, endDate = ?, fte = ?, weeklyHours = ?, qualification = ?, note = ? WHERE id = ? AND employeeId = ?',
-      ).run(
-        input.startDate,
-        input.endDate ?? null,
-        derivedFte,
-        input.weeklyHours ?? null,
-        input.qualification,
-        input.periodNote ?? null,
-        input.periodId,
-        employeeId,
-      );
+        `UPDATE employment_periods
+         SET startDate = @startDate, endDate = @endDate, fte = @fte, weeklyHours = @weeklyHours, qualification = @qualification, note = @note
+         WHERE id = @periodId`,
+      ).run({ ...periodPayload, periodId: input.periodId });
     } else {
-      const openPeriod = db
-        .prepare(
-          `
-          SELECT id, startDate
-          FROM employment_periods
-          WHERE employeeId = ?
-            AND (endDate IS NULL OR endDate = '')
-            AND date(startDate) <= date(?)
-          ORDER BY date(startDate) DESC
-          LIMIT 1;
-        `,
-        )
-        .get(employeeId, input.startDate) as { id: number; startDate: string } | undefined;
-
-      if (openPeriod?.id) {
-        const prevEnd = new Date(`${input.startDate}T00:00:00`);
-        prevEnd.setDate(prevEnd.getDate() - 1);
-        const prevEndIso = prevEnd.toISOString().slice(0, 10);
-        db.prepare('UPDATE employment_periods SET endDate = ? WHERE id = ?').run(prevEndIso, openPeriod.id);
-      }
-
       db.prepare(
-        'INSERT INTO employment_periods (employeeId, startDate, endDate, fte, weeklyHours, qualification, note) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      ).run(
-        employeeId,
-        input.startDate,
-        input.endDate ?? null,
-        derivedFte,
-        input.weeklyHours ?? null,
-        input.qualification,
-        input.periodNote ?? null,
-      );
+        `INSERT INTO employment_periods (employeeId, startDate, endDate, fte, weeklyHours, qualification, note)
+         VALUES (@employeeId, @startDate, @endDate, @fte, @weeklyHours, @qualification, @note)`,
+      ).run({ ...periodPayload, employeeId: input.id });
     }
+  } else {
+    const empResult = db
+      .prepare(
+        `INSERT INTO employees (name, qualification, dataSource, note, documentPath)
+         VALUES (@name, @qualification, @dataSource, @note, @documentPath)`,
+      )
+      .run(employeePayload);
+    const newId = empResult.lastInsertRowid as number;
 
-    const today = new Date().toISOString().slice(0, 10);
-    if (!existing && employeeId) {
-      db.prepare(
-        'INSERT INTO employee_events (employeeId, eventDate, type, title, details) VALUES (?, ?, ?, ?, ?)',
-      ).run(employeeId, input.startDate || today, 'join', 'Eintritt', `Startdatum: ${input.startDate}`);
-    }
+    db.prepare(
+      `INSERT INTO employment_periods (employeeId, startDate, endDate, fte, weeklyHours, qualification, note)
+       VALUES (@employeeId, @startDate, @endDate, @fte, @weeklyHours, @qualification, @note)`,
+    ).run({ ...periodPayload, employeeId: newId });
+  }
 
-    if (existing && employeeId) {
-      if (existing.name !== input.name) {
-        db.prepare(
-          'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta, previousValue, newValue) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        ).run(
-          employeeId,
-          today,
-          'name-change',
-          'Name geändert',
-          `${existing.name} → ${input.name}`,
-          JSON.stringify({ from: existing.name, to: input.name }),
-          existing.name,
-          input.name,
-        );
-      }
-      if ((existing.note ?? '') !== (input.note ?? '')) {
-        const from = existing.note ?? '';
-        const to = input.note ?? '';
-        db.prepare(
-          'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta, previousValue, newValue) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        ).run(
-          employeeId,
-          today,
-          'note-change',
-          'Notiz geändert',
-          'Notiz aktualisiert',
-          JSON.stringify({ from, to }),
-          from,
-          to,
-        );
-      }
-    }
-  });
-
-  mutation();
   return getYearDataset(input.year);
 };
 
 const deleteEmployee = (id: number, year: number): YearDataset => {
   ensureDbReady();
+  const db = getDb();
   db.prepare('DELETE FROM employees WHERE id = ?').run(id);
   return getYearDataset(year);
 };
 
 const deletePeriod = (periodId: number, year: number): YearDataset => {
   ensureDbReady();
+  const db = getDb();
   db.prepare('DELETE FROM employment_periods WHERE id = ?').run(periodId);
   return getYearDataset(year);
 };
 
 const deleteDatabase = (): void => {
-  if (db) {
-    db.close();
-    db = null;
-  }
-  fs.rmSync(workingDbPath, { force: true });
-  fs.rmSync(encryptedDbPath, { force: true });
-  ensureDataDir();
+  closeDb();
+  deleteDbFiles();
 };
 
 const resetApplication = (): AppState => {
-  if (db) {
-    db.close();
-    db = null;
-  }
-  encryptionKey = null;
+  closeDb();
+  deleteDbFiles();
+  deleteConfig();
   unlocked = false;
-  if (fs.existsSync(dataDir)) {
-    fs.rmSync(dataDir, { recursive: true, force: true });
-  }
+  setEncryptionKey(null);
   return { configured: false, unlocked: false };
 };
 
@@ -837,25 +403,38 @@ const saveEvent = (input: {
   newValue?: string | null;
 }): EmployeeEvent[] => {
   ensureDbReady();
-  const payload = {
-    employeeId: input.employeeId,
-    eventDate: input.eventDate,
-    type: input.type,
-    title: input.title,
-    details: input.details ?? null,
-    meta: input.meta ? JSON.stringify(input.meta) : null,
-    previousValue: input.previousValue ?? null,
-    newValue: input.newValue ?? null,
-  };
+  const db = getDb();
+  const metaStr = input.meta ? JSON.stringify(input.meta) : null;
 
   if (input.id) {
     db.prepare(
-      'UPDATE employee_events SET eventDate = @eventDate, type = @type, title = @title, details = @details, meta = @meta, previousValue = @previousValue, newValue = @newValue WHERE id = @id AND employeeId = @employeeId',
-    ).run({ ...payload, id: input.id });
+      `UPDATE employee_events
+       SET eventDate = @eventDate, type = @type, title = @title, details = @details, meta = @meta, previousValue = @previousValue, newValue = @newValue
+       WHERE id = @id`,
+    ).run({
+      id: input.id,
+      eventDate: input.eventDate,
+      type: input.type,
+      title: input.title,
+      details: input.details ?? null,
+      meta: metaStr,
+      previousValue: input.previousValue ?? null,
+      newValue: input.newValue ?? null,
+    });
   } else {
     db.prepare(
-      'INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta, previousValue, newValue) VALUES (@employeeId, @eventDate, @type, @title, @details, @meta, @previousValue, @newValue)',
-    ).run(payload);
+      `INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta, previousValue, newValue)
+       VALUES (@employeeId, @eventDate, @type, @title, @details, @meta, @previousValue, @newValue)`,
+    ).run({
+      employeeId: input.employeeId,
+      eventDate: input.eventDate,
+      type: input.type,
+      title: input.title,
+      details: input.details ?? null,
+      meta: metaStr,
+      previousValue: input.previousValue ?? null,
+      newValue: input.newValue ?? null,
+    });
   }
 
   return listEvents(input.employeeId);
@@ -863,233 +442,203 @@ const saveEvent = (input: {
 
 const deleteEvent = (id: number, employeeId: number): EmployeeEvent[] => {
   ensureDbReady();
+  const db = getDb();
   db.prepare('DELETE FROM employee_events WHERE id = ?').run(id);
   return listEvents(employeeId);
 };
 
 const getBaseHours = (): number => {
   ensureDbReady();
-  const row = db?.prepare("SELECT value FROM settings WHERE key = 'baseHours'").get() as { value?: string } | undefined;
+  const db = getDb();
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'baseHours'").get() as
+    | { value?: string }
+    | undefined;
   return row?.value ? Number(row.value) || 36 : 36;
 };
 
 const setBaseHours = (hours: number): number => {
   ensureDbReady();
-  db?.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(
-    'baseHours',
-    String(hours),
+  const db = getDb();
+  const clamped = Math.max(1, Math.min(168, hours));
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('baseHours', ?)").run(
+    String(clamped),
   );
-  return getBaseHours();
+  return clamped;
 };
 
 const listQualifications = (): QualificationType[] => {
   ensureDbReady();
-  const rows = db
-    ?.prepare('SELECT id, name, note FROM qualification_types ORDER BY sortOrder ASC, name ASC')
+  const db = getDb();
+  return db
+    .prepare('SELECT id, name, sortOrder, note FROM qualification_types ORDER BY sortOrder ASC')
     .all() as QualificationType[];
-  return rows ?? [];
 };
 
 const addQualification = (name: string, note?: string | null): QualificationType[] => {
   ensureDbReady();
+  const db = getDb();
   const trimmed = name.trim();
-  if (!trimmed) return listQualifications();
-  const nextOrder = db
-    ?.prepare('SELECT COALESCE(MAX(sortOrder), 0) + 1 as nextOrder FROM qualification_types')
-    .get() as { nextOrder: number };
-  db?.prepare('INSERT OR IGNORE INTO qualification_types (name, sortOrder) VALUES (?, ?)').run(
-    trimmed,
-    nextOrder?.nextOrder ?? 1,
-  );
-  if (note && note.trim()) {
-    db?.prepare('UPDATE qualification_types SET note = ? WHERE name = ?').run(note.trim(), trimmed);
+  if (!trimmed) {
+    throw new Error('Qualifikationsname darf nicht leer sein.');
   }
+  const maxSort = db.prepare('SELECT MAX(sortOrder) as mx FROM qualification_types').get() as {
+    mx: number | null;
+  };
+  const nextSort = (maxSort.mx ?? 0) + 1;
+  db.prepare(
+    'INSERT INTO qualification_types (name, sortOrder, note) VALUES (@name, @sortOrder, @note)',
+  ).run({ name: trimmed, sortOrder: nextSort, note: note ?? null });
   return listQualifications();
 };
 
-const updateQualification = (id: number, name: string, note?: string | null): QualificationType[] => {
+const updateQualification = (
+  id: number,
+  name: string,
+  note?: string | null,
+): QualificationType[] => {
   ensureDbReady();
+  const db = getDb();
   const trimmed = name.trim();
-  if (!trimmed) return listQualifications();
-  try {
-    db?.prepare('UPDATE qualification_types SET name = ?, note = ? WHERE id = ?').run(
-      trimmed,
-      note?.trim() ?? null,
-      id,
-    );
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : 'Aktualisierung fehlgeschlagen (möglicher Konflikt mit vorhandenem Namen).';
-    throw new Error(message);
+  if (!trimmed) {
+    throw new Error('Qualifikationsname darf nicht leer sein.');
   }
+  db.prepare('UPDATE qualification_types SET name = @name, note = @note WHERE id = @id').run({
+    id,
+    name: trimmed,
+    note: note ?? null,
+  });
   return listQualifications();
 };
 
 const reorderQualifications = (orderedIds: number[]): QualificationType[] => {
   ensureDbReady();
-  const tx = db?.transaction(() => {
-    orderedIds.forEach((id, idx) => {
-      db?.prepare('UPDATE qualification_types SET sortOrder = ? WHERE id = ?').run(idx + 1, id);
-    });
-  });
-  tx?.();
+  const db = getDb();
+  const update = db.prepare('UPDATE qualification_types SET sortOrder = ? WHERE id = ?');
+  orderedIds.forEach((id, idx) => update.run(idx, id));
   return listQualifications();
 };
 
 const deleteQualification = (id: number): QualificationType[] => {
   ensureDbReady();
-  db?.prepare('DELETE FROM qualification_types WHERE id = ?').run(id);
+  const db = getDb();
+  db.prepare('DELETE FROM qualification_types WHERE id = ?').run(id);
   return listQualifications();
 };
+
+// =============================================================================
+// EXPORT / IMPORT
+// =============================================================================
 
 const exportDatabase = async (
   mode: 'encrypted' | 'plain',
 ): Promise<{ saved: boolean; filePath?: string; error?: string }> => {
-  ensureDbReady();
-  ensureWorkingDb();
-  const { filePath, canceled } = await dialog.showSaveDialog({
-    title: mode === 'encrypted' ? 'Datenbank exportieren (verschlüsselt)' : 'Datenbank exportieren (unverschlüsselt)',
-    defaultPath: mode === 'encrypted' ? 'employee.db.enc' : 'employee.db',
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: mode === 'encrypted' ? 'Datenbank verschlüsselt exportieren' : 'Datenbank unverschlüsselt exportieren',
+    defaultPath: `employee-backup-${Date.now()}.${mode === 'encrypted' ? 'enc' : 'db'}`,
     filters: [
       mode === 'encrypted'
-        ? { name: 'Verschlüsselte DB', extensions: ['enc'] }
-        : { name: 'SQLite DB', extensions: ['db', 'sqlite'] },
+        ? { name: 'Verschlüsselte Datenbank', extensions: ['enc'] }
+        : { name: 'SQLite Datenbank', extensions: ['db'] },
     ],
   });
-  if (canceled || !filePath) return { saved: false };
-
-  try {
-    if (mode === 'encrypted') {
-      if (!encryptionKey) throw new Error('Kein Schlüssel geladen.');
-      encryptFile(workingDbPath, filePath, encryptionKey);
-    } else {
-      fs.copyFileSync(workingDbPath, filePath);
-    }
-    return { saved: true, filePath };
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : 'Export fehlgeschlagen. Bitte Pfad/Schreibrechte prüfen.';
-    dialog.showErrorBox('Export fehlgeschlagen', message);
-    return { saved: false, error: message };
+  if (canceled || !filePath) {
+    return { saved: false };
   }
-};
 
-const closeDb = (): void => {
-  if (db) {
-    db.close();
-    db = null;
+  ensureDbReady();
+  const db = getDb();
+  db.backup(filePath);
+
+  if (mode === 'encrypted') {
+    const key = getEncryptionKey();
+    if (!key) throw new Error('Kein Schlüssel');
+    const data = fs.readFileSync(filePath);
+    const payload = encryptBuffer(data, key);
+    const combined = Buffer.concat([payload.iv, payload.tag, payload.content]);
+    fs.writeFileSync(filePath, combined);
   }
+
+  return { saved: true, filePath };
 };
 
 const importDatabase = async (
   mode: 'encrypted' | 'plain',
-): Promise<{ imported: boolean; error?: string; backupPath?: string }> => {
-  ensureDbReady();
-  const { filePaths, canceled } = await dialog.showOpenDialog({
-    title: mode === 'encrypted' ? 'Datenbank importieren (verschlüsselt)' : 'Datenbank importieren (unverschlüsselt)',
-    properties: ['openFile'],
+): Promise<{ imported: boolean; error?: string }> => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    title: mode === 'encrypted' ? 'Verschlüsselte Datenbank importieren' : 'Datenbank importieren',
     filters: [
       mode === 'encrypted'
-        ? { name: 'Verschlüsselte DB', extensions: ['enc'] }
-        : { name: 'SQLite DB', extensions: ['db', 'sqlite'] },
+        ? { name: 'Verschlüsselte Datenbank', extensions: ['enc'] }
+        : { name: 'SQLite Datenbank', extensions: ['db'] },
     ],
+    properties: ['openFile'],
   });
-  if (canceled || filePaths.length === 0) return { imported: false };
-
-  const source = filePaths[0];
-
-  try {
-    const backupPath = backupDatabase();
-    ensureDataDir();
-    closeDb();
-    if (mode === 'encrypted') {
-      if (!encryptionKey) throw new Error('Kein Schlüssel geladen.');
-      fs.copyFileSync(source, encryptedDbPath);
-      decryptFile(source, workingDbPath, encryptionKey);
-    } else {
-      fs.copyFileSync(source, workingDbPath);
-      if (fs.existsSync(encryptedDbPath)) {
-        fs.rmSync(encryptedDbPath);
-      }
-    }
-    openDatabase();
-    return { imported: true, backupPath };
-  } catch (err) {
-    const message =
-      err instanceof Error ? err.message : 'Import fehlgeschlagen. Datei/Schlüssel prüfen.';
-    dialog.showErrorBox('Import fehlgeschlagen', message);
-    return { imported: false, error: message };
+  if (canceled || filePaths.length === 0) {
+    return { imported: false };
   }
+
+  const sourceFile = filePaths[0];
+  backupDatabase();
+  closeDb();
+
+  const targetPath = path.join(dataDir, 'employee.db');
+
+  if (mode === 'encrypted') {
+    const key = getEncryptionKey();
+    if (!key) throw new Error('Kein Schlüssel');
+    const payload = fs.readFileSync(sourceFile);
+    if (payload.length < 28) throw new Error('Datei ist ungültig');
+    const iv = payload.subarray(0, 12);
+    const tag = payload.subarray(12, 28);
+    const content = payload.subarray(28);
+    const data = decryptBuffer({ iv, tag, content }, key);
+    fs.writeFileSync(targetPath, data);
+  } else {
+    fs.copyFileSync(sourceFile, targetPath);
+  }
+
+  openDatabase();
+  return { imported: true };
 };
 
 const exportData = async (
   year: number,
   format: 'csv' | 'xlsx',
 ): Promise<{ saved: boolean; filePath?: string; error?: string }> => {
-  ensureDbReady();
   const dataset = getYearDataset(year);
-  const { filePath, canceled } = await dialog.showSaveDialog({
-    title: `Export ${year}`,
-    defaultPath: `mitarbeitende-${year}.${format === 'csv' ? 'csv' : 'xlsx'}`,
-    filters: [
-      format === 'csv'
-        ? { name: 'CSV', extensions: ['csv'] }
-        : { name: 'Excel', extensions: ['xlsx'] },
-    ],
+  const ext = format === 'csv' ? 'csv' : 'xlsx';
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: `Daten als ${ext.toUpperCase()} exportieren`,
+    defaultPath: `mitarbeitende-${year}.${ext}`,
+    filters: [{ name: ext.toUpperCase(), extensions: [ext] }],
   });
 
   if (canceled || !filePath) {
     return { saved: false };
   }
 
-  try {
-    const dir = path.dirname(filePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Ordner konnte nicht erstellt werden.';
-    dialog.showErrorBox('Export fehlgeschlagen', message);
-    return { saved: false, error: message };
-  }
+  const rows = dataset.employees.map((emp) => ({
+    Name: emp.name,
+    Qualifikation: emp.qualification,
+    VZÄ: emp.fte,
+    Wochenstunden: emp.weeklyHours ?? '',
+    'Start-Datum': emp.startDate,
+    'End-Datum': emp.endDate ?? '',
+    Status: emp.status,
+    Notiz: emp.note ?? '',
+    Datenquelle: emp.dataSource ?? '',
+  }));
 
-  const writeToPath = (targetPath: string): void => {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Mitarbeitende');
+
+  const writeToPath = (target: string) => {
     if (format === 'csv') {
-      const header = 'Name;Qualifikation;Eintritt;Austritt;FTE/VZÄ;Status;Quelle;Dokument\n';
-      const lines = dataset.employees
-        .map(
-          (row) =>
-            `${row.name};${row.qualification};${row.startDate};${row.endDate ?? ''};${row.fte};${row.status};${row.dataSource ?? ''};${row.documentPath ?? ''}`,
-        )
-        .join('\n');
-      fs.writeFileSync(targetPath, `${header}${lines}`);
+      const csvContent = XLSX.utils.sheet_to_csv(ws, { FS: ';' });
+      fs.writeFileSync(target, csvContent, 'utf8');
     } else {
-      const workbook = XLSX.utils.book_new();
-      const dataSheet = XLSX.utils.json_to_sheet(
-        dataset.employees.map((row) => ({
-          Name: row.name,
-          Qualifikation: row.qualification,
-          Eintritt: row.startDate,
-          Austritt: row.endDate ?? '',
-          'FTE/VZÄ': row.fte,
-          Status: row.status,
-          Quelle: row.dataSource ?? '',
-          Dokument: row.documentPath ?? '',
-        })),
-      );
-      XLSX.utils.book_append_sheet(workbook, dataSheet, `Mitarbeitende ${year}`);
-
-      const aggSheet = XLSX.utils.json_to_sheet(
-        dataset.aggregation.categories.map((cat) => ({
-          Qualifikation: cat.qualification,
-          Kopfanzahl: cat.headcount,
-        'FTE/VZÄ': cat.fte,
-        })),
-      );
-      XLSX.utils.book_append_sheet(workbook, aggSheet, 'Aggregationen');
-      // Use type: 'array' to avoid XLSX's browser download path (write_dl) in webpack-bundled Electron
-      const arrayBuffer = XLSX.write(workbook, { type: 'array', bookType: 'xlsx' });
-      fs.writeFileSync(targetPath, Buffer.from(arrayBuffer));
+      XLSX.writeFile(wb, target);
     }
   };
 
@@ -1119,6 +668,10 @@ const exportData = async (
 
   return { saved: true, filePath };
 };
+
+// =============================================================================
+// WINDOW & AUTO-UPDATER
+// =============================================================================
 
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
@@ -1178,6 +731,10 @@ const initAutoUpdater = (): void => {
   sendUpdateStatus({ state: 'idle' });
 };
 
+// =============================================================================
+// APP LIFECYCLE
+// =============================================================================
+
 app.on('ready', () => {
   createWindow();
   initAutoUpdater();
@@ -1200,16 +757,25 @@ app.on('activate', () => {
   }
 });
 
+// =============================================================================
+// IPC HANDLERS
+// =============================================================================
+
+// App state
 ipcMain.handle('app:state', (): AppState => ({
   configured: isConfigured(),
   unlocked,
 }));
 
+// Auto-updates
 ipcMain.handle('updates:check', async () => {
   if (!app.isPackaged) {
     if (process.env.MOCK_UPDATE_BANNER === '1') {
       sendUpdateStatus({ state: 'available', version: 'dev-demo' });
-      setTimeout(() => sendUpdateStatus({ state: 'downloading', version: 'dev-demo', progress: 42 }), 300);
+      setTimeout(
+        () => sendUpdateStatus({ state: 'downloading', version: 'dev-demo', progress: 42 }),
+        300,
+      );
       setTimeout(() => sendUpdateStatus({ state: 'downloaded', version: 'dev-demo' }), 1200);
       return true;
     }
@@ -1239,6 +805,7 @@ ipcMain.handle('updates:install', async () => {
   return true;
 });
 
+// Authentication
 ipcMain.handle('auth:register', (_event, password: string): AppState => {
   if (isConfigured()) {
     throw new Error('Die App ist bereits eingerichtet.');
@@ -1263,7 +830,7 @@ ipcMain.handle('auth:register', (_event, password: string): AppState => {
   };
   writeConfig(config);
 
-  encryptionKey = keyBytes;
+  setEncryptionKey(keyBytes);
   unlocked = true;
   openDatabase();
   persistEncryptedDb();
@@ -1300,19 +867,20 @@ ipcMain.handle('auth:login', (_event, password: string): AppState => {
     writeConfig(upgraded);
   }
 
-  encryptionKey = keyBytes;
+  setEncryptionKey(keyBytes);
   unlocked = true;
   openDatabase();
   return { configured: true, unlocked: true };
 });
 
 ipcMain.handle('auth:recoveryKey', (): { recoveryKey: string; fingerprint: string } => {
-  if (!unlocked || !encryptionKey) {
+  const key = getEncryptionKey();
+  if (!unlocked || !key) {
     throw new Error('Bitte zuerst anmelden.');
   }
   return {
-    recoveryKey: encryptionKey.toString('base64'),
-    fingerprint: fingerprintKey(encryptionKey),
+    recoveryKey: key.toString('base64'),
+    fingerprint: fingerprintKey(key),
   };
 });
 
@@ -1338,11 +906,11 @@ ipcMain.handle(
     }
 
     try {
-      encryptionKey = keyBytes;
+      setEncryptionKey(keyBytes);
       unlocked = true;
       openDatabase();
     } catch (err) {
-      encryptionKey = null;
+      setEncryptionKey(null);
       unlocked = false;
       throw err;
     }
@@ -1367,6 +935,7 @@ ipcMain.handle(
   },
 );
 
+// Data operations
 ipcMain.handle('data:list', (_event, { year }: { year: number }): YearDataset => {
   ensureDbReady();
   return getYearDataset(year);
@@ -1387,39 +956,70 @@ ipcMain.handle('data:delete', (_event, { id, year }: { id: number; year: number 
   return deleteEmployee(id, year);
 });
 
-ipcMain.handle('data:export', async (_event, { year, format }: { year: number; format: 'csv' | 'xlsx' }) => {
-  ensureDbReady();
-  return exportData(year, format);
-});
+ipcMain.handle(
+  'data:export',
+  async (_event, { year, format }: { year: number; format: 'csv' | 'xlsx' }) => {
+    ensureDbReady();
+    return exportData(year, format);
+  },
+);
 
 ipcMain.handle('data:openDocument', async (_event, { path: filePath }: { path: string }) => {
   if (!filePath) return;
   await shell.openPath(filePath);
 });
 
+// Qualifications
 ipcMain.handle('qualifications:list', () => listQualifications());
-ipcMain.handle('qualifications:add', (_event, { name, note }: { name: string; note?: string | null }) =>
-  addQualification(name, note),
+ipcMain.handle(
+  'qualifications:add',
+  (_event, { name, note }: { name: string; note?: string | null }) => addQualification(name, note),
 );
-ipcMain.handle('qualifications:update', (_event, { id, name, note }: { id: number; name: string; note?: string | null }) =>
-  updateQualification(id, name, note),
+ipcMain.handle(
+  'qualifications:update',
+  (_event, { id, name, note }: { id: number; name: string; note?: string | null }) =>
+    updateQualification(id, name, note),
 );
 ipcMain.handle('qualifications:delete', (_event, { id }: { id: number }) => deleteQualification(id));
-ipcMain.handle('qualifications:reorder', (_event, { ids }: { ids: number[] }) => reorderQualifications(ids));
-ipcMain.handle('db:export', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => exportDatabase(mode));
-ipcMain.handle('db:import', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => importDatabase(mode));
+ipcMain.handle('qualifications:reorder', (_event, { ids }: { ids: number[] }) =>
+  reorderQualifications(ids),
+);
+
+// Database management
+ipcMain.handle('db:export', (_event, { mode }: { mode: 'encrypted' | 'plain' }) =>
+  exportDatabase(mode),
+);
+ipcMain.handle('db:import', (_event, { mode }: { mode: 'encrypted' | 'plain' }) =>
+  importDatabase(mode),
+);
 ipcMain.handle('period:delete', (_event, { periodId, year }: { periodId: number; year: number }) =>
   deletePeriod(periodId, year),
 );
-ipcMain.handle('events:list', (_event, { employeeId }: { employeeId: number }) => listEvents(employeeId));
+
+// Events
+ipcMain.handle('events:list', (_event, { employeeId }: { employeeId: number }) =>
+  listEvents(employeeId),
+);
 ipcMain.handle(
   'events:save',
-  (_event, input: { id?: number; employeeId: number; eventDate: string; type: EmployeeEventType; title: string; details?: string | null; meta?: Record<string, unknown> | null }) =>
-    saveEvent(input),
+  (
+    _event,
+    input: {
+      id?: number;
+      employeeId: number;
+      eventDate: string;
+      type: EmployeeEventType;
+      title: string;
+      details?: string | null;
+      meta?: Record<string, unknown> | null;
+    },
+  ) => saveEvent(input),
 );
 ipcMain.handle('events:delete', (_event, { id, employeeId }: { id: number; employeeId: number }) =>
   deleteEvent(id, employeeId),
 );
+
+// App management
 ipcMain.handle('db:delete', () => {
   ensureDataDir();
   deleteDatabase();
@@ -1427,13 +1027,18 @@ ipcMain.handle('db:delete', () => {
 });
 ipcMain.handle('app:reset', () => resetApplication());
 ipcMain.handle('settings:getBaseHours', () => getBaseHours());
-ipcMain.handle('settings:setBaseHours', (_event, { hours }: { hours: number }) => setBaseHours(hours));
+ipcMain.handle('settings:setBaseHours', (_event, { hours }: { hours: number }) =>
+  setBaseHours(hours),
+);
 
 // DEV: Raw table data - dynamically discovers all tables
 ipcMain.handle('dev:tables', () => {
-  if (!db) return {};
+  if (!isDbOpen()) return {};
+  const db = getDb();
   const tables = db
-    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name",
+    )
     .all() as { name: string }[];
   const result: Record<string, unknown[]> = {};
   for (const { name } of tables) {
