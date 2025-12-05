@@ -12,6 +12,7 @@ const employees: EmployeeWithPeriod[] = [
     startDate: '2024-01-01',
     endDate: '',
     fte: 0.8,
+    weeklyHours: 30,
     status: 'active',
   },
 ];
@@ -69,5 +70,7 @@ describe('EmployeeList', () => {
 
     fireEvent.click(screen.getByText('Anna Beispiel'));
     expect(onSelect).toHaveBeenCalledWith(employees[0]);
+
+    expect(screen.getByText('30')).toBeInTheDocument();
   });
 });

@@ -26,6 +26,7 @@ const EmployeeTable = ({ employees, onSelect, onDelete, selectedId }: EmployeeTa
               VZÄ
             </abbr>
           </th>
+          <th>Wochenstunden</th>
           <th>Status</th>
           <th>Quelle</th>
           <th>Aktion</th>
@@ -50,6 +51,7 @@ const EmployeeTable = ({ employees, onSelect, onDelete, selectedId }: EmployeeTa
             <td>{emp.startDate}</td>
             <td>{emp.endDate ?? '—'}</td>
             <td>{emp.fte.toFixed(2)}</td>
+            <td>{emp.weeklyHours ?? '—'}</td>
             <td>
               <Badge status={emp.status} />
             </td>

@@ -15,6 +15,7 @@ import ConfirmModal from './components/modals/ConfirmModal';
 import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
 import QualificationModal from './components/modals/QualificationModal';
+import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
 import useAppLogic from './hooks/useAppLogic';
 import type { EventModalType } from './types/ui';
 
@@ -519,7 +520,7 @@ const App = () => {
                       setEditModal({ ...editModal, weeklyHours: val });
                       const hoursNum = Number(val);
                       if (!Number.isNaN(hoursNum)) {
-                        const fteVal = Math.min(1, Number((hoursNum / (baseHours || 36)).toFixed(2)));
+                        const fteVal = deriveFteFromWeeklyHours(hoursNum, baseHours);
                         if (editModal.linked) {
                           setForm((prev) => ({ ...prev, weeklyHours: hoursNum, fte: fteVal, linked: true }));
                           setEditModal((prev) => ({ ...prev, fteValue: fteVal.toFixed(2) }));
@@ -568,9 +569,9 @@ const App = () => {
                       if (Number.isNaN(fteVal)) return;
                       const cappedFte = Math.min(1, fteVal);
                       if (editModal.linked) {
-                        const hours = cappedFte >= 1 ? (baseHours || 36) : cappedFte * (baseHours || 36);
+                        const hours = deriveWeeklyHoursFromFte(cappedFte, baseHours);
                         setEditModal((prev) => ({ ...prev, weeklyHours: hours.toFixed(1), fteValue: cappedFte.toFixed(2) }));
-                        setForm((prev) => ({ ...prev, fte: cappedFte, weeklyHours: Number(hours.toFixed(1)), linked: true }));
+                        setForm((prev) => ({ ...prev, fte: cappedFte, weeklyHours: hours, linked: true }));
                       } else {
                         setEditModal((prev) => ({ ...prev, fteValue: e.target.value }));
                         setForm((prev) => ({ ...prev, fte: cappedFte, linked: false }));
