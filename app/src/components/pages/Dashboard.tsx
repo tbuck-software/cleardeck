@@ -1,5 +1,14 @@
 import React from 'react';
-import type { YearDataset } from '../../shared/types';
+import {
+  faBriefcase,
+  faChartPie,
+  faGraduationCap,
+  faUsers,
+  faUserPlus,
+  faUserMinus,
+  faPercent,
+} from '@fortawesome/free-solid-svg-icons';
+import type { QualificationType, YearDataset } from '../../shared/types';
 import StatCard from '../ui/StatCard';
 
 type DashboardProps = {
@@ -9,68 +18,140 @@ type DashboardProps = {
   averageFte: number;
   totalFte: number;
   totalHeadcount: number;
+  qualifications: QualificationType[];
 };
 
-const Dashboard = ({ year, dataset, baseHours, averageFte, totalFte, totalHeadcount }: DashboardProps) => (
-  <div className="stack dashboard">
-    <div className="card dashboard-hero">
-      <div>
-        <p className="eyebrow">Übersicht {year}</p>
-        <h2>Willkommen zurück</h2>
-        <p className="subtitle">Kennzahlen und Qualifikationen im gewählten Jahr.</p>
-      </div>
-    </div>
+const Dashboard = ({
+  year,
+  dataset,
+  averageFte,
+  totalFte,
+  totalHeadcount,
+  qualifications,
+}: DashboardProps) => {
+  const fullTimeCount = dataset?.employees.filter((e) => e.fte >= 1).length ?? 0;
+  const fullTimePercent =
+    totalHeadcount > 0 ? Math.round((fullTimeCount / totalHeadcount) * 100) : 0;
+  const newHires =
+    dataset?.employees.filter((e) => e.startDate.startsWith(`${year}`)).length ?? 0;
+  const leavers =
+    dataset?.employees.filter((e) => e.endDate?.startsWith(`${year}`)).length ?? 0;
 
-    <div className="card">
-      <div className="form-header">
-        <div>
-          <p className="eyebrow">Kennzahlen</p>
-          <h3>Jahr im Blick</h3>
+  return (
+    <div className="stack dashboard">
+      <div className="card dashboard-hero">
+        <div className="hero-content">
+          <p className="eyebrow">Übersicht {year}</p>
+          <h2>Willkommen zurück</h2>
+          <p className="subtitle">Kennzahlen und Qualifikationen im gewählten Jahr.</p>
+        </div>
+        <div className="hero-decoration">
+          {/* Optional decoration or pattern */}
         </div>
       </div>
-      <div className="grid stats-grid dashboard-stats">
-        <StatCard label="Gesamt VZÄ" value={`${totalFte.toFixed(2)}`} sub="Summe aller Stellenanteile" />
-        <StatCard label="Mitarbeitende" value={`${totalHeadcount}`} sub="im gewählten Jahr" />
-        <StatCard label="Ø VZÄ je Person" value={averageFte.toFixed(2)} sub="Durchschnittliche Auslastung" />
-        <StatCard
-          label="Qualifikationen"
-          value={`${dataset?.aggregation.categories.length ?? 0}`}
-          sub="mit VZÄ im Jahr"
-        />
-        <StatCard label="Basis-Stunden" value={`${baseHours || 36}`} sub="Grundlage VZÄ-Berechnung" />
-      </div>
-    </div>
 
-    <div className="card">
-      <div className="form-header">
-        <div>
-          <p className="eyebrow">Qualifikationen</p>
-          <h3>VZÄ je Qualifikation</h3>
-        </div>
-      </div>
-      <div className="qual-grid">
-        {(dataset?.aggregation.categories ?? []).length > 0 ? (
-          dataset?.aggregation.categories.map((cat) => {
-            const percent = totalFte > 0 ? Math.min(100, (cat.fte / totalFte) * 100) : 0;
-            return (
-              <div className="qual-card" key={cat.qualification}>
-                <div className="qual-card-head">
-                  <div className="qual-title">{cat.qualification}</div>
-                  <div className="qual-meta">{cat.headcount} Personen</div>
-                </div>
-                <div className="qual-fte">{cat.fte.toFixed(2)} VZÄ</div>
-                <div className="qual-progress">
-                  <div className="qual-progress-bar" style={{ width: `${percent}%` }} />
-                </div>
+      <div className="dashboard-grid">
+        <div className="stack">
+          <div className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Kennzahlen</p>
+                <h3>Jahr im Blick</h3>
               </div>
-            );
-          })
-        ) : (
-          <div className="empty">Keine Qualifikationen mit VZÄ im gewählten Jahr.</div>
-        )}
+            </div>
+            <div className="grid stats-grid dashboard-stats">
+              <StatCard
+                label="Gesamt VZÄ"
+                value={`${totalFte.toFixed(2)}`}
+                sub="Summe aller Stellenanteile"
+                icon={faChartPie}
+              />
+              <StatCard
+                label="Mitarbeitende"
+                value={`${totalHeadcount}`}
+                sub="im gewählten Jahr"
+                icon={faUsers}
+              />
+              <StatCard
+                label="Ø VZÄ je Person"
+                value={averageFte.toFixed(2)}
+                sub="Durchschnittliche Auslastung"
+                icon={faBriefcase}
+              />
+              <StatCard
+                label="Qualifikationen"
+                value={`${dataset?.aggregation.categories.length ?? 0}`}
+                sub="mit VZÄ im Jahr"
+                icon={faGraduationCap}
+              />
+              <StatCard
+                label="Vollzeit-Quote"
+                value={`${fullTimePercent}%`}
+                sub={`${fullTimeCount} Vollzeit-Kräfte`}
+                icon={faPercent}
+              />
+              <StatCard
+                label="Neu im Jahr"
+                value={`${newHires}`}
+                sub="Neueintritte"
+                icon={faUserPlus}
+              />
+              <StatCard
+                label="Ausgeschieden"
+                value={`${leavers}`}
+                sub="Austritte im Jahr"
+                icon={faUserMinus}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="form-header">
+            <div>
+              <p className="eyebrow">Qualifikationen</p>
+              <h3>VZÄ je Qualifikation</h3>
+            </div>
+          </div>
+          <div className="qual-grid">
+            {qualifications.length > 0 ? (
+              qualifications.map((q) => {
+                const cat = dataset?.aggregation.categories.find(
+                  (c) => c.qualification === q.name,
+                );
+                const fte = cat?.fte ?? 0;
+                const headcount = cat?.headcount ?? 0;
+                const percent = totalFte > 0 ? Math.min(100, (fte / totalFte) * 100) : 0;
+
+                return (
+                  <div className="qual-card" key={q.name}>
+                    <div className="qual-card-head">
+                      <div className="qual-icon">
+                        <div className="qual-dot" />
+                      </div>
+                      <div className="qual-info">
+                        <div className="qual-title">{q.name}</div>
+                        <div className="qual-meta">{headcount} Personen</div>
+                      </div>
+                      <div className="qual-fte">{fte.toFixed(2)}</div>
+                    </div>
+                    <div className="qual-progress-wrapper">
+                      <div className="qual-progress">
+                        <div className="qual-progress-bar" style={{ width: `${percent}%` }} />
+                      </div>
+                      <div className="qual-percent">{Math.round(percent)}%</div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="empty">Keine Qualifikationen definiert.</div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default Dashboard;
