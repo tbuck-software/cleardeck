@@ -102,6 +102,7 @@ const App = () => {
       openNewPeriodModal,
       openExistingPeriodModal,
       openEventModalForEvent,
+      openCreateModal,
       openEditModal,
       handleEditModalSave,
       resetForm,
@@ -162,6 +163,8 @@ const App = () => {
       return next;
     });
   };
+
+  const isCreateMode = editModal.mode === 'create';
 
   if (!appReady.configured || !appReady.unlocked) {
     const authMode: 'setup' | 'login' = appReady.configured ? 'login' : 'setup';
@@ -268,7 +271,7 @@ const App = () => {
             onStatusChange={(val) => setStatusFilter(val)}
             onQualificationChange={setQualificationFilter}
             onExport={handleExport}
-            onCreate={() => goTo('new')}
+            onCreate={openCreateModal}
             onSelect={handleSelect}
             onDelete={confirmDeleteEmployee}
           />
@@ -342,10 +345,43 @@ const App = () => {
         <div className="modal-backdrop">
           <div className="modal">
             <div className="modal-icon">
-              <FontAwesomeIcon icon={faPen} />
+              <FontAwesomeIcon icon={isCreateMode ? faPlus : faPen} />
             </div>
-            <h3>Mitarbeiter:in bearbeiten</h3>
+            <h3>{isCreateMode ? 'Mitarbeiter:in anlegen' : 'Mitarbeiter:in bearbeiten'}</h3>
             <div className="modal-body">
+              {isCreateMode && (
+                <div className="form-grid">
+                  <label>
+                    Qualifikation
+                    <select
+                      value={form.qualification}
+                      onChange={(e) => setForm((prev) => ({ ...prev, qualification: e.target.value }))}
+                    >
+                      {qualifications.map((q) => (
+                        <option key={q.id ?? q.name} value={q.name}>
+                          {q.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Start
+                    <input
+                      type="date"
+                      value={form.startDate}
+                      onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    Ende
+                    <input
+                      type="date"
+                      value={form.endDate}
+                      onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                    />
+                  </label>
+                </div>
+              )}
               <label className="full-width">
                 Name*
                 <input
@@ -411,7 +447,7 @@ const App = () => {
                   Abbrechen
                 </button>
                 <button className="primary" onClick={handleEditModalSave}>
-                  Speichern
+                  {isCreateMode ? 'Anlegen' : 'Speichern'}
                 </button>
               </div>
             </div>

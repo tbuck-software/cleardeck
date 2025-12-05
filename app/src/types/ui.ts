@@ -59,6 +59,7 @@ export type ConfirmState = {
 
 export type EditModalState = {
   open: boolean;
+  mode: 'edit' | 'create';
   name: string;
   note: string;
   weeklyHours: string;

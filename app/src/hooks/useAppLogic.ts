@@ -258,6 +258,7 @@ const useAppLogic = () => {
       openNewPeriodModal: eventSlice.actions.openNewPeriodModal,
       openExistingPeriodModal: eventSlice.actions.openExistingPeriodModal,
       openEventModalForEvent: eventSlice.actions.openEventModalForEvent,
+      openCreateModal: employeeSlice.actions.openCreateModal,
       openEditModal: employeeSlice.actions.openEditModal,
       handleEditModalSave: handleEditModalSaveWithHistory,
       resetForm: employeeSlice.actions.resetForm,

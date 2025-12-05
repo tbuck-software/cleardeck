@@ -71,6 +71,7 @@ const useEmployees = ({
   const [addNewPeriod, setAddNewPeriod] = useState(false);
   const [editModal, setEditModal] = useState<EditModalState>({
     open: false,
+    mode: 'edit',
     name: '',
     note: '',
     weeklyHours: '',
@@ -119,6 +120,7 @@ const useEmployees = ({
       const hoursFromFte = cappedFte ? (cappedFte * (baseHours || 36)).toFixed(1) : '';
       setEditModal({
         open: false,
+        mode: 'edit',
         name: emp.name,
         note: emp.note ?? '',
         weeklyHours: emp.weeklyHours ? String(emp.weeklyHours) : hoursFromFte,
@@ -302,6 +304,7 @@ const useEmployees = ({
           : '';
     setEditModal({
       open: true,
+      mode: 'edit',
       name: selectedEmployee.name,
       note: selectedEmployee.note ?? '',
       weeklyHours: computedWeeklyHours,
@@ -310,7 +313,71 @@ const useEmployees = ({
     });
   }, [baseHours, selectedEmployee]);
 
+  const openCreateModal = useCallback(() => {
+    const defaultQualification = qualifications[0]?.name ?? '';
+    const freshForm = emptyForm(year, defaultQualification);
+    setForm(freshForm);
+    setAddNewPeriod(false);
+    setSelectedEmployee(null);
+    setEditModal({
+      open: true,
+      mode: 'create',
+      name: '',
+      note: '',
+      weeklyHours: '',
+      linked: true,
+      fteValue: freshForm.fte ? clampFte(freshForm.fte).toFixed(2) : '',
+    });
+  }, [qualifications, setAddNewPeriod, setForm, setSelectedEmployee, year]);
+
   const handleEditModalSave = useCallback(async () => {
+    if (editModal.mode === 'create') {
+      if (!editModal.name.trim()) {
+        handleError(new Error('Name darf nicht leer sein.'));
+        return;
+      }
+      setLoading(true);
+      try {
+        const weeklyHoursNum = editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : form.weeklyHours ?? null;
+        const useLinked = editModal.linked ?? true;
+        const derivedFte =
+          useLinked && typeof weeklyHoursNum === 'number' && !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0
+            ? deriveFteFromWeeklyHours(weeklyHoursNum, baseHours)
+            : editModal.fteValue
+              ? Number(editModal.fteValue)
+              : form.fte;
+        const payload: Parameters<typeof api.employees.save>[0] = {
+          ...form,
+          name: editModal.name,
+          note: editModal.note,
+          weeklyHours: weeklyHoursNum ?? null,
+          fte: Math.min(1, Number(derivedFte) || 0),
+          endDate: form.endDate ? form.endDate : null,
+          year,
+          linked: useLinked,
+        };
+        const updated = await api.employees.save(payload);
+        setDataset(updated);
+        setToast('Gespeichert.');
+        setPage('list');
+        resetForm();
+      } catch (err) {
+        handleError(err);
+      } finally {
+        setLoading(false);
+        setEditModal({
+          open: false,
+          mode: 'edit',
+          name: '',
+          note: '',
+          weeklyHours: '',
+          linked: true,
+          fteValue: '',
+        });
+        setTimeout(() => setToast(null), 2000);
+      }
+      return;
+    }
     if (!selectedEmployee) return;
     setLoading(true);
     try {
@@ -357,6 +424,7 @@ const useEmployees = ({
       setLoading(false);
       setEditModal({
         open: false,
+        mode: 'edit',
         name: '',
         note: '',
         weeklyHours: '',
@@ -365,7 +433,7 @@ const useEmployees = ({
       });
       setTimeout(() => setToast(null), 2000);
     }
-  }, [baseHours, editModal, form, handleError, selectedEmployee, setLoading, setToast, year]);
+  }, [baseHours, editModal, form, handleError, resetForm, selectedEmployee, setLoading, setPage, setToast, year]);
 
   const filteredEmployees = useMemo(() => {
     if (!dataset) return [];
@@ -480,6 +548,7 @@ const useEmployees = ({
       confirmDeleteQualification,
       reorderQualification,
       openEditModal,
+      openCreateModal,
       handleEditModalSave,
       resetForm,
     },
