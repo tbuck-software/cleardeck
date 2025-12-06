@@ -22,11 +22,13 @@ export const v006_drop_documentpath: Migration = {
           name TEXT NOT NULL,
           qualification TEXT NOT NULL,
           note TEXT,
+          weeklyHours REAL,
+          fte REAL,
           createdAt TEXT DEFAULT (datetime('now'))
         );
 
-        INSERT INTO employees (id, name, qualification, note, createdAt)
-        SELECT id, name, qualification, note, createdAt
+        INSERT INTO employees (id, name, qualification, note, weeklyHours, fte, createdAt)
+        SELECT id, name, qualification, note, weeklyHours, fte, createdAt
         FROM employees_old;
 
         DROP TABLE employees_old;

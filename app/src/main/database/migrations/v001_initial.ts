@@ -33,6 +33,7 @@ export const v001_initial: Migration = {
         dataSource TEXT,
         note TEXT,
         weeklyHours REAL,
+        fte REAL,
         documentPath TEXT,
         createdAt TEXT DEFAULT (datetime('now'))
       );
@@ -41,10 +42,8 @@ export const v001_initial: Migration = {
         employeeId INTEGER NOT NULL,
         startDate TEXT NOT NULL,
         endDate TEXT,
-        fte REAL NOT NULL,
         qualification TEXT,
         note TEXT,
-        weeklyHours REAL,
         FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE
       );
       CREATE INDEX IF NOT EXISTS idx_periods_employee ON employment_periods(employeeId);

@@ -101,12 +101,12 @@ export const getYearDataset = (year: number): YearDataset => {
       SELECT e.id as employeeId,
              e.name,
              e.note,
-             p.weeklyHours,
+             e.weeklyHours,
+             e.fte,
              e.createdAt,
              p.id as periodId,
              p.startDate,
              p.endDate,
-             p.fte,
              p.qualification as qualification,
              p.note as periodNote
       FROM employees e
@@ -122,6 +122,7 @@ export const getYearDataset = (year: number): YearDataset => {
       periodId: number;
       periodNote?: string | null;
       createdAt?: string;
+      fte: number;
     })[];
 
   const latest = new Map<number, EmployeeWithPeriod>();
@@ -166,7 +167,7 @@ export const listPeriods = (employeeId: number): EmploymentPeriod[] => {
   const rows = db
     .prepare(
       `
-      SELECT id, startDate, endDate, fte, weeklyHours, qualification, note
+      SELECT id, startDate, endDate, qualification, note
       FROM employment_periods
       WHERE employeeId = ?
       ORDER BY startDate DESC;
@@ -196,13 +197,13 @@ export const saveEmployee = (input: {
   const employeePayload = {
     name: input.name,
     note: input.note ?? null,
+    weeklyHours: input.weeklyHours ?? null,
+    fte: input.fte,
   };
 
   const periodPayload = {
     startDate: input.startDate,
     endDate: input.endDate ?? null,
-    fte: input.fte,
-    weeklyHours: input.weeklyHours ?? null,
     qualification: input.qualification,
     note: input.note ?? null,
   };
@@ -210,34 +211,34 @@ export const saveEmployee = (input: {
   if (input.id) {
     db.prepare(
       `UPDATE employees
-       SET name = @name, note = @note
+       SET name = @name, note = @note, weeklyHours = @weeklyHours, fte = @fte
        WHERE id = @id`,
     ).run({ ...employeePayload, id: input.id });
 
     if (input.periodId) {
       db.prepare(
         `UPDATE employment_periods
-         SET startDate = @startDate, endDate = @endDate, fte = @fte, weeklyHours = @weeklyHours, qualification = @qualification, note = @note
+         SET startDate = @startDate, endDate = @endDate, qualification = @qualification, note = @note
          WHERE id = @periodId`,
       ).run({ ...periodPayload, periodId: input.periodId });
     } else {
       db.prepare(
-        `INSERT INTO employment_periods (employeeId, startDate, endDate, fte, weeklyHours, qualification, note)
-         VALUES (@employeeId, @startDate, @endDate, @fte, @weeklyHours, @qualification, @note)`,
+        `INSERT INTO employment_periods (employeeId, startDate, endDate, qualification, note)
+         VALUES (@employeeId, @startDate, @endDate, @qualification, @note)`,
       ).run({ ...periodPayload, employeeId: input.id });
     }
   } else {
     const empResult = db
       .prepare(
-        `INSERT INTO employees (name, note)
-         VALUES (@name, @note)`,
+        `INSERT INTO employees (name, note, weeklyHours, fte)
+         VALUES (@name, @note, @weeklyHours, @fte)`,
       )
       .run(employeePayload);
     const newId = empResult.lastInsertRowid as number;
 
     db.prepare(
-      `INSERT INTO employment_periods (employeeId, startDate, endDate, fte, weeklyHours, qualification, note)
-       VALUES (@employeeId, @startDate, @endDate, @fte, @weeklyHours, @qualification, @note)`,
+      `INSERT INTO employment_periods (employeeId, startDate, endDate, qualification, note)
+       VALUES (@employeeId, @startDate, @endDate, @qualification, @note)`,
     ).run({ ...periodPayload, employeeId: newId });
 
     // Create join event for new employee

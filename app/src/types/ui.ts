@@ -70,7 +70,6 @@ export type EditModalState = {
 export type AddPeriodFormState = {
   startDate: string;
   endDate: string;
-  fte: number;
   qualification: string;
   periodId?: number;
   note?: string;

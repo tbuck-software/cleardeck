@@ -9,7 +9,7 @@ const HistoryList = ({ items }: HistoryListProps) => (
   <div className="history">
     <div className="history-header">
       <span>Historie</span>
-      <small>Stellenanteil pro Zeitraum</small>
+      <small>Beschäftigungszeiträume</small>
     </div>
     {items.length === 0 && <div className="history-empty">Keine Historie hinterlegt.</div>}
     {items.map((item) => (
@@ -19,7 +19,7 @@ const HistoryList = ({ items }: HistoryListProps) => (
             {item.startDate} – {item.endDate ?? 'aktuell'}
           </div>
           <div className="history-meta">
-            FTE/VZÄ: {item.fte} · Quali: {item.qualification ?? '—'}
+            Quali: {item.qualification ?? '—'}
           </div>
         </div>
       </div>

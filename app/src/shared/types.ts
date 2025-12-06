@@ -15,6 +15,7 @@ export interface Employee {
   name: string;
   note?: string;
   weeklyHours?: number | null;
+  fte?: number | null;
   createdAt?: string;
 }
 
@@ -23,8 +24,6 @@ export interface EmploymentPeriod {
   employeeId?: number;
   startDate: string;
   endDate?: string | null;
-  fte: number;
-  weeklyHours?: number | null;
   qualification: Qualification | string;
   note?: string | null;
 }

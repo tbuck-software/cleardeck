@@ -224,7 +224,6 @@ const EmployeeDetail = ({
                   </div>
                   <div className="timeline-meta">
                     <span className="pill">{p.qualification ?? employee.qualification}</span>
-                    <span className="pill">VZÄ {p.fte}</span>
                     {p.note && <span className="muted">{p.note}</span>}
                   </div>
                 </div>

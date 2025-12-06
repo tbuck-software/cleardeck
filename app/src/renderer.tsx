@@ -527,18 +527,6 @@ const App = () => {
                       ))}
                     </select>
                   </label>
-                  <label>
-                    <abbr className="help" title={fteHelp}>
-                      FTE / VZÄ
-                    </abbr>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={addPeriodForm.fte}
-                      onChange={(e) => setAddPeriodForm({ ...addPeriodForm, fte: Number(e.target.value) })}
-                    />
-                  </label>
                   <label className="full-width">
                     Notiz
                     <textarea

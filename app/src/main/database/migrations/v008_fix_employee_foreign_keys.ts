@@ -33,6 +33,8 @@ export const v008_fix_employee_foreign_keys: Migration = {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
           note TEXT,
+          weeklyHours REAL,
+          fte REAL,
           createdAt TEXT DEFAULT (datetime('now'))
         );
       `);
@@ -43,7 +45,7 @@ export const v008_fix_employee_foreign_keys: Migration = {
       db.exec('DROP TABLE employees_old;');
     }
 
-    // Recreate employment_periods with a clean FK to employees
+    // Recreate employment_periods with a clean FK to employees (without fte/weeklyHours)
     if (tableExists(db, 'employment_periods')) {
       db.exec(`
         CREATE TABLE employment_periods_new (
@@ -51,17 +53,15 @@ export const v008_fix_employee_foreign_keys: Migration = {
           employeeId INTEGER NOT NULL,
           startDate TEXT NOT NULL,
           endDate TEXT,
-          fte REAL NOT NULL,
           qualification TEXT,
           note TEXT,
-          weeklyHours REAL,
           FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE
         );
 
         INSERT INTO employment_periods_new (
-          id, employeeId, startDate, endDate, fte, qualification, note, weeklyHours
+          id, employeeId, startDate, endDate, qualification, note
         )
-        SELECT id, employeeId, startDate, endDate, fte, qualification, note, weeklyHours
+        SELECT id, employeeId, startDate, endDate, qualification, note
         FROM employment_periods;
 
         DROP TABLE employment_periods;

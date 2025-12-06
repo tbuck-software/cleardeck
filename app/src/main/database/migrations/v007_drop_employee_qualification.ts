@@ -32,11 +32,13 @@ export const v007_drop_employee_qualification: Migration = {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
           note TEXT,
+          weeklyHours REAL,
+          fte REAL,
           createdAt TEXT DEFAULT (datetime('now'))
         );
 
-        INSERT INTO employees (id, name, note, createdAt)
-        SELECT id, name, note, createdAt
+        INSERT INTO employees (id, name, note, weeklyHours, fte, createdAt)
+        SELECT id, name, note, weeklyHours, fte, createdAt
         FROM employees_old;
 
         DROP TABLE employees_old;

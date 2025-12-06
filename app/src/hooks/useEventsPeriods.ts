@@ -47,7 +47,6 @@ type UseEventsPeriodsParams = {
 const initialAddPeriodForm = (year: number, qualification: string): AddPeriodFormState => ({
   startDate: `${year}-01-01`,
   endDate: '',
-  fte: 1,
   qualification,
   periodId: undefined,
   note: '',
@@ -119,7 +118,6 @@ const useEventsPeriods = ({
       setAddPeriodForm({
         startDate: period.startDate,
         endDate: period.endDate ?? '',
-        fte: period.fte,
         qualification: period.qualification ?? selectedEmployee.qualification,
         periodId: period.id,
         note: period.note ?? '',
@@ -155,7 +153,7 @@ const useEventsPeriods = ({
         weeklyHours: form.weeklyHours ?? selectedEmployee.weeklyHours ?? null,
         startDate: addPeriodForm.startDate,
         endDate: addPeriodForm.endDate || null,
-        fte: Number(addPeriodForm.fte) || 0,
+        fte: form.fte ?? selectedEmployee.fte ?? 1,
         periodId: addPeriodForm.periodId,
         year,
         periodNote: addPeriodForm.note ?? null,
@@ -173,11 +171,11 @@ const useEventsPeriods = ({
     }
   }, [
     addPeriodForm.endDate,
-    addPeriodForm.fte,
     addPeriodForm.periodId,
     addPeriodForm.qualification,
     addPeriodForm.startDate,
     addPeriodForm.note,
+    form.fte,
     form.weeklyHours,
     handleError,
     loadHistory,

@@ -23,12 +23,14 @@ export const v005_drop_datasource: Migration = {
           name TEXT NOT NULL,
           qualification TEXT NOT NULL,
           note TEXT,
+          weeklyHours REAL,
+          fte REAL,
           documentPath TEXT,
           createdAt TEXT DEFAULT (datetime('now'))
         );
 
-        INSERT INTO employees (id, name, qualification, note, documentPath, createdAt)
-        SELECT id, name, qualification, note, documentPath, createdAt
+        INSERT INTO employees (id, name, qualification, note, weeklyHours, fte, documentPath, createdAt)
+        SELECT id, name, qualification, note, weeklyHours, fte, documentPath, createdAt
         FROM employees_old;
 
         DROP TABLE employees_old;

@@ -1,8 +1,8 @@
 /**
- * Migration v003: FTE Recalculation
+ * Migration v003: Add FTE to employees
  *
- * Ensures weeklyHours are properly stored in employment_periods
- * and recalculates FTE using the 36-hour threshold rule:
+ * Adds the fte column to employees table and calculates FTE
+ * using the 36-hour threshold rule:
  * - weeklyHours >= 36 = 1.0 FTE
  * - weeklyHours < 36 = weeklyHours / baseHours (capped at 1.0)
  */
@@ -13,7 +13,7 @@ const FULL_TIME_THRESHOLD = 36;
 
 export const v003_fte: Migration = {
   version: 3,
-  description: 'Migrate weeklyHours to periods and recalculate FTE with 36h threshold',
+  description: 'Add FTE column to employees and calculate from weeklyHours',
   up: (db) => {
     // Get baseHours setting
     const baseHoursRow = db
@@ -21,31 +21,24 @@ export const v003_fte: Migration = {
       .get() as { value?: string } | undefined;
     const baseHours = baseHoursRow?.value ? Number(baseHoursRow.value) || 36 : 36;
 
-    // 1. Copy weeklyHours from employees to periods where missing
-    db.prepare(
-      `
-      UPDATE employment_periods
-      SET weeklyHours = (SELECT e.weeklyHours FROM employees e WHERE e.id = employment_periods.employeeId)
-      WHERE weeklyHours IS NULL
-    `,
-    ).run();
+    // 1. Add fte column to employees if missing
+    try {
+      db.prepare('ALTER TABLE employees ADD COLUMN fte REAL').run();
+    } catch {
+      /* column already exists */
+    }
 
-    // 2. If weeklyHours is still NULL but FTE exists, calculate weeklyHours from FTE
-    db.prepare(
-      `
-      UPDATE employment_periods
-      SET weeklyHours = CASE
-        WHEN fte >= 1.0 THEN ?
-        ELSE ROUND(fte * ?, 1)
-      END
-      WHERE weeklyHours IS NULL AND fte IS NOT NULL
-    `,
-    ).run(baseHours, baseHours);
+    // 2. Ensure weeklyHours column exists in employees (for very old DBs)
+    try {
+      db.prepare('ALTER TABLE employees ADD COLUMN weeklyHours REAL').run();
+    } catch {
+      /* column already exists */
+    }
 
-    // 3. Recalculate FTE for all periods where weeklyHours is set (using 36h threshold)
+    // 3. Calculate FTE for all employees where weeklyHours is set
     db.prepare(
       `
-      UPDATE employment_periods
+      UPDATE employees
       SET fte = CASE
         WHEN weeklyHours >= ? THEN 1.0
         ELSE MIN(1.0, ROUND(weeklyHours / ?, 2))
@@ -53,5 +46,8 @@ export const v003_fte: Migration = {
       WHERE weeklyHours IS NOT NULL
     `,
     ).run(FULL_TIME_THRESHOLD, baseHours);
+
+    // 4. Default FTE to 1.0 where still NULL
+    db.prepare(`UPDATE employees SET fte = 1.0 WHERE fte IS NULL`).run();
   },
 };
