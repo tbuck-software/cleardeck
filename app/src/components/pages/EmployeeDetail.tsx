@@ -7,7 +7,15 @@ import {
   faClock,
   faChartPie,
   faUserTag,
+  faArrowRightToBracket,
+  faArrowRightFromBracket,
+  faSignature,
+  faStickyNote,
+  faStethoscope,
+  faKitMedical,
+  faCalendarDay,
 } from '@fortawesome/free-solid-svg-icons';
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { EmployeeEvent, EmployeeWithPeriod, EmploymentPeriod } from '../../shared/types';
 import type { TimelineItem } from '../../types/ui';
 import { fteHelp } from '../../constants';
@@ -33,6 +41,16 @@ const typeLabels: Record<EmployeeEvent['type'], string> = {
   'care-visit': 'Pflegevisite',
   'emergency-training': 'Notfallschulung',
   custom: 'Ereignis',
+};
+
+const typeIcons: Record<EmployeeEvent['type'], IconDefinition> = {
+  join: faArrowRightToBracket,
+  leave: faArrowRightFromBracket,
+  'name-change': faSignature,
+  'note-change': faStickyNote,
+  'care-visit': faStethoscope,
+  'emergency-training': faKitMedical,
+  custom: faCalendarDay,
 };
 
 const buildNoteDiff = (prev: string, next: string): DiffLine[] => {
@@ -231,7 +249,9 @@ const EmployeeDetail = ({
               key={`e-${ev.id ?? `${ev.eventDate}-${ev.title}`}`}
               onClick={() => onSelectEvent(ev)}
             >
-              <div className="timeline-dot event-dot" />
+              <div className={`timeline-dot event-dot event-${ev.type}`}>
+                <FontAwesomeIcon icon={typeIcons[ev.type]} />
+              </div>
               <div className="timeline-content">
                 <div className="timeline-title">
                   {ev.eventDate} · {ev.title}

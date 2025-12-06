@@ -691,6 +691,25 @@ button.detail-item.clickable:hover {
 .timeline-dot.event-dot {
   background: #f59e0b;
   box-shadow: 0 0 0 2px #fef3c7;
+  width: 28px;
+  height: 28px;
+  margin-left: -40px;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+}
+
+.timeline-dot.event-join {
+  background: #22c55e;
+  box-shadow: 0 0 0 2px #dcfce7;
+}
+
+.timeline-dot.event-leave {
+  background: #ef4444;
+  box-shadow: 0 0 0 2px #fee2e2;
 }
 
 .timeline-content {
