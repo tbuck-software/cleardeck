@@ -655,12 +655,23 @@ button.detail-item.clickable:hover {
 
 /* Timeline Modernization */
 .timeline {
-  border-left: 2px solid #e2e8f0;
-  padding-left: 24px;
-  margin-left: 12px;
+  padding-left: 20px;
+  margin-left: 24px;
+  margin-right: 24px;
   gap: 24px;
   margin-top: 24px;
   display: grid;
+  position: relative;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 28px;
+  bottom: 28px;
+  width: 2px;
+  background: #e2e8f0;
 }
 
 .timeline-item {
@@ -710,6 +721,20 @@ button.detail-item.clickable:hover {
 .timeline-dot.event-leave {
   background: #ef4444;
   box-shadow: 0 0 0 2px #fee2e2;
+}
+
+.timeline-dot.period-dot {
+  background: #6366f1;
+  box-shadow: 0 0 0 2px #e0e7ff;
+  width: 28px;
+  height: 28px;
+  margin-left: -40px;
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
 }
 
 .timeline-content {

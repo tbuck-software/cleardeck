@@ -215,7 +215,9 @@ const EmployeeDetail = ({
                 key={`p-${p.id ?? `${p.startDate}-${p.endDate}`}`}
                 onClick={() => onSelectPeriod(p)}
               >
-                <div className="timeline-dot" />
+                <div className="timeline-dot period-dot">
+                  <FontAwesomeIcon icon={faGraduationCap} />
+                </div>
                 <div className="timeline-content">
                   <div className="timeline-title">
                     {p.startDate} – {p.endDate ?? 'aktuell'}
