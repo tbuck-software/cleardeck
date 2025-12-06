@@ -494,7 +494,7 @@ const useEmployees = ({
     new: 'Neue Person mit Historieneintrag erfassen.',
     edit: form.id ? `Bearbeitung: ${form.name}` : 'Bitte Eintrag aus Liste wählen.',
     settings: 'Datenbank austauschen oder Export/Import (verschlüsselt/unkryptiert).',
-    view: selectedEmployee ? `Status: ${statusLabels[selectedEmployee.status]}` : '',
+    view: '',
     dev: 'Rohe Datenbank-Tabellen und Debug-Informationen.',
   };
 
