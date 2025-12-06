@@ -559,14 +559,6 @@ const App = () => {
                     />
                   </label>
                   <label className="full-width">
-                    Titel
-                    <input
-                      value={eventModal.title}
-                      onChange={(e) => setEventModal({ ...eventModal, title: e.target.value })}
-                      placeholder="z. B. Wiedereinstieg nach Pause"
-                    />
-                  </label>
-                  <label className="full-width">
                     Details
                     <textarea
                       value={eventModal.details}

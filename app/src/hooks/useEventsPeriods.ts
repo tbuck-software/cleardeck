@@ -11,10 +11,21 @@ import type {
   AddPeriodFormState,
   ConfirmActionOptions,
   EventModalState,
+  EventModalType,
   FormState,
   PeriodToDeleteState,
   TimelineItem,
 } from '../types/ui';
+
+const typeLabels: Record<Exclude<EventModalType, 'period'>, string> = {
+  join: 'Eintritt',
+  leave: 'Austritt',
+  'name-change': 'Namensänderung',
+  'note-change': 'Notizänderung',
+  'care-visit': 'Pflegevisite',
+  'emergency-training': 'Notfallschulung',
+  custom: 'Ereignis',
+};
 
 type UseEventsPeriodsParams = {
   year: number;
@@ -203,18 +214,19 @@ const useEventsPeriods = ({
       await handleAddPeriod();
       return;
     }
-    if (!eventModal.eventDate || !eventModal.title.trim()) {
-      handleError(new Error('Datum und Titel dürfen nicht leer sein.'));
+    if (!eventModal.eventDate) {
+      handleError(new Error('Datum darf nicht leer sein.'));
       return;
     }
     setLoading(true);
     try {
+      const title = typeLabels[eventModal.type];
       const list = await api.events.save({
         id: eventModal.id,
         employeeId: selectedEmployee.id ?? 0,
         eventDate: eventModal.eventDate,
         type: eventModal.type,
-        title: eventModal.title.trim(),
+        title,
         details: eventModal.details.trim() ? eventModal.details.trim() : null,
         previousValue: eventModal.previousValue ?? null,
         newValue: eventModal.newValue ?? null,
@@ -237,7 +249,6 @@ const useEventsPeriods = ({
     eventModal.id,
     eventModal.newValue,
     eventModal.previousValue,
-    eventModal.title,
     eventModal.type,
     handleAddPeriod,
     handleError,
