@@ -219,13 +219,11 @@ const EmployeeDetail = ({
                   <FontAwesomeIcon icon={faGraduationCap} />
                 </div>
                 <div className="timeline-content">
-                  <div className="timeline-title">
-                    {p.startDate} – {p.endDate ?? 'aktuell'}
+                  <div className="timeline-header">
+                    <span className="timeline-title">{p.qualification ?? employee.qualification}</span>
+                    <span className="timeline-date">{p.startDate} – {p.endDate ?? 'aktuell'}</span>
                   </div>
-                  <div className="timeline-meta">
-                    <span className="pill">{p.qualification ?? employee.qualification}</span>
-                    {p.note && <span className="muted">{p.note}</span>}
-                  </div>
+                  {p.note && <div className="timeline-note muted">{p.note}</div>}
                 </div>
               </button>
             );
