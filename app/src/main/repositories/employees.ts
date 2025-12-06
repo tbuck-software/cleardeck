@@ -14,6 +14,7 @@ import type {
 } from '../../shared/types';
 
 import { getDb } from '../database/connection';
+import { saveEvent } from './events';
 
 /**
  * Compute employee status for a given year
@@ -238,6 +239,14 @@ export const saveEmployee = (input: {
       `INSERT INTO employment_periods (employeeId, startDate, endDate, fte, weeklyHours, qualification, note)
        VALUES (@employeeId, @startDate, @endDate, @fte, @weeklyHours, @qualification, @note)`,
     ).run({ ...periodPayload, employeeId: newId });
+
+    // Create join event for new employee
+    saveEvent({
+      employeeId: newId,
+      eventDate: input.startDate,
+      type: 'join',
+      title: 'Eintritt',
+    });
   }
 
   return getYearDataset(input.year);
