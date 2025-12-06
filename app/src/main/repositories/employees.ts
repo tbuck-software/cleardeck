@@ -189,6 +189,7 @@ export const saveEmployee = (input: {
   startDate: string;
   endDate?: string | null;
   note?: string | null;
+  periodNote?: string | null;
   year: number;
   qualification: string;
 }): YearDataset => {
@@ -205,7 +206,7 @@ export const saveEmployee = (input: {
     startDate: input.startDate,
     endDate: input.endDate ?? null,
     qualification: input.qualification,
-    note: input.note ?? null,
+    note: input.periodNote ?? null,
   };
 
   if (input.id) {
@@ -216,11 +217,20 @@ export const saveEmployee = (input: {
     ).run({ ...employeePayload, id: input.id });
 
     if (input.periodId) {
-      db.prepare(
-        `UPDATE employment_periods
-         SET startDate = @startDate, endDate = @endDate, qualification = @qualification, note = @note
-         WHERE id = @periodId`,
-      ).run({ ...periodPayload, periodId: input.periodId });
+      // Only update period note if explicitly provided (not undefined)
+      if (input.periodNote !== undefined) {
+        db.prepare(
+          `UPDATE employment_periods
+           SET startDate = @startDate, endDate = @endDate, qualification = @qualification, note = @note
+           WHERE id = @periodId`,
+        ).run({ ...periodPayload, periodId: input.periodId });
+      } else {
+        db.prepare(
+          `UPDATE employment_periods
+           SET startDate = @startDate, endDate = @endDate, qualification = @qualification
+           WHERE id = @periodId`,
+        ).run({ ...periodPayload, periodId: input.periodId });
+      }
     } else {
       db.prepare(
         `INSERT INTO employment_periods (employeeId, startDate, endDate, qualification, note)
