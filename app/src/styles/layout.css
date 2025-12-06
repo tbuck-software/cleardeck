@@ -727,10 +727,44 @@ button.detail-item.clickable:hover {
   border-color: #cbd5e1;
 }
 
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.timeline-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
 .timeline-title {
   font-size: 15px;
+  font-weight: 600;
   color: var(--text);
-  margin-bottom: 6px;
+}
+
+.timeline-detail {
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timeline-date {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.timeline-note {
+  font-size: 13px;
+  font-weight: 400;
+  margin-top: 4px;
 }
 
 .timeline-meta {

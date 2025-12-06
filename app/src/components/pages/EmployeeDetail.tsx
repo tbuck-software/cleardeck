@@ -253,27 +253,23 @@ const EmployeeDetail = ({
                 <FontAwesomeIcon icon={typeIcons[ev.type]} />
               </div>
               <div className="timeline-content">
-                <div className="timeline-title">
-                  {ev.eventDate} · {ev.title}
+                <div className="timeline-header">
+                  <span className="timeline-title">{typeLabels[ev.type]}</span>
+                  <span className="timeline-date">{ev.eventDate}</span>
                 </div>
-                <div className="timeline-meta">
-                  <span className="pill pill-quiet">{typeLabels[ev.type]}</span>
-                  {detail &&
-                    (isDiff ? (
-                      <pre className="diff-text">
-                        {diffLines.map((line, idx) => (
-                          <span
-                            key={`${line.text}-${idx}`}
-                            className={`diff-line ${line.kind === 'del' ? 'diff-del' : ''} ${line.kind === 'add' ? 'diff-add' : ''} ${line.kind === 'same' ? 'diff-same' : ''}`}
-                          >
-                            {line.kind === 'del' ? `-${line.text}` : line.kind === 'add' ? `+${line.text}` : line.text}
-                          </span>
-                        ))}
-                      </pre>
-                    ) : (
-                      <span className="muted">{detail}</span>
+                {detail && !isDiff && <div className="timeline-note muted">{detail}</div>}
+                {isDiff && (
+                  <pre className="diff-text">
+                    {diffLines.map((line, idx) => (
+                      <span
+                        key={`${line.text}-${idx}`}
+                        className={`diff-line ${line.kind === 'del' ? 'diff-del' : ''} ${line.kind === 'add' ? 'diff-add' : ''} ${line.kind === 'same' ? 'diff-same' : ''}`}
+                      >
+                        {line.kind === 'del' ? `-${line.text}` : line.kind === 'add' ? `+${line.text}` : line.text}
+                      </span>
                     ))}
-                </div>
+                  </pre>
+                )}
               </div>
             </button>
           );
