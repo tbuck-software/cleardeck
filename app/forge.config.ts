@@ -19,6 +19,7 @@ const config: ForgeConfig = {
     asar: true,
     executableName: 'cleardeck',
     icon: './assets/icon',
+    extraResource: ['./assets/app-update.yml'],
   },
   rebuildConfig: {},
   makers: [
