@@ -75,16 +75,30 @@ const config: ForgeConfig = {
         return;
       }
 
-      const appName = options.packageJSON.productName || options.packageJSON.name;
-      const appPaths = options.packagePaths.flatMap((packagePath) => {
-        if (packagePath.endsWith('.app')) {
-          return [packagePath];
-        }
+      const packageAppName =
+        // forge <=7.3 exposes appName, newer exposes packageJSON
+        (options as any).appName ||
+        options.packageJSON?.productName ||
+        options.packageJSON?.name ||
+        undefined;
 
-        // electron-packager usually puts the .app inside the output directory
-        const candidate = path.join(packagePath, `${appName}.app`);
-        return [candidate];
-      });
+      const appPaths =
+        options.packagePaths?.flatMap((packagePath) => {
+          if (packagePath.endsWith('.app')) {
+            return [packagePath];
+          }
+
+          const base =
+            packageAppName ||
+            path.basename(packagePath, path.extname(packagePath));
+
+          // electron-packager usually puts the .app inside the output directory
+          return [path.join(packagePath, `${base}.app`)];
+        }) ?? [];
+
+      if (appPaths.length === 0) {
+        return;
+      }
 
       for (const appPath of appPaths) {
         if (!existsSync(appPath)) {
