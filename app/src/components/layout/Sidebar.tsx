@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGaugeHigh, faUsers, faGear, faCode } from '@fortawesome/free-solid-svg-icons';
+import { faGaugeHigh, faUsers, faGear, faCode, faBars, faXmark } from '@fortawesome/free-solid-svg-icons';
 import type { Page } from '../../types/ui';
 import type { UpdateStatus } from '../../shared/types';
 
@@ -21,56 +21,81 @@ const Sidebar = ({
   onSnoozeUpdate,
   snoozed,
 }: SidebarProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleNavigate = (page: Page) => {
+    onNavigate(page);
+    setIsOpen(false);
+  };
+
   const navItems: { key: Page; label: string; icon: any }[] = [
     { key: 'dashboard', label: 'Dashboard', icon: faGaugeHigh },
     { key: 'list', label: 'Team', icon: faUsers },
   ];
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="brand">
-        <div className="brand-mark">CD</div>
-        <div>
-          <div className="brand-title">ClearDeck</div>
-          <div className="brand-sub">Verwaltungstool</div>
-        </div>
-      </div>
-      <nav className="nav">
-        {navItems.map((item) => (
-          <button
-            key={item.key}
-            className={`nav-item ${current === item.key ? 'active' : ''}`}
-            onClick={() => onNavigate(item.key)}
-          >
-            <FontAwesomeIcon icon={item.icon} /> {item.label}
-          </button>
-        ))}
-      </nav>
-      <div className="nav-footer">
-        {!snoozed && updateStatus.state === 'downloaded' && (
-          <div className="update-pill">
-            <button className="update-pill-close" onClick={onSnoozeUpdate} title="Schließen">
-              ×
-            </button>
-            <div className="update-pill-text">
-              <p className="eyebrow">Update</p>
-              <strong>{updateStatus.version ? `v${updateStatus.version}` : 'Update'}</strong> bereit
-            </div>
-            <button className="primary small" onClick={onInstallUpdate} title="Neustart und Installation">
-              Installieren
-            </button>
+        <div className="brand-logo-wrapper">
+          <div className="brand-mark">CD</div>
+          <div>
+            <div className="brand-title">ClearDeck</div>
+            <div className="brand-sub">Verwaltungstool</div>
           </div>
-        )}
-        <button className={`nav-item ${current === 'settings' ? 'active' : ''}`} onClick={() => onNavigate('settings')}>
-          <FontAwesomeIcon icon={faGear} /> Einstellungen
+        </div>
+        <button
+          className="sidebar-toggle"
+          onClick={() => setIsOpen(!isOpen)}
+          aria-label="Menü umschalten"
+        >
+          <FontAwesomeIcon icon={isOpen ? faXmark : faBars} />
         </button>
-        {process.env.NODE_ENV === 'development' && (
-          <button className={`nav-item ${current === 'dev' ? 'active' : ''}`} onClick={() => onNavigate('dev')}>
-            <FontAwesomeIcon icon={faCode} /> DEV
+      </div>
+
+      <div className={`sidebar-content ${isOpen ? 'show' : ''}`}>
+        <nav className="nav">
+          {navItems.map((item) => (
+            <button
+              key={item.key}
+              className={`nav-item ${current === item.key ? 'active' : ''}`}
+              onClick={() => handleNavigate(item.key)}
+            >
+              <FontAwesomeIcon icon={item.icon} /> {item.label}
+            </button>
+          ))}
+        </nav>
+        <div className="nav-footer">
+          {!snoozed && updateStatus.state === 'downloaded' && (
+            <div className="update-pill">
+              <button className="update-pill-close" onClick={onSnoozeUpdate} title="Schließen">
+                ×
+              </button>
+              <div className="update-pill-text">
+                <p className="eyebrow">Update</p>
+                <strong>{updateStatus.version ? `v${updateStatus.version}` : 'Update'}</strong> bereit
+              </div>
+              <button className="primary small" onClick={onInstallUpdate} title="Neustart und Installation">
+                Installieren
+              </button>
+            </div>
+          )}
+          <button
+            className={`nav-item ${current === 'settings' ? 'active' : ''}`}
+            onClick={() => handleNavigate('settings')}
+          >
+            <FontAwesomeIcon icon={faGear} /> Einstellungen
           </button>
-        )}
-        <div className="nav-hint">
-          &copy; {new Date().getFullYear()} Torben Buck
+          {process.env.NODE_ENV === 'development' && (
+            <button
+              className={`nav-item ${current === 'dev' ? 'active' : ''}`}
+              onClick={() => handleNavigate('dev')}
+            >
+              <FontAwesomeIcon icon={faCode} /> DEV
+            </button>
+          )}
+          <div className="nav-hint">
+            &copy; {new Date().getFullYear()} Torben Buck
+          </div>
         </div>
       </div>
     </aside>

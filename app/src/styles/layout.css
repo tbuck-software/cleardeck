@@ -17,12 +17,29 @@
   overflow-y: auto;
 }
 
+.sidebar-toggle {
+  display: none;
+}
+
 .brand {
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: space-between;
   padding: 0 12px 24px 12px;
   margin-bottom: 8px;
+}
+
+.brand-logo-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 8px;
 }
 
 .brand-mark {
@@ -924,21 +941,74 @@ button.detail-item.clickable:hover {
   .layout {
     grid-template-columns: 1fr;
   }
+  
+  /* Mobile/Narrow Sidebar Implementation */
   .sidebar {
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    border-right: none;
-    border-bottom: 1px solid var(--card-border);
+    flex-direction: column;
     height: auto;
-    padding: 12px 16px;
+    padding: 0;
+    gap: 0;
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 100;
+    border-right: none;
+    border-bottom: 1px solid var(--card-border);
+    transition: all 0.3s;
   }
+  
+  /* Toggle Button */
+  .sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 8px;
+    transition: background 0.2s;
+  }
+  .sidebar-toggle:hover {
+    background: rgba(0,0,0,0.05);
+  }
+
+  /* Brand adjustments */
+  .brand {
+    width: 100%;
+    padding: 12px 16px;
+    margin-bottom: 0;
+  }
+  
+  /* Content toggling */
+  .sidebar-content {
+    display: none;
+    padding: 0 16px 16px;
+    background: white;
+    border-top: 1px solid #f1f5f9;
+  }
+  
+  .sidebar-content.show {
+    display: flex;
+    animation: slideDown 0.2s ease-out;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  
   .nav {
-    grid-auto-flow: column;
+    grid-auto-flow: row;
+    grid-template-columns: 1fr;
+    margin-top: 12px;
   }
+  
+  .nav-footer {
+    width: 100%;
+    grid-template-columns: 1fr;
+    padding-top: 12px;
+    margin-top: 12px;
+  }
+
   .main {
     padding-top: 12px;
   }
@@ -951,6 +1021,20 @@ button.detail-item.clickable:hover {
   .toolbar-actions {
     width: 100%;
     justify-content: flex-start;
+  }
+  
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@media (max-width: 640px) {
+  .brand-sub {
+    display: none;
+  }
+  .update-pill {
+    grid-column: 1 / -1;
   }
 }
 
