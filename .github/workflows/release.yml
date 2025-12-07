@@ -41,6 +41,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
 
+      - name: Generate update yml
+        run: node scripts/generate-update-yml.js
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
