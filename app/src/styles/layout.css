@@ -35,6 +35,16 @@
   gap: 14px;
 }
 
+.brand-logo-bg {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #eef2ff, #dbeafe);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.08);
+}
+
 .sidebar-content {
   display: flex;
   flex-direction: column;
@@ -133,7 +143,7 @@
   margin-top: auto;
   color: var(--muted);
   font-size: 12px;
-  text-align: center;
+  text-align: left;
   padding: 12px 12px 0;
   border-top: 1px solid #f1f5f9;
   margin-top: 12px;
