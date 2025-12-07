@@ -338,64 +338,90 @@ const SettingsPage = ({
 
         {activeTab === 'info' && (
           <div className="card form-card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">
-                  <FontAwesomeIcon icon={faInfoCircle} style={{ marginRight: 8 }} /> Über
-                </p>
-                <h3>App-Informationen</h3>
-              </div>
-            </div>
             {appInfo ? (
-              <div className="info-grid">
-                <div className="info-row">
-                  <span className="info-label">App-Name</span>
-                  <span className="info-value">{appInfo.name}</span>
+              <div className="about-page">
+                <div className="about-header">
+                  <div className="about-logo">
+                    <FontAwesomeIcon icon={faDatabase} />
+                  </div>
+                  <div className="about-title-group">
+                    <div className="about-title-wrapper">
+                      <h2 className="about-app-name">{appInfo.name}</h2>
+                      <span className="about-version">v{appInfo.version}</span>
+                    </div>
+                    <p className="about-desc">Verwaltungstool</p>
+                  </div>
                 </div>
-                <div className="info-row">
-                  <span className="info-label">Version</span>
-                  <span className="info-value">v{appInfo.version}</span>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">Entwickler</span>
-                  <span className="info-value">{appInfo.author}</span>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">Kontakt</span>
-                  <a href={`mailto:${appInfo.email}`} className="info-link">{appInfo.email}</a>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">GitHub</span>
-                  <a href={appInfo.github} target="_blank" rel="noopener noreferrer" className="info-link">{appInfo.github.replace('https://github.com/', '')}</a>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">Lizenz</span>
-                  <span className="info-value">{appInfo.license}</span>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">Copyright</span>
-                  <span className="info-value">{appInfo.copyright}</span>
-                </div>
-                <div className="info-section-header">Systeminfo</div>
-                <div className="info-row">
-                  <span className="info-label">Electron</span>
-                  <span className="info-value">v{appInfo.electronVersion}</span>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">Node.js</span>
-                  <span className="info-value">v{appInfo.nodeVersion}</span>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">Plattform</span>
-                  <span className="info-value">{appInfo.platform}</span>
-                </div>
-                <div className="info-row">
-                  <span className="info-label">Architektur</span>
-                  <span className="info-value">{appInfo.arch}</span>
+
+                <div className="about-grid">
+                  <div className="about-card">
+                    <h4 className="about-section-header">Projekt</h4>
+                    <div className="about-details-list">
+                      <div className="about-row">
+                        <span className="about-label">Entwickler</span>
+                        <span className="about-value">{appInfo.author}</span>
+                      </div>
+                      <div className="about-row">
+                        <span className="about-label">Lizenz</span>
+                        <span className="about-value">{appInfo.license}</span>
+                      </div>
+                      <div className="about-row">
+                        <span className="about-label">Copyright</span>
+                        <span className="about-value">{appInfo.copyright}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="about-card">
+                    <h4 className="about-section-header">Links</h4>
+                    <div className="about-links">
+                      <a href={`mailto:${appInfo.email}`} className="about-link-button">
+                        <span className="link-icon">
+                          <FontAwesomeIcon icon={faInfoCircle} />
+                        </span>
+                        Contact Support
+                      </a>
+                      <a
+                        href={appInfo.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="about-link-button"
+                      >
+                        <span className="link-icon">
+                          <FontAwesomeIcon icon={faDatabase} />
+                        </span>
+                        GitHub Repository
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="system-info-wrapper">
+                    <h4 className="about-section-header">Systemumgebung</h4>
+                    <div className="system-info-badges">
+                      <div className="sys-badge">
+                        <span className="sys-label">Electron</span>
+                        <span className="sys-val">v{appInfo.electronVersion}</span>
+                      </div>
+                      <div className="sys-badge">
+                        <span className="sys-label">Node.js</span>
+                        <span className="sys-val">v{appInfo.nodeVersion}</span>
+                      </div>
+                      <div className="sys-badge">
+                        <span className="sys-label">Platform</span>
+                        <span className="sys-val">{appInfo.platform}</span>
+                      </div>
+                      <div className="sys-badge">
+                        <span className="sys-label">Arch</span>
+                        <span className="sys-val">{appInfo.arch}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
-              <p className="subtitle">Lade App-Informationen...</p>
+              <div className="empty" style={{ padding: 40 }}>
+                <p className="subtitle">Lade App-Informationen...</p>
+              </div>
             )}
           </div>
         )}

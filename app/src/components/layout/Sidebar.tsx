@@ -32,7 +32,7 @@ const Sidebar = ({
         <div className="brand-mark">CD</div>
         <div>
           <div className="brand-title">ClearDeck</div>
-          <div className="brand-sub">VZÄ & Historie</div>
+          <div className="brand-sub">Verwaltungstool</div>
         </div>
       </div>
       <nav className="nav">
