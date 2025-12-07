@@ -225,7 +225,6 @@ const App = () => {
                 </span>
               ))}
             </div>
-            <p className="eyebrow">Team & VZÄ</p>
             <h1>{pageTitle[page]}</h1>
             <p className="subtitle">{pageSubtitle[page]}</p>
           </div>

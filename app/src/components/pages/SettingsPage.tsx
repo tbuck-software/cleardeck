@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faGithub } from '@fortawesome/free-brands-svg-icons';
 import {
   faPlus,
   faTrash,
@@ -13,7 +14,8 @@ import {
   faExclamationTriangle,
   faClock,
   faCog,
-  faInfoCircle
+  faInfoCircle,
+  faEnvelope
 } from '@fortawesome/free-solid-svg-icons';
 import type { QualificationType, UpdateStatus, AppInfo } from '../../shared/types';
 import type { QualificationModalPayload } from '../../types/ui';
@@ -377,9 +379,9 @@ const SettingsPage = ({
                     <div className="about-links">
                       <a href={`mailto:${appInfo.email}`} className="about-link-button">
                         <span className="link-icon">
-                          <FontAwesomeIcon icon={faInfoCircle} />
+                          <FontAwesomeIcon icon={faEnvelope} />
                         </span>
-                        Contact Support
+                        Support kontaktieren
                       </a>
                       <a
                         href={appInfo.github}
@@ -388,7 +390,7 @@ const SettingsPage = ({
                         className="about-link-button"
                       >
                         <span className="link-icon">
-                          <FontAwesomeIcon icon={faDatabase} />
+                          <FontAwesomeIcon icon={faGithub} />
                         </span>
                         GitHub Repository
                       </a>
