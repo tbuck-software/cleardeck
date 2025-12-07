@@ -20,6 +20,7 @@ const config: ForgeConfig = {
     executableName: 'cleardeck',
     icon: './assets/icon',
     extraResource: ['./assets/app-update.yml'],
+    osxSign: {},
   },
   rebuildConfig: {},
   makers: [
