@@ -19,6 +19,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import type { QualificationType, UpdateStatus, AppInfo } from '../../shared/types';
 import type { QualificationModalPayload } from '../../types/ui';
+import logoUrl from '../../../assets/logo.png';
 
 type SettingsPageProps = {
   qualifications: QualificationType[];
@@ -344,7 +345,7 @@ const SettingsPage = ({
               <div className="about-page">
                 <div className="about-header">
                   <div className="about-logo">
-                    <FontAwesomeIcon icon={faDatabase} />
+                    <img src={logoUrl} alt="ClearDeck Logo" />
                   </div>
                   <div className="about-title-group">
                     <div className="about-title-wrapper">

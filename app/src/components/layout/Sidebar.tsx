@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGaugeHigh, faUsers, faGear, faCode, faBars, faXmark } from '@fortawesome/free-solid-svg-icons';
 import type { Page } from '../../types/ui';
 import type { UpdateStatus } from '../../shared/types';
+import logoUrl from '../../../assets/logo.png';
 
 type SidebarProps = {
   current: Page;
@@ -37,7 +38,7 @@ const Sidebar = ({
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="brand">
         <div className="brand-logo-wrapper">
-          <div className="brand-mark">CD</div>
+          <img src={logoUrl} alt="ClearDeck Logo" className="brand-logo" />
           <div>
             <div className="brand-title">ClearDeck</div>
             <div className="brand-sub">Verwaltungstool</div>
