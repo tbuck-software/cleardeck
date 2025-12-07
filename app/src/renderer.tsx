@@ -41,6 +41,7 @@ const App = () => {
       updateStatus,
       dbMessage,
       snoozeUpdates,
+      appInfo,
       search,
       statusFilter,
       qualificationFilter,
@@ -284,6 +285,7 @@ const App = () => {
             dbMessage={dbMessage}
             baseHoursInput={baseHoursInput}
             updateStatus={updateStatus}
+            appInfo={appInfo}
             onOpenQualificationModal={(payload) =>
               setQualificationModal({
                 open: true,

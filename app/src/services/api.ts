@@ -24,6 +24,9 @@ async function call<T extends (...args: any[]) => any>(
 export type ExportFormat = 'csv' | 'xlsx';
 
 export const api = {
+  app: {
+    getInfo: () => call('getAppInfo', baseApi.getAppInfo),
+  },
   auth: {
     getState: () => call('getAppState', baseApi.getAppState),
     register: (password: string) => call('register', baseApi.register, password),

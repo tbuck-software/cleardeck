@@ -187,6 +187,7 @@ const useAppLogic = () => {
       updateStatus: settingsSlice.state.updateStatus,
       dbMessage: settingsSlice.state.dbMessage,
       snoozeUpdates: settingsSlice.state.snoozeUpdates,
+      appInfo: settingsSlice.state.appInfo,
       search: employeeSlice.state.search,
       statusFilter: employeeSlice.state.statusFilter,
       qualificationFilter: employeeSlice.state.qualificationFilter,

@@ -93,3 +93,12 @@ export type UpdateStatus =
   | { state: 'downloading'; version?: string; progress?: number }
   | { state: 'downloaded'; version?: string }
   | { state: 'error'; message: string };
+
+export interface AppInfo {
+  name: string;
+  version: string;
+  electronVersion: string;
+  nodeVersion: string;
+  platform: string;
+  arch: string;
+}

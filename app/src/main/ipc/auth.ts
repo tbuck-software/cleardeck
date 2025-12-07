@@ -4,10 +4,10 @@
  * Handles registration, login, and password recovery.
  */
 
-import { ipcMain } from 'electron';
+import { ipcMain, app } from 'electron';
 import crypto from 'crypto';
 
-import type { AppState } from '../../shared/types';
+import type { AppState, AppInfo } from '../../shared/types';
 import {
   type AppConfig,
   deriveKey,
@@ -46,6 +46,15 @@ export const registerAuthHandlers = (): void => {
   ipcMain.handle('app:state', (): AppState => ({
     configured: isConfigured(),
     unlocked,
+  }));
+
+  ipcMain.handle('app:info', (): AppInfo => ({
+    name: app.getName(),
+    version: app.getVersion(),
+    electronVersion: process.versions.electron,
+    nodeVersion: process.versions.node,
+    platform: process.platform,
+    arch: process.arch,
   }));
 
   ipcMain.handle('auth:register', (_event, password: string): AppState => {

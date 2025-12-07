@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   AppState,
+  AppInfo,
   EmploymentPeriod,
   QualificationType,
   YearDataset,
@@ -14,6 +15,7 @@ type ExportFormat = 'csv' | 'xlsx';
 
 export type Api = {
   getAppState: () => Promise<AppState>;
+  getAppInfo: () => Promise<AppInfo>;
   register: (password: string) => Promise<AppState>;
   login: (password: string) => Promise<AppState>;
   getRecoveryKey: () => Promise<RecoveryInfo>;
@@ -77,6 +79,7 @@ export type Api = {
 
 const api: Api = {
   getAppState: () => ipcRenderer.invoke('app:state'),
+  getAppInfo: () => ipcRenderer.invoke('app:info'),
   register: (password) => ipcRenderer.invoke('auth:register', password),
   login: (password) => ipcRenderer.invoke('auth:login', password),
   getRecoveryKey: () => ipcRenderer.invoke('auth:recoveryKey'),

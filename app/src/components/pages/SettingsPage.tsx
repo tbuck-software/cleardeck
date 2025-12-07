@@ -12,9 +12,10 @@ import {
   faUpload,
   faExclamationTriangle,
   faClock,
-  faCog
+  faCog,
+  faInfoCircle
 } from '@fortawesome/free-solid-svg-icons';
-import type { QualificationType, UpdateStatus } from '../../shared/types';
+import type { QualificationType, UpdateStatus, AppInfo } from '../../shared/types';
 import type { QualificationModalPayload } from '../../types/ui';
 
 type SettingsPageProps = {
@@ -23,6 +24,7 @@ type SettingsPageProps = {
   dbMessage: string | null;
   baseHoursInput: string;
   updateStatus: UpdateStatus;
+  appInfo: AppInfo | null;
   onOpenQualificationModal: (payload: QualificationModalPayload) => void;
   onReorderQualification: (orderedIds: number[]) => void | Promise<void>;
   onDeleteQualification: (id: number) => void;
@@ -37,7 +39,7 @@ type SettingsPageProps = {
   onFullReset: () => void | Promise<void>;
 };
 
-type TabId = 'general' | 'qualifications' | 'database' | 'danger';
+type TabId = 'general' | 'qualifications' | 'database' | 'danger' | 'info';
 
 const SettingsPage = ({
   qualifications,
@@ -45,6 +47,7 @@ const SettingsPage = ({
   dbMessage,
   baseHoursInput,
   updateStatus,
+  appInfo,
   onOpenQualificationModal,
   onReorderQualification,
   onDeleteQualification,
@@ -66,6 +69,7 @@ const SettingsPage = ({
     { id: 'qualifications', label: 'Qualifikationen', icon: faList },
     { id: 'database', label: 'Datenbank & Sicherheit', icon: faDatabase },
     { id: 'danger', label: 'Gefahrenzone', icon: faExclamationTriangle },
+    { id: 'info', label: 'Info', icon: faInfoCircle },
   ];
 
   return (
@@ -329,6 +333,49 @@ const SettingsPage = ({
                 Reset
               </button>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'info' && (
+          <div className="card form-card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">
+                  <FontAwesomeIcon icon={faInfoCircle} style={{ marginRight: 8 }} /> Über
+                </p>
+                <h3>App-Informationen</h3>
+              </div>
+            </div>
+            {appInfo ? (
+              <div className="info-grid">
+                <div className="info-row">
+                  <span className="info-label">App-Name</span>
+                  <span className="info-value">{appInfo.name}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Version</span>
+                  <span className="info-value">v{appInfo.version}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Electron</span>
+                  <span className="info-value">v{appInfo.electronVersion}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Node.js</span>
+                  <span className="info-value">v{appInfo.nodeVersion}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Plattform</span>
+                  <span className="info-value">{appInfo.platform}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Architektur</span>
+                  <span className="info-value">{appInfo.arch}</span>
+                </div>
+              </div>
+            ) : (
+              <p className="subtitle">Lade App-Informationen...</p>
+            )}
           </div>
         )}
       </div>

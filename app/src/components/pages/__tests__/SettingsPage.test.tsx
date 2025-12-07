@@ -19,6 +19,7 @@ const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage
   dbMessage: null,
   baseHoursInput: '36',
   updateStatus: baseStatus,
+  appInfo: null,
   onOpenQualificationModal: vi.fn<(payload: QualificationModalPayload) => void>(),
   onReorderQualification: vi.fn<(ids: number[]) => void>(),
   onDeleteQualification: vi.fn<(id: number) => void>(),

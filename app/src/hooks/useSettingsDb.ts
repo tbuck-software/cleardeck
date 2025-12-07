@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import type { AppState, UpdateStatus } from '../shared/types';
+import type { AppInfo, AppState, UpdateStatus } from '../shared/types';
 import type { ConfirmActionOptions } from '../types/ui';
 
 type UseSettingsDbParams = {
@@ -31,6 +31,7 @@ const useSettingsDb = ({
   const [dbMessage, setDbMessage] = useState<string | null>(null);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' });
   const [snoozeUpdates, setSnoozeUpdates] = useState(false);
+  const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
 
   const hydrateBaseHours = useCallback((hours?: number | null) => {
     setBaseHours(hours || 36);
@@ -189,6 +190,12 @@ const useSettingsDb = ({
     }
   }, [hydrateBaseHours, onError]);
 
+  useEffect(() => {
+    api.app.getInfo().then(setAppInfo).catch(() => {
+      // Ignore errors loading app info
+    });
+  }, []);
+
   return {
     state: {
       baseHours,
@@ -196,6 +203,7 @@ const useSettingsDb = ({
       dbMessage,
       updateStatus,
       snoozeUpdates,
+      appInfo,
     },
     setters: {
       setBaseHoursInput,
