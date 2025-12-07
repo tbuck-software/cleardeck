@@ -17,7 +17,7 @@ const shouldUseFuses = process.env.SKIP_FUSES !== '1';
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
-    executableName: 'employee-db',
+    executableName: 'cleardeck',
   },
   rebuildConfig: {},
   makers: [
