@@ -32,9 +32,20 @@ function getFileSize(filePath) {
 }
 
 /**
- * Find artifacts in the out/make directory
+ * Check if filename contains the current version
  */
-function findArtifacts(makeDir) {
+function isCurrentVersion(filePath, version) {
+  const fileName = path.basename(filePath);
+  // Match version patterns like: 1.4.4, -1.4.4-, -1.4.4.zip, etc.
+  return fileName.includes(version) || fileName.includes(`-${version}-`) || fileName.includes(`-${version}.`);
+}
+
+/**
+ * Find artifacts in the out/make directory
+ * Only includes files matching the current version
+ * Prefers ZIP over DMG for macOS (required for auto-update)
+ */
+function findArtifacts(makeDir, version) {
   const artifacts = {
     mac: [],
     win: [],
@@ -55,18 +66,27 @@ function findArtifacts(makeDir) {
       if (stat.isDirectory()) {
         walkDir(filePath);
       } else {
+        // Skip files that don't match current version
+        if (!isCurrentVersion(filePath, version)) {
+          continue;
+        }
+
         const ext = path.extname(file).toLowerCase();
 
-        // macOS artifacts
-        if (ext === '.dmg' || (ext === '.zip' && filePath.includes('darwin'))) {
+        // macOS: Prefer ZIP for auto-update (DMG cannot be auto-installed)
+        if (ext === '.zip' && filePath.includes('darwin')) {
           artifacts.mac.push(filePath);
         }
-        // Windows artifacts (prefer ZIP for electron-updater compatibility)
+        // Windows artifacts
         else if (ext === '.zip' && filePath.includes('win32')) {
           artifacts.win.push(filePath);
         }
-        // Windows exe (fallback)
-        else if (ext === '.exe' && !artifacts.win.some((f) => f.includes('.zip'))) {
+        // Windows exe (fallback if no ZIP)
+        else if (ext === '.exe') {
+          artifacts.win.push(filePath);
+        }
+        // Windows nupkg (for Squirrel updates)
+        else if (ext === '.nupkg') {
           artifacts.win.push(filePath);
         }
         // Linux artifacts
@@ -116,7 +136,7 @@ console.log(`Generating update yml files for version ${version}`);
 console.log(`Scanning: ${makeDir}`);
 console.log(`Output: ${outputDir}`);
 
-const artifacts = findArtifacts(makeDir);
+const artifacts = findArtifacts(makeDir, version);
 
 // Generate latest-mac.yml
 if (artifacts.mac.length > 0) {
