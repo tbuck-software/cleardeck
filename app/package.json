@@ -1,6 +1,6 @@
 {
-  "name": "employee-db",
-  "productName": "Employee DB",
+  "name": "cleardeck",
+  "productName": "ClearDeck",
   "version": "1.3.3",
   "description": "Electron-Desktop-App für Team-, Historie- und VZÄ-Übersicht (SQLite, Export, Verschlüsselung).",
   "main": ".webpack/main",
@@ -15,9 +15,9 @@
   "keywords": [],
   "author": {
     "name": "Torben Buck",
-    "email": "dev@tbuck.de"
+    "email": "mail@tbuck.de"
   },
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "devDependencies": {
     "@electron-forge/cli": "^7.10.2",
     "@electron-forge/maker-deb": "^7.10.2",

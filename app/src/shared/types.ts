@@ -97,6 +97,11 @@ export type UpdateStatus =
 export interface AppInfo {
   name: string;
   version: string;
+  author: string;
+  email: string;
+  github: string;
+  license: string;
+  copyright: string;
   electronVersion: string;
   nodeVersion: string;
   platform: string;

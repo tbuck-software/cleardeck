@@ -297,3 +297,27 @@ h3 {
   font-family: 'Space Grotesk', 'Inter', monospace;
   font-size: 14px;
 }
+
+.info-link {
+  font-weight: 600;
+  color: var(--accent);
+  font-family: 'Space Grotesk', 'Inter', monospace;
+  font-size: 14px;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.info-link:hover {
+  color: var(--accent-strong);
+  text-decoration: underline;
+}
+
+.info-section-header {
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-top: 8px;
+  padding: 0 4px;
+}

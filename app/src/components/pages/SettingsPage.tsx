@@ -357,6 +357,27 @@ const SettingsPage = ({
                   <span className="info-value">v{appInfo.version}</span>
                 </div>
                 <div className="info-row">
+                  <span className="info-label">Entwickler</span>
+                  <span className="info-value">{appInfo.author}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Kontakt</span>
+                  <a href={`mailto:${appInfo.email}`} className="info-link">{appInfo.email}</a>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">GitHub</span>
+                  <a href={appInfo.github} target="_blank" rel="noopener noreferrer" className="info-link">{appInfo.github.replace('https://github.com/', '')}</a>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Lizenz</span>
+                  <span className="info-value">{appInfo.license}</span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">Copyright</span>
+                  <span className="info-value">{appInfo.copyright}</span>
+                </div>
+                <div className="info-section-header">Systeminfo</div>
+                <div className="info-row">
                   <span className="info-label">Electron</span>
                   <span className="info-value">v{appInfo.electronVersion}</span>
                 </div>

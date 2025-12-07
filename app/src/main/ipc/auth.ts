@@ -51,6 +51,11 @@ export const registerAuthHandlers = (): void => {
   ipcMain.handle('app:info', (): AppInfo => ({
     name: app.getName(),
     version: app.getVersion(),
+    author: 'Torben Buck – tbuck software',
+    email: 'mail@tbuck.de',
+    github: 'https://github.com/Rasalas/employee-db',
+    license: 'Proprietär (Einzelnutzer-Lizenz)',
+    copyright: `© ${new Date().getFullYear()} tbuck software`,
     electronVersion: process.versions.electron,
     nodeVersion: process.versions.node,
     platform: process.platform,
