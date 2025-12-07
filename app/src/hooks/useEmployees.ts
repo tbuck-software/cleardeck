@@ -490,7 +490,7 @@ const useEmployees = ({
 
   const pageSubtitle: Record<Page, string> = {
     dashboard: 'Kennzahlen und Aggregationen zum gewählten Jahr.',
-    list: 'Liste mit Filter/Status und Doppelklick zum Bearbeiten.',
+    list: 'Liste von Teammitgliedern mit Filter/Status',
     new: 'Neue Person mit Historieneintrag erfassen.',
     edit: form.id ? `Bearbeitung: ${form.name}` : 'Bitte Eintrag aus Liste wählen.',
     settings: 'Datenbank austauschen oder Export/Import (verschlüsselt/unkryptiert).',
