@@ -1,8 +1,9 @@
 /// <reference types="vitest/globals" />
+/// <reference types="@testing-library/jest-dom" />
 
 import { render, screen } from '@testing-library/react';
 import Dashboard from '../Dashboard';
-import type { YearDataset } from '../../../shared/types';
+import type { QualificationType, YearDataset } from '../../../shared/types';
 
 const sampleDataset: YearDataset = {
   employees: [],
@@ -17,6 +18,11 @@ const sampleDataset: YearDataset = {
   baseHours: 36,
 };
 
+const qualifications: QualificationType[] = [
+  { id: 1, name: 'Pflegekraft' },
+  { id: 2, name: 'Admin' },
+];
+
 describe('Dashboard', () => {
   it('zeigt Kennzahlen und Qualifikationen', () => {
     render(
@@ -27,6 +33,7 @@ describe('Dashboard', () => {
         averageFte={2.5}
         totalFte={sampleDataset.aggregation.totalFte}
         totalHeadcount={sampleDataset.aggregation.totalHeadcount}
+        qualifications={qualifications}
       />,
     );
 
@@ -53,6 +60,7 @@ describe('Dashboard', () => {
         averageFte={0}
         totalFte={0}
         totalHeadcount={0}
+        qualifications={[]}
       />,
     );
 

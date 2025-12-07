@@ -42,14 +42,14 @@ const form = {
   startDate: '2024-01-01',
   endDate: '',
   fte: 1,
-  weeklyHours: null,
+  weeklyHours: null as number | null,
   linked: true,
 };
 
 describe('useEventsPeriods timeline', () => {
   it('sortiert Timeline-Items absteigend und nutzt Join-Datum als Start', async () => {
     listPeriodsMock.mockResolvedValue([
-      { startDate: '2024-02-01', endDate: null, fte: 1, qualification: 'Pflegekraft' },
+      { startDate: '2024-02-01', endDate: null, qualification: 'Pflegekraft' },
     ]);
     listEventsMock.mockResolvedValue([
       { eventDate: '2024-03-01', type: 'name-change', title: 'Namensänderung' },

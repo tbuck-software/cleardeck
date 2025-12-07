@@ -1,4 +1,5 @@
 /// <reference types="vitest/globals" />
+/// <reference types="@testing-library/jest-dom" />
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import SettingsPage from '../SettingsPage';
@@ -12,7 +13,7 @@ const qualifications: QualificationType[] = [
 
 const baseStatus: UpdateStatus = { state: 'idle' };
 
-const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage>> = {}) => ({
+const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage>> = {}): React.ComponentProps<typeof SettingsPage> => ({
   qualifications,
   qualificationEdits: {},
   dbMessage: null,

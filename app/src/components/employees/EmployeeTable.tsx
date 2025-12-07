@@ -35,7 +35,7 @@ const EmployeeTable = ({ employees, onSelect, onDelete, selectedId }: EmployeeTa
     const { key, direction } = sort;
     const dir = direction === 'asc' ? 1 : -1;
 
-    const getValue = (emp: EmployeeWithPeriod) => {
+    const getValue = (emp: EmployeeWithPeriod): string | number => {
       switch (key) {
         case 'fte':
           return emp.fte ?? -1;
@@ -43,8 +43,14 @@ const EmployeeTable = ({ employees, onSelect, onDelete, selectedId }: EmployeeTa
           return emp.weeklyHours ?? -1;
         case 'endDate':
           return emp.endDate ?? '';
-        default:
-          return (emp as Record<string, unknown>)[key] ?? '';
+        case 'name':
+          return emp.name ?? '';
+        case 'qualification':
+          return emp.qualification ?? '';
+        case 'startDate':
+          return emp.startDate ?? '';
+        case 'status':
+          return emp.status ?? '';
       }
     };
 

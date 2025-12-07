@@ -1,4 +1,5 @@
 /// <reference types="vitest/globals" />
+/// <reference types="@testing-library/jest-dom" />
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import EmployeeList from '../EmployeeList';
