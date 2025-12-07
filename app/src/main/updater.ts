@@ -34,8 +34,17 @@ export const initAutoUpdater = (mainWindow: BrowserWindow | null): void => {
   const feedUrl = process.env.UPDATE_FEED_URL;
   if (feedUrl) {
     autoUpdater.setFeedURL({ provider: 'generic', url: feedUrl, channel: 'latest' });
-    updateFeedConfigured = true;
+  } else {
+    // GitHub releases (private repo needs GH_TOKEN)
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: 'Rasalas',
+      repo: 'employee-db',
+      private: true,
+      token: process.env.GH_TOKEN,
+    });
   }
+  updateFeedConfigured = true;
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = false;
@@ -101,11 +110,17 @@ export const checkForUpdates = async (mainWindow: BrowserWindow | null): Promise
 
   if (!updateFeedConfigured) {
     const feedUrl = process.env.UPDATE_FEED_URL;
-    if (!feedUrl) {
-      sendUpdateStatus(mainWindow, { state: 'error', message: 'UPDATE_FEED_URL ist nicht konfiguriert.' });
-      return false;
+    if (feedUrl) {
+      autoUpdater.setFeedURL({ provider: 'generic', url: feedUrl, channel: 'latest' });
+    } else {
+      autoUpdater.setFeedURL({
+        provider: 'github',
+        owner: 'Rasalas',
+        repo: 'employee-db',
+        private: true,
+        token: process.env.GH_TOKEN,
+      });
     }
-    autoUpdater.setFeedURL({ provider: 'generic', url: feedUrl, channel: 'latest' });
     updateFeedConfigured = true;
   }
 

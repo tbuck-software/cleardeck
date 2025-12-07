@@ -38,6 +38,8 @@ jobs:
 
       - name: Build artifacts
         run: ${{ runner.os == 'Windows' && 'set SKIP_FUSES=1 && npm run make' || 'SKIP_FUSES=1 npm run make' }}
+        env:
+          GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
