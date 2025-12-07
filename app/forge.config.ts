@@ -8,6 +8,9 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { execSync } from 'child_process';
+import { existsSync } from 'fs';
+import * as path from 'path';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
@@ -20,7 +23,9 @@ const config: ForgeConfig = {
     executableName: 'cleardeck',
     icon: './assets/icon',
     extraResource: ['./assets/app-update.yml'],
-    osxSign: {},
+    osxSign: {
+      identity: '-', // ad-hoc signing to satisfy macOS Gatekeeper
+    },
   },
   rebuildConfig: {},
   makers: [
@@ -64,6 +69,35 @@ const config: ForgeConfig = {
         ]
       : []),
   ],
+  hooks: {
+    postPackage: async (_forgeConfig, options) => {
+      if (options.platform !== 'darwin') {
+        return;
+      }
+
+      const appName = options.packageJSON.productName || options.packageJSON.name;
+      const appPaths = options.packagePaths.flatMap((packagePath) => {
+        if (packagePath.endsWith('.app')) {
+          return [packagePath];
+        }
+
+        // electron-packager usually puts the .app inside the output directory
+        const candidate = path.join(packagePath, `${appName}.app`);
+        return [candidate];
+      });
+
+      for (const appPath of appPaths) {
+        if (!existsSync(appPath)) {
+          continue;
+        }
+
+        // Deep ad-hoc sign the bundle so electron-updater can validate it
+        execSync(`codesign --force --deep --sign - "${appPath}"`, {
+          stdio: 'inherit',
+        });
+      }
+    },
+  },
 };
 
 export default config;
