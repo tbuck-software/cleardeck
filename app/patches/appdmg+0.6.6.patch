@@ -1,0 +1,44 @@
+diff --git a/node_modules/appdmg/lib/hdiutil.js b/node_modules/appdmg/lib/hdiutil.js
+index a85a3af..685ab2a 100644
+--- a/node_modules/appdmg/lib/hdiutil.js
++++ b/node_modules/appdmg/lib/hdiutil.js
+@@ -61,19 +61,27 @@ exports.attach = function (path, cb) {
+ }
+ 
+ exports.detach = function (path, cb) {
+-  const args = ['detach', path]
++  // Check if the volume exists before attempting to detach (fixes CI race condition)
++  fs.access(path, fs.constants.F_OK, function (existsErr) {
++    if (existsErr) {
++      // Volume doesn't exist, no need to detach - this is OK
++      return cb(null)
++    }
+ 
+-  let attempts = 0
+-  function attemptDetach (err) {
+-    attempts += 1
+-    if (err && (err.exitCode === 16 || err.code === 16) && attempts <= 8) {
+-      setTimeout(function () {
+-        util.sh('hdiutil', args, attemptDetach)
+-      }, 1000 * Math.pow(2, attempts - 1))
+-    } else {
+-      cb(err)
++    const args = ['detach', path]
++
++    let attempts = 0
++    function attemptDetach (err) {
++      attempts += 1
++      if (err && (err.exitCode === 16 || err.code === 16) && attempts <= 8) {
++        setTimeout(function () {
++          util.sh('hdiutil', args, attemptDetach)
++        }, 1000 * Math.pow(2, attempts - 1))
++      } else {
++        cb(err)
++      }
+     }
+-  }
+ 
+-  util.sh('hdiutil', args, attemptDetach)
++    util.sh('hdiutil', args, attemptDetach)
++  })
+ }
