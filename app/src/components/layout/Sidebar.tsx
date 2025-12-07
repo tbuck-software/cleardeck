@@ -38,7 +38,9 @@ const Sidebar = ({
     <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
       <div className="brand">
         <div className="brand-logo-wrapper">
-          <img src={logoUrl} alt="ClearDeck Logo" className="brand-logo" />
+          <div className="brand-logo-bg">
+            <img src={logoUrl} alt="ClearDeck Logo" className="brand-logo" />
+          </div>
           <div>
             <div className="brand-title">ClearDeck</div>
             <div className="brand-sub">Verwaltungstool</div>
