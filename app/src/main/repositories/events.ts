@@ -110,3 +110,4 @@ export const deleteEvent = (id: number, employeeId: number): EmployeeEvent[] => 
   db.prepare('DELETE FROM employee_events WHERE id = ?').run(id);
   return listEvents(employeeId);
 };
+

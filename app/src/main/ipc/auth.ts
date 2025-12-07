@@ -200,3 +200,4 @@ export const registerAuthHandlers = (): void => {
     return { configured: false, unlocked: false };
   });
 };
+

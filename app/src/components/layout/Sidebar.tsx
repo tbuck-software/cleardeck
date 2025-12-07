@@ -29,10 +29,10 @@ const Sidebar = ({
   return (
     <aside className="sidebar">
       <div className="brand">
-        <div className="brand-mark">DB</div>
+        <div className="brand-mark">CD</div>
         <div>
-          <div className="brand-title">Employee DB</div>
-          <div className="brand-sub">VZAE & Historie</div>
+          <div className="brand-title">ClearDeck</div>
+          <div className="brand-sub">VZÄ & Historie</div>
         </div>
       </div>
       <nav className="nav">

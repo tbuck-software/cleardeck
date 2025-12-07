@@ -67,3 +67,4 @@ describe('Dashboard', () => {
     expect(screen.getByText('Keine Qualifikationen mit VZÄ im gewählten Jahr.')).toBeInTheDocument();
   });
 });
+

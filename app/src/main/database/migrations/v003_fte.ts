@@ -51,3 +51,4 @@ export const v003_fte: Migration = {
     db.prepare(`UPDATE employees SET fte = 1.0 WHERE fte IS NULL`).run();
   },
 };
+

@@ -35,3 +35,4 @@ export const v002_columns: Migration = {
     ).run();
   },
 };
+

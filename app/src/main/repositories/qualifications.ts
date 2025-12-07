@@ -76,3 +76,4 @@ export const deleteQualification = (id: number): QualificationType[] => {
   db.prepare('DELETE FROM qualification_types WHERE id = ?').run(id);
   return listQualifications();
 };
+

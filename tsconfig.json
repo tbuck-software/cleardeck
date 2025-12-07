@@ -2,3 +2,4 @@
   "extends": "./app/tsconfig.json",
   "include": ["app/src/**/*"]
 }
+

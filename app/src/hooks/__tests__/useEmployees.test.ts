@@ -48,3 +48,4 @@ describe('useEmployees.averageFte', () => {
     expect(result.current.derived.averageFte).toBe(0);
   });
 });
+

@@ -69,3 +69,4 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Neu starten & installieren')).toBeEnabled();
   });
 });
+

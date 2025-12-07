@@ -159,3 +159,4 @@ export const deleteConfig = (): void => {
 
 // Re-export paths
 export { configPath, dataDir };
+

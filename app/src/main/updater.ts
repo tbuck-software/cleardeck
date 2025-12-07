@@ -142,3 +142,4 @@ export const installUpdate = (): boolean => {
  * Check if updater is initialized
  */
 export const isUpdaterInitialized = (): boolean => updaterInitialized;
+
