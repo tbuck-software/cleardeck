@@ -3,7 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGaugeHigh, faUsers, faGear, faCode, faBars, faXmark } from '@fortawesome/free-solid-svg-icons';
 import type { Page } from '../../types/ui';
 import type { UpdateStatus } from '../../shared/types';
-import logoUrl from '../../../assets/logo.png';
+import logoUrl from '../../assets/logo.png';
 
 type SidebarProps = {
   current: Page;

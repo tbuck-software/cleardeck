@@ -19,7 +19,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import type { QualificationType, UpdateStatus, AppInfo } from '../../shared/types';
 import type { QualificationModalPayload } from '../../types/ui';
-import logoUrl from '../../../assets/logo.png';
+import logoUrl from '../../assets/logo.png';
 
 type SettingsPageProps = {
   qualifications: QualificationType[];
