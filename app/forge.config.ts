@@ -18,6 +18,7 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     executableName: 'cleardeck',
+    icon: './assets/icon',
   },
   rebuildConfig: {},
   makers: [
