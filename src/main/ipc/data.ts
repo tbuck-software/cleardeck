@@ -18,7 +18,6 @@ import {
 import { listEvents, saveEvent, deleteEvent, listUpcomingEvents, listEventsInRange } from '../repositories/events';
 import {
   getExpiringTrainings,
-  getDepartmentStats,
   getBirthdaysAndAnniversaries,
 } from '../repositories/dashboard';
 import {
@@ -28,13 +27,6 @@ import {
   reorderQualifications,
   deleteQualification,
 } from '../repositories/qualifications';
-import {
-  listDepartments,
-  addDepartment,
-  updateDepartment,
-  reorderDepartments,
-  deleteDepartment,
-} from '../repositories/departments';
 import { getBaseHours, setBaseHours, getHiddenEventTypes, setHiddenEventTypes } from '../repositories/settings';
 import { exportDatabase, importDatabase, exportData } from '../export';
 import { isUnlocked } from './auth';
@@ -125,38 +117,6 @@ export const registerDataHandlers = (): void => {
   ipcMain.handle('qualifications:reorder', (_event, { ids }: { ids: number[] }) => {
     ensureDbReady();
     return reorderQualifications(ids);
-  });
-
-  // Departments
-  ipcMain.handle('departments:list', () => {
-    ensureDbReady();
-    return listDepartments();
-  });
-
-  ipcMain.handle(
-    'departments:add',
-    (_event, { name, note }: { name: string; note?: string | null }) => {
-      ensureDbReady();
-      return addDepartment(name, note);
-    },
-  );
-
-  ipcMain.handle(
-    'departments:update',
-    (_event, { id, name, note }: { id: number; name: string; note?: string | null }) => {
-      ensureDbReady();
-      return updateDepartment(id, name, note);
-    },
-  );
-
-  ipcMain.handle('departments:delete', (_event, { id }: { id: number }) => {
-    ensureDbReady();
-    return deleteDepartment(id);
-  });
-
-  ipcMain.handle('departments:reorder', (_event, { ids }: { ids: number[] }) => {
-    ensureDbReady();
-    return reorderDepartments(ids);
   });
 
   // Events
@@ -253,11 +213,6 @@ export const registerDataHandlers = (): void => {
       return getExpiringTrainings(withinDays, limit);
     }
   );
-
-  ipcMain.handle('dashboard:departmentStats', (_event, { year }: { year: number }) => {
-    ensureDbReady();
-    return getDepartmentStats(year);
-  });
 
   ipcMain.handle(
     'dashboard:birthdaysAnniversaries',

@@ -16,8 +16,6 @@ const baseStatus: UpdateStatus = { state: 'idle' };
 const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage>> = {}): React.ComponentProps<typeof SettingsPage> => ({
   qualifications,
   qualificationEdits: {},
-  departments: [],
-  departmentEdits: {},
   dbMessage: null,
   baseHoursInput: '36',
   updateStatus: baseStatus,
@@ -25,9 +23,6 @@ const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage
   onOpenQualificationModal: vi.fn<(payload: QualificationModalPayload) => void>(),
   onReorderQualification: vi.fn<(ids: number[]) => void>(),
   onDeleteQualification: vi.fn<(id: number) => void>(),
-  onOpenDepartmentModal: vi.fn(),
-  onReorderDepartment: vi.fn(),
-  onDeleteDepartment: vi.fn(),
   onBaseHoursInputChange: vi.fn<(val: string) => void>(),
   onSaveBaseHours: vi.fn(),
   onDbExport: vi.fn(),
@@ -44,6 +39,9 @@ describe('SettingsPage', () => {
   it('ermöglicht Neu-Anlage und Drag&Drop-Reihenfolge', () => {
     const props = createProps();
     render(<SettingsPage {...props} />);
+
+    // Navigate to qualifications tab first
+    fireEvent.click(screen.getByText('Qualifikationen'));
 
     fireEvent.click(screen.getByText('Neu'));
     expect(props.onOpenQualificationModal).toHaveBeenCalledWith({ value: '', note: '', id: undefined });
@@ -66,12 +64,16 @@ describe('SettingsPage', () => {
 
     render(<SettingsPage {...props} />);
 
+    // Test is on 'Allgemein' tab by default
     fireEvent.change(screen.getByDisplayValue('36'), { target: { value: '40' } });
     expect(props.onBaseHoursInputChange).toHaveBeenCalledWith('40');
 
-    expect(screen.getByText('Export erledigt')).toBeInTheDocument();
     expect(screen.getByText('Update v1.2.3 heruntergeladen.')).toBeInTheDocument();
-    expect(screen.getByText('Neu starten & installieren')).toBeEnabled();
+    expect(screen.getByText('Installieren')).toBeEnabled();
+
+    // Navigate to database tab to check dbMessage
+    fireEvent.click(screen.getByText('Datenbank & Sicherheit'));
+    expect(screen.getByText('Export erledigt')).toBeInTheDocument();
   });
 });
 

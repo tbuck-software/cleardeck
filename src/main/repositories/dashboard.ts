@@ -9,7 +9,6 @@
 
 import type {
   ExpiringTraining,
-  DepartmentStats,
   BirthdayAnniversary,
 } from '../../shared/types';
 
@@ -79,42 +78,6 @@ export const getExpiringTrainings = (
       daysUntilExpiry,
     };
   });
-};
-
-/**
- * Get department statistics for a given year
- */
-export const getDepartmentStats = (year: number): DepartmentStats[] => {
-  const db = getDb();
-  const startIso = `${year}-01-01`;
-  const endIso = `${year}-12-31`;
-
-  const rows = db
-    .prepare(
-      `
-      SELECT
-        COALESCE(emp.department, 'Nicht zugeordnet') as department,
-        COUNT(DISTINCT emp.id) as headcount,
-        SUM(emp.fte) as fte
-      FROM employees emp
-      INNER JOIN employment_periods p ON p.employeeId = emp.id
-      WHERE date(p.startDate) <= date(?)
-        AND (p.endDate IS NULL OR date(p.endDate) >= date(?))
-      GROUP BY COALESCE(emp.department, 'Nicht zugeordnet')
-      ORDER BY fte DESC
-    `
-    )
-    .all(endIso, startIso) as {
-    department: string;
-    headcount: number;
-    fte: number;
-  }[];
-
-  return rows.map((row) => ({
-    department: row.department,
-    headcount: row.headcount,
-    fte: Number((row.fte || 0).toFixed(2)),
-  }));
 };
 
 /**

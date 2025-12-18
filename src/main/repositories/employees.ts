@@ -105,7 +105,6 @@ export const getYearDataset = (year: number): YearDataset => {
              e.fte,
              e.createdAt,
              e.birthDate,
-             e.department,
              p.id as periodId,
              p.startDate,
              p.endDate,
@@ -126,7 +125,6 @@ export const getYearDataset = (year: number): YearDataset => {
       createdAt?: string;
       fte: number;
       birthDate?: string | null;
-      department?: string | null;
     })[];
 
   const latest = new Map<number, EmployeeWithPeriod>();
@@ -146,7 +144,6 @@ export const getYearDataset = (year: number): YearDataset => {
         weeklyHours: row.weeklyHours ?? null,
         createdAt: row.createdAt,
         birthDate: row.birthDate ?? null,
-        department: row.department ?? null,
         startDate: effectiveStart,
         endDate: effectiveEnd ?? null,
         fte: row.fte,
@@ -199,7 +196,6 @@ export const saveEmployee = (input: {
   year: number;
   qualification: string;
   birthDate?: string | null;
-  department?: string | null;
 }): YearDataset => {
   const db = getDb();
 
@@ -209,7 +205,6 @@ export const saveEmployee = (input: {
     weeklyHours: input.weeklyHours ?? null,
     fte: input.fte,
     birthDate: input.birthDate ?? null,
-    department: input.department ?? null,
   };
 
   const periodPayload = {
@@ -222,7 +217,7 @@ export const saveEmployee = (input: {
   if (input.id) {
     db.prepare(
       `UPDATE employees
-       SET name = @name, note = @note, weeklyHours = @weeklyHours, fte = @fte, birthDate = @birthDate, department = @department
+       SET name = @name, note = @note, weeklyHours = @weeklyHours, fte = @fte, birthDate = @birthDate
        WHERE id = @id`,
     ).run({ ...employeePayload, id: input.id });
 
@@ -250,8 +245,8 @@ export const saveEmployee = (input: {
   } else {
     const empResult = db
       .prepare(
-        `INSERT INTO employees (name, note, weeklyHours, fte, birthDate, department)
-         VALUES (@name, @note, @weeklyHours, @fte, @birthDate, @department)`,
+        `INSERT INTO employees (name, note, weeklyHours, fte, birthDate)
+         VALUES (@name, @note, @weeklyHours, @fte, @birthDate)`,
       )
       .run(employeePayload);
     const newId = empResult.lastInsertRowid as number;

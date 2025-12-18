@@ -10,12 +10,6 @@ export interface QualificationType {
   note?: string | null;
 }
 
-export interface Department {
-  id?: number;
-  name: string;
-  note?: string | null;
-}
-
 export interface Employee {
   id?: number;
   name: string;
@@ -24,7 +18,6 @@ export interface Employee {
   fte?: number | null;
   createdAt?: string;
   birthDate?: string | null;
-  department?: string | null;
 }
 
 export interface EmploymentPeriod {
@@ -45,7 +38,6 @@ export interface EmployeeWithPeriod extends Employee {
   weeklyHours?: number | null;
   qualification: Qualification | string;
   birthDate?: string | null;
-  department?: string | null;
 }
 
 export type EmployeeEventType =
@@ -140,12 +132,6 @@ export interface ExpiringTraining {
   eventDate: string;
   expiresAt: string;
   daysUntilExpiry: number;
-}
-
-export interface DepartmentStats {
-  department: string;
-  headcount: number;
-  fte: number;
 }
 
 export interface BirthdayAnniversary {
