@@ -115,6 +115,17 @@ export type PatientFormState = {
   note: string;
 };
 
+export type PatientModalState = {
+  open: boolean;
+  mode: 'create' | 'edit';
+  id?: number;
+  name: string;
+  birthDate: string;
+  diagnosis: string;
+  qprStatus: QprRating | '';
+  note: string;
+};
+
 export type VisitModalState = {
   open: boolean;
   id?: number;

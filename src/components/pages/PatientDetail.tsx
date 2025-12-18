@@ -6,7 +6,6 @@ import {
   faCalendarCheck,
   faStethoscope,
   faCakeCandles,
-  faArrowLeft,
 } from '@fortawesome/free-solid-svg-icons';
 import type { PatientWithLatestVisit, PatientVisit } from '../../shared/types';
 import QprBadge from '../ui/QprBadge';
@@ -14,7 +13,6 @@ import QprBadge from '../ui/QprBadge';
 type PatientDetailProps = {
   patient: PatientWithLatestVisit;
   visits: PatientVisit[];
-  onBack: () => void;
   onEdit: () => void;
   onAddVisit: () => void;
   onSelectVisit: (visit: PatientVisit) => void;
@@ -23,7 +21,6 @@ type PatientDetailProps = {
 const PatientDetail = ({
   patient,
   visits,
-  onBack,
   onEdit,
   onAddVisit,
   onSelectVisit,
@@ -39,12 +36,6 @@ const PatientDetail = ({
     <div className="stack">
       <div className="card detail-header">
         <div className="detail-main">
-          <div className="detail-back-row">
-            <button className="ghost-button icon-button" onClick={onBack} title="Zurueck zur Liste">
-              <FontAwesomeIcon icon={faArrowLeft} />
-            </button>
-          </div>
-
           <div
             role="button"
             tabIndex={0}
@@ -130,7 +121,7 @@ const PatientDetail = ({
               key={visit.id}
               onClick={() => onSelectVisit(visit)}
             >
-              <div className="timeline-dot">
+              <div className="timeline-dot event-dot event-visit">
                 <FontAwesomeIcon icon={faCalendarCheck} />
               </div>
               <div className="timeline-content">

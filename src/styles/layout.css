@@ -772,6 +772,11 @@ button.detail-item.clickable:hover {
   box-shadow: 0 0 0 2px #fee2e2;
 }
 
+.timeline-dot.event-visit {
+  background: #0ea5e9;
+  box-shadow: 0 0 0 2px #e0f2fe;
+}
+
 .timeline-dot.period-dot {
   background: #6366f1;
   box-shadow: 0 0 0 2px #e0e7ff;
