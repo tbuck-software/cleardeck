@@ -58,10 +58,12 @@ export const unifyEvents = (
     const eventType: UnifiedEventType = item.type === 'birthday' ? 'birthday' : 'anniversary';
     if (hiddenEventTypes.includes(eventType)) continue;
 
-    const subtitle =
-      item.type === 'birthday'
-        ? `${item.age}. Geburtstag`
-        : `${item.years}-jähriges Dienstjubiläum`;
+    let subtitle: string | undefined;
+    if (item.type === 'birthday') {
+      subtitle = item.age != null ? `${item.age}. Geburtstag` : undefined;
+    } else {
+      subtitle = `${item.years}-jähriges Dienstjubiläum`;
+    }
 
     unified.push({
       id: `${item.type}-${item.employeeId}-${item.date}`,
@@ -77,9 +79,14 @@ export const unifyEvents = (
   // Convert patient birthdays
   for (const item of patientBirthdays) {
     if (hiddenEventTypes.includes('patient-birthday')) continue;
-    const birthYear = new Date(item.birthDate).getFullYear();
-    const eventYear = new Date(item.date).getFullYear();
-    const age = eventYear - birthYear;
+
+    let subtitle: string | undefined;
+    if (item.hasKnownYear) {
+      const birthYear = parseInt(item.birthDate.slice(0, 4), 10);
+      const eventYear = new Date(item.date).getFullYear();
+      const age = eventYear - birthYear;
+      subtitle = `${age}. Geburtstag`;
+    }
 
     unified.push({
       id: `patient-birthday-${item.patientId}-${item.date}`,
@@ -88,7 +95,7 @@ export const unifyEvents = (
       type: 'patient-birthday',
       date: item.date,
       title: 'Geburtstag',
-      subtitle: `${age}. Geburtstag`,
+      subtitle,
     });
   }
 

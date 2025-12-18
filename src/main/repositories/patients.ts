@@ -214,11 +214,11 @@ export const getConcerningRatings = (limit = 10): PatientConcerningRating[] => {
 export const listPatientBirthdays = (
   startDate: string,
   endDate: string,
-): { patientId: number; patientName: string; birthDate: string; date: string }[] => {
+): { patientId: number; patientName: string; birthDate: string; date: string; hasKnownYear: boolean }[] => {
   const db = getDb();
   const start = new Date(startDate);
   const end = new Date(endDate);
-  const results: { patientId: number; patientName: string; birthDate: string; date: string }[] = [];
+  const results: { patientId: number; patientName: string; birthDate: string; date: string; hasKnownYear: boolean }[] = [];
 
   // Get all patients with birth dates
   const patients = db
@@ -227,6 +227,9 @@ export const listPatientBirthdays = (
 
   for (const patient of patients) {
     const birthDate = new Date(patient.birthDate);
+    const birthYear = parseInt(patient.birthDate.slice(0, 4), 10);
+    const hasKnownYear = birthYear > 0;
+
     // Check each year in range
     for (let year = start.getFullYear(); year <= end.getFullYear(); year++) {
       const thisYearBirthday = new Date(year, birthDate.getMonth(), birthDate.getDate());
@@ -236,6 +239,7 @@ export const listPatientBirthdays = (
           patientName: patient.name,
           birthDate: patient.birthDate,
           date: thisYearBirthday.toISOString().slice(0, 10),
+          hasKnownYear,
         });
       }
     }

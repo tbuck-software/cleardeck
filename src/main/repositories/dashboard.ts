@@ -120,6 +120,9 @@ export const getBirthdaysAndAnniversaries = (
     // Check birthday
     if (row.birthDate) {
       const birthDate = new Date(row.birthDate);
+      const birthYear = parseInt(row.birthDate.slice(0, 4), 10);
+      const hasKnownYear = birthYear > 0;
+
       const thisYearBirthday = new Date(
         currentYear,
         birthDate.getMonth(),
@@ -136,15 +139,20 @@ export const getBirthdaysAndAnniversaries = (
       );
 
       if (daysUntil >= 0 && daysUntil <= withinDays) {
-        const age = thisYearBirthday.getFullYear() - birthDate.getFullYear();
-        results.push({
+        const entry: BirthdayAnniversary = {
           employeeId: row.employeeId,
           employeeName: row.employeeName,
           type: 'birthday',
           date: thisYearBirthday.toISOString().slice(0, 10),
           displayDate: `${birthDate.getDate()}.${birthDate.getMonth() + 1}.`,
-          age,
-        });
+        };
+
+        // Only include age if birth year is known
+        if (hasKnownYear) {
+          entry.age = thisYearBirthday.getFullYear() - birthYear;
+        }
+
+        results.push(entry);
       }
     }
 

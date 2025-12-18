@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import type { PatientFormState, Page } from '../../types/ui';
 import type { QprRating } from '../../shared/types';
+import BirthDateInput from '../ui/BirthDateInput';
 
 type PatientFormProps = {
   page: Page;
@@ -57,12 +58,11 @@ const PatientForm = ({
           placeholder="Vor- und Nachname"
         />
       </label>
-      <label>
+      <label className="full-width">
         Geburtsdatum
-        <input
-          type="date"
+        <BirthDateInput
           value={form.birthDate}
-          onChange={(e) => onChange({ ...form, birthDate: e.target.value })}
+          onChange={(value) => onChange({ ...form, birthDate: value })}
         />
       </label>
       <label className="full-width">
