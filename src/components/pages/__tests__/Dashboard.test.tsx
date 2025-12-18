@@ -57,7 +57,6 @@ describe('Dashboard', () => {
         onToggleEventFilter={mockOnToggleEventFilter}
         onShowAllEvents={mockOnShowAllEvents}
         onHideAllEvents={mockOnHideAllEvents}
-        departmentStats={[]}
       />,
     );
 
@@ -91,7 +90,6 @@ describe('Dashboard', () => {
         onToggleEventFilter={mockOnToggleEventFilter}
         onShowAllEvents={mockOnShowAllEvents}
         onHideAllEvents={mockOnHideAllEvents}
-        departmentStats={[]}
       />,
     );
 
@@ -115,7 +113,6 @@ describe('Dashboard', () => {
         onToggleEventFilter={mockOnToggleEventFilter}
         onShowAllEvents={mockOnShowAllEvents}
         onHideAllEvents={mockOnHideAllEvents}
-        departmentStats={[]}
       />,
     );
 

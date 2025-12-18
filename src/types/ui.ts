@@ -33,15 +33,6 @@ export type QualificationModalState = {
 
 export type QualificationModalPayload = Pick<QualificationModalState, 'id' | 'value' | 'note'>;
 
-export type DepartmentModalState = {
-  open: boolean;
-  id?: number;
-  value: string;
-  note: string;
-};
-
-export type DepartmentModalPayload = Pick<DepartmentModalState, 'id' | 'value' | 'note'>;
-
 export type RecoveryResetState = {
   open: boolean;
   recoveryKey: string;
@@ -77,7 +68,6 @@ export type EditModalState = {
   linked: boolean;
   fteValue: string;
   birthDate: string;
-  department: string;
 };
 
 export type AddPeriodFormState = {

@@ -16,7 +16,6 @@ import { v006_drop_documentpath } from './v006_drop_documentpath';
 import { v007_drop_employee_qualification } from './v007_drop_employee_qualification';
 import { v008_fix_employee_foreign_keys } from './v008_fix_employee_foreign_keys';
 import { v009_employee_fields } from './v009_employee_fields';
-import { v010_departments } from './v010_departments';
 
 export type Migration = {
   version: number;
@@ -38,7 +37,6 @@ export const migrations: Migration[] = [
   v007_drop_employee_qualification,
   v008_fix_employee_foreign_keys,
   v009_employee_fields,
-  v010_departments,
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations.length;

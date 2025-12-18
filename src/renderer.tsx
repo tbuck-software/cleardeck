@@ -17,7 +17,6 @@ import ConfirmModal from './components/modals/ConfirmModal';
 import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
 import QualificationModal from './components/modals/QualificationModal';
-import DepartmentModal from './components/modals/DepartmentModal';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
 import { unifyEvents } from './utils/unifyEvents';
 import useAppLogic from './hooks/useAppLogic';
@@ -34,7 +33,6 @@ const App = () => {
       baseHours,
       baseHoursInput,
       qualifications,
-      departments,
       form,
       periods,
       selectedEmployee,
@@ -53,8 +51,6 @@ const App = () => {
       addNewPeriod,
       qualificationEdits,
       qualificationModal,
-      departmentEdits,
-      departmentModal,
       editModal,
       addPeriodForm,
       eventModal,
@@ -74,7 +70,6 @@ const App = () => {
       setAddNewPeriod,
       setQualificationFilter,
       setQualificationModal,
-      setDepartmentModal,
       setEditModal,
       setSearch,
       setStatusFilter,
@@ -95,9 +90,6 @@ const App = () => {
       confirmDeleteQualification,
       handleSaveQualificationModal,
       reorderQualification,
-      confirmDeleteDepartment,
-      handleSaveDepartmentModal,
-      reorderDepartment,
       openRecoveryKey,
       handleCopyRecoveryKey,
       startRecoveryReset,
@@ -292,7 +284,6 @@ const App = () => {
             onToggleEventFilter={toggleEventTypeFilter}
             onShowAllEvents={showAllEventTypes}
             onHideAllEvents={hideAllEventTypes}
-            departmentStats={dashboardWidgets.departmentStats}
           />
         )}
 
@@ -330,8 +321,6 @@ const App = () => {
           <SettingsPage
             qualifications={qualifications}
             qualificationEdits={qualificationEdits}
-            departments={departments}
-            departmentEdits={departmentEdits}
             dbMessage={dbMessage}
             baseHoursInput={baseHoursInput}
             updateStatus={updateStatus}
@@ -346,16 +335,6 @@ const App = () => {
             }
             onReorderQualification={reorderQualification}
             onDeleteQualification={confirmDeleteQualification}
-            onOpenDepartmentModal={(payload) =>
-              setDepartmentModal({
-                open: true,
-                id: payload.id,
-                value: payload.value,
-                note: payload.note,
-              })
-            }
-            onReorderDepartment={reorderDepartment}
-            onDeleteDepartment={confirmDeleteDepartment}
             onBaseHoursInputChange={setBaseHoursInput}
             onSaveBaseHours={handleSaveBaseHoursValue}
             onDbExport={handleDbExport}
@@ -424,12 +403,6 @@ const App = () => {
         onChange={(next) => setQualificationModal((prev) => ({ ...prev, ...next }))}
         onClose={() => setQualificationModal({ open: false, value: '', note: '' })}
         onSave={handleSaveQualificationModal}
-      />
-      <DepartmentModal
-        state={departmentModal}
-        onChange={(next) => setDepartmentModal((prev) => ({ ...prev, ...next }))}
-        onClose={() => setDepartmentModal({ open: false, value: '', note: '' })}
-        onSave={handleSaveDepartmentModal}
       />
       {editModal.open && (
         <div className="modal-backdrop">
@@ -522,30 +495,14 @@ const App = () => {
                   />
                 </label>
               </div>
-              <div className="form-grid">
-                <label>
-                  Geburtsdatum
-                  <input
-                    type="date"
-                    value={editModal.birthDate}
-                    onChange={(e) => setEditModal((prev) => ({ ...prev, birthDate: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  Abteilung
-                  <select
-                    value={editModal.department}
-                    onChange={(e) => setEditModal((prev) => ({ ...prev, department: e.target.value }))}
-                  >
-                    <option value="">— Keine Abteilung —</option>
-                    {departments.map((d) => (
-                      <option key={d.id ?? d.name} value={d.name}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+              <label>
+                Geburtsdatum
+                <input
+                  type="date"
+                  value={editModal.birthDate}
+                  onChange={(e) => setEditModal((prev) => ({ ...prev, birthDate: e.target.value }))}
+                />
+              </label>
               <label className="full-width">
                 Notiz / Bemerkung
                 <textarea

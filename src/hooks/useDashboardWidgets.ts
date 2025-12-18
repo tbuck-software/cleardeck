@@ -1,7 +1,6 @@
 import { useCallback, useState } from 'react';
 import type {
   ExpiringTraining,
-  DepartmentStats,
   BirthdayAnniversary,
 } from '../shared/types';
 
@@ -11,7 +10,6 @@ type UseDashboardWidgetsProps = {
 
 const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
   const [expiringTrainings, setExpiringTrainings] = useState<ExpiringTraining[]>([]);
-  const [departmentStats, setDepartmentStats] = useState<DepartmentStats[]>([]);
   const [birthdaysAnniversaries, setBirthdaysAnniversaries] = useState<BirthdayAnniversary[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -20,18 +18,6 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
       try {
         const data = await window.api.getExpiringTrainings(withinDays, limit);
         setExpiringTrainings(data);
-      } catch (err) {
-        handleError(err);
-      }
-    },
-    [handleError]
-  );
-
-  const loadDepartmentStats = useCallback(
-    async (year: number) => {
-      try {
-        const data = await window.api.getDepartmentStats(year);
-        setDepartmentStats(data);
       } catch (err) {
         handleError(err);
       }
@@ -52,31 +38,28 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
   );
 
   const loadAll = useCallback(
-    async (year: number) => {
+    async () => {
       setLoading(true);
       try {
         await Promise.all([
           loadExpiringTrainings(),
-          loadDepartmentStats(year),
           loadBirthdaysAnniversaries(),
         ]);
       } finally {
         setLoading(false);
       }
     },
-    [loadExpiringTrainings, loadDepartmentStats, loadBirthdaysAnniversaries]
+    [loadExpiringTrainings, loadBirthdaysAnniversaries]
   );
 
   return {
     state: {
       expiringTrainings,
-      departmentStats,
       birthdaysAnniversaries,
       loading,
     },
     actions: {
       loadExpiringTrainings,
-      loadDepartmentStats,
       loadBirthdaysAnniversaries,
       loadAll,
     },

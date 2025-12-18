@@ -4,7 +4,6 @@ import type {
   AppInfo,
   EmploymentPeriod,
   QualificationType,
-  Department,
   YearDataset,
   EmployeeEvent,
   EmployeeEventType,
@@ -12,7 +11,6 @@ import type {
   RecoveryInfo,
   UpcomingEvent,
   ExpiringTraining,
-  DepartmentStats,
   BirthdayAnniversary,
 } from './shared/types';
 
@@ -72,11 +70,6 @@ export type Api = {
   updateQualification: (id: number, name: string, note?: string | null) => Promise<QualificationType[]>;
   deleteQualification: (id: number) => Promise<QualificationType[]>;
   reorderQualifications: (ids: number[]) => Promise<QualificationType[]>;
-  listDepartments: () => Promise<Department[]>;
-  addDepartment: (name: string, note?: string | null) => Promise<Department[]>;
-  updateDepartment: (id: number, name: string, note?: string | null) => Promise<Department[]>;
-  deleteDepartment: (id: number) => Promise<Department[]>;
-  reorderDepartments: (ids: number[]) => Promise<Department[]>;
   exportDatabase: (mode: 'encrypted' | 'plain') => Promise<{ saved: boolean; filePath?: string; error?: string }>;
   importDatabase: (
     mode: 'encrypted' | 'plain',
@@ -94,7 +87,6 @@ export type Api = {
   getDevTables: () => Promise<Record<string, Record<string, unknown>[]>>;
   // Dashboard widgets
   getExpiringTrainings: (withinDays?: number, limit?: number) => Promise<ExpiringTraining[]>;
-  getDepartmentStats: (year: number) => Promise<DepartmentStats[]>;
   getBirthdaysAndAnniversaries: (withinDays?: number, limit?: number) => Promise<BirthdayAnniversary[]>;
 };
 
@@ -121,11 +113,6 @@ const api: Api = {
   updateQualification: (id, name, note) => ipcRenderer.invoke('qualifications:update', { id, name, note }),
   deleteQualification: (id) => ipcRenderer.invoke('qualifications:delete', { id }),
   reorderQualifications: (ids) => ipcRenderer.invoke('qualifications:reorder', { ids }),
-  listDepartments: () => ipcRenderer.invoke('departments:list'),
-  addDepartment: (name, note) => ipcRenderer.invoke('departments:add', { name, note }),
-  updateDepartment: (id, name, note) => ipcRenderer.invoke('departments:update', { id, name, note }),
-  deleteDepartment: (id) => ipcRenderer.invoke('departments:delete', { id }),
-  reorderDepartments: (ids) => ipcRenderer.invoke('departments:reorder', { ids }),
   exportDatabase: (mode) => ipcRenderer.invoke('db:export', { mode }),
   importDatabase: (mode) => ipcRenderer.invoke('db:import', { mode }),
   deletePeriod: (periodId, year) => ipcRenderer.invoke('period:delete', { periodId, year }),
@@ -146,7 +133,6 @@ const api: Api = {
   // Dashboard widgets
   getExpiringTrainings: (withinDays, limit) =>
     ipcRenderer.invoke('dashboard:expiringTrainings', { withinDays, limit }),
-  getDepartmentStats: (year) => ipcRenderer.invoke('dashboard:departmentStats', { year }),
   getBirthdaysAndAnniversaries: (withinDays, limit) =>
     ipcRenderer.invoke('dashboard:birthdaysAnniversaries', { withinDays, limit }),
 };

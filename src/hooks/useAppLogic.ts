@@ -112,8 +112,6 @@ const useAppLogic = () => {
     setForm: employeeSlice.setters.setForm,
     setQualifications: employeeSlice.setters.setQualifications,
     setQualificationEdits: employeeSlice.setters.setQualificationEdits,
-    setDepartments: employeeSlice.setters.setDepartments,
-    setDepartmentEdits: employeeSlice.setters.setDepartmentEdits,
     hydrateBaseHours: settingsSlice.actions.hydrateBaseHours,
   });
 
@@ -134,9 +132,9 @@ const useAppLogic = () => {
     if (authSlice.appReady.unlocked) {
       upcomingEventsSlice.actions.loadHiddenEventTypes();
       upcomingEventsSlice.actions.loadUpcomingEvents();
-      dashboardWidgetsSlice.actions.loadAll(year);
+      dashboardWidgetsSlice.actions.loadAll();
     }
-  }, [authSlice.appReady.unlocked, upcomingEventsSlice.actions, dashboardWidgetsSlice.actions, year]);
+  }, [authSlice.appReady.unlocked, upcomingEventsSlice.actions, dashboardWidgetsSlice.actions]);
 
   useEffect(() => {
     if (employeeSlice.state.qualificationFilter === 'all') return;
@@ -199,7 +197,6 @@ const useAppLogic = () => {
       baseHours: settingsSlice.state.baseHours,
       baseHoursInput: settingsSlice.state.baseHoursInput,
       qualifications: employeeSlice.state.qualifications,
-      departments: employeeSlice.state.departments,
       form: employeeSlice.state.form,
       periods: eventSlice.state.periods,
       events: eventSlice.state.events,
@@ -219,8 +216,6 @@ const useAppLogic = () => {
       addNewPeriod: employeeSlice.state.addNewPeriod,
       qualificationEdits: employeeSlice.state.qualificationEdits,
       qualificationModal: employeeSlice.state.qualificationModal,
-      departmentEdits: employeeSlice.state.departmentEdits,
-      departmentModal: employeeSlice.state.departmentModal,
       editModal: employeeSlice.state.editModal,
       addPeriodForm: eventSlice.state.addPeriodForm,
       periodToDelete: eventSlice.state.periodToDelete,
@@ -242,7 +237,6 @@ const useAppLogic = () => {
       setAddNewPeriod: employeeSlice.setters.setAddNewPeriod,
       setQualificationFilter: employeeSlice.setters.setQualificationFilter,
       setQualificationModal: employeeSlice.setters.setQualificationModal,
-      setDepartmentModal: employeeSlice.setters.setDepartmentModal,
       setEditModal: employeeSlice.setters.setEditModal,
       setSearch: employeeSlice.setters.setSearch,
       setStatusFilter: employeeSlice.setters.setStatusFilter,
@@ -272,9 +266,6 @@ const useAppLogic = () => {
       confirmDeleteQualification: employeeSlice.actions.confirmDeleteQualification,
       handleSaveQualificationModal: employeeSlice.actions.handleSaveQualificationModal,
       reorderQualification: employeeSlice.actions.reorderQualification,
-      confirmDeleteDepartment: employeeSlice.actions.confirmDeleteDepartment,
-      handleSaveDepartmentModal: employeeSlice.actions.handleSaveDepartmentModal,
-      reorderDepartment: employeeSlice.actions.reorderDepartment,
       openRecoveryKey,
       handleCopyRecoveryKey,
       startRecoveryReset,

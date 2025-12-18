@@ -1647,68 +1647,6 @@ button.detail-item.clickable:hover {
   margin-top: 4px;
 }
 
-/* Department Stats */
-.department-stats-container {
-  margin-top: 16px;
-}
-
-.department-chart {
-  margin-bottom: 20px;
-}
-
-.department-bar-container {
-  display: flex;
-  height: 24px;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #f1f5f9;
-}
-
-.department-bar-segment {
-  height: 100%;
-  min-width: 4px;
-  transition: all 0.3s ease;
-}
-
-.department-bar-segment:hover {
-  opacity: 0.8;
-}
-
-.department-legend {
-  display: grid;
-  gap: 12px;
-}
-
-.department-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.department-legend-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.department-legend-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.department-legend-name {
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--text);
-}
-
-.department-legend-value {
-  font-size: 12px;
-  color: var(--muted);
-}
-
 /* Birthdays & Anniversaries List */
 .birthdays-container {
   margin-top: 16px;

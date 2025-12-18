@@ -13,12 +13,10 @@ import type {
   YearDataset,
   UnifiedEvent,
   UnifiedEventType,
-  DepartmentStats,
 } from '../../shared/types';
 import StatCard from '../ui/StatCard';
 import UpcomingEventsList from '../ui/UpcomingEventsList';
 import EventsFilterDropdown from '../ui/EventsFilterDropdown';
-import DepartmentStatsCard from '../ui/DepartmentStatsCard';
 
 type DashboardProps = {
   year: number;
@@ -34,7 +32,6 @@ type DashboardProps = {
   onToggleEventFilter: (type: UnifiedEventType) => void;
   onShowAllEvents: () => void;
   onHideAllEvents: () => void;
-  departmentStats: DepartmentStats[];
 };
 
 const Dashboard = ({
@@ -50,7 +47,6 @@ const Dashboard = ({
   onToggleEventFilter,
   onShowAllEvents,
   onHideAllEvents,
-  departmentStats,
 }: DashboardProps) => {
   const fullTimeCount = dataset?.employees.filter((e) => e.fte >= 1).length ?? 0;
   const fullTimePercent =
@@ -74,6 +70,7 @@ const Dashboard = ({
       </div>
 
       <div className="dashboard-masonry">
+        {/* Spalte 1: Ereignisse + Qualifikationen */}
         <div className="card">
           <div className="form-header">
             <div>
@@ -94,6 +91,51 @@ const Dashboard = ({
           />
         </div>
 
+        <div className="card">
+          <div className="form-header">
+            <div>
+              <p className="eyebrow">Qualifikationen</p>
+              <h3>VZÄ je Qualifikation</h3>
+            </div>
+          </div>
+          <div className="qual-grid">
+            {qualifications.length > 0 ? (
+              qualifications.map((q) => {
+                const cat = dataset?.aggregation.categories.find(
+                  (c) => c.qualification === q.name,
+                );
+                const fte = cat?.fte ?? 0;
+                const headcount = cat?.headcount ?? 0;
+                const percent = totalFte > 0 ? Math.min(100, (fte / totalFte) * 100) : 0;
+
+                return (
+                  <div className="qual-card" key={q.name}>
+                    <div className="qual-card-head">
+                      <div className="qual-icon">
+                        <div className="qual-dot" />
+                      </div>
+                      <div className="qual-info">
+                        <div className="qual-title">{q.name}</div>
+                        <div className="qual-meta">{headcount} Personen</div>
+                      </div>
+                      <div className="qual-fte">{fte.toFixed(2)}</div>
+                    </div>
+                    <div className="qual-progress-wrapper">
+                      <div className="qual-progress">
+                        <div className="qual-progress-bar" style={{ width: `${percent}%` }} />
+                      </div>
+                      <div className="qual-percent">{Math.round(percent)}%</div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="empty">Keine Qualifikationen definiert.</div>
+            )}
+          </div>
+        </div>
+
+        {/* Spalte 2: Jahr im Blick + Abteilungen */}
         <div className="card">
           <div className="form-header">
             <div>
@@ -144,60 +186,6 @@ const Dashboard = ({
               sub="Austritte im Jahr"
               icon={faUserMinus}
             />
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="form-header">
-            <div>
-              <p className="eyebrow">Organisation</p>
-              <h3>Abteilungen</h3>
-            </div>
-          </div>
-          <DepartmentStatsCard stats={departmentStats} totalFte={totalFte} />
-        </div>
-
-        <div className="card">
-          <div className="form-header">
-            <div>
-              <p className="eyebrow">Qualifikationen</p>
-              <h3>VZÄ je Qualifikation</h3>
-            </div>
-          </div>
-          <div className="qual-grid">
-            {qualifications.length > 0 ? (
-              qualifications.map((q) => {
-                const cat = dataset?.aggregation.categories.find(
-                  (c) => c.qualification === q.name,
-                );
-                const fte = cat?.fte ?? 0;
-                const headcount = cat?.headcount ?? 0;
-                const percent = totalFte > 0 ? Math.min(100, (fte / totalFte) * 100) : 0;
-
-                return (
-                  <div className="qual-card" key={q.name}>
-                    <div className="qual-card-head">
-                      <div className="qual-icon">
-                        <div className="qual-dot" />
-                      </div>
-                      <div className="qual-info">
-                        <div className="qual-title">{q.name}</div>
-                        <div className="qual-meta">{headcount} Personen</div>
-                      </div>
-                      <div className="qual-fte">{fte.toFixed(2)}</div>
-                    </div>
-                    <div className="qual-progress-wrapper">
-                      <div className="qual-progress">
-                        <div className="qual-progress-bar" style={{ width: `${percent}%` }} />
-                      </div>
-                      <div className="qual-percent">{Math.round(percent)}%</div>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="empty">Keine Qualifikationen definiert.</div>
-            )}
           </div>
         </div>
       </div>

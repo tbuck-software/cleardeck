@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import api from '../services/api';
-import type { EmployeeWithPeriod, QualificationType, Department, YearDataset } from '../shared/types';
-import type { ConfirmActionOptions, DepartmentModalState, EditModalState, FormState, Page, QualificationModalState } from '../types/ui';
+import type { EmployeeWithPeriod, QualificationType, YearDataset } from '../shared/types';
+import type { ConfirmActionOptions, EditModalState, FormState, Page, QualificationModalState } from '../types/ui';
 import { deriveFteFromWeeklyHours } from '../utils/fte';
 
 export const emptyForm = (year: number, defaultQualification = ''): FormState => ({
@@ -62,13 +62,6 @@ const useEmployees = ({
     value: '',
     note: '',
   });
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [departmentEdits, setDepartmentEdits] = useState<Record<number, string>>({});
-  const [departmentModal, setDepartmentModal] = useState<DepartmentModalState>({
-    open: false,
-    value: '',
-    note: '',
-  });
   const [form, setForm] = useState<FormState>(emptyForm(currentYear));
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithPeriod | null>(null);
   const [page, setPage] = useState<Page>('dashboard');
@@ -85,7 +78,6 @@ const useEmployees = ({
     linked: true,
     fteValue: '',
     birthDate: '',
-    department: '',
   });
 
   const refreshDataset = useCallback(
@@ -136,7 +128,6 @@ const useEmployees = ({
         linked: true,
         fteValue: emp.fte ? clampFte(emp.fte).toFixed(2) : '',
         birthDate: emp.birthDate ?? '',
-        department: emp.department ?? '',
       });
       setPage('view');
       setForm({
@@ -304,72 +295,6 @@ const useEmployees = ({
     [handleError],
   );
 
-  const handleSaveDepartmentModal = useCallback(async () => {
-    const val = departmentModal.value.trim();
-    if (!val) return;
-    try {
-      let list: Department[] = departments;
-      if (departmentModal.id) {
-        list = await api.departments.update(departmentModal.id, val, departmentModal.note);
-      } else {
-        list = await api.departments.add(val, departmentModal.note);
-      }
-      setDepartments(list);
-      const edits: Record<number, string> = {};
-      list.forEach((d) => {
-        if (d.id) edits[d.id] = d.name;
-      });
-      setDepartmentEdits(edits);
-      setDepartmentModal({ open: false, value: '', note: '' });
-      setToast('Abteilung gespeichert.');
-      setTimeout(() => setToast(null), 2000);
-    } catch (err) {
-      handleError(err);
-    }
-  }, [departmentModal, departments, handleError, setToast]);
-
-  const handleDeleteDepartment = useCallback(
-    async (id: number) => {
-      try {
-        const list = await api.departments.delete(id);
-        setDepartments(list);
-        setDepartmentEdits({});
-        setToast('Abteilung gelöscht.');
-        setTimeout(() => setToast(null), 2000);
-      } catch (err) {
-        handleError(err);
-      }
-    },
-    [handleError, setToast],
-  );
-
-  const confirmDeleteDepartment = useCallback(
-    (id: number) => {
-      confirmAction('Abteilung wirklich löschen?', () => handleDeleteDepartment(id), {
-        confirmLabel: 'Löschen',
-        danger: true,
-      });
-    },
-    [confirmAction, handleDeleteDepartment],
-  );
-
-  const reorderDepartment = useCallback(
-    async (orderedIds: number[]) => {
-      try {
-        const list = await api.departments.reorder(orderedIds);
-        setDepartments(list);
-        const edits: Record<number, string> = {};
-        list.forEach((d) => {
-          if (d.id) edits[d.id] = d.name;
-        });
-        setDepartmentEdits(edits);
-      } catch (err) {
-        handleError(err);
-      }
-    },
-    [handleError],
-  );
-
   const openEditModal = useCallback(() => {
     if (!selectedEmployee) return;
     const cappedSelectedFte = clampFte(selectedEmployee.fte);
@@ -388,7 +313,6 @@ const useEmployees = ({
       fteValue: cappedSelectedFte ? cappedSelectedFte.toFixed(2) : '',
       linked: true,
       birthDate: selectedEmployee.birthDate ?? '',
-      department: selectedEmployee.department ?? '',
     });
   }, [baseHours, selectedEmployee]);
 
@@ -407,7 +331,6 @@ const useEmployees = ({
       linked: true,
       fteValue: freshForm.fte ? clampFte(freshForm.fte).toFixed(2) : '',
       birthDate: '',
-      department: '',
     });
   }, [qualifications, setAddNewPeriod, setForm, setSelectedEmployee, year]);
 
@@ -437,7 +360,6 @@ const useEmployees = ({
           year,
           linked: useLinked,
           birthDate: editModal.birthDate || null,
-          department: editModal.department || null,
         };
         const updated = await api.employees.save(payload);
         setDataset(updated);
@@ -457,7 +379,6 @@ const useEmployees = ({
           linked: true,
           fteValue: '',
           birthDate: '',
-          department: '',
         });
         setTimeout(() => setToast(null), 2000);
       }
@@ -486,7 +407,6 @@ const useEmployees = ({
         year,
         linked: useLinked,
         birthDate: editModal.birthDate || null,
-        department: editModal.department || null,
       };
       const updated = await api.employees.save(payload);
       setDataset(updated);
@@ -497,7 +417,6 @@ const useEmployees = ({
         weeklyHours: weeklyHoursNum ?? selectedEmployee.weeklyHours ?? null,
         fte: payload.fte,
         birthDate: payload.birthDate,
-        department: payload.department,
       });
       setForm((prev) => ({
         ...prev,
@@ -520,7 +439,6 @@ const useEmployees = ({
         linked: true,
         fteValue: '',
         birthDate: '',
-        department: '',
       });
       setTimeout(() => setToast(null), 2000);
     }
@@ -596,9 +514,6 @@ const useEmployees = ({
       qualifications,
       qualificationEdits,
       qualificationModal,
-      departments,
-      departmentEdits,
-      departmentModal,
       form,
       selectedEmployee,
       page,
@@ -613,9 +528,6 @@ const useEmployees = ({
       setQualifications,
       setQualificationEdits,
       setQualificationModal,
-      setDepartments,
-      setDepartmentEdits,
-      setDepartmentModal,
       setForm,
       setSelectedEmployee,
       setPage,
@@ -645,9 +557,6 @@ const useEmployees = ({
       handleSaveQualificationModal,
       confirmDeleteQualification,
       reorderQualification,
-      handleSaveDepartmentModal,
-      confirmDeleteDepartment,
-      reorderDepartment,
       openEditModal,
       openCreateModal,
       handleEditModalSave,

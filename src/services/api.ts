@@ -62,15 +62,6 @@ export const api = {
     delete: (id: number) => call('deleteQualification', baseApi.deleteQualification, id),
     reorder: (ids: number[]) => call('reorderQualifications', baseApi.reorderQualifications, ids),
   },
-  departments: {
-    list: () => call('listDepartments', baseApi.listDepartments),
-    add: (name: string, note?: string | null) =>
-      call('addDepartment', baseApi.addDepartment, name, note),
-    update: (id: number, name: string, note?: string | null) =>
-      call('updateDepartment', baseApi.updateDepartment, id, name, note),
-    delete: (id: number) => call('deleteDepartment', baseApi.deleteDepartment, id),
-    reorder: (ids: number[]) => call('reorderDepartments', baseApi.reorderDepartments, ids),
-  },
   data: {
     export: (year: number, format: ExportFormat) => call('exportData', baseApi.exportData, year, format),
     openDocument: (path: string) => call('openDocument', baseApi.openDocument, path),
