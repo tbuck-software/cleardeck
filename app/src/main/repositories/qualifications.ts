@@ -77,3 +77,4 @@ export const deleteQualification = (id: number): QualificationType[] => {
   return listQualifications();
 };
 
+

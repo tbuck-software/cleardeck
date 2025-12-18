@@ -26,3 +26,4 @@ export const registerUpdateHandlers = (getMainWindow: () => BrowserWindow | null
  */
 export { initAutoUpdater };
 
+

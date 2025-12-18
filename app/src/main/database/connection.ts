@@ -163,3 +163,4 @@ export const backupDatabase = (): string => {
 // Re-export paths for use elsewhere
 export { dataDir, encryptedDbPath, workingDbPath };
 
+
