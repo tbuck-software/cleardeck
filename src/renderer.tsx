@@ -20,6 +20,7 @@ import ConfirmModal from './components/modals/ConfirmModal';
 import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
 import QualificationModal from './components/modals/QualificationModal';
+import BirthDateInput from './components/ui/BirthDateInput';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
 import { unifyEvents } from './utils/unifyEvents';
 import useAppLogic from './hooks/useAppLogic';
@@ -574,12 +575,11 @@ const App = () => {
                   />
                 </label>
               </div>
-              <label>
+              <label className="full-width">
                 Geburtsdatum
-                <input
-                  type="date"
+                <BirthDateInput
                   value={editModal.birthDate}
-                  onChange={(e) => setEditModal((prev) => ({ ...prev, birthDate: e.target.value }))}
+                  onChange={(value) => setEditModal((prev) => ({ ...prev, birthDate: value }))}
                 />
               </label>
               <label className="full-width">
@@ -797,12 +797,11 @@ const App = () => {
                   placeholder="Vor- und Nachname"
                 />
               </label>
-              <label>
+              <label className="full-width">
                 Geburtsdatum
-                <input
-                  type="date"
+                <BirthDateInput
                   value={patientModal.birthDate}
-                  onChange={(e) => setPatientModal((prev) => ({ ...prev, birthDate: e.target.value }))}
+                  onChange={(value) => setPatientModal((prev) => ({ ...prev, birthDate: value }))}
                 />
               </label>
               <label className="full-width">

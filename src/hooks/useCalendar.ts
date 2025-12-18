@@ -133,16 +133,20 @@ const useCalendar = ({ handleError, hiddenEventTypes, enabled = true }: UseCalen
 
       // Transform patient birthdays to calendar events
       const birthdayEvents: UpcomingEvent[] = patientBirthdays.map((item: PatientBirthdayEvent) => {
-        const birthYear = new Date(item.birthDate).getFullYear();
-        const eventYear = new Date(item.date).getFullYear();
-        const age = eventYear - birthYear;
+        let details: string | undefined;
+        if (item.hasKnownYear) {
+          const birthYear = parseInt(item.birthDate.slice(0, 4), 10);
+          const eventYear = new Date(item.date).getFullYear();
+          const age = eventYear - birthYear;
+          details = `${age}. Geburtstag`;
+        }
         return {
           id: 0,
           employeeId: undefined,
           eventDate: item.date,
           type: 'patient-birthday' as const,
           title: 'Geburtstag',
-          details: `${age}. Geburtstag`,
+          details,
           employeeName: item.patientName,
           patientId: item.patientId,
           patientName: item.patientName,

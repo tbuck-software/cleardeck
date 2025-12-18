@@ -242,6 +242,7 @@ const EmployeeDetail = ({
           const prevVal = prevFallback ?? '';
           const newVal = newFallback ?? '';
           const diffLines = isDiff ? buildNoteDiff(prevVal, newVal) : [];
+          const evType = ev.type as EmployeeEventType;
           return (
             <button
               className="timeline-item event"
@@ -249,11 +250,11 @@ const EmployeeDetail = ({
               onClick={() => onSelectEvent(ev)}
             >
               <div className={`timeline-dot event-dot event-${ev.type}`}>
-                <FontAwesomeIcon icon={typeIcons[ev.type]} />
+                <FontAwesomeIcon icon={typeIcons[evType]} />
               </div>
               <div className="timeline-content">
                 <div className="timeline-header">
-                  <span className="timeline-title">{typeLabels[ev.type]}</span>
+                  <span className="timeline-title">{typeLabels[evType]}</span>
                   <span className="timeline-date">{ev.eventDate}</span>
                 </div>
                 {detail && !isDiff && <div className="timeline-note muted">{detail}</div>}

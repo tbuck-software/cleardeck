@@ -195,3 +195,31 @@ button:active {
   gap: 12px;
   margin-top: 12px;
 }
+
+/* Birth date input with optional year */
+.birth-date-input {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.birth-date-fields {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.birth-date-day {
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.birth-date-month {
+  width: 90px;
+  flex-shrink: 0;
+}
+
+.birth-date-year {
+  width: 70px;
+  flex-shrink: 0;
+}

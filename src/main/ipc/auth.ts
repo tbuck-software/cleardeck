@@ -64,7 +64,7 @@ export const registerAuthHandlers = (): void => {
 
   ipcMain.handle('auth:register', (_event, password: string): AppState => {
     if (isConfigured()) {
-      throw new Error('Die App ist bereits eingerichtet.');
+      throw new Error('Die App ist bereits eingerichtet. Bitte melde dich an.');
     }
     ensureDataDir();
 
@@ -96,12 +96,12 @@ export const registerAuthHandlers = (): void => {
   ipcMain.handle('auth:login', (_event, password: string): AppState => {
     const config = readConfig();
     if (!config) {
-      throw new Error('Noch nicht eingerichtet.');
+      throw new Error('Die App wurde noch nicht eingerichtet. Bitte erstelle zuerst ein Passwort.');
     }
     const derived = deriveKey(password, config.salt);
     const hashed = hashPassword(password, config.salt);
     if (hashed !== config.passwordHash) {
-      throw new Error('Passwort ist falsch.');
+      throw new Error('Das eingegebene Passwort ist nicht korrekt. Bitte versuche es erneut.');
     }
 
     const keyBytes = decryptBuffer(
@@ -132,7 +132,7 @@ export const registerAuthHandlers = (): void => {
   ipcMain.handle('auth:recoveryKey', (): { recoveryKey: string; fingerprint: string } => {
     const key = getEncryptionKey();
     if (!unlocked || !key) {
-      throw new Error('Bitte zuerst anmelden.');
+      throw new Error('Du musst angemeldet sein, um den Recovery Key anzuzeigen.');
     }
     return {
       recoveryKey: key.toString('base64'),
@@ -145,20 +145,20 @@ export const registerAuthHandlers = (): void => {
     (_event, payload: { recoveryKey: string; newPassword: string }): AppState => {
       const config = readConfig();
       if (!config) {
-        throw new Error('Noch nicht eingerichtet.');
+        throw new Error('Die App wurde noch nicht eingerichtet.');
       }
       const { recoveryKey, newPassword } = payload;
       if (!recoveryKey || recoveryKey.trim().length === 0) {
-        throw new Error('Recovery Key fehlt.');
+        throw new Error('Bitte gib deinen Recovery Key ein.');
       }
       if (!newPassword || newPassword.trim().length === 0) {
-        throw new Error('Neues Passwort fehlt.');
+        throw new Error('Bitte gib ein neues Passwort ein.');
       }
 
       const keyBytes = parseRecoveryKey(recoveryKey);
       const fingerprint = fingerprintKey(keyBytes);
       if (config.keyFingerprint && config.keyFingerprint !== fingerprint) {
-        throw new Error('Recovery Key passt nicht zu dieser Installation.');
+        throw new Error('Der Recovery Key ist ungültig oder gehört zu einer anderen Installation.');
       }
 
       try {

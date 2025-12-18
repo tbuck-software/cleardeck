@@ -217,6 +217,7 @@ export interface PatientBirthdayEvent {
   patientName: string;
   birthDate: string;
   date: string;
+  hasKnownYear: boolean;
 }
 
 export interface PatientVisitEvent {
