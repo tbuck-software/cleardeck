@@ -12,6 +12,12 @@ import type {
   UpcomingEvent,
   ExpiringTraining,
   BirthdayAnniversary,
+  Patient,
+  PatientVisit,
+  PatientWithLatestVisit,
+  PatientConcerningRating,
+  PatientStats,
+  QprRating,
 } from './shared/types';
 
 type ExportFormat = 'csv' | 'xlsx';
@@ -88,6 +94,34 @@ export type Api = {
   // Dashboard widgets
   getExpiringTrainings: (withinDays?: number, limit?: number) => Promise<ExpiringTraining[]>;
   getBirthdaysAndAnniversaries: (withinDays?: number, limit?: number) => Promise<BirthdayAnniversary[]>;
+
+  // Patients
+  listPatients: () => Promise<PatientWithLatestVisit[]>;
+  getPatient: (id: number) => Promise<Patient | null>;
+  savePatient: (input: {
+    id?: number;
+    name: string;
+    birthDate?: string | null;
+    diagnosis?: string | null;
+    qprStatus?: QprRating | null;
+    note?: string | null;
+  }) => Promise<PatientWithLatestVisit[]>;
+  deletePatient: (id: number) => Promise<PatientWithLatestVisit[]>;
+
+  // Patient Visits
+  listVisits: (patientId: number) => Promise<PatientVisit[]>;
+  saveVisit: (input: {
+    id?: number;
+    patientId: number;
+    visitDate: string;
+    qprRating: QprRating;
+    comment?: string | null;
+  }) => Promise<PatientVisit[]>;
+  deleteVisit: (id: number, patientId: number) => Promise<PatientVisit[]>;
+
+  // Dashboard - Patient widgets
+  getConcerningRatings: (limit?: number) => Promise<PatientConcerningRating[]>;
+  getPatientStats: () => Promise<PatientStats>;
 };
 
 const api: Api = {
@@ -135,6 +169,21 @@ const api: Api = {
     ipcRenderer.invoke('dashboard:expiringTrainings', { withinDays, limit }),
   getBirthdaysAndAnniversaries: (withinDays, limit) =>
     ipcRenderer.invoke('dashboard:birthdaysAnniversaries', { withinDays, limit }),
+
+  // Patients
+  listPatients: () => ipcRenderer.invoke('patients:list'),
+  getPatient: (id) => ipcRenderer.invoke('patients:get', { id }),
+  savePatient: (input) => ipcRenderer.invoke('patients:save', input),
+  deletePatient: (id) => ipcRenderer.invoke('patients:delete', { id }),
+
+  // Patient Visits
+  listVisits: (patientId) => ipcRenderer.invoke('visits:list', { patientId }),
+  saveVisit: (input) => ipcRenderer.invoke('visits:save', input),
+  deleteVisit: (id, patientId) => ipcRenderer.invoke('visits:delete', { id, patientId }),
+
+  // Dashboard - Patient widgets
+  getConcerningRatings: (limit) => ipcRenderer.invoke('dashboard:concerningRatings', { limit }),
+  getPatientStats: () => ipcRenderer.invoke('dashboard:patientStats'),
 };
 
 contextBridge.exposeInMainWorld('api', api);

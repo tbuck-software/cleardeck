@@ -13,10 +13,15 @@ import EmployeeDetail from './components/pages/EmployeeDetail';
 import SettingsPage from './components/pages/SettingsPage';
 import DevPage from './components/pages/DevPage';
 import CalendarPage from './components/pages/CalendarPage';
+import PatientList from './components/pages/PatientList';
+import PatientDetail from './components/pages/PatientDetail';
+import PatientForm from './components/patients/PatientForm';
+import VisitModal from './components/patients/VisitModal';
 import ConfirmModal from './components/modals/ConfirmModal';
 import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
 import QualificationModal from './components/modals/QualificationModal';
+import { emptyPatientForm } from './hooks/usePatients';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
 import { unifyEvents } from './utils/unifyEvents';
 import useAppLogic from './hooks/useAppLogic';
@@ -61,6 +66,16 @@ const App = () => {
       hiddenEventTypes,
       calendar,
       dashboardWidgets,
+      // Patient state
+      patients,
+      selectedPatient,
+      patientVisits,
+      patientForm,
+      patientPage,
+      patientSearch,
+      patientRatingFilter,
+      patientVisitModal,
+      patientDashboard,
     },
     setters: {
       setYear,
@@ -78,8 +93,14 @@ const App = () => {
       setRecoveryKeyModal,
       setRecoveryReset,
       setConfirmState,
+      // Patient setters
+      setPatientForm,
+      setPatientSearch,
+      setPatientRatingFilter,
+      setPatientVisitModal,
+      setPatientPage,
     },
-    derived: { filteredEmployees, averageFte, totalFte, totalHeadcount, displayStart, timelineItems, crumbs, sidebarPage },
+    derived: { filteredEmployees, averageFte, totalFte, totalHeadcount, displayStart, timelineItems, crumbs, sidebarPage, filteredPatients },
     actions: {
       goTo,
       handleLogin,
@@ -116,6 +137,15 @@ const App = () => {
       showAllEventTypes,
       hideAllEventTypes,
       calendarActions,
+      // Patient actions
+      goToPatients,
+      handleSelectPatient,
+      handleSavePatient,
+      confirmDeletePatient,
+      handleSaveVisit,
+      confirmDeleteVisit,
+      openVisitModal,
+      closeVisitModal,
     },
   } = useAppLogic();
 
@@ -362,6 +392,44 @@ const App = () => {
             onToday={calendarActions.goToToday}
             onMonthClick={calendarActions.goToMonth}
             onEventClick={handleCalendarEventClick}
+          />
+        )}
+
+        {page === 'patients' && (
+          <PatientList
+            search={patientSearch}
+            ratingFilter={patientRatingFilter}
+            filteredPatients={filteredPatients}
+            selectedId={patientForm.id}
+            onSearchChange={setPatientSearch}
+            onRatingChange={setPatientRatingFilter}
+            onCreate={() => goToPatients('patient-new')}
+            onSelect={handleSelectPatient}
+            onDelete={(id) => confirmDeletePatient(id)}
+          />
+        )}
+
+        {page === 'patient-view' && selectedPatient && (
+          <PatientDetail
+            patient={selectedPatient}
+            visits={patientVisits}
+            onBack={() => goToPatients('patients')}
+            onEdit={() => goToPatients('patient-edit')}
+            onAddVisit={() => openVisitModal(selectedPatient.id!)}
+            onSelectVisit={(visit) => openVisitModal(selectedPatient.id!, visit)}
+          />
+        )}
+
+        {(page === 'patient-new' || page === 'patient-edit') && (
+          <PatientForm
+            page={page}
+            form={patientForm}
+            loading={loading}
+            onChange={setPatientForm}
+            onReset={() => setPatientForm(emptyPatientForm())}
+            onSave={handleSavePatient}
+            onDelete={patientForm.id ? () => confirmDeletePatient(patientForm.id) : undefined}
+            onBack={() => goToPatients('patients')}
           />
         )}
 
@@ -702,6 +770,13 @@ const App = () => {
           </div>
         </div>
       )}
+      <VisitModal
+        modal={patientVisitModal}
+        onChange={setPatientVisitModal}
+        onClose={closeVisitModal}
+        onSave={handleSaveVisit}
+        onDelete={confirmDeleteVisit}
+      />
     </div>
   );
 };

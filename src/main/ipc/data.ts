@@ -6,7 +6,7 @@
 
 import { ipcMain, shell } from 'electron';
 
-import type { EmployeeEventType, YearDataset } from '../../shared/types';
+import type { EmployeeEventType, YearDataset, QprRating } from '../../shared/types';
 import { getDb, isDbOpen, getEncryptionKey, openDatabase, closeDb, deleteDatabase as deleteDbFiles, ensureDataDir } from '../database/connection';
 import {
   getYearDataset,
@@ -28,6 +28,17 @@ import {
   deleteQualification,
 } from '../repositories/qualifications';
 import { getBaseHours, setBaseHours, getHiddenEventTypes, setHiddenEventTypes } from '../repositories/settings';
+import {
+  listPatients,
+  getPatient,
+  savePatient,
+  deletePatient,
+  listVisits,
+  saveVisit,
+  deleteVisit,
+  getConcerningRatings,
+  getPatientStats,
+} from '../repositories/patients';
 import { exportDatabase, importDatabase, exportData } from '../export';
 import { isUnlocked } from './auth';
 
@@ -236,6 +247,79 @@ export const registerDataHandlers = (): void => {
       result[name] = db.prepare(`SELECT * FROM "${name}"`).all();
     }
     return result;
+  });
+
+  // Patients
+  ipcMain.handle('patients:list', () => {
+    ensureDbReady();
+    return listPatients();
+  });
+
+  ipcMain.handle('patients:get', (_event, { id }: { id: number }) => {
+    ensureDbReady();
+    return getPatient(id);
+  });
+
+  ipcMain.handle(
+    'patients:save',
+    (
+      _event,
+      input: {
+        id?: number;
+        name: string;
+        birthDate?: string | null;
+        diagnosis?: string | null;
+        qprStatus?: QprRating | null;
+        note?: string | null;
+      },
+    ) => {
+      ensureDbReady();
+      return savePatient(input);
+    },
+  );
+
+  ipcMain.handle('patients:delete', (_event, { id }: { id: number }) => {
+    ensureDbReady();
+    return deletePatient(id);
+  });
+
+  // Patient Visits
+  ipcMain.handle('visits:list', (_event, { patientId }: { patientId: number }) => {
+    ensureDbReady();
+    return listVisits(patientId);
+  });
+
+  ipcMain.handle(
+    'visits:save',
+    (
+      _event,
+      input: {
+        id?: number;
+        patientId: number;
+        visitDate: string;
+        qprRating: QprRating;
+        comment?: string | null;
+      },
+    ) => {
+      ensureDbReady();
+      return saveVisit(input);
+    },
+  );
+
+  ipcMain.handle('visits:delete', (_event, { id, patientId }: { id: number; patientId: number }) => {
+    ensureDbReady();
+    return deleteVisit(id, patientId);
+  });
+
+  // Dashboard - Patient widgets
+  ipcMain.handle('dashboard:concerningRatings', (_event, { limit }: { limit?: number }) => {
+    ensureDbReady();
+    return getConcerningRatings(limit);
+  });
+
+  ipcMain.handle('dashboard:patientStats', () => {
+    ensureDbReady();
+    return getPatientStats();
   });
 };
 

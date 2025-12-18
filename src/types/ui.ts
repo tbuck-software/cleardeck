@@ -1,7 +1,19 @@
-import type { EmploymentPeriod, EmployeeEvent, EmployeeEventType } from '../shared/types';
+import type { EmploymentPeriod, EmployeeEvent, EmployeeEventType, QprRating } from '../shared/types';
 import type { RecoveryInfo } from '../shared/types';
 
-export type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'settings' | 'view' | 'dev' | 'calendar';
+export type Page =
+  | 'dashboard'
+  | 'list'
+  | 'new'
+  | 'edit'
+  | 'settings'
+  | 'view'
+  | 'dev'
+  | 'calendar'
+  | 'patients'
+  | 'patient-view'
+  | 'patient-new'
+  | 'patient-edit';
 
 export type CalendarView = 'month' | 'week' | 'year';
 
@@ -91,3 +103,23 @@ export type EventModalState = {
 };
 
 export type PeriodToDeleteState = { periodId: number; label: string } | null;
+
+// Patient-related UI types
+
+export type PatientFormState = {
+  id?: number;
+  name: string;
+  birthDate: string;
+  diagnosis: string;
+  qprStatus: QprRating | '';
+  note: string;
+};
+
+export type VisitModalState = {
+  open: boolean;
+  id?: number;
+  patientId: number;
+  visitDate: string;
+  qprRating: QprRating;
+  comment: string;
+};

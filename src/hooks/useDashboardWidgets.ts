@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type {
   ExpiringTraining,
   BirthdayAnniversary,
@@ -52,17 +52,22 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
     [loadExpiringTrainings, loadBirthdaysAnniversaries]
   );
 
+  const actions = useMemo(
+    () => ({
+      loadExpiringTrainings,
+      loadBirthdaysAnniversaries,
+      loadAll,
+    }),
+    [loadExpiringTrainings, loadBirthdaysAnniversaries, loadAll],
+  );
+
   return {
     state: {
       expiringTrainings,
       birthdaysAnniversaries,
       loading,
     },
-    actions: {
-      loadExpiringTrainings,
-      loadBirthdaysAnniversaries,
-      loadAll,
-    },
+    actions,
   };
 };
 

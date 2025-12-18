@@ -43,6 +43,10 @@ const pageTitle: Record<Page, string> = {
   view: 'Details',
   dev: 'Entwickler',
   calendar: 'Kalender',
+  patients: 'Patient:innen',
+  'patient-view': 'Patient:in Details',
+  'patient-new': 'Patient:in anlegen',
+  'patient-edit': 'Patient:in bearbeiten',
 };
 
 const useEmployees = ({
@@ -495,17 +499,26 @@ const useEmployees = ({
     [page, selectedEmployee],
   );
 
-  const sidebarPage: Page = page === 'new' || page === 'edit' || page === 'view' ? 'list' : page;
+  const getSidebarPage = (): Page => {
+    if (page === 'new' || page === 'edit' || page === 'view') return 'list';
+    if (page === 'patient-view' || page === 'patient-new' || page === 'patient-edit') return 'patients';
+    return page;
+  };
+  const sidebarPage: Page = getSidebarPage();
 
   const pageSubtitle: Record<Page, string> = {
-    dashboard: 'Kennzahlen und Aggregationen zum gewählten Jahr.',
+    dashboard: 'Kennzahlen und Aggregationen zum gewaehlten Jahr.',
     list: 'Liste von Teammitgliedern mit Filter/Status',
     new: 'Neue Person mit Historieneintrag erfassen.',
-    edit: form.id ? `Bearbeitung: ${form.name}` : 'Bitte Eintrag aus Liste wählen.',
-    settings: 'Datenbank austauschen oder Export/Import (verschlüsselt/unkryptiert).',
+    edit: form.id ? `Bearbeitung: ${form.name}` : 'Bitte Eintrag aus Liste waehlen.',
+    settings: 'Datenbank austauschen oder Export/Import (verschluesselt/unkryptiert).',
     view: '',
     dev: 'Rohe Datenbank-Tabellen und Debug-Informationen.',
-    calendar: 'Termine und Ereignisse im Überblick.',
+    calendar: 'Termine und Ereignisse im Ueberblick.',
+    patients: 'Patient:innen mit QPR 2026 Bewertung verwalten.',
+    'patient-view': '',
+    'patient-new': 'Neue:n Patient:in anlegen.',
+    'patient-edit': 'Patient:in bearbeiten.',
   };
 
   return {
