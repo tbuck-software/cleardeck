@@ -8,6 +8,7 @@ import useEventsPeriods from './useEventsPeriods';
 import useEmployees from './useEmployees';
 import useAuth from './useAuth';
 import useUpcomingEvents from './useUpcomingEvents';
+import useCalendar from './useCalendar';
 
 const useAppLogic = () => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
@@ -117,6 +118,11 @@ const useAppLogic = () => {
 
   const upcomingEventsSlice = useUpcomingEvents({ handleError });
 
+  const calendarSlice = useCalendar({
+    handleError,
+    hiddenEventTypes: upcomingEventsSlice.state.hiddenEventTypes,
+  });
+
   // Load upcoming events and filters when app is unlocked
   useEffect(() => {
     if (authSlice.appReady.unlocked) {
@@ -214,6 +220,7 @@ const useAppLogic = () => {
       recoveryReset,
       upcomingEvents: upcomingEventsSlice.state.upcomingEvents,
       hiddenEventTypes: upcomingEventsSlice.state.hiddenEventTypes,
+      calendar: calendarSlice.state,
     },
     setters: {
       setYear,
@@ -280,6 +287,7 @@ const useAppLogic = () => {
       toggleEventTypeFilter: upcomingEventsSlice.actions.toggleEventTypeFilter,
       showAllEventTypes: upcomingEventsSlice.actions.showAllEventTypes,
       hideAllEventTypes: upcomingEventsSlice.actions.hideAllEventTypes,
+      calendarActions: calendarSlice.actions,
     },
   };
 };

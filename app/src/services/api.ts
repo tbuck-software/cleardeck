@@ -50,6 +50,8 @@ export const api = {
       call('deleteEvent', baseApi.deleteEvent, id, employeeId),
     listUpcoming: (fromDate?: string, limit?: number) =>
       call('listUpcomingEvents', baseApi.listUpcomingEvents, fromDate, limit),
+    listRange: (startDate: string, endDate: string) =>
+      call('listEventsInRange', baseApi.listEventsInRange, startDate, endDate),
   },
   qualifications: {
     list: () => call('listQualifications', baseApi.listQualifications),

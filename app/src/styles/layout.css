@@ -1196,6 +1196,7 @@ button.detail-item.clickable:hover {
   transition: all 0.2s ease;
   text-align: left;
   width: 100%;
+  position: relative;
 }
 
 .upcoming-event-item:hover {
@@ -1286,6 +1287,9 @@ button.detail-item.clickable:hover {
 }
 
 .upcoming-event-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
   background: #eff6ff;
   color: var(--accent-strong);
   font-size: 11px;
@@ -1295,15 +1299,9 @@ button.detail-item.clickable:hover {
   white-space: nowrap;
 }
 
-/* Upcoming Events Container & Toolbar */
+/* Upcoming Events Container */
 .upcoming-events-container {
   margin-top: 16px;
-}
-
-.upcoming-events-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 12px;
 }
 
 .filter-dropdown-container {

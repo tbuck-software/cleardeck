@@ -58,3 +58,4 @@ export const setHiddenEventTypes = (types: string[]): string[] => {
 };
 
 
+

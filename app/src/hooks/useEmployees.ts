@@ -43,6 +43,7 @@ const pageTitle: Record<Page, string> = {
   settings: 'Einstellungen',
   view: 'Details',
   dev: 'Entwickler',
+  calendar: 'Kalender',
 };
 
 const useEmployees = ({
@@ -496,6 +497,7 @@ const useEmployees = ({
     settings: 'Datenbank austauschen oder Export/Import (verschlüsselt/unkryptiert).',
     view: '',
     dev: 'Rohe Datenbank-Tabellen und Debug-Informationen.',
+    calendar: 'Termine und Ereignisse im Überblick.',
   };
 
   return {

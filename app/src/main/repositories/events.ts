@@ -147,4 +147,39 @@ export const listUpcomingEvents = (fromDate?: string, limit: number = 10): Upcom
   }));
 };
 
+/**
+ * List all events within a date range (for calendar view)
+ */
+export const listEventsInRange = (startDate: string, endDate: string): UpcomingEvent[] => {
+  const db = getDb();
+
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        e.id,
+        e.employeeId,
+        e.eventDate,
+        e.type,
+        e.title,
+        e.details,
+        e.meta,
+        e.previousValue,
+        e.newValue,
+        emp.name as employeeName
+      FROM employee_events e
+      INNER JOIN employees emp ON e.employeeId = emp.id
+      WHERE date(e.eventDate) >= date(?)
+        AND date(e.eventDate) <= date(?)
+      ORDER BY date(e.eventDate) ASC, e.id ASC
+    `,
+    )
+    .all(startDate, endDate);
+
+  return rows.map((row: any) => ({
+    ...parseEventRow(row),
+    employeeName: row.employeeName,
+  }));
+};
+
 

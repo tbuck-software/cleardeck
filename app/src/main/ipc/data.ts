@@ -15,7 +15,7 @@ import {
   deleteEmployee,
   deletePeriod,
 } from '../repositories/employees';
-import { listEvents, saveEvent, deleteEvent, listUpcomingEvents } from '../repositories/events';
+import { listEvents, saveEvent, deleteEvent, listUpcomingEvents, listEventsInRange } from '../repositories/events';
 import {
   listQualifications,
   addQualification,
@@ -150,6 +150,14 @@ export const registerDataHandlers = (): void => {
     (_event, { fromDate, limit }: { fromDate?: string; limit?: number }) => {
       ensureDbReady();
       return listUpcomingEvents(fromDate, limit);
+    },
+  );
+
+  ipcMain.handle(
+    'events:listRange',
+    (_event, { startDate, endDate }: { startDate: string; endDate: string }) => {
+      ensureDbReady();
+      return listEventsInRange(startDate, endDate);
     },
   );
 

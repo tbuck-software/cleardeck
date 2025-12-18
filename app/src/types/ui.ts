@@ -1,7 +1,9 @@
 import type { EmploymentPeriod, EmployeeEvent, EmployeeEventType } from '../shared/types';
 import type { RecoveryInfo } from '../shared/types';
 
-export type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'settings' | 'view' | 'dev';
+export type Page = 'dashboard' | 'list' | 'new' | 'edit' | 'settings' | 'view' | 'dev' | 'calendar';
+
+export type CalendarView = 'month' | 'week' | 'year';
 
 export type EventModalType = EmployeeEventType | 'period';
 
