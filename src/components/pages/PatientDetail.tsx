@@ -9,6 +9,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import type { PatientWithLatestVisit, PatientVisit } from '../../shared/types';
 import QprBadge from '../ui/QprBadge';
+import { formatDateDE } from '../../utils/dateFormat';
 
 type PatientDetailProps = {
   patient: PatientWithLatestVisit;
@@ -66,7 +67,7 @@ const PatientDetail = ({
               </div>
               <div className="detail-content">
                 <span className="detail-label">Geburtsdatum</span>
-                <span className="detail-value">{patient.birthDate ?? '-'}</span>
+                <span className="detail-value">{formatDateDE(patient.birthDate)}</span>
               </div>
             </div>
 
@@ -129,7 +130,7 @@ const PatientDetail = ({
                   <span className="timeline-title">
                     <QprBadge rating={visit.qprRating} showLabel />
                   </span>
-                  <span className="timeline-date">{visit.visitDate}</span>
+                  <span className="timeline-date">{formatDateDE(visit.visitDate)}</span>
                 </div>
                 {visit.comment && <div className="timeline-note muted">{visit.comment}</div>}
               </div>

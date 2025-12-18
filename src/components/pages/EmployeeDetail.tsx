@@ -20,6 +20,7 @@ import type { EmployeeEvent, EmployeeEventType, EmployeeWithPeriod, EmploymentPe
 import type { TimelineItem } from '../../types/ui';
 import { fteHelp } from '../../constants';
 import Badge from '../ui/Badge';
+import { formatDateDE } from '../../utils/dateFormat';
 
 type EmployeeDetailProps = {
   employee: EmployeeWithPeriod;
@@ -184,8 +185,8 @@ const EmployeeDetail = ({
 
         <div className="detail-footer">
           <span className="muted">
-            Im Unternehmen seit: {displayStart}{' '}
-            {employee.endDate ? `– ausgetreten: ${employee.endDate}` : '– heute'}
+            Im Unternehmen seit: {formatDateDE(displayStart)}{' '}
+            {employee.endDate ? `– ausgetreten: ${formatDateDE(employee.endDate)}` : '– heute'}
           </span>
         </div>
       </div>
@@ -221,7 +222,7 @@ const EmployeeDetail = ({
                 <div className="timeline-content">
                   <div className="timeline-header">
                     <span className="timeline-title">{p.qualification ?? employee.qualification}</span>
-                    <span className="timeline-date">{p.startDate} – {p.endDate ?? 'aktuell'}</span>
+                    <span className="timeline-date">{formatDateDE(p.startDate)} – {p.endDate ? formatDateDE(p.endDate) : 'aktuell'}</span>
                   </div>
                   {p.note && <div className="timeline-note muted">{p.note}</div>}
                 </div>
@@ -255,7 +256,7 @@ const EmployeeDetail = ({
               <div className="timeline-content">
                 <div className="timeline-header">
                   <span className="timeline-title">{typeLabels[evType]}</span>
-                  <span className="timeline-date">{ev.eventDate}</span>
+                  <span className="timeline-date">{formatDateDE(ev.eventDate)}</span>
                 </div>
                 {detail && !isDiff && <div className="timeline-note muted">{detail}</div>}
                 {isDiff && (
