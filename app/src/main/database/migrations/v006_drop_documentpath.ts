@@ -43,3 +43,4 @@ export const v006_drop_documentpath: Migration = {
   },
 };
 
+

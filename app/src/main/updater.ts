@@ -143,3 +143,4 @@ export const installUpdate = (): boolean => {
  */
 export const isUpdaterInitialized = (): boolean => updaterInitialized;
 
+

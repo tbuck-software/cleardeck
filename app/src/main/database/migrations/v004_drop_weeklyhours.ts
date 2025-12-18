@@ -58,3 +58,4 @@ export const v004_drop_weeklyhours: Migration = {
   },
 };
 
+
