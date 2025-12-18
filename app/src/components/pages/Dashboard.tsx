@@ -8,8 +8,9 @@ import {
   faUserMinus,
   faPercent,
 } from '@fortawesome/free-solid-svg-icons';
-import type { QualificationType, YearDataset } from '../../shared/types';
+import type { QualificationType, YearDataset, UpcomingEvent } from '../../shared/types';
 import StatCard from '../ui/StatCard';
+import UpcomingEventsList from '../ui/UpcomingEventsList';
 
 type DashboardProps = {
   year: number;
@@ -19,6 +20,8 @@ type DashboardProps = {
   totalFte: number;
   totalHeadcount: number;
   qualifications: QualificationType[];
+  upcomingEvents: UpcomingEvent[];
+  onEventClick: (event: UpcomingEvent) => void;
 };
 
 const Dashboard = ({
@@ -28,6 +31,8 @@ const Dashboard = ({
   totalFte,
   totalHeadcount,
   qualifications,
+  upcomingEvents,
+  onEventClick,
 }: DashboardProps) => {
   const fullTimeCount = dataset?.employees.filter((e) => e.fte >= 1).length ?? 0;
   const fullTimePercent =
@@ -103,6 +108,16 @@ const Dashboard = ({
                 icon={faUserMinus}
               />
             </div>
+          </div>
+
+          <div className="card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Termine</p>
+                <h3>Bevorstehende Ereignisse</h3>
+              </div>
+            </div>
+            <UpcomingEventsList events={upcomingEvents} onEventClick={onEventClick} />
           </div>
         </div>
 

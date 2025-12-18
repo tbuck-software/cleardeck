@@ -3,7 +3,7 @@
 
 import { render, screen } from '@testing-library/react';
 import Dashboard from '../Dashboard';
-import type { QualificationType, YearDataset } from '../../../shared/types';
+import type { QualificationType, YearDataset, UpcomingEvent } from '../../../shared/types';
 
 const sampleDataset: YearDataset = {
   employees: [],
@@ -23,6 +23,19 @@ const qualifications: QualificationType[] = [
   { id: 2, name: 'Admin' },
 ];
 
+const mockUpcomingEvents: UpcomingEvent[] = [
+  {
+    id: 1,
+    employeeId: 1,
+    eventDate: '2024-12-20',
+    type: 'care-visit',
+    title: 'Pflegevisite',
+    employeeName: 'Max Mustermann',
+  },
+];
+
+const mockOnEventClick = vi.fn();
+
 describe('Dashboard', () => {
   it('zeigt Kennzahlen und Qualifikationen', () => {
     render(
@@ -34,6 +47,8 @@ describe('Dashboard', () => {
         totalFte={sampleDataset.aggregation.totalFte}
         totalHeadcount={sampleDataset.aggregation.totalHeadcount}
         qualifications={qualifications}
+        upcomingEvents={mockUpcomingEvents}
+        onEventClick={mockOnEventClick}
       />,
     );
 
@@ -61,10 +76,33 @@ describe('Dashboard', () => {
         totalFte={0}
         totalHeadcount={0}
         qualifications={[]}
+        upcomingEvents={[]}
+        onEventClick={mockOnEventClick}
       />,
     );
 
-    expect(screen.getByText('Keine Qualifikationen mit VZÄ im gewählten Jahr.')).toBeInTheDocument();
+    expect(screen.getByText('Keine Qualifikationen definiert.')).toBeInTheDocument();
+    expect(screen.getByText('Keine bevorstehenden Ereignisse.')).toBeInTheDocument();
+  });
+
+  it('zeigt bevorstehende Ereignisse an', () => {
+    render(
+      <Dashboard
+        year={2024}
+        dataset={sampleDataset}
+        baseHours={36}
+        averageFte={2.5}
+        totalFte={7.5}
+        totalHeadcount={3}
+        qualifications={qualifications}
+        upcomingEvents={mockUpcomingEvents}
+        onEventClick={mockOnEventClick}
+      />,
+    );
+
+    expect(screen.getByText('Bevorstehende Ereignisse')).toBeInTheDocument();
+    expect(screen.getByText('Max Mustermann')).toBeInTheDocument();
+    expect(screen.getByText('Pflegevisite')).toBeInTheDocument();
   });
 });
 

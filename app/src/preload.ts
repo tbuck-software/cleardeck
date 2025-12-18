@@ -9,6 +9,7 @@ import type {
   EmployeeEventType,
   UpdateStatus,
   RecoveryInfo,
+  UpcomingEvent,
 } from './shared/types';
 
 type ExportFormat = 'csv' | 'xlsx';
@@ -52,6 +53,7 @@ export type Api = {
     newValue?: string | null;
   }) => Promise<EmployeeEvent[]>;
   deleteEvent: (id: number, employeeId: number) => Promise<EmployeeEvent[]>;
+  listUpcomingEvents: (fromDate?: string, limit?: number) => Promise<UpcomingEvent[]>;
   exportData: (
     year: number,
     format: ExportFormat,
@@ -91,6 +93,7 @@ const api: Api = {
   deleteEmployee: (id, year) => ipcRenderer.invoke('data:delete', { id, year }),
   saveEvent: (input) => ipcRenderer.invoke('events:save', input),
   deleteEvent: (id, employeeId) => ipcRenderer.invoke('events:delete', { id, employeeId }),
+  listUpcomingEvents: (fromDate, limit) => ipcRenderer.invoke('events:listUpcoming', { fromDate, limit }),
   exportData: (year, format) => ipcRenderer.invoke('data:export', { year, format }),
   openDocument: (path) => ipcRenderer.invoke('data:openDocument', { path }),
   listQualifications: () => ipcRenderer.invoke('qualifications:list'),

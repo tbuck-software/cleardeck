@@ -4,7 +4,7 @@
  * Data access functions for employee events (join, leave, qualification changes, etc.)
  */
 
-import type { EmployeeEvent, EmployeeEventType } from '../../shared/types';
+import type { EmployeeEvent, EmployeeEventType, UpcomingEvent } from '../../shared/types';
 
 import { getDb } from '../database/connection';
 
@@ -109,6 +109,42 @@ export const deleteEvent = (id: number, employeeId: number): EmployeeEvent[] => 
   const db = getDb();
   db.prepare('DELETE FROM employee_events WHERE id = ?').run(id);
   return listEvents(employeeId);
+};
+
+/**
+ * List upcoming events for all employees
+ */
+export const listUpcomingEvents = (fromDate?: string, limit: number = 10): UpcomingEvent[] => {
+  const db = getDb();
+  const today = fromDate ?? new Date().toISOString().slice(0, 10);
+
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        e.id,
+        e.employeeId,
+        e.eventDate,
+        e.type,
+        e.title,
+        e.details,
+        e.meta,
+        e.previousValue,
+        e.newValue,
+        emp.name as employeeName
+      FROM employee_events e
+      INNER JOIN employees emp ON e.employeeId = emp.id
+      WHERE date(e.eventDate) >= date(?)
+      ORDER BY date(e.eventDate) ASC, e.id ASC
+      LIMIT ?
+    `,
+    )
+    .all(today, limit);
+
+  return rows.map((row: any) => ({
+    ...parseEventRow(row),
+    employeeName: row.employeeName,
+  }));
 };
 
 

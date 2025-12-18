@@ -7,6 +7,7 @@ import useSettingsDb from './useSettingsDb';
 import useEventsPeriods from './useEventsPeriods';
 import useEmployees from './useEmployees';
 import useAuth from './useAuth';
+import useUpcomingEvents from './useUpcomingEvents';
 
 const useAppLogic = () => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
@@ -114,6 +115,15 @@ const useAppLogic = () => {
 
   appReadySetterRef.current = authSlice.setAppReady;
 
+  const upcomingEventsSlice = useUpcomingEvents({ handleError });
+
+  // Load upcoming events when app is unlocked
+  useEffect(() => {
+    if (authSlice.appReady.unlocked) {
+      upcomingEventsSlice.actions.loadUpcomingEvents();
+    }
+  }, [authSlice.appReady.unlocked, upcomingEventsSlice.actions]);
+
   useEffect(() => {
     if (employeeSlice.state.qualificationFilter === 'all') return;
     const exists = employeeSlice.state.qualifications.some(
@@ -201,6 +211,7 @@ const useAppLogic = () => {
       confirmState,
       recoveryKeyModal,
       recoveryReset,
+      upcomingEvents: upcomingEventsSlice.state.upcomingEvents,
     },
     setters: {
       setYear,
@@ -263,6 +274,7 @@ const useAppLogic = () => {
       openEditModal: employeeSlice.actions.openEditModal,
       handleEditModalSave: handleEditModalSaveWithHistory,
       resetForm: employeeSlice.actions.resetForm,
+      loadUpcomingEvents: upcomingEventsSlice.actions.loadUpcomingEvents,
     },
   };
 };

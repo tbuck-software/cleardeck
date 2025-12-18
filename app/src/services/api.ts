@@ -48,6 +48,8 @@ export const api = {
     save: (input: Parameters<Api['saveEvent']>[0]) => call('saveEvent', baseApi.saveEvent, input),
     delete: (id: number, employeeId: number) =>
       call('deleteEvent', baseApi.deleteEvent, id, employeeId),
+    listUpcoming: (fromDate?: string, limit?: number) =>
+      call('listUpcomingEvents', baseApi.listUpcomingEvents, fromDate, limit),
   },
   qualifications: {
     list: () => call('listQualifications', baseApi.listQualifications),
