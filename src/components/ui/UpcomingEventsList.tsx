@@ -8,17 +8,21 @@ import {
   faStethoscope,
   faKitMedical,
   faCalendarDay,
+  faCakeCandles,
+  faAward,
+  faCertificate,
+  faExclamationTriangle,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import type { UpcomingEvent } from '../../shared/types';
+import type { UnifiedEvent, UnifiedEventType } from '../../shared/types';
 
 type UpcomingEventsListProps = {
-  events: UpcomingEvent[];
+  events: UnifiedEvent[];
   hasActiveFilters: boolean;
-  onEventClick: (event: UpcomingEvent) => void;
+  onEventClick: (event: UnifiedEvent) => void;
 };
 
-const typeLabels: Record<UpcomingEvent['type'], string> = {
+const typeLabels: Record<UnifiedEventType, string> = {
   join: 'Eintritt',
   leave: 'Austritt',
   'name-change': 'Namensänderung',
@@ -26,9 +30,12 @@ const typeLabels: Record<UpcomingEvent['type'], string> = {
   'care-visit': 'Pflegevisite',
   'emergency-training': 'Notfallschulung',
   custom: 'Ereignis',
+  birthday: 'Geburtstag',
+  anniversary: 'Jubiläum',
+  'certificate-expiry': 'Zertifikat',
 };
 
-const typeIcons: Record<UpcomingEvent['type'], IconDefinition> = {
+const typeIcons: Record<UnifiedEventType, IconDefinition> = {
   join: faArrowRightToBracket,
   leave: faArrowRightFromBracket,
   'name-change': faSignature,
@@ -36,6 +43,9 @@ const typeIcons: Record<UpcomingEvent['type'], IconDefinition> = {
   'care-visit': faStethoscope,
   'emergency-training': faKitMedical,
   custom: faCalendarDay,
+  birthday: faCakeCandles,
+  anniversary: faAward,
+  'certificate-expiry': faCertificate,
 };
 
 const formatDate = (dateStr: string): string => {
@@ -77,33 +87,39 @@ const UpcomingEventsList = ({
     <div className="upcoming-events-container">
       <div className="upcoming-events-list">
         {events.map((event) => {
-          const daysUntil = getDaysUntil(event.eventDate);
+          const daysUntil = getDaysUntil(event.date);
           const isToday = daysUntil === 0;
           const isTomorrow = daysUntil === 1;
+          const urgencyClass = event.urgency || 'normal';
+          const showWarningIcon = event.urgency === 'urgent';
 
           return (
             <button
               key={event.id}
-              className="upcoming-event-item"
+              className={`upcoming-event-item ${urgencyClass !== 'normal' ? urgencyClass : ''}`}
               onClick={() => onEventClick(event)}
             >
-              <div className={`upcoming-event-icon event-${event.type}`}>
-                <FontAwesomeIcon icon={typeIcons[event.type]} />
+              <div className={`upcoming-event-icon event-${event.type} ${urgencyClass}`}>
+                {showWarningIcon ? (
+                  <FontAwesomeIcon icon={faExclamationTriangle} />
+                ) : (
+                  <FontAwesomeIcon icon={typeIcons[event.type]} />
+                )}
               </div>
               <div className="upcoming-event-content">
                 <div className="upcoming-event-header">
                   <span className="upcoming-event-type">{typeLabels[event.type]}</span>
-                  <span className="upcoming-event-date">
-                    {isToday ? 'Heute' : isTomorrow ? 'Morgen' : formatDate(event.eventDate)}
+                  <span className={`upcoming-event-date ${urgencyClass}`}>
+                    {isToday ? 'Heute' : isTomorrow ? 'Morgen' : formatDate(event.date)}
                   </span>
                 </div>
                 <div className="upcoming-event-employee">{event.employeeName}</div>
-                {event.title && event.title !== typeLabels[event.type] && (
-                  <div className="upcoming-event-title muted">{event.title}</div>
+                {event.subtitle && (
+                  <div className="upcoming-event-title muted">{event.subtitle}</div>
                 )}
               </div>
               {!isToday && !isTomorrow && daysUntil <= 7 && (
-                <div className="upcoming-event-badge">In {daysUntil} Tagen</div>
+                <div className={`upcoming-event-badge ${urgencyClass}`}>In {daysUntil} Tagen</div>
               )}
             </button>
           );

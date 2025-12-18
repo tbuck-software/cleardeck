@@ -42,6 +42,8 @@ export type Api = {
       year: number;
       periodNote?: string | null;
       linked?: boolean;
+      birthDate?: string | null;
+      department?: string | null;
     },
   ) => Promise<YearDataset>;
   deleteEmployee: (id: number, year: number) => Promise<YearDataset>;

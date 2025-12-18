@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import type { UpcomingEvent, EmployeeEventType } from '../shared/types';
+import type { UpcomingEvent, UnifiedEventType } from '../shared/types';
 import type { CalendarView } from '../types/ui';
 
 type UseCalendarParams = {
   handleError: (err: unknown) => void;
-  hiddenEventTypes: EmployeeEventType[];
+  hiddenEventTypes: UnifiedEventType[];
+  enabled?: boolean;
 };
 
 /**
@@ -102,7 +103,7 @@ export const formatPeriodLabel = (date: Date, view: CalendarView): string => {
 
 const CALENDAR_VIEW_KEY = 'calendarView';
 
-const useCalendar = ({ handleError, hiddenEventTypes }: UseCalendarParams) => {
+const useCalendar = ({ handleError, hiddenEventTypes, enabled = true }: UseCalendarParams) => {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [view, setView] = useState<CalendarView>(() => {
     const saved = localStorage.getItem(CALENDAR_VIEW_KEY);
@@ -133,10 +134,12 @@ const useCalendar = ({ handleError, hiddenEventTypes }: UseCalendarParams) => {
     }
   }, [currentDate, view, handleError]);
 
-  // Load events when date or view changes
+  // Load events when date or view changes (only if enabled)
   useEffect(() => {
-    loadEvents();
-  }, [loadEvents]);
+    if (enabled) {
+      loadEvents();
+    }
+  }, [loadEvents, enabled]);
 
   const nextPeriod = useCallback(() => {
     setCurrentDate((prev) => {

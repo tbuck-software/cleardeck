@@ -16,6 +16,8 @@ const baseStatus: UpdateStatus = { state: 'idle' };
 const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage>> = {}): React.ComponentProps<typeof SettingsPage> => ({
   qualifications,
   qualificationEdits: {},
+  departments: [],
+  departmentEdits: {},
   dbMessage: null,
   baseHoursInput: '36',
   updateStatus: baseStatus,
@@ -23,6 +25,9 @@ const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage
   onOpenQualificationModal: vi.fn<(payload: QualificationModalPayload) => void>(),
   onReorderQualification: vi.fn<(ids: number[]) => void>(),
   onDeleteQualification: vi.fn<(id: number) => void>(),
+  onOpenDepartmentModal: vi.fn(),
+  onReorderDepartment: vi.fn(),
+  onDeleteDepartment: vi.fn(),
   onBaseHoursInputChange: vi.fn<(val: string) => void>(),
   onSaveBaseHours: vi.fn(),
   onDbExport: vi.fn(),

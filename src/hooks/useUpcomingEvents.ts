@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import api from '../services/api';
-import type { UpcomingEvent, EmployeeEventType } from '../shared/types';
+import type { UpcomingEvent, UnifiedEventType } from '../shared/types';
 
 type UseUpcomingEventsParams = {
   handleError: (err: unknown) => void;
@@ -8,12 +8,12 @@ type UseUpcomingEventsParams = {
 
 const useUpcomingEvents = ({ handleError }: UseUpcomingEventsParams) => {
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
-  const [hiddenEventTypes, setHiddenEventTypes] = useState<EmployeeEventType[]>([]);
+  const [hiddenEventTypes, setHiddenEventTypes] = useState<UnifiedEventType[]>([]);
 
   const loadHiddenEventTypes = useCallback(async () => {
     try {
       const types = await api.settings.getHiddenEventTypes();
-      setHiddenEventTypes(types as EmployeeEventType[]);
+      setHiddenEventTypes(types as UnifiedEventType[]);
     } catch (err) {
       handleError(err);
     }
@@ -32,7 +32,7 @@ const useUpcomingEvents = ({ handleError }: UseUpcomingEventsParams) => {
   );
 
   const toggleEventTypeFilter = useCallback(
-    async (type: EmployeeEventType) => {
+    async (type: UnifiedEventType) => {
       try {
         const newHidden = hiddenEventTypes.includes(type)
           ? hiddenEventTypes.filter((t) => t !== type)
@@ -57,12 +57,15 @@ const useUpcomingEvents = ({ handleError }: UseUpcomingEventsParams) => {
 
   const hideAllEventTypes = useCallback(async () => {
     try {
-      const allTypes: EmployeeEventType[] = [
+      const allTypes: UnifiedEventType[] = [
         'join',
         'leave',
         'care-visit',
         'emergency-training',
         'custom',
+        'birthday',
+        'anniversary',
+        'certificate-expiry',
       ];
       await api.settings.setHiddenEventTypes(allTypes);
       setHiddenEventTypes(allTypes);

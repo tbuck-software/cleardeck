@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash, faLink, faLinkSlash, faPen } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
@@ -19,9 +19,10 @@ import RecoveryResetModal from './components/modals/RecoveryResetModal';
 import QualificationModal from './components/modals/QualificationModal';
 import DepartmentModal from './components/modals/DepartmentModal';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
+import { unifyEvents } from './utils/unifyEvents';
 import useAppLogic from './hooks/useAppLogic';
 import type { EventModalType } from './types/ui';
-import type { UpcomingEvent } from './shared/types';
+import type { UnifiedEvent } from './shared/types';
 
 const App = () => {
   const {
@@ -183,7 +184,25 @@ const App = () => {
 
   const isCreateMode = editModal.mode === 'create';
 
-  const handleUpcomingEventClick = async (event: UpcomingEvent) => {
+  const unifiedEvents = useMemo(
+    () =>
+      unifyEvents(
+        upcomingEvents,
+        dashboardWidgets.expiringTrainings,
+        dashboardWidgets.birthdaysAnniversaries,
+        hiddenEventTypes,
+      ),
+    [upcomingEvents, dashboardWidgets.expiringTrainings, dashboardWidgets.birthdaysAnniversaries, hiddenEventTypes],
+  );
+
+  const handleUnifiedEventClick = async (event: UnifiedEvent) => {
+    const employee = dataset?.employees.find((emp) => emp.id === event.employeeId);
+    if (employee) {
+      await handleSelect(employee);
+    }
+  };
+
+  const handleCalendarEventClick = async (event: { employeeId?: number }) => {
     const employee = dataset?.employees.find((emp) => emp.id === event.employeeId);
     if (employee) {
       await handleSelect(employee);
@@ -267,17 +286,13 @@ const App = () => {
             totalFte={totalFte}
             totalHeadcount={totalHeadcount}
             qualifications={qualifications}
-            upcomingEvents={upcomingEvents}
+            unifiedEvents={unifiedEvents}
             hiddenEventTypes={hiddenEventTypes}
-            onEventClick={handleUpcomingEventClick}
+            onEventClick={handleUnifiedEventClick}
             onToggleEventFilter={toggleEventTypeFilter}
             onShowAllEvents={showAllEventTypes}
             onHideAllEvents={hideAllEventTypes}
-            expiringTrainings={dashboardWidgets.expiringTrainings}
             departmentStats={dashboardWidgets.departmentStats}
-            birthdaysAnniversaries={dashboardWidgets.birthdaysAnniversaries}
-            onTrainingClick={handleUpcomingEventClick}
-            onBirthdayClick={handleUpcomingEventClick}
           />
         )}
 
@@ -367,7 +382,7 @@ const App = () => {
             onNext={calendarActions.nextPeriod}
             onToday={calendarActions.goToToday}
             onMonthClick={calendarActions.goToMonth}
-            onEventClick={handleUpcomingEventClick}
+            onEventClick={handleCalendarEventClick}
           />
         )}
 
