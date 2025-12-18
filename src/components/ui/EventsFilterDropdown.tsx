@@ -8,18 +8,21 @@ import {
   faCalendarDay,
   faFilter,
   faCheck,
+  faCakeCandles,
+  faAward,
+  faCertificate,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import type { EmployeeEventType } from '../../shared/types';
+import type { UnifiedEventType } from '../../shared/types';
 
 type EventsFilterDropdownProps = {
-  hiddenEventTypes: EmployeeEventType[];
-  onToggleFilter: (type: EmployeeEventType) => void;
+  hiddenEventTypes: UnifiedEventType[];
+  onToggleFilter: (type: UnifiedEventType) => void;
   onShowAll: () => void;
   onHideAll: () => void;
 };
 
-const typeLabels: Record<EmployeeEventType, string> = {
+const typeLabels: Record<UnifiedEventType, string> = {
   join: 'Eintritt',
   leave: 'Austritt',
   'name-change': 'Namensänderung',
@@ -27,9 +30,12 @@ const typeLabels: Record<EmployeeEventType, string> = {
   'care-visit': 'Pflegevisite',
   'emergency-training': 'Notfallschulung',
   custom: 'Ereignis',
+  birthday: 'Geburtstag',
+  anniversary: 'Jubiläum',
+  'certificate-expiry': 'Zertifikat',
 };
 
-const typeIcons: Record<EmployeeEventType, IconDefinition> = {
+const typeIcons: Record<UnifiedEventType, IconDefinition> = {
   join: faArrowRightToBracket,
   leave: faArrowRightFromBracket,
   'name-change': faArrowRightToBracket,
@@ -37,14 +43,20 @@ const typeIcons: Record<EmployeeEventType, IconDefinition> = {
   'care-visit': faStethoscope,
   'emergency-training': faKitMedical,
   custom: faCalendarDay,
+  birthday: faCakeCandles,
+  anniversary: faAward,
+  'certificate-expiry': faCertificate,
 };
 
-const allEventTypes: EmployeeEventType[] = [
+const allEventTypes: UnifiedEventType[] = [
   'join',
   'leave',
   'care-visit',
   'emergency-training',
   'custom',
+  'birthday',
+  'anniversary',
+  'certificate-expiry',
 ];
 
 const EventsFilterDropdown = ({

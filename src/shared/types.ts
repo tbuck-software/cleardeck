@@ -57,6 +57,12 @@ export type EmployeeEventType =
   | 'emergency-training'
   | 'custom';
 
+export type UnifiedEventType =
+  | EmployeeEventType
+  | 'birthday'
+  | 'anniversary'
+  | 'certificate-expiry';
+
 export interface EmployeeEvent {
   id?: number;
   employeeId?: number;
@@ -150,4 +156,15 @@ export interface BirthdayAnniversary {
   displayDate: string;
   age?: number;
   years?: number;
+}
+
+export interface UnifiedEvent {
+  id: string;
+  employeeId: number;
+  employeeName: string;
+  type: UnifiedEventType;
+  date: string;
+  title: string;
+  subtitle?: string;
+  urgency?: 'normal' | 'warning' | 'urgent';
 }

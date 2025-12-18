@@ -3,7 +3,7 @@
 
 import { render, screen } from '@testing-library/react';
 import Dashboard from '../Dashboard';
-import type { QualificationType, YearDataset, UpcomingEvent, EmployeeEventType } from '../../../shared/types';
+import type { QualificationType, YearDataset, UnifiedEvent, UnifiedEventType } from '../../../shared/types';
 
 const sampleDataset: YearDataset = {
   employees: [],
@@ -23,11 +23,11 @@ const qualifications: QualificationType[] = [
   { id: 2, name: 'Admin' },
 ];
 
-const mockUpcomingEvents: UpcomingEvent[] = [
+const mockUnifiedEvents: UnifiedEvent[] = [
   {
-    id: 1,
+    id: 'event-1',
     employeeId: 1,
-    eventDate: '2024-12-20',
+    date: '2024-12-20',
     type: 'care-visit',
     title: 'Pflegevisite',
     employeeName: 'Max Mustermann',
@@ -38,7 +38,7 @@ const mockOnEventClick = vi.fn();
 const mockOnToggleEventFilter = vi.fn();
 const mockOnShowAllEvents = vi.fn();
 const mockOnHideAllEvents = vi.fn();
-const mockHiddenEventTypes: EmployeeEventType[] = [];
+const mockHiddenEventTypes: UnifiedEventType[] = [];
 
 describe('Dashboard', () => {
   it('zeigt Kennzahlen und Qualifikationen', () => {
@@ -51,12 +51,13 @@ describe('Dashboard', () => {
         totalFte={sampleDataset.aggregation.totalFte}
         totalHeadcount={sampleDataset.aggregation.totalHeadcount}
         qualifications={qualifications}
-        upcomingEvents={mockUpcomingEvents}
+        unifiedEvents={mockUnifiedEvents}
         hiddenEventTypes={mockHiddenEventTypes}
         onEventClick={mockOnEventClick}
         onToggleEventFilter={mockOnToggleEventFilter}
         onShowAllEvents={mockOnShowAllEvents}
         onHideAllEvents={mockOnHideAllEvents}
+        departmentStats={[]}
       />,
     );
 
@@ -84,12 +85,13 @@ describe('Dashboard', () => {
         totalFte={0}
         totalHeadcount={0}
         qualifications={[]}
-        upcomingEvents={[]}
+        unifiedEvents={[]}
         hiddenEventTypes={mockHiddenEventTypes}
         onEventClick={mockOnEventClick}
         onToggleEventFilter={mockOnToggleEventFilter}
         onShowAllEvents={mockOnShowAllEvents}
         onHideAllEvents={mockOnHideAllEvents}
+        departmentStats={[]}
       />,
     );
 
@@ -107,12 +109,13 @@ describe('Dashboard', () => {
         totalFte={7.5}
         totalHeadcount={3}
         qualifications={qualifications}
-        upcomingEvents={mockUpcomingEvents}
+        unifiedEvents={mockUnifiedEvents}
         hiddenEventTypes={mockHiddenEventTypes}
         onEventClick={mockOnEventClick}
         onToggleEventFilter={mockOnToggleEventFilter}
         onShowAllEvents={mockOnShowAllEvents}
         onHideAllEvents={mockOnHideAllEvents}
+        departmentStats={[]}
       />,
     );
 

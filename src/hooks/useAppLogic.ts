@@ -124,6 +124,7 @@ const useAppLogic = () => {
   const calendarSlice = useCalendar({
     handleError,
     hiddenEventTypes: upcomingEventsSlice.state.hiddenEventTypes,
+    enabled: authSlice.appReady.unlocked,
   });
 
   const dashboardWidgetsSlice = useDashboardWidgets({ handleError });
@@ -227,7 +228,7 @@ const useAppLogic = () => {
       confirmState,
       recoveryKeyModal,
       recoveryReset,
-      upcomingEvents: upcomingEventsSlice.state.upcomingEvents,
+      upcomingEvents: upcomingEventsSlice.state.allUpcomingEvents,
       hiddenEventTypes: upcomingEventsSlice.state.hiddenEventTypes,
       calendar: calendarSlice.state,
       dashboardWidgets: dashboardWidgetsSlice.state,

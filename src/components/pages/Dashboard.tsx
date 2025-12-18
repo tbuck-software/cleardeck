@@ -11,18 +11,14 @@ import {
 import type {
   QualificationType,
   YearDataset,
-  UpcomingEvent,
-  EmployeeEventType,
-  ExpiringTraining,
+  UnifiedEvent,
+  UnifiedEventType,
   DepartmentStats,
-  BirthdayAnniversary,
 } from '../../shared/types';
 import StatCard from '../ui/StatCard';
 import UpcomingEventsList from '../ui/UpcomingEventsList';
 import EventsFilterDropdown from '../ui/EventsFilterDropdown';
-import ExpiringTrainingsList from '../ui/ExpiringTrainingsList';
 import DepartmentStatsCard from '../ui/DepartmentStatsCard';
-import BirthdaysAnniversariesList from '../ui/BirthdaysAnniversariesList';
 
 type DashboardProps = {
   year: number;
@@ -32,17 +28,13 @@ type DashboardProps = {
   totalFte: number;
   totalHeadcount: number;
   qualifications: QualificationType[];
-  upcomingEvents: UpcomingEvent[];
-  hiddenEventTypes: EmployeeEventType[];
-  onEventClick: (event: UpcomingEvent) => void;
-  onToggleEventFilter: (type: EmployeeEventType) => void;
+  unifiedEvents: UnifiedEvent[];
+  hiddenEventTypes: UnifiedEventType[];
+  onEventClick: (event: UnifiedEvent) => void;
+  onToggleEventFilter: (type: UnifiedEventType) => void;
   onShowAllEvents: () => void;
   onHideAllEvents: () => void;
-  expiringTrainings: ExpiringTraining[];
   departmentStats: DepartmentStats[];
-  birthdaysAnniversaries: BirthdayAnniversary[];
-  onTrainingClick: (training: ExpiringTraining) => void;
-  onBirthdayClick: (item: BirthdayAnniversary) => void;
 };
 
 const Dashboard = ({
@@ -52,17 +44,13 @@ const Dashboard = ({
   totalFte,
   totalHeadcount,
   qualifications,
-  upcomingEvents,
+  unifiedEvents,
   hiddenEventTypes,
   onEventClick,
   onToggleEventFilter,
   onShowAllEvents,
   onHideAllEvents,
-  expiringTrainings,
   departmentStats,
-  birthdaysAnniversaries,
-  onTrainingClick,
-  onBirthdayClick,
 }: DashboardProps) => {
   const fullTimeCount = dataset?.employees.filter((e) => e.fte >= 1).length ?? 0;
   const fullTimePercent =
@@ -86,6 +74,26 @@ const Dashboard = ({
       </div>
 
       <div className="dashboard-masonry">
+        <div className="card">
+          <div className="form-header">
+            <div>
+              <p className="eyebrow">Termine</p>
+              <h3>Bevorstehende Ereignisse</h3>
+            </div>
+            <EventsFilterDropdown
+              hiddenEventTypes={hiddenEventTypes}
+              onToggleFilter={onToggleEventFilter}
+              onShowAll={onShowAllEvents}
+              onHideAll={onHideAllEvents}
+            />
+          </div>
+          <UpcomingEventsList
+            events={unifiedEvents}
+            hasActiveFilters={hiddenEventTypes.length > 0}
+            onEventClick={onEventClick}
+          />
+        </div>
+
         <div className="card">
           <div className="form-header">
             <div>
@@ -137,52 +145,6 @@ const Dashboard = ({
               icon={faUserMinus}
             />
           </div>
-        </div>
-
-        <div className="card">
-          <div className="form-header">
-            <div>
-              <p className="eyebrow">Termine</p>
-              <h3>Bevorstehende Ereignisse</h3>
-            </div>
-            <EventsFilterDropdown
-              hiddenEventTypes={hiddenEventTypes}
-              onToggleFilter={onToggleEventFilter}
-              onShowAll={onShowAllEvents}
-              onHideAll={onHideAllEvents}
-            />
-          </div>
-          <UpcomingEventsList
-            events={upcomingEvents}
-            hasActiveFilters={hiddenEventTypes.length > 0}
-            onEventClick={onEventClick}
-          />
-        </div>
-
-        <div className="card">
-          <div className="form-header">
-            <div>
-              <p className="eyebrow">Schulungen</p>
-              <h3>Ablaufende Zertifikate</h3>
-            </div>
-          </div>
-          <ExpiringTrainingsList
-            trainings={expiringTrainings}
-            onTrainingClick={onTrainingClick}
-          />
-        </div>
-
-        <div className="card">
-          <div className="form-header">
-            <div>
-              <p className="eyebrow">Team</p>
-              <h3>Geburtstage & Jubiläen</h3>
-            </div>
-          </div>
-          <BirthdaysAnniversariesList
-            items={birthdaysAnniversaries}
-            onItemClick={onBirthdayClick}
-          />
         </div>
 
         <div className="card">
