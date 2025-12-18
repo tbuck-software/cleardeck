@@ -30,6 +30,7 @@ const parseEventRow = (row: any): EmployeeEvent => {
     meta,
     previousValue: row.previousValue ?? null,
     newValue: row.newValue ?? null,
+    expiresAt: row.expiresAt ?? null,
   };
 };
 
@@ -41,7 +42,7 @@ export const listEvents = (employeeId: number): EmployeeEvent[] => {
   const rows = db
     .prepare(
       `
-      SELECT id, employeeId, eventDate, type, title, details, meta, previousValue, newValue
+      SELECT id, employeeId, eventDate, type, title, details, meta, previousValue, newValue, expiresAt
       FROM employee_events
       WHERE employeeId = ?
       ORDER BY date(eventDate) DESC, id DESC;
@@ -64,6 +65,7 @@ export const saveEvent = (input: {
   meta?: Record<string, unknown> | null;
   previousValue?: string | null;
   newValue?: string | null;
+  expiresAt?: string | null;
 }): EmployeeEvent[] => {
   const db = getDb();
   const metaStr = input.meta ? JSON.stringify(input.meta) : null;
@@ -71,7 +73,7 @@ export const saveEvent = (input: {
   if (input.id) {
     db.prepare(
       `UPDATE employee_events
-       SET eventDate = @eventDate, type = @type, title = @title, details = @details, meta = @meta, previousValue = @previousValue, newValue = @newValue
+       SET eventDate = @eventDate, type = @type, title = @title, details = @details, meta = @meta, previousValue = @previousValue, newValue = @newValue, expiresAt = @expiresAt
        WHERE id = @id`,
     ).run({
       id: input.id,
@@ -82,11 +84,12 @@ export const saveEvent = (input: {
       meta: metaStr,
       previousValue: input.previousValue ?? null,
       newValue: input.newValue ?? null,
+      expiresAt: input.expiresAt ?? null,
     });
   } else {
     db.prepare(
-      `INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta, previousValue, newValue)
-       VALUES (@employeeId, @eventDate, @type, @title, @details, @meta, @previousValue, @newValue)`,
+      `INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta, previousValue, newValue, expiresAt)
+       VALUES (@employeeId, @eventDate, @type, @title, @details, @meta, @previousValue, @newValue, @expiresAt)`,
     ).run({
       employeeId: input.employeeId,
       eventDate: input.eventDate,
@@ -96,6 +99,7 @@ export const saveEvent = (input: {
       meta: metaStr,
       previousValue: input.previousValue ?? null,
       newValue: input.newValue ?? null,
+      expiresAt: input.expiresAt ?? null,
     });
   }
 
@@ -131,6 +135,7 @@ export const listUpcomingEvents = (fromDate?: string, limit: number = 10): Upcom
         e.meta,
         e.previousValue,
         e.newValue,
+        e.expiresAt,
         emp.name as employeeName
       FROM employee_events e
       INNER JOIN employees emp ON e.employeeId = emp.id
@@ -166,6 +171,7 @@ export const listEventsInRange = (startDate: string, endDate: string): UpcomingE
         e.meta,
         e.previousValue,
         e.newValue,
+        e.expiresAt,
         emp.name as employeeName
       FROM employee_events e
       INNER JOIN employees emp ON e.employeeId = emp.id

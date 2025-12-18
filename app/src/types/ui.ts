@@ -33,6 +33,15 @@ export type QualificationModalState = {
 
 export type QualificationModalPayload = Pick<QualificationModalState, 'id' | 'value' | 'note'>;
 
+export type DepartmentModalState = {
+  open: boolean;
+  id?: number;
+  value: string;
+  note: string;
+};
+
+export type DepartmentModalPayload = Pick<DepartmentModalState, 'id' | 'value' | 'note'>;
+
 export type RecoveryResetState = {
   open: boolean;
   recoveryKey: string;
@@ -67,6 +76,8 @@ export type EditModalState = {
   weeklyHours: string;
   linked: boolean;
   fteValue: string;
+  birthDate: string;
+  department: string;
 };
 
 export type AddPeriodFormState = {
@@ -86,6 +97,7 @@ export type EventModalState = {
   details: string;
   previousValue?: string | null;
   newValue?: string | null;
+  expiresAt?: string | null;
 };
 
 export type PeriodToDeleteState = { periodId: number; label: string } | null;

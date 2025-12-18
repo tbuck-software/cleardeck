@@ -10,6 +10,12 @@ export interface QualificationType {
   note?: string | null;
 }
 
+export interface Department {
+  id?: number;
+  name: string;
+  note?: string | null;
+}
+
 export interface Employee {
   id?: number;
   name: string;
@@ -17,6 +23,8 @@ export interface Employee {
   weeklyHours?: number | null;
   fte?: number | null;
   createdAt?: string;
+  birthDate?: string | null;
+  department?: string | null;
 }
 
 export interface EmploymentPeriod {
@@ -36,6 +44,8 @@ export interface EmployeeWithPeriod extends Employee {
   status: 'active' | 'left';
   weeklyHours?: number | null;
   qualification: Qualification | string;
+  birthDate?: string | null;
+  department?: string | null;
 }
 
 export type EmployeeEventType =
@@ -57,6 +67,7 @@ export interface EmployeeEvent {
   meta?: Record<string, unknown> | null;
   previousValue?: string | null;
   newValue?: string | null;
+  expiresAt?: string | null;
 }
 
 export interface UpcomingEvent extends EmployeeEvent {
@@ -110,4 +121,33 @@ export interface AppInfo {
   nodeVersion: string;
   platform: string;
   arch: string;
+}
+
+// Dashboard widget types
+
+export interface ExpiringTraining {
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  type: EmployeeEventType;
+  title: string;
+  eventDate: string;
+  expiresAt: string;
+  daysUntilExpiry: number;
+}
+
+export interface DepartmentStats {
+  department: string;
+  headcount: number;
+  fte: number;
+}
+
+export interface BirthdayAnniversary {
+  employeeId: number;
+  employeeName: string;
+  type: 'birthday' | 'anniversary';
+  date: string;
+  displayDate: string;
+  age?: number;
+  years?: number;
 }

@@ -9,6 +9,7 @@ import {
   faShieldAlt,
   faSync,
   faList,
+  faSitemap,
   faDownload,
   faUpload,
   faExclamationTriangle,
@@ -17,13 +18,15 @@ import {
   faInfoCircle,
   faEnvelope
 } from '@fortawesome/free-solid-svg-icons';
-import type { QualificationType, UpdateStatus, AppInfo } from '../../shared/types';
-import type { QualificationModalPayload } from '../../types/ui';
+import type { QualificationType, Department, UpdateStatus, AppInfo } from '../../shared/types';
+import type { QualificationModalPayload, DepartmentModalPayload } from '../../types/ui';
 import logoUrl from '../../assets/logo.png';
 
 type SettingsPageProps = {
   qualifications: QualificationType[];
   qualificationEdits: Record<number, string>;
+  departments: Department[];
+  departmentEdits: Record<number, string>;
   dbMessage: string | null;
   baseHoursInput: string;
   updateStatus: UpdateStatus;
@@ -31,6 +34,9 @@ type SettingsPageProps = {
   onOpenQualificationModal: (payload: QualificationModalPayload) => void;
   onReorderQualification: (orderedIds: number[]) => void | Promise<void>;
   onDeleteQualification: (id: number) => void;
+  onOpenDepartmentModal: (payload: DepartmentModalPayload) => void;
+  onReorderDepartment: (orderedIds: number[]) => void | Promise<void>;
+  onDeleteDepartment: (id: number) => void;
   onBaseHoursInputChange: (val: string) => void;
   onSaveBaseHours: () => void | Promise<void>;
   onDbExport: (mode: 'encrypted' | 'plain') => void | Promise<void>;
@@ -42,11 +48,13 @@ type SettingsPageProps = {
   onFullReset: () => void | Promise<void>;
 };
 
-type TabId = 'general' | 'qualifications' | 'database' | 'danger' | 'info';
+type TabId = 'general' | 'qualifications' | 'departments' | 'database' | 'danger' | 'info';
 
 const SettingsPage = ({
   qualifications,
   qualificationEdits,
+  departments,
+  departmentEdits,
   dbMessage,
   baseHoursInput,
   updateStatus,
@@ -54,6 +62,9 @@ const SettingsPage = ({
   onOpenQualificationModal,
   onReorderQualification,
   onDeleteQualification,
+  onOpenDepartmentModal,
+  onReorderDepartment,
+  onDeleteDepartment,
   onBaseHoursInputChange,
   onSaveBaseHours,
   onDbExport,
@@ -65,11 +76,13 @@ const SettingsPage = ({
   onFullReset,
 }: SettingsPageProps) => {
   const [dragQualificationId, setDragQualificationId] = useState<number | null>(null);
+  const [dragDepartmentId, setDragDepartmentId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('general');
 
   const tabs: { id: TabId; label: string; icon: any }[] = [
     { id: 'general', label: 'Allgemein', icon: faCog },
     { id: 'qualifications', label: 'Qualifikationen', icon: faList },
+    { id: 'departments', label: 'Abteilungen', icon: faSitemap },
     { id: 'database', label: 'Datenbank & Sicherheit', icon: faDatabase },
     { id: 'danger', label: 'Gefahrenzone', icon: faExclamationTriangle },
     { id: 'info', label: 'Info', icon: faInfoCircle },
@@ -235,6 +248,89 @@ const SettingsPage = ({
                     <tr>
                       <td colSpan={3} className="empty">
                         Keine Qualifikationen hinterlegt.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'departments' && (
+          <div className="card form-card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Verwaltung</p>
+                <h3>Abteilungen</h3>
+              </div>
+              <button
+                className="primary"
+                onClick={() => onOpenDepartmentModal({ value: '', note: '', id: undefined })}
+              >
+                <FontAwesomeIcon icon={faPlus} /> Neu
+              </button>
+            </div>
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Notiz</th>
+                    <th style={{ width: 80 }}>Aktionen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {departments.map((d) => (
+                    <tr
+                      key={d.id ?? d.name}
+                      className="clickable-row"
+                      draggable={!!d.id}
+                      onDragStart={() => setDragDepartmentId(d.id ?? null)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (!dragDepartmentId || !d.id || dragDepartmentId === d.id) return;
+                        const orderedIds = departments.map((item) => item.id!).filter(Boolean);
+                        const from = orderedIds.indexOf(dragDepartmentId);
+                        const to = orderedIds.indexOf(d.id);
+                        if (from === -1 || to === -1) return;
+                        const reordered = [...orderedIds];
+                        const [moved] = reordered.splice(from, 1);
+                        reordered.splice(to, 0, moved);
+                        onReorderDepartment(reordered);
+                      }}
+                      onClick={() =>
+                        d.id &&
+                        onOpenDepartmentModal({
+                          id: d.id as number,
+                          value: departmentEdits[d.id as number] ?? d.name,
+                          note: d.note ?? '',
+                        })
+                      }
+                    >
+                      <td>{d.name}</td>
+                      <td className="muted">{d.note ?? '—'}</td>
+                      <td>
+                        {d.id && (
+                          <button
+                            className="ghost-button danger icon-button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteDepartment(d.id as number);
+                            }}
+                            title="Löschen"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {departments.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="empty">
+                        Keine Abteilungen hinterlegt.
                       </td>
                     </tr>
                   )}

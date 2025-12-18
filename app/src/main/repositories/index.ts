@@ -8,5 +8,6 @@ export * from './employees';
 export * from './events';
 export * from './qualifications';
 export * from './settings';
+export * from './dashboard';
 
 

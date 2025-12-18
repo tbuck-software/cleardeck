@@ -61,6 +61,7 @@ const initialEventModal = (): EventModalState => ({
   details: '',
   previousValue: null,
   newValue: null,
+  expiresAt: null,
 });
 
 const useEventsPeriods = ({
@@ -137,6 +138,7 @@ const useEventsPeriods = ({
       details: ev.details ?? '',
       previousValue: ev.previousValue ?? null,
       newValue: ev.newValue ?? null,
+      expiresAt: ev.expiresAt ?? null,
     });
   }, []);
 
@@ -228,6 +230,7 @@ const useEventsPeriods = ({
         details: eventModal.details.trim() ? eventModal.details.trim() : null,
         previousValue: eventModal.previousValue ?? null,
         newValue: eventModal.newValue ?? null,
+        expiresAt: eventModal.expiresAt ?? null,
       });
       setEvents(list);
       const refreshed = await api.employees.list(year);
@@ -244,6 +247,7 @@ const useEventsPeriods = ({
   }, [
     eventModal.details,
     eventModal.eventDate,
+    eventModal.expiresAt,
     eventModal.id,
     eventModal.newValue,
     eventModal.previousValue,

@@ -1469,3 +1469,276 @@ button.detail-item.clickable:hover {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Expiring Trainings List */
+.expiring-trainings-container {
+  margin-top: 16px;
+}
+
+.expiring-trainings-list {
+  display: grid;
+  gap: 12px;
+}
+
+.expiring-training-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.expiring-training-item:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.expiring-training-item.urgent {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.expiring-training-item.warning {
+  border-color: #fed7aa;
+  background: #fffbeb;
+}
+
+.expiring-training-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.expiring-training-icon.urgent {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.expiring-training-icon.warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.expiring-training-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.expiring-training-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.expiring-training-type {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.expiring-training-days {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: var(--muted);
+}
+
+.expiring-training-days.urgent {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.expiring-training-days.warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.expiring-training-employee {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--accent-strong);
+  margin-top: 2px;
+}
+
+.expiring-training-date {
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+/* Department Stats */
+.department-stats-container {
+  margin-top: 16px;
+}
+
+.department-chart {
+  margin-bottom: 20px;
+}
+
+.department-bar-container {
+  display: flex;
+  height: 24px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f1f5f9;
+}
+
+.department-bar-segment {
+  height: 100%;
+  min-width: 4px;
+  transition: all 0.3s ease;
+}
+
+.department-bar-segment:hover {
+  opacity: 0.8;
+}
+
+.department-legend {
+  display: grid;
+  gap: 12px;
+}
+
+.department-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.department-legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.department-legend-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.department-legend-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.department-legend-value {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Birthdays & Anniversaries List */
+.birthdays-container {
+  margin-top: 16px;
+}
+
+.birthdays-list {
+  display: grid;
+  gap: 12px;
+}
+
+.birthday-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+  position: relative;
+}
+
+.birthday-item:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.birthday-item.today {
+  border-color: #fbbf24;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+}
+
+.birthday-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.birthday-icon.birthday {
+  background: #fce7f3;
+  color: #db2777;
+}
+
+.birthday-icon.anniversary {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.birthday-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.birthday-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.birthday-name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.birthday-date {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.birthday-detail {
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.birthday-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  background: #eff6ff;
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
