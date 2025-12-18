@@ -20,7 +20,7 @@ const useUpcomingEvents = ({ handleError }: UseUpcomingEventsParams) => {
   }, [handleError]);
 
   const loadUpcomingEvents = useCallback(
-    async (limit: number = 10) => {
+    async (limit = 10) => {
       try {
         const events = await api.events.listUpcoming(undefined, limit);
         setUpcomingEvents(events);

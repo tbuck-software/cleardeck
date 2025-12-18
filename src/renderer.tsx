@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faTrash, faTriangleExclamation, faLink, faLinkSlash, faPen } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faTrash, faLink, faLinkSlash, faPen } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import AuthScreen from './components/auth/AuthScreen';
@@ -56,7 +56,6 @@ const App = () => {
       departmentModal,
       editModal,
       addPeriodForm,
-      periodToDelete,
       eventModal,
       confirmState,
       recoveryKeyModal,
@@ -113,7 +112,6 @@ const App = () => {
       handleAddPeriod,
       handleSaveEvent,
       handleDeleteEvent,
-      handleDeletePeriod,
       openNewPeriodModal,
       openExistingPeriodModal,
       openEventModalForEvent,
@@ -121,7 +119,6 @@ const App = () => {
       openEditModal,
       handleEditModalSave,
       resetForm,
-      loadUpcomingEvents,
       toggleEventTypeFilter,
       showAllEventTypes,
       hideAllEventTypes,

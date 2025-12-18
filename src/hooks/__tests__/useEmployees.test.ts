@@ -4,6 +4,7 @@ import { act, renderHook } from '@testing-library/react';
 import useEmployees from '../useEmployees';
 import type { YearDataset } from '../../shared/types';
 
+// eslint-disable-next-line @typescript-eslint/no-empty-function
 const noop = () => {};
 
 const createHook = () =>

@@ -118,7 +118,7 @@ export const deleteEvent = (id: number, employeeId: number): EmployeeEvent[] => 
 /**
  * List upcoming events for all employees
  */
-export const listUpcomingEvents = (fromDate?: string, limit: number = 10): UpcomingEvent[] => {
+export const listUpcomingEvents = (fromDate?: string, limit = 10): UpcomingEvent[] => {
   const db = getDb();
   const today = fromDate ?? new Date().toISOString().slice(0, 10);
 

@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 import api from '../services/api';
 import type { EmployeeWithPeriod, QualificationType, Department, YearDataset } from '../shared/types';
 import type { ConfirmActionOptions, DepartmentModalState, EditModalState, FormState, Page, QualificationModalState } from '../types/ui';
-import { statusLabels } from '../constants';
 import { deriveFteFromWeeklyHours } from '../utils/fte';
 
 export const emptyForm = (year: number, defaultQualification = ''): FormState => ({
