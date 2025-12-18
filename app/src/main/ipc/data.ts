@@ -23,7 +23,7 @@ import {
   reorderQualifications,
   deleteQualification,
 } from '../repositories/qualifications';
-import { getBaseHours, setBaseHours } from '../repositories/settings';
+import { getBaseHours, setBaseHours, getHiddenEventTypes, setHiddenEventTypes } from '../repositories/settings';
 import { exportDatabase, importDatabase, exportData } from '../export';
 import { isUnlocked } from './auth';
 
@@ -162,6 +162,16 @@ export const registerDataHandlers = (): void => {
   ipcMain.handle('settings:setBaseHours', (_event, { hours }: { hours: number }) => {
     ensureDbReady();
     return setBaseHours(hours);
+  });
+
+  ipcMain.handle('settings:getHiddenEventTypes', () => {
+    ensureDbReady();
+    return getHiddenEventTypes();
+  });
+
+  ipcMain.handle('settings:setHiddenEventTypes', (_event, { types }: { types: string[] }) => {
+    ensureDbReady();
+    return setHiddenEventTypes(types);
   });
 
   // Database management

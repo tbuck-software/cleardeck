@@ -73,6 +73,8 @@ export type Api = {
   resetApp: () => Promise<AppState>;
   getBaseHours: () => Promise<number>;
   setBaseHours: (hours: number) => Promise<number>;
+  getHiddenEventTypes: () => Promise<string[]>;
+  setHiddenEventTypes: (types: string[]) => Promise<string[]>;
   checkUpdates: () => Promise<boolean>;
   installUpdate: () => Promise<boolean>;
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
@@ -108,6 +110,8 @@ const api: Api = {
   resetApp: () => ipcRenderer.invoke('app:reset'),
   getBaseHours: () => ipcRenderer.invoke('settings:getBaseHours'),
   setBaseHours: (hours) => ipcRenderer.invoke('settings:setBaseHours', { hours }),
+  getHiddenEventTypes: () => ipcRenderer.invoke('settings:getHiddenEventTypes'),
+  setHiddenEventTypes: (types) => ipcRenderer.invoke('settings:setHiddenEventTypes', { types }),
   checkUpdates: () => ipcRenderer.invoke('updates:check'),
   installUpdate: () => ipcRenderer.invoke('updates:install'),
   onUpdateStatus: (cb) => {

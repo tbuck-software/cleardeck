@@ -8,7 +8,7 @@ import {
   faUserMinus,
   faPercent,
 } from '@fortawesome/free-solid-svg-icons';
-import type { QualificationType, YearDataset, UpcomingEvent } from '../../shared/types';
+import type { QualificationType, YearDataset, UpcomingEvent, EmployeeEventType } from '../../shared/types';
 import StatCard from '../ui/StatCard';
 import UpcomingEventsList from '../ui/UpcomingEventsList';
 
@@ -21,7 +21,11 @@ type DashboardProps = {
   totalHeadcount: number;
   qualifications: QualificationType[];
   upcomingEvents: UpcomingEvent[];
+  hiddenEventTypes: EmployeeEventType[];
   onEventClick: (event: UpcomingEvent) => void;
+  onToggleEventFilter: (type: EmployeeEventType) => void;
+  onShowAllEvents: () => void;
+  onHideAllEvents: () => void;
 };
 
 const Dashboard = ({
@@ -32,7 +36,11 @@ const Dashboard = ({
   totalHeadcount,
   qualifications,
   upcomingEvents,
+  hiddenEventTypes,
   onEventClick,
+  onToggleEventFilter,
+  onShowAllEvents,
+  onHideAllEvents,
 }: DashboardProps) => {
   const fullTimeCount = dataset?.employees.filter((e) => e.fte >= 1).length ?? 0;
   const fullTimePercent =
@@ -117,7 +125,14 @@ const Dashboard = ({
                 <h3>Bevorstehende Ereignisse</h3>
               </div>
             </div>
-            <UpcomingEventsList events={upcomingEvents} onEventClick={onEventClick} />
+            <UpcomingEventsList
+              events={upcomingEvents}
+              hiddenEventTypes={hiddenEventTypes}
+              onEventClick={onEventClick}
+              onToggleFilter={onToggleEventFilter}
+              onShowAll={onShowAllEvents}
+              onHideAll={onHideAllEvents}
+            />
           </div>
         </div>
 

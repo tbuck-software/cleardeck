@@ -3,7 +3,7 @@
 
 import { render, screen } from '@testing-library/react';
 import Dashboard from '../Dashboard';
-import type { QualificationType, YearDataset, UpcomingEvent } from '../../../shared/types';
+import type { QualificationType, YearDataset, UpcomingEvent, EmployeeEventType } from '../../../shared/types';
 
 const sampleDataset: YearDataset = {
   employees: [],
@@ -35,6 +35,10 @@ const mockUpcomingEvents: UpcomingEvent[] = [
 ];
 
 const mockOnEventClick = vi.fn();
+const mockOnToggleEventFilter = vi.fn();
+const mockOnShowAllEvents = vi.fn();
+const mockOnHideAllEvents = vi.fn();
+const mockHiddenEventTypes: EmployeeEventType[] = [];
 
 describe('Dashboard', () => {
   it('zeigt Kennzahlen und Qualifikationen', () => {
@@ -48,7 +52,11 @@ describe('Dashboard', () => {
         totalHeadcount={sampleDataset.aggregation.totalHeadcount}
         qualifications={qualifications}
         upcomingEvents={mockUpcomingEvents}
+        hiddenEventTypes={mockHiddenEventTypes}
         onEventClick={mockOnEventClick}
+        onToggleEventFilter={mockOnToggleEventFilter}
+        onShowAllEvents={mockOnShowAllEvents}
+        onHideAllEvents={mockOnHideAllEvents}
       />,
     );
 
@@ -77,7 +85,11 @@ describe('Dashboard', () => {
         totalHeadcount={0}
         qualifications={[]}
         upcomingEvents={[]}
+        hiddenEventTypes={mockHiddenEventTypes}
         onEventClick={mockOnEventClick}
+        onToggleEventFilter={mockOnToggleEventFilter}
+        onShowAllEvents={mockOnShowAllEvents}
+        onHideAllEvents={mockOnHideAllEvents}
       />,
     );
 
@@ -96,7 +108,11 @@ describe('Dashboard', () => {
         totalHeadcount={3}
         qualifications={qualifications}
         upcomingEvents={mockUpcomingEvents}
+        hiddenEventTypes={mockHiddenEventTypes}
         onEventClick={mockOnEventClick}
+        onToggleEventFilter={mockOnToggleEventFilter}
+        onShowAllEvents={mockOnShowAllEvents}
+        onHideAllEvents={mockOnHideAllEvents}
       />,
     );
 

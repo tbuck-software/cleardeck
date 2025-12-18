@@ -77,6 +77,9 @@ export const api = {
   settings: {
     getBaseHours: () => call('getBaseHours', baseApi.getBaseHours),
     setBaseHours: (hours: number) => call('setBaseHours', baseApi.setBaseHours, hours),
+    getHiddenEventTypes: () => call('getHiddenEventTypes', baseApi.getHiddenEventTypes),
+    setHiddenEventTypes: (types: string[]) =>
+      call('setHiddenEventTypes', baseApi.setHiddenEventTypes, types),
   },
   updates: {
     check: () => call('checkUpdates', baseApi.checkUpdates),

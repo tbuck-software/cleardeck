@@ -29,4 +29,32 @@ export const setBaseHours = (hours: number): number => {
   return clamped;
 };
 
+/**
+ * Get hidden event types for upcoming events display
+ * Returns array of event type strings that should be hidden
+ */
+export const getHiddenEventTypes = (): string[] => {
+  const db = getDb();
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'hiddenEventTypes'").get() as
+    | { value?: string }
+    | undefined;
+  if (!row?.value) return [];
+  try {
+    return JSON.parse(row.value);
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * Set hidden event types for upcoming events display
+ */
+export const setHiddenEventTypes = (types: string[]): string[] => {
+  const db = getDb();
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('hiddenEventTypes', ?)").run(
+    JSON.stringify(types),
+  );
+  return types;
+};
+
 

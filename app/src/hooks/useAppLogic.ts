@@ -117,9 +117,10 @@ const useAppLogic = () => {
 
   const upcomingEventsSlice = useUpcomingEvents({ handleError });
 
-  // Load upcoming events when app is unlocked
+  // Load upcoming events and filters when app is unlocked
   useEffect(() => {
     if (authSlice.appReady.unlocked) {
+      upcomingEventsSlice.actions.loadHiddenEventTypes();
       upcomingEventsSlice.actions.loadUpcomingEvents();
     }
   }, [authSlice.appReady.unlocked, upcomingEventsSlice.actions]);
@@ -212,6 +213,7 @@ const useAppLogic = () => {
       recoveryKeyModal,
       recoveryReset,
       upcomingEvents: upcomingEventsSlice.state.upcomingEvents,
+      hiddenEventTypes: upcomingEventsSlice.state.hiddenEventTypes,
     },
     setters: {
       setYear,
@@ -275,6 +277,9 @@ const useAppLogic = () => {
       handleEditModalSave: handleEditModalSaveWithHistory,
       resetForm: employeeSlice.actions.resetForm,
       loadUpcomingEvents: upcomingEventsSlice.actions.loadUpcomingEvents,
+      toggleEventTypeFilter: upcomingEventsSlice.actions.toggleEventTypeFilter,
+      showAllEventTypes: upcomingEventsSlice.actions.showAllEventTypes,
+      hideAllEventTypes: upcomingEventsSlice.actions.hideAllEventTypes,
     },
   };
 };

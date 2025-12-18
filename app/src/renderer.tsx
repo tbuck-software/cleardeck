@@ -57,6 +57,7 @@ const App = () => {
       recoveryKeyModal,
       recoveryReset,
       upcomingEvents,
+      hiddenEventTypes,
     },
     setters: {
       setYear,
@@ -110,6 +111,9 @@ const App = () => {
       handleEditModalSave,
       resetForm,
       loadUpcomingEvents,
+      toggleEventTypeFilter,
+      showAllEventTypes,
+      hideAllEventTypes,
     },
   } = useAppLogic();
 
@@ -255,7 +259,11 @@ const App = () => {
             totalHeadcount={totalHeadcount}
             qualifications={qualifications}
             upcomingEvents={upcomingEvents}
+            hiddenEventTypes={hiddenEventTypes}
             onEventClick={handleUpcomingEventClick}
+            onToggleEventFilter={toggleEventTypeFilter}
+            onShowAllEvents={showAllEventTypes}
+            onHideAllEvents={hideAllEventTypes}
           />
         )}
 
