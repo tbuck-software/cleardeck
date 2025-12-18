@@ -46,6 +46,7 @@ jobs:
         with:
           name: ${{ runner.os }}-artifacts
           path: out/make/**
+          retention-days: 1
 
   release:
     needs: build
