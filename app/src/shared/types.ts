@@ -59,6 +59,10 @@ export interface EmployeeEvent {
   newValue?: string | null;
 }
 
+export interface UpcomingEvent extends EmployeeEvent {
+  employeeName: string;
+}
+
 export interface Aggregation {
   totalHeadcount: number;
   totalFte: number;

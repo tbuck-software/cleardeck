@@ -15,7 +15,7 @@ import {
   deleteEmployee,
   deletePeriod,
 } from '../repositories/employees';
-import { listEvents, saveEvent, deleteEvent } from '../repositories/events';
+import { listEvents, saveEvent, deleteEvent, listUpcomingEvents } from '../repositories/events';
 import {
   listQualifications,
   addQualification,
@@ -144,6 +144,14 @@ export const registerDataHandlers = (): void => {
     ensureDbReady();
     return deleteEvent(id, employeeId);
   });
+
+  ipcMain.handle(
+    'events:listUpcoming',
+    (_event, { fromDate, limit }: { fromDate?: string; limit?: number }) => {
+      ensureDbReady();
+      return listUpcomingEvents(fromDate, limit);
+    },
+  );
 
   // Settings
   ipcMain.handle('settings:getBaseHours', () => {

@@ -19,6 +19,7 @@ import QualificationModal from './components/modals/QualificationModal';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
 import useAppLogic from './hooks/useAppLogic';
 import type { EventModalType } from './types/ui';
+import type { UpcomingEvent } from './shared/types';
 
 const App = () => {
   const {
@@ -55,6 +56,7 @@ const App = () => {
       confirmState,
       recoveryKeyModal,
       recoveryReset,
+      upcomingEvents,
     },
     setters: {
       setYear,
@@ -107,6 +109,7 @@ const App = () => {
       openEditModal,
       handleEditModalSave,
       resetForm,
+      loadUpcomingEvents,
     },
   } = useAppLogic();
 
@@ -166,6 +169,13 @@ const App = () => {
   };
 
   const isCreateMode = editModal.mode === 'create';
+
+  const handleUpcomingEventClick = async (event: UpcomingEvent) => {
+    const employee = dataset?.employees.find((emp) => emp.id === event.employeeId);
+    if (employee) {
+      await handleSelect(employee);
+    }
+  };
 
   if (!appReady.configured || !appReady.unlocked) {
     const authMode: 'setup' | 'login' = appReady.configured ? 'login' : 'setup';
@@ -244,6 +254,8 @@ const App = () => {
             totalFte={totalFte}
             totalHeadcount={totalHeadcount}
             qualifications={qualifications}
+            upcomingEvents={upcomingEvents}
+            onEventClick={handleUpcomingEventClick}
           />
         )}
 
