@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import type { AppState, QualificationType } from '../shared/types';
+import type { AppState, QualificationType, Department } from '../shared/types';
 import type { FormState } from '../types/ui';
 
 type UseAuthParams = {
@@ -12,6 +12,8 @@ type UseAuthParams = {
   setForm: (updater: FormState | ((prev: FormState) => FormState)) => void;
   setQualifications: (list: QualificationType[]) => void;
   setQualificationEdits: (edits: Record<number, string>) => void;
+  setDepartments: (list: Department[]) => void;
+  setDepartmentEdits: (edits: Record<number, string>) => void;
   hydrateBaseHours: (hours?: number | null) => void;
 };
 
@@ -24,6 +26,8 @@ const useAuth = ({
   setForm,
   setQualifications,
   setQualificationEdits,
+  setDepartments,
+  setDepartmentEdits,
   hydrateBaseHours,
 }: UseAuthParams) => {
   const [appReady, setAppReady] = useState<AppState>({
@@ -44,6 +48,18 @@ const useAuth = ({
     [setForm, setQualificationEdits, setQualifications],
   );
 
+  const hydrateDepartments = useCallback(
+    (depts: Department[]) => {
+      setDepartments(depts);
+      const edits: Record<number, string> = {};
+      depts.forEach((d) => {
+        if (d.id) edits[d.id] = d.name;
+      });
+      setDepartmentEdits(edits);
+    },
+    [setDepartmentEdits, setDepartments],
+  );
+
   const bootstrap = useCallback(async () => {
     try {
       const state = await api.auth.getState();
@@ -57,12 +73,14 @@ const useAuth = ({
         }
         const qualis = await api.qualifications.list();
         hydrateQualifications(qualis);
+        const depts = await api.departments.list();
+        hydrateDepartments(depts);
         await refreshDataset(year);
       }
     } catch (err) {
       handleError(err);
     }
-  }, [handleError, hydrateBaseHours, hydrateQualifications, refreshDataset, year]);
+  }, [handleError, hydrateBaseHours, hydrateDepartments, hydrateQualifications, refreshDataset, year]);
 
   useEffect(() => {
     bootstrap();
@@ -82,7 +100,13 @@ const useAuth = ({
         hydrateQualifications(list);
       })
       .catch(handleError);
-  }, [appReady.unlocked, handleError, hydrateQualifications]);
+    api.departments
+      .list()
+      .then((list) => {
+        hydrateDepartments(list);
+      })
+      .catch(handleError);
+  }, [appReady.unlocked, handleError, hydrateDepartments, hydrateQualifications]);
 
   const handleLogin = useCallback(
     async (password: string, mode: 'setup' | 'login') => {

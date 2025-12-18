@@ -17,12 +17,24 @@ import {
 } from '../repositories/employees';
 import { listEvents, saveEvent, deleteEvent, listUpcomingEvents, listEventsInRange } from '../repositories/events';
 import {
+  getExpiringTrainings,
+  getDepartmentStats,
+  getBirthdaysAndAnniversaries,
+} from '../repositories/dashboard';
+import {
   listQualifications,
   addQualification,
   updateQualification,
   reorderQualifications,
   deleteQualification,
 } from '../repositories/qualifications';
+import {
+  listDepartments,
+  addDepartment,
+  updateDepartment,
+  reorderDepartments,
+  deleteDepartment,
+} from '../repositories/departments';
 import { getBaseHours, setBaseHours, getHiddenEventTypes, setHiddenEventTypes } from '../repositories/settings';
 import { exportDatabase, importDatabase, exportData } from '../export';
 import { isUnlocked } from './auth';
@@ -115,6 +127,38 @@ export const registerDataHandlers = (): void => {
     return reorderQualifications(ids);
   });
 
+  // Departments
+  ipcMain.handle('departments:list', () => {
+    ensureDbReady();
+    return listDepartments();
+  });
+
+  ipcMain.handle(
+    'departments:add',
+    (_event, { name, note }: { name: string; note?: string | null }) => {
+      ensureDbReady();
+      return addDepartment(name, note);
+    },
+  );
+
+  ipcMain.handle(
+    'departments:update',
+    (_event, { id, name, note }: { id: number; name: string; note?: string | null }) => {
+      ensureDbReady();
+      return updateDepartment(id, name, note);
+    },
+  );
+
+  ipcMain.handle('departments:delete', (_event, { id }: { id: number }) => {
+    ensureDbReady();
+    return deleteDepartment(id);
+  });
+
+  ipcMain.handle('departments:reorder', (_event, { ids }: { ids: number[] }) => {
+    ensureDbReady();
+    return reorderDepartments(ids);
+  });
+
   // Events
   ipcMain.handle('events:list', (_event, { employeeId }: { employeeId: number }) => {
     ensureDbReady();
@@ -133,6 +177,7 @@ export const registerDataHandlers = (): void => {
         title: string;
         details?: string | null;
         meta?: Record<string, unknown> | null;
+        expiresAt?: string | null;
       },
     ) => {
       ensureDbReady();
@@ -199,6 +244,28 @@ export const registerDataHandlers = (): void => {
     deleteDbFiles();
     return true;
   });
+
+  // Dashboard widgets
+  ipcMain.handle(
+    'dashboard:expiringTrainings',
+    (_event, { withinDays, limit }: { withinDays?: number; limit?: number }) => {
+      ensureDbReady();
+      return getExpiringTrainings(withinDays, limit);
+    }
+  );
+
+  ipcMain.handle('dashboard:departmentStats', (_event, { year }: { year: number }) => {
+    ensureDbReady();
+    return getDepartmentStats(year);
+  });
+
+  ipcMain.handle(
+    'dashboard:birthdaysAnniversaries',
+    (_event, { withinDays, limit }: { withinDays?: number; limit?: number }) => {
+      ensureDbReady();
+      return getBirthdaysAndAnniversaries(withinDays, limit);
+    }
+  );
 
   // DEV: Raw table data
   ipcMain.handle('dev:tables', () => {

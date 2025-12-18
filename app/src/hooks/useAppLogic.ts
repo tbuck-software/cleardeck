@@ -9,6 +9,7 @@ import useEmployees from './useEmployees';
 import useAuth from './useAuth';
 import useUpcomingEvents from './useUpcomingEvents';
 import useCalendar from './useCalendar';
+import useDashboardWidgets from './useDashboardWidgets';
 
 const useAppLogic = () => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
@@ -111,6 +112,8 @@ const useAppLogic = () => {
     setForm: employeeSlice.setters.setForm,
     setQualifications: employeeSlice.setters.setQualifications,
     setQualificationEdits: employeeSlice.setters.setQualificationEdits,
+    setDepartments: employeeSlice.setters.setDepartments,
+    setDepartmentEdits: employeeSlice.setters.setDepartmentEdits,
     hydrateBaseHours: settingsSlice.actions.hydrateBaseHours,
   });
 
@@ -123,13 +126,16 @@ const useAppLogic = () => {
     hiddenEventTypes: upcomingEventsSlice.state.hiddenEventTypes,
   });
 
+  const dashboardWidgetsSlice = useDashboardWidgets({ handleError });
+
   // Load upcoming events and filters when app is unlocked
   useEffect(() => {
     if (authSlice.appReady.unlocked) {
       upcomingEventsSlice.actions.loadHiddenEventTypes();
       upcomingEventsSlice.actions.loadUpcomingEvents();
+      dashboardWidgetsSlice.actions.loadAll(year);
     }
-  }, [authSlice.appReady.unlocked, upcomingEventsSlice.actions]);
+  }, [authSlice.appReady.unlocked, upcomingEventsSlice.actions, dashboardWidgetsSlice.actions, year]);
 
   useEffect(() => {
     if (employeeSlice.state.qualificationFilter === 'all') return;
@@ -192,6 +198,7 @@ const useAppLogic = () => {
       baseHours: settingsSlice.state.baseHours,
       baseHoursInput: settingsSlice.state.baseHoursInput,
       qualifications: employeeSlice.state.qualifications,
+      departments: employeeSlice.state.departments,
       form: employeeSlice.state.form,
       periods: eventSlice.state.periods,
       events: eventSlice.state.events,
@@ -211,6 +218,8 @@ const useAppLogic = () => {
       addNewPeriod: employeeSlice.state.addNewPeriod,
       qualificationEdits: employeeSlice.state.qualificationEdits,
       qualificationModal: employeeSlice.state.qualificationModal,
+      departmentEdits: employeeSlice.state.departmentEdits,
+      departmentModal: employeeSlice.state.departmentModal,
       editModal: employeeSlice.state.editModal,
       addPeriodForm: eventSlice.state.addPeriodForm,
       periodToDelete: eventSlice.state.periodToDelete,
@@ -221,6 +230,7 @@ const useAppLogic = () => {
       upcomingEvents: upcomingEventsSlice.state.upcomingEvents,
       hiddenEventTypes: upcomingEventsSlice.state.hiddenEventTypes,
       calendar: calendarSlice.state,
+      dashboardWidgets: dashboardWidgetsSlice.state,
     },
     setters: {
       setYear,
@@ -231,6 +241,7 @@ const useAppLogic = () => {
       setAddNewPeriod: employeeSlice.setters.setAddNewPeriod,
       setQualificationFilter: employeeSlice.setters.setQualificationFilter,
       setQualificationModal: employeeSlice.setters.setQualificationModal,
+      setDepartmentModal: employeeSlice.setters.setDepartmentModal,
       setEditModal: employeeSlice.setters.setEditModal,
       setSearch: employeeSlice.setters.setSearch,
       setStatusFilter: employeeSlice.setters.setStatusFilter,
@@ -260,6 +271,9 @@ const useAppLogic = () => {
       confirmDeleteQualification: employeeSlice.actions.confirmDeleteQualification,
       handleSaveQualificationModal: employeeSlice.actions.handleSaveQualificationModal,
       reorderQualification: employeeSlice.actions.reorderQualification,
+      confirmDeleteDepartment: employeeSlice.actions.confirmDeleteDepartment,
+      handleSaveDepartmentModal: employeeSlice.actions.handleSaveDepartmentModal,
+      reorderDepartment: employeeSlice.actions.reorderDepartment,
       openRecoveryKey,
       handleCopyRecoveryKey,
       startRecoveryReset,

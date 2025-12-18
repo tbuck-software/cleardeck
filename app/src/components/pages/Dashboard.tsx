@@ -8,10 +8,21 @@ import {
   faUserMinus,
   faPercent,
 } from '@fortawesome/free-solid-svg-icons';
-import type { QualificationType, YearDataset, UpcomingEvent, EmployeeEventType } from '../../shared/types';
+import type {
+  QualificationType,
+  YearDataset,
+  UpcomingEvent,
+  EmployeeEventType,
+  ExpiringTraining,
+  DepartmentStats,
+  BirthdayAnniversary,
+} from '../../shared/types';
 import StatCard from '../ui/StatCard';
 import UpcomingEventsList from '../ui/UpcomingEventsList';
 import EventsFilterDropdown from '../ui/EventsFilterDropdown';
+import ExpiringTrainingsList from '../ui/ExpiringTrainingsList';
+import DepartmentStatsCard from '../ui/DepartmentStatsCard';
+import BirthdaysAnniversariesList from '../ui/BirthdaysAnniversariesList';
 
 type DashboardProps = {
   year: number;
@@ -27,6 +38,11 @@ type DashboardProps = {
   onToggleEventFilter: (type: EmployeeEventType) => void;
   onShowAllEvents: () => void;
   onHideAllEvents: () => void;
+  expiringTrainings: ExpiringTraining[];
+  departmentStats: DepartmentStats[];
+  birthdaysAnniversaries: BirthdayAnniversary[];
+  onTrainingClick: (training: ExpiringTraining) => void;
+  onBirthdayClick: (item: BirthdayAnniversary) => void;
 };
 
 const Dashboard = ({
@@ -42,6 +58,11 @@ const Dashboard = ({
   onToggleEventFilter,
   onShowAllEvents,
   onHideAllEvents,
+  expiringTrainings,
+  departmentStats,
+  birthdaysAnniversaries,
+  onTrainingClick,
+  onBirthdayClick,
 }: DashboardProps) => {
   const fullTimeCount = dataset?.employees.filter((e) => e.fte >= 1).length ?? 0;
   const fullTimePercent =
@@ -136,6 +157,42 @@ const Dashboard = ({
             hasActiveFilters={hiddenEventTypes.length > 0}
             onEventClick={onEventClick}
           />
+        </div>
+
+        <div className="card">
+          <div className="form-header">
+            <div>
+              <p className="eyebrow">Schulungen</p>
+              <h3>Ablaufende Zertifikate</h3>
+            </div>
+          </div>
+          <ExpiringTrainingsList
+            trainings={expiringTrainings}
+            onTrainingClick={onTrainingClick}
+          />
+        </div>
+
+        <div className="card">
+          <div className="form-header">
+            <div>
+              <p className="eyebrow">Team</p>
+              <h3>Geburtstage & Jubiläen</h3>
+            </div>
+          </div>
+          <BirthdaysAnniversariesList
+            items={birthdaysAnniversaries}
+            onItemClick={onBirthdayClick}
+          />
+        </div>
+
+        <div className="card">
+          <div className="form-header">
+            <div>
+              <p className="eyebrow">Organisation</p>
+              <h3>Abteilungen</h3>
+            </div>
+          </div>
+          <DepartmentStatsCard stats={departmentStats} totalFte={totalFte} />
         </div>
 
         <div className="card">
