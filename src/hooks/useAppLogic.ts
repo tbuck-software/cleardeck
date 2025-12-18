@@ -10,6 +10,8 @@ import useAuth from './useAuth';
 import useUpcomingEvents from './useUpcomingEvents';
 import useCalendar from './useCalendar';
 import useDashboardWidgets from './useDashboardWidgets';
+import usePatients from './usePatients';
+import usePatientDashboard from './usePatientDashboard';
 
 const useAppLogic = () => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
@@ -127,14 +129,25 @@ const useAppLogic = () => {
 
   const dashboardWidgetsSlice = useDashboardWidgets({ handleError });
 
+  const patientSlice = usePatients({
+    handleError,
+    setLoading,
+    setToast: showToast,
+    confirmAction,
+  });
+
+  const patientDashboardSlice = usePatientDashboard({ handleError });
+
   // Load upcoming events and filters when app is unlocked
   useEffect(() => {
     if (authSlice.appReady.unlocked) {
       upcomingEventsSlice.actions.loadHiddenEventTypes();
       upcomingEventsSlice.actions.loadUpcomingEvents();
       dashboardWidgetsSlice.actions.loadAll();
+      patientSlice.actions.refreshPatients();
+      patientDashboardSlice.actions.loadAll();
     }
-  }, [authSlice.appReady.unlocked, upcomingEventsSlice.actions, dashboardWidgetsSlice.actions]);
+  }, [authSlice.appReady.unlocked, upcomingEventsSlice.actions, dashboardWidgetsSlice.actions, patientSlice.actions, patientDashboardSlice.actions]);
 
   useEffect(() => {
     if (employeeSlice.state.qualificationFilter === 'all') return;
@@ -227,6 +240,16 @@ const useAppLogic = () => {
       hiddenEventTypes: upcomingEventsSlice.state.hiddenEventTypes,
       calendar: calendarSlice.state,
       dashboardWidgets: dashboardWidgetsSlice.state,
+      // Patient state
+      patients: patientSlice.state.patients,
+      selectedPatient: patientSlice.state.selectedPatient,
+      patientVisits: patientSlice.state.visits,
+      patientForm: patientSlice.state.form,
+      patientPage: patientSlice.state.page,
+      patientSearch: patientSlice.state.search,
+      patientRatingFilter: patientSlice.state.ratingFilter,
+      patientVisitModal: patientSlice.state.visitModal,
+      patientDashboard: patientDashboardSlice.state,
     },
     setters: {
       setYear,
@@ -245,6 +268,12 @@ const useAppLogic = () => {
       setRecoveryKeyModal,
       setRecoveryReset,
       setConfirmState,
+      // Patient setters
+      setPatientForm: patientSlice.setters.setForm,
+      setPatientSearch: patientSlice.setters.setSearch,
+      setPatientRatingFilter: patientSlice.setters.setRatingFilter,
+      setPatientVisitModal: patientSlice.setters.setVisitModal,
+      setPatientPage: patientSlice.setters.setPage,
     },
     derived: {
       filteredEmployees: employeeSlice.derived.filteredEmployees,
@@ -255,6 +284,8 @@ const useAppLogic = () => {
       timelineItems: eventSlice.derived.timelineItems,
       crumbs: employeeSlice.derived.crumbs,
       sidebarPage: employeeSlice.derived.sidebarPage,
+      // Patient derived
+      filteredPatients: patientSlice.derived.filteredPatients,
     },
     actions: {
       goTo: employeeSlice.actions.goTo,
@@ -294,6 +325,16 @@ const useAppLogic = () => {
       showAllEventTypes: upcomingEventsSlice.actions.showAllEventTypes,
       hideAllEventTypes: upcomingEventsSlice.actions.hideAllEventTypes,
       calendarActions: calendarSlice.actions,
+      // Patient actions
+      goToPatients: patientSlice.actions.goToPatients,
+      handleSelectPatient: patientSlice.actions.handleSelectPatient,
+      handleSavePatient: patientSlice.actions.handleSavePatient,
+      confirmDeletePatient: patientSlice.actions.confirmDeletePatient,
+      handleSaveVisit: patientSlice.actions.handleSaveVisit,
+      confirmDeleteVisit: patientSlice.actions.confirmDeleteVisit,
+      openVisitModal: patientSlice.actions.openVisitModal,
+      closeVisitModal: patientSlice.actions.closeVisitModal,
+      refreshPatients: patientSlice.actions.refreshPatients,
     },
   };
 };

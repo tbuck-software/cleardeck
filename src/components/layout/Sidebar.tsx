@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGaugeHigh, faUsers, faGear, faCode, faBars, faXmark, faCalendarDays } from '@fortawesome/free-solid-svg-icons';
+import { faGaugeHigh, faUsers, faGear, faCode, faBars, faXmark, faCalendarDays, faUserInjured } from '@fortawesome/free-solid-svg-icons';
 import type { Page } from '../../types/ui';
 import type { UpdateStatus } from '../../shared/types';
 import logoUrl from '../../assets/logo.png';
@@ -32,6 +32,7 @@ const Sidebar = ({
   const navItems: { key: Page; label: string; icon: any }[] = [
     { key: 'dashboard', label: 'Dashboard', icon: faGaugeHigh },
     { key: 'list', label: 'Team', icon: faUsers },
+    { key: 'patients', label: 'Patient:innen', icon: faUserInjured },
     { key: 'calendar', label: 'Kalender', icon: faCalendarDays },
   ];
 

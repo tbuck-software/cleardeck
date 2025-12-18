@@ -91,6 +91,21 @@ export const api = {
   dev: {
     getTables: () => call('getDevTables', baseApi.getDevTables),
   },
+  patients: {
+    list: () => call('listPatients', baseApi.listPatients),
+    get: (id: number) => call('getPatient', baseApi.getPatient, id),
+    save: (input: Parameters<Api['savePatient']>[0]) =>
+      call('savePatient', baseApi.savePatient, input),
+    delete: (id: number) => call('deletePatient', baseApi.deletePatient, id),
+    listVisits: (patientId: number) => call('listVisits', baseApi.listVisits, patientId),
+    saveVisit: (input: Parameters<Api['saveVisit']>[0]) =>
+      call('saveVisit', baseApi.saveVisit, input),
+    deleteVisit: (id: number, patientId: number) =>
+      call('deleteVisit', baseApi.deleteVisit, id, patientId),
+    getConcerningRatings: (limit?: number) =>
+      call('getConcerningRatings', baseApi.getConcerningRatings, limit),
+    getPatientStats: () => call('getPatientStats', baseApi.getPatientStats),
+  },
 };
 
 export type AppApi = typeof api;

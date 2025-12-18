@@ -154,3 +154,54 @@ export interface UnifiedEvent {
   subtitle?: string;
   urgency?: 'normal' | 'warning' | 'urgent';
 }
+
+// Patient types (QPR 2026)
+
+export type QprRating = 'A' | 'B' | 'C' | 'D';
+
+export interface Patient {
+  id?: number;
+  name: string;
+  birthDate?: string | null;
+  diagnosis?: string | null;
+  qprStatus?: QprRating | null;
+  note?: string | null;
+  createdAt?: string;
+}
+
+export interface PatientVisit {
+  id?: number;
+  patientId: number;
+  visitDate: string;
+  qprRating: QprRating;
+  comment?: string | null;
+  createdAt?: string;
+}
+
+export interface PatientWithLatestVisit extends Patient {
+  latestVisitDate?: string | null;
+  latestQprRating?: QprRating | null;
+  visitCount?: number;
+}
+
+export interface PatientConcerningRating {
+  patientId: number;
+  patientName: string;
+  visitId: number;
+  visitDate: string;
+  qprRating: QprRating;
+  comment?: string | null;
+}
+
+export interface PatientStats {
+  totalPatients: number;
+  byRating: {
+    A: number;
+    B: number;
+    C: number;
+    D: number;
+    unrated: number;
+  };
+  recentVisits: number;
+  concerningCount: number;
+}

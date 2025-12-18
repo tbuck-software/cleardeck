@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import api from '../services/api';
 import type { UpcomingEvent, UnifiedEventType } from '../shared/types';
 
@@ -79,19 +79,24 @@ const useUpcomingEvents = ({ handleError }: UseUpcomingEventsParams) => {
     (event) => !hiddenEventTypes.includes(event.type),
   );
 
+  const actions = useMemo(
+    () => ({
+      loadUpcomingEvents,
+      loadHiddenEventTypes,
+      toggleEventTypeFilter,
+      showAllEventTypes,
+      hideAllEventTypes,
+    }),
+    [loadUpcomingEvents, loadHiddenEventTypes, toggleEventTypeFilter, showAllEventTypes, hideAllEventTypes],
+  );
+
   return {
     state: {
       upcomingEvents: filteredEvents,
       allUpcomingEvents: upcomingEvents,
       hiddenEventTypes,
     },
-    actions: {
-      loadUpcomingEvents,
-      loadHiddenEventTypes,
-      toggleEventTypeFilter,
-      showAllEventTypes,
-      hideAllEventTypes,
-    },
+    actions,
   };
 };
 
