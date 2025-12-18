@@ -11,6 +11,7 @@ import {
   faCakeCandles,
   faAward,
   faCertificate,
+  faClipboardList,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { UnifiedEventType } from '../../shared/types';
@@ -33,6 +34,8 @@ const typeLabels: Record<UnifiedEventType, string> = {
   birthday: 'Geburtstag',
   anniversary: 'Jubiläum',
   'certificate-expiry': 'Zertifikat',
+  'patient-birthday': 'Patient:in Geb.',
+  'patient-visit': 'QPR-Visite',
 };
 
 const typeIcons: Record<UnifiedEventType, IconDefinition> = {
@@ -46,6 +49,8 @@ const typeIcons: Record<UnifiedEventType, IconDefinition> = {
   birthday: faCakeCandles,
   anniversary: faAward,
   'certificate-expiry': faCertificate,
+  'patient-birthday': faCakeCandles,
+  'patient-visit': faClipboardList,
 };
 
 const allEventTypes: UnifiedEventType[] = [
@@ -57,6 +62,8 @@ const allEventTypes: UnifiedEventType[] = [
   'birthday',
   'anniversary',
   'certificate-expiry',
+  'patient-birthday',
+  'patient-visit',
 ];
 
 const EventsFilterDropdown = ({

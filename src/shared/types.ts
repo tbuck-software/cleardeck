@@ -53,13 +53,15 @@ export type UnifiedEventType =
   | EmployeeEventType
   | 'birthday'
   | 'anniversary'
-  | 'certificate-expiry';
+  | 'certificate-expiry'
+  | 'patient-birthday'
+  | 'patient-visit';
 
 export interface EmployeeEvent {
   id?: number;
   employeeId?: number;
   eventDate: string;
-  type: EmployeeEventType;
+  type: EmployeeEventType | UnifiedEventType;
   title: string;
   details?: string | null;
   meta?: Record<string, unknown> | null;
@@ -70,6 +72,8 @@ export interface EmployeeEvent {
 
 export interface UpcomingEvent extends EmployeeEvent {
   employeeName: string;
+  patientId?: number;
+  patientName?: string;
 }
 
 export interface Aggregation {
@@ -146,8 +150,10 @@ export interface BirthdayAnniversary {
 
 export interface UnifiedEvent {
   id: string;
-  employeeId: number;
-  employeeName: string;
+  employeeId?: number;
+  employeeName?: string;
+  patientId?: number;
+  patientName?: string;
   type: UnifiedEventType;
   date: string;
   title: string;
@@ -204,4 +210,20 @@ export interface PatientStats {
   };
   recentVisits: number;
   concerningCount: number;
+}
+
+export interface PatientBirthdayEvent {
+  patientId: number;
+  patientName: string;
+  birthDate: string;
+  date: string;
+}
+
+export interface PatientVisitEvent {
+  visitId: number;
+  patientId: number;
+  patientName: string;
+  visitDate: string;
+  qprRating: QprRating;
+  comment: string | null;
 }

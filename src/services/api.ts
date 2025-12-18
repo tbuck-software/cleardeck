@@ -105,6 +105,10 @@ export const api = {
     getConcerningRatings: (limit?: number) =>
       call('getConcerningRatings', baseApi.getConcerningRatings, limit),
     getPatientStats: () => call('getPatientStats', baseApi.getPatientStats),
+    listBirthdays: (startDate: string, endDate: string) =>
+      call('listPatientBirthdays', baseApi.listPatientBirthdays, startDate, endDate),
+    listVisitsInRange: (startDate: string, endDate: string) =>
+      call('listPatientVisitsInRange', baseApi.listPatientVisitsInRange, startDate, endDate),
   },
 };
 

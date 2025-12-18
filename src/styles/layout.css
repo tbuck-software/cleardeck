@@ -1293,6 +1293,16 @@ button.detail-item.clickable:hover {
   color: #d97706;
 }
 
+.upcoming-event-icon.event-patient-birthday {
+  background: #ffe4e6;
+  color: #e11d48;
+}
+
+.upcoming-event-icon.event-patient-visit {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
 .upcoming-event-content {
   flex: 1;
   min-width: 0;
@@ -1506,6 +1516,14 @@ button.detail-item.clickable:hover {
 
 .filter-icon.event-certificate-expiry {
   color: #0891b2;
+}
+
+.filter-icon.event-patient-birthday {
+  color: #e11d48;
+}
+
+.filter-icon.event-patient-visit {
+  color: #2563eb;
 }
 
 .filter-dropdown-actions {

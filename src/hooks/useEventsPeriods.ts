@@ -3,6 +3,7 @@ import api from '../services/api';
 import type {
   EmploymentPeriod,
   EmployeeEvent,
+  EmployeeEventType,
   EmployeeWithPeriod,
   QualificationType,
   YearDataset,
@@ -133,7 +134,7 @@ const useEventsPeriods = ({
       open: true,
       id: ev.id,
       eventDate: ev.eventDate,
-      type: ev.type,
+      type: ev.type as EmployeeEventType,
       title: ev.title,
       details: ev.details ?? '',
       previousValue: ev.previousValue ?? null,

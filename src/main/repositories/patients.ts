@@ -208,6 +208,70 @@ export const getConcerningRatings = (limit = 10): PatientConcerningRating[] => {
 /**
  * Get patient statistics - for dashboard
  */
+/**
+ * Get upcoming patient birthdays within a date range
+ */
+export const listPatientBirthdays = (
+  startDate: string,
+  endDate: string,
+): { patientId: number; patientName: string; birthDate: string; date: string }[] => {
+  const db = getDb();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const results: { patientId: number; patientName: string; birthDate: string; date: string }[] = [];
+
+  // Get all patients with birth dates
+  const patients = db
+    .prepare(`SELECT id, name, birthDate FROM patients WHERE birthDate IS NOT NULL`)
+    .all() as { id: number; name: string; birthDate: string }[];
+
+  for (const patient of patients) {
+    const birthDate = new Date(patient.birthDate);
+    // Check each year in range
+    for (let year = start.getFullYear(); year <= end.getFullYear(); year++) {
+      const thisYearBirthday = new Date(year, birthDate.getMonth(), birthDate.getDate());
+      if (thisYearBirthday >= start && thisYearBirthday <= end) {
+        results.push({
+          patientId: patient.id,
+          patientName: patient.name,
+          birthDate: patient.birthDate,
+          date: thisYearBirthday.toISOString().slice(0, 10),
+        });
+      }
+    }
+  }
+
+  return results.sort((a, b) => a.date.localeCompare(b.date));
+};
+
+/**
+ * Get patient visits within a date range (for calendar)
+ */
+export const listPatientVisitsInRange = (
+  startDate: string,
+  endDate: string,
+): { visitId: number; patientId: number; patientName: string; visitDate: string; qprRating: QprRating; comment: string | null }[] => {
+  const db = getDb();
+  return db
+    .prepare(
+      `
+      SELECT
+        v.id as visitId,
+        v.patientId,
+        p.name as patientName,
+        v.visitDate,
+        v.qprRating,
+        v.comment
+      FROM patient_visits v
+      INNER JOIN patients p ON v.patientId = p.id
+      WHERE date(v.visitDate) >= date(?)
+        AND date(v.visitDate) <= date(?)
+      ORDER BY v.visitDate ASC
+    `,
+    )
+    .all(startDate, endDate) as { visitId: number; patientId: number; patientName: string; visitDate: string; qprRating: QprRating; comment: string | null }[];
+};
+
 export const getPatientStats = (): PatientStats => {
   const db = getDb();
 

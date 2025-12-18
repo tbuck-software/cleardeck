@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import type {
   ExpiringTraining,
   BirthdayAnniversary,
+  PatientBirthdayEvent,
+  PatientVisitEvent,
 } from '../shared/types';
 
 type UseDashboardWidgetsProps = {
@@ -11,6 +13,8 @@ type UseDashboardWidgetsProps = {
 const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
   const [expiringTrainings, setExpiringTrainings] = useState<ExpiringTraining[]>([]);
   const [birthdaysAnniversaries, setBirthdaysAnniversaries] = useState<BirthdayAnniversary[]>([]);
+  const [patientBirthdays, setPatientBirthdays] = useState<PatientBirthdayEvent[]>([]);
+  const [patientVisits, setPatientVisits] = useState<PatientVisitEvent[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadExpiringTrainings = useCallback(
@@ -37,6 +41,42 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
     [handleError]
   );
 
+  const loadPatientBirthdays = useCallback(
+    async (withinDays = 30) => {
+      try {
+        const today = new Date();
+        const endDate = new Date(today);
+        endDate.setDate(today.getDate() + withinDays);
+        const data = await window.api.listPatientBirthdays(
+          today.toISOString().slice(0, 10),
+          endDate.toISOString().slice(0, 10),
+        );
+        setPatientBirthdays(data);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [handleError]
+  );
+
+  const loadPatientVisits = useCallback(
+    async (withinDays = 30) => {
+      try {
+        const today = new Date();
+        const endDate = new Date(today);
+        endDate.setDate(today.getDate() + withinDays);
+        const data = await window.api.listPatientVisitsInRange(
+          today.toISOString().slice(0, 10),
+          endDate.toISOString().slice(0, 10),
+        );
+        setPatientVisits(data);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [handleError]
+  );
+
   const loadAll = useCallback(
     async () => {
       setLoading(true);
@@ -44,27 +84,33 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
         await Promise.all([
           loadExpiringTrainings(),
           loadBirthdaysAnniversaries(),
+          loadPatientBirthdays(),
+          loadPatientVisits(),
         ]);
       } finally {
         setLoading(false);
       }
     },
-    [loadExpiringTrainings, loadBirthdaysAnniversaries]
+    [loadExpiringTrainings, loadBirthdaysAnniversaries, loadPatientBirthdays, loadPatientVisits]
   );
 
   const actions = useMemo(
     () => ({
       loadExpiringTrainings,
       loadBirthdaysAnniversaries,
+      loadPatientBirthdays,
+      loadPatientVisits,
       loadAll,
     }),
-    [loadExpiringTrainings, loadBirthdaysAnniversaries, loadAll],
+    [loadExpiringTrainings, loadBirthdaysAnniversaries, loadPatientBirthdays, loadPatientVisits, loadAll],
   );
 
   return {
     state: {
       expiringTrainings,
       birthdaysAnniversaries,
+      patientBirthdays,
+      patientVisits,
       loading,
     },
     actions,

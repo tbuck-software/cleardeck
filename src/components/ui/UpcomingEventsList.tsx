@@ -12,6 +12,7 @@ import {
   faAward,
   faCertificate,
   faExclamationTriangle,
+  faClipboardList,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import type { UnifiedEvent, UnifiedEventType } from '../../shared/types';
@@ -33,6 +34,8 @@ const typeLabels: Record<UnifiedEventType, string> = {
   birthday: 'Geburtstag',
   anniversary: 'Jubiläum',
   'certificate-expiry': 'Zertifikat',
+  'patient-birthday': 'Patient:in Geb.',
+  'patient-visit': 'QPR-Visite',
 };
 
 const typeIcons: Record<UnifiedEventType, IconDefinition> = {
@@ -46,6 +49,8 @@ const typeIcons: Record<UnifiedEventType, IconDefinition> = {
   birthday: faCakeCandles,
   anniversary: faAward,
   'certificate-expiry': faCertificate,
+  'patient-birthday': faCakeCandles,
+  'patient-visit': faClipboardList,
 };
 
 const formatDate = (dateStr: string): string => {
@@ -113,7 +118,7 @@ const UpcomingEventsList = ({
                     {isToday ? 'Heute' : isTomorrow ? 'Morgen' : formatDate(event.date)}
                   </span>
                 </div>
-                <div className="upcoming-event-employee">{event.employeeName}</div>
+                <div className="upcoming-event-employee">{event.patientName ?? event.employeeName}</div>
                 {event.subtitle && (
                   <div className="upcoming-event-title muted">{event.subtitle}</div>
                 )}

@@ -244,6 +244,27 @@
   color: #64748b;
 }
 
+.calendar-event.event-birthday,
+.calendar-event.event-patient-birthday {
+  background: #ffe4e6;
+  color: #e11d48;
+}
+
+.calendar-event.event-anniversary {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.calendar-event.event-certificate-expiry {
+  background: #cffafe;
+  color: #0891b2;
+}
+
+.calendar-event.event-patient-visit {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
 /* Week View */
 .calendar-week {
   height: 100%;
@@ -407,6 +428,27 @@
 .calendar-week-event.event-custom {
   background: #f1f5f9;
   color: #64748b;
+}
+
+.calendar-week-event.event-birthday,
+.calendar-week-event.event-patient-birthday {
+  background: #ffe4e6;
+  color: #e11d48;
+}
+
+.calendar-week-event.event-anniversary {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.calendar-week-event.event-certificate-expiry {
+  background: #cffafe;
+  color: #0891b2;
+}
+
+.calendar-week-event.event-patient-visit {
+  background: #dbeafe;
+  color: #2563eb;
 }
 
 /* Year View */

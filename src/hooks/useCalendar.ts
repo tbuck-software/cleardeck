@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import type { UpcomingEvent, UnifiedEventType } from '../shared/types';
+import type { UpcomingEvent, UnifiedEventType, PatientBirthdayEvent, PatientVisitEvent } from '../shared/types';
 import type { CalendarView } from '../types/ui';
 
 type UseCalendarParams = {
@@ -125,8 +125,44 @@ const useCalendar = ({ handleError, hiddenEventTypes, enabled = true }: UseCalen
     setLoading(true);
     try {
       const { startDate, endDate } = getDateRange(currentDate, view);
-      const allEvents = await api.events.listRange(startDate, endDate);
-      setEvents(allEvents);
+      const [employeeEvents, patientBirthdays, patientVisits] = await Promise.all([
+        api.events.listRange(startDate, endDate),
+        api.patients.listBirthdays(startDate, endDate),
+        api.patients.listVisitsInRange(startDate, endDate),
+      ]);
+
+      // Transform patient birthdays to calendar events
+      const birthdayEvents: UpcomingEvent[] = patientBirthdays.map((item: PatientBirthdayEvent) => {
+        const birthYear = new Date(item.birthDate).getFullYear();
+        const eventYear = new Date(item.date).getFullYear();
+        const age = eventYear - birthYear;
+        return {
+          id: 0,
+          employeeId: undefined,
+          eventDate: item.date,
+          type: 'patient-birthday' as const,
+          title: 'Geburtstag',
+          details: `${age}. Geburtstag`,
+          employeeName: item.patientName,
+          patientId: item.patientId,
+          patientName: item.patientName,
+        };
+      });
+
+      // Transform patient visits to calendar events
+      const visitEvents: UpcomingEvent[] = patientVisits.map((item: PatientVisitEvent) => ({
+        id: item.visitId,
+        employeeId: undefined,
+        eventDate: item.visitDate,
+        type: 'patient-visit' as const,
+        title: `QPR-Visite (${item.qprRating})`,
+        details: item.comment,
+        employeeName: item.patientName,
+        patientId: item.patientId,
+        patientName: item.patientName,
+      }));
+
+      setEvents([...employeeEvents, ...birthdayEvents, ...visitEvents]);
     } catch (err) {
       handleError(err);
     } finally {
