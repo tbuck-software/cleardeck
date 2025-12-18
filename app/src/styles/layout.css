@@ -1294,3 +1294,164 @@ button.detail-item.clickable:hover {
   border-radius: 6px;
   white-space: nowrap;
 }
+
+/* Upcoming Events Container & Toolbar */
+.upcoming-events-container {
+  margin-top: 16px;
+}
+
+.upcoming-events-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.filter-dropdown-container {
+  position: relative;
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-toggle.has-filters {
+  color: var(--accent-strong);
+}
+
+.filter-badge {
+  background: var(--accent);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+.filter-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid var(--card-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  min-width: 200px;
+  z-index: 100;
+  padding: 8px;
+}
+
+.filter-dropdown-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 12px 4px;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text);
+  transition: background 0.15s;
+}
+
+.filter-option:hover {
+  background: #f1f5f9;
+}
+
+.filter-option.hidden {
+  color: var(--muted);
+}
+
+.filter-option.hidden .filter-icon {
+  opacity: 0.4;
+}
+
+.filter-check {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--card-border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: white;
+  transition: all 0.15s;
+}
+
+.filter-check.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.filter-icon {
+  font-size: 14px;
+}
+
+.filter-icon.event-join {
+  color: #16a34a;
+}
+
+.filter-icon.event-leave {
+  color: #dc2626;
+}
+
+.filter-icon.event-care-visit {
+  color: #d97706;
+}
+
+.filter-icon.event-emergency-training {
+  color: #2563eb;
+}
+
+.filter-icon.event-custom {
+  color: #64748b;
+}
+
+.filter-dropdown-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 4px 4px;
+  margin-top: 8px;
+  border-top: 1px solid var(--card-border);
+}
+
+.filter-action-btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--card-border);
+  background: #f8fafc;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--text);
+}
+
+.filter-action-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.filter-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

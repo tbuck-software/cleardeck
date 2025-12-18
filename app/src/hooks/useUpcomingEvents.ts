@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import api from '../services/api';
-import type { UpcomingEvent } from '../shared/types';
+import type { UpcomingEvent, EmployeeEventType } from '../shared/types';
 
 type UseUpcomingEventsParams = {
   handleError: (err: unknown) => void;
@@ -8,6 +8,16 @@ type UseUpcomingEventsParams = {
 
 const useUpcomingEvents = ({ handleError }: UseUpcomingEventsParams) => {
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
+  const [hiddenEventTypes, setHiddenEventTypes] = useState<EmployeeEventType[]>([]);
+
+  const loadHiddenEventTypes = useCallback(async () => {
+    try {
+      const types = await api.settings.getHiddenEventTypes();
+      setHiddenEventTypes(types as EmployeeEventType[]);
+    } catch (err) {
+      handleError(err);
+    }
+  }, [handleError]);
 
   const loadUpcomingEvents = useCallback(
     async (limit: number = 10) => {
@@ -21,12 +31,63 @@ const useUpcomingEvents = ({ handleError }: UseUpcomingEventsParams) => {
     [handleError],
   );
 
+  const toggleEventTypeFilter = useCallback(
+    async (type: EmployeeEventType) => {
+      try {
+        const newHidden = hiddenEventTypes.includes(type)
+          ? hiddenEventTypes.filter((t) => t !== type)
+          : [...hiddenEventTypes, type];
+        await api.settings.setHiddenEventTypes(newHidden);
+        setHiddenEventTypes(newHidden);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [hiddenEventTypes, handleError],
+  );
+
+  const showAllEventTypes = useCallback(async () => {
+    try {
+      await api.settings.setHiddenEventTypes([]);
+      setHiddenEventTypes([]);
+    } catch (err) {
+      handleError(err);
+    }
+  }, [handleError]);
+
+  const hideAllEventTypes = useCallback(async () => {
+    try {
+      const allTypes: EmployeeEventType[] = [
+        'join',
+        'leave',
+        'care-visit',
+        'emergency-training',
+        'custom',
+      ];
+      await api.settings.setHiddenEventTypes(allTypes);
+      setHiddenEventTypes(allTypes);
+    } catch (err) {
+      handleError(err);
+    }
+  }, [handleError]);
+
+  // Filter events based on hidden types
+  const filteredEvents = upcomingEvents.filter(
+    (event) => !hiddenEventTypes.includes(event.type),
+  );
+
   return {
     state: {
-      upcomingEvents,
+      upcomingEvents: filteredEvents,
+      allUpcomingEvents: upcomingEvents,
+      hiddenEventTypes,
     },
     actions: {
       loadUpcomingEvents,
+      loadHiddenEventTypes,
+      toggleEventTypeFilter,
+      showAllEventTypes,
+      hideAllEventTypes,
     },
   };
 };
