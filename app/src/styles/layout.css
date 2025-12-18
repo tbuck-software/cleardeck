@@ -531,6 +531,22 @@ tbody tr.selected td {
   gap: 24px;
 }
 
+.dashboard-masonry {
+  columns: 2;
+  column-gap: 24px;
+}
+
+.dashboard-masonry > .card {
+  break-inside: avoid;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1080px) {
+  .dashboard-masonry {
+    columns: 1;
+  }
+}
+
 .quick-actions {
   display: flex;
   gap: 8px;
