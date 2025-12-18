@@ -6,9 +6,13 @@ import {
   faStethoscope,
   faKitMedical,
   faCalendarDay,
+  faCakeCandles,
+  faAward,
+  faCertificate,
+  faClipboardList,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import type { UpcomingEvent, EmployeeEventType } from '../../../shared/types';
+import type { UpcomingEvent, UnifiedEventType } from '../../../shared/types';
 
 type WeekViewProps = {
   currentDate: Date;
@@ -16,7 +20,7 @@ type WeekViewProps = {
   onEventClick: (event: UpcomingEvent) => void;
 };
 
-const typeIcons: Record<EmployeeEventType, IconDefinition> = {
+const typeIcons: Record<UnifiedEventType, IconDefinition> = {
   join: faArrowRightToBracket,
   leave: faArrowRightFromBracket,
   'name-change': faArrowRightToBracket,
@@ -24,9 +28,14 @@ const typeIcons: Record<EmployeeEventType, IconDefinition> = {
   'care-visit': faStethoscope,
   'emergency-training': faKitMedical,
   custom: faCalendarDay,
+  birthday: faCakeCandles,
+  anniversary: faAward,
+  'certificate-expiry': faCertificate,
+  'patient-birthday': faCakeCandles,
+  'patient-visit': faClipboardList,
 };
 
-const typeLabels: Record<EmployeeEventType, string> = {
+const typeLabels: Record<UnifiedEventType, string> = {
   join: 'Eintritt',
   leave: 'Austritt',
   'name-change': 'Namensänderung',
@@ -34,6 +43,11 @@ const typeLabels: Record<EmployeeEventType, string> = {
   'care-visit': 'Pflegevisite',
   'emergency-training': 'Notfallschulung',
   custom: 'Ereignis',
+  birthday: 'Geburtstag',
+  anniversary: 'Jubiläum',
+  'certificate-expiry': 'Zertifikat',
+  'patient-birthday': 'Patient:in Geb.',
+  'patient-visit': 'QPR-Visite',
 };
 
 const weekDaysFull = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
@@ -89,22 +103,25 @@ const WeekView = ({ currentDate, eventsByDate, onEventClick }: WeekViewProps) =>
                 </span>
               </div>
               <div className="calendar-week-day-events">
-                {dayEvents.map((event) => (
-                  <button
-                    key={event.id}
-                    className={`calendar-week-event event-${event.type}`}
-                    onClick={() => onEventClick(event)}
-                  >
-                    <div className="calendar-week-event-header">
-                      <FontAwesomeIcon icon={typeIcons[event.type]} className="calendar-week-event-icon" />
-                      <span className="calendar-week-event-type">{typeLabels[event.type]}</span>
-                    </div>
-                    <div className="calendar-week-event-name">{event.employeeName}</div>
-                    {event.title && event.title !== typeLabels[event.type] && (
-                      <div className="calendar-week-event-title">{event.title}</div>
-                    )}
-                  </button>
-                ))}
+                {dayEvents.map((event) => {
+                  const displayName = event.patientName ?? event.employeeName;
+                  return (
+                    <button
+                      key={event.id}
+                      className={`calendar-week-event event-${event.type}`}
+                      onClick={() => onEventClick(event)}
+                    >
+                      <div className="calendar-week-event-header">
+                        <FontAwesomeIcon icon={typeIcons[event.type]} className="calendar-week-event-icon" />
+                        <span className="calendar-week-event-type">{typeLabels[event.type]}</span>
+                      </div>
+                      <div className="calendar-week-event-name">{displayName}</div>
+                      {event.title && event.title !== typeLabels[event.type] && (
+                        <div className="calendar-week-event-title">{event.title}</div>
+                      )}
+                    </button>
+                  );
+                })}
                 {dayEvents.length === 0 && (
                   <div className="calendar-week-empty">Keine Termine</div>
                 )}

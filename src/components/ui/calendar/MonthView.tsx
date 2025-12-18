@@ -6,9 +6,13 @@ import {
   faStethoscope,
   faKitMedical,
   faCalendarDay,
+  faCakeCandles,
+  faAward,
+  faCertificate,
+  faClipboardList,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import type { UpcomingEvent, EmployeeEventType } from '../../../shared/types';
+import type { UpcomingEvent, UnifiedEventType } from '../../../shared/types';
 
 type MonthViewProps = {
   currentDate: Date;
@@ -16,7 +20,7 @@ type MonthViewProps = {
   onEventClick: (event: UpcomingEvent) => void;
 };
 
-const typeIcons: Record<EmployeeEventType, IconDefinition> = {
+const typeIcons: Record<UnifiedEventType, IconDefinition> = {
   join: faArrowRightToBracket,
   leave: faArrowRightFromBracket,
   'name-change': faArrowRightToBracket,
@@ -24,6 +28,11 @@ const typeIcons: Record<EmployeeEventType, IconDefinition> = {
   'care-visit': faStethoscope,
   'emergency-training': faKitMedical,
   custom: faCalendarDay,
+  birthday: faCakeCandles,
+  anniversary: faAward,
+  'certificate-expiry': faCertificate,
+  'patient-birthday': faCakeCandles,
+  'patient-visit': faClipboardList,
 };
 
 const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
@@ -106,17 +115,20 @@ const MonthView = ({ currentDate, eventsByDate, onEventClick }: MonthViewProps) 
                 </span>
               </div>
               <div className="calendar-day-events">
-                {dayEvents.slice(0, 3).map((event) => (
-                  <button
-                    key={event.id}
-                    className={`calendar-event event-${event.type}`}
-                    onClick={() => onEventClick(event)}
-                    title={`${event.title} - ${event.employeeName}`}
-                  >
-                    <FontAwesomeIcon icon={typeIcons[event.type]} className="calendar-event-icon" />
-                    <span className="calendar-event-name">{event.employeeName}</span>
-                  </button>
-                ))}
+                {dayEvents.slice(0, 3).map((event) => {
+                  const displayName = event.patientName ?? event.employeeName;
+                  return (
+                    <button
+                      key={event.id}
+                      className={`calendar-event event-${event.type}`}
+                      onClick={() => onEventClick(event)}
+                      title={`${event.title} - ${displayName}`}
+                    >
+                      <FontAwesomeIcon icon={typeIcons[event.type]} className="calendar-event-icon" />
+                      <span className="calendar-event-name">{displayName}</span>
+                    </button>
+                  );
+                })}
                 {dayEvents.length > 3 && (
                   <div className="calendar-day-more">+{dayEvents.length - 3} weitere</div>
                 )}

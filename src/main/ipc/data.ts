@@ -38,6 +38,8 @@ import {
   deleteVisit,
   getConcerningRatings,
   getPatientStats,
+  listPatientBirthdays,
+  listPatientVisitsInRange,
 } from '../repositories/patients';
 import { exportDatabase, importDatabase, exportData } from '../export';
 import { isUnlocked } from './auth';
@@ -321,6 +323,23 @@ export const registerDataHandlers = (): void => {
     ensureDbReady();
     return getPatientStats();
   });
+
+  // Patient events for calendar/upcoming
+  ipcMain.handle(
+    'patients:listBirthdays',
+    (_event, { startDate, endDate }: { startDate: string; endDate: string }) => {
+      ensureDbReady();
+      return listPatientBirthdays(startDate, endDate);
+    },
+  );
+
+  ipcMain.handle(
+    'patients:listVisitsInRange',
+    (_event, { startDate, endDate }: { startDate: string; endDate: string }) => {
+      ensureDbReady();
+      return listPatientVisitsInRange(startDate, endDate);
+    },
+  );
 };
 
 

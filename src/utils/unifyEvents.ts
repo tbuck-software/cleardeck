@@ -4,6 +4,8 @@ import type {
   BirthdayAnniversary,
   UnifiedEvent,
   UnifiedEventType,
+  PatientBirthdayEvent,
+  PatientVisitEvent,
 } from '../shared/types';
 
 const getUrgencyFromDays = (days: number): 'normal' | 'warning' | 'urgent' => {
@@ -17,6 +19,8 @@ export const unifyEvents = (
   expiringTrainings: ExpiringTraining[],
   birthdaysAnniversaries: BirthdayAnniversary[],
   hiddenEventTypes: UnifiedEventType[],
+  patientBirthdays: PatientBirthdayEvent[] = [],
+  patientVisits: PatientVisitEvent[] = [],
 ): UnifiedEvent[] => {
   const unified: UnifiedEvent[] = [];
 
@@ -67,6 +71,38 @@ export const unifyEvents = (
       date: item.date,
       title: item.type === 'birthday' ? 'Geburtstag' : 'Jubiläum',
       subtitle,
+    });
+  }
+
+  // Convert patient birthdays
+  for (const item of patientBirthdays) {
+    if (hiddenEventTypes.includes('patient-birthday')) continue;
+    const birthYear = new Date(item.birthDate).getFullYear();
+    const eventYear = new Date(item.date).getFullYear();
+    const age = eventYear - birthYear;
+
+    unified.push({
+      id: `patient-birthday-${item.patientId}-${item.date}`,
+      patientId: item.patientId,
+      patientName: item.patientName,
+      type: 'patient-birthday',
+      date: item.date,
+      title: 'Geburtstag',
+      subtitle: `${age}. Geburtstag`,
+    });
+  }
+
+  // Convert patient visits
+  for (const item of patientVisits) {
+    if (hiddenEventTypes.includes('patient-visit')) continue;
+    unified.push({
+      id: `patient-visit-${item.visitId}`,
+      patientId: item.patientId,
+      patientName: item.patientName,
+      type: 'patient-visit',
+      date: item.visitDate,
+      title: `QPR-Visite (${item.qprRating})`,
+      subtitle: item.comment ?? undefined,
     });
   }
 

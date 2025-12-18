@@ -212,18 +212,40 @@ const App = () => {
         dashboardWidgets.expiringTrainings,
         dashboardWidgets.birthdaysAnniversaries,
         hiddenEventTypes,
+        dashboardWidgets.patientBirthdays,
+        dashboardWidgets.patientVisits,
       ),
-    [upcomingEvents, dashboardWidgets.expiringTrainings, dashboardWidgets.birthdaysAnniversaries, hiddenEventTypes],
+    [upcomingEvents, dashboardWidgets.expiringTrainings, dashboardWidgets.birthdaysAnniversaries, hiddenEventTypes, dashboardWidgets.patientBirthdays, dashboardWidgets.patientVisits],
   );
 
   const handleUnifiedEventClick = async (event: UnifiedEvent) => {
+    // Handle patient events
+    if (event.patientId) {
+      const patient = patients.find((p) => p.id === event.patientId);
+      if (patient) {
+        await handleSelectPatient(patient);
+        goTo('patients');
+      }
+      return;
+    }
+    // Handle employee events
     const employee = dataset?.employees.find((emp) => emp.id === event.employeeId);
     if (employee) {
       await handleSelect(employee);
     }
   };
 
-  const handleCalendarEventClick = async (event: { employeeId?: number }) => {
+  const handleCalendarEventClick = async (event: { employeeId?: number; patientId?: number }) => {
+    // Handle patient events
+    if (event.patientId) {
+      const patient = patients.find((p) => p.id === event.patientId);
+      if (patient) {
+        await handleSelectPatient(patient);
+        goTo('patients');
+      }
+      return;
+    }
+    // Handle employee events
     const employee = dataset?.employees.find((emp) => emp.id === event.employeeId);
     if (employee) {
       await handleSelect(employee);

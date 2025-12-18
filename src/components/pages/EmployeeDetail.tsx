@@ -16,7 +16,7 @@ import {
   faCalendarDay,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import type { EmployeeEvent, EmployeeWithPeriod, EmploymentPeriod } from '../../shared/types';
+import type { EmployeeEvent, EmployeeEventType, EmployeeWithPeriod, EmploymentPeriod } from '../../shared/types';
 import type { TimelineItem } from '../../types/ui';
 import { fteHelp } from '../../constants';
 import Badge from '../ui/Badge';
@@ -33,7 +33,7 @@ type EmployeeDetailProps = {
 
 type DiffLine = { text: string; kind: 'del' | 'add' | 'same' };
 
-const typeLabels: Record<EmployeeEvent['type'], string> = {
+const typeLabels: Record<EmployeeEventType, string> = {
   join: 'Eintritt',
   leave: 'Austritt',
   'name-change': 'Namensänderung',
@@ -43,7 +43,7 @@ const typeLabels: Record<EmployeeEvent['type'], string> = {
   custom: 'Ereignis',
 };
 
-const typeIcons: Record<EmployeeEvent['type'], IconDefinition> = {
+const typeIcons: Record<EmployeeEventType, IconDefinition> = {
   join: faArrowRightToBracket,
   leave: faArrowRightFromBracket,
   'name-change': faSignature,

@@ -17,6 +17,8 @@ import type {
   PatientWithLatestVisit,
   PatientConcerningRating,
   PatientStats,
+  PatientBirthdayEvent,
+  PatientVisitEvent,
   QprRating,
 } from './shared/types';
 
@@ -122,6 +124,10 @@ export type Api = {
   // Dashboard - Patient widgets
   getConcerningRatings: (limit?: number) => Promise<PatientConcerningRating[]>;
   getPatientStats: () => Promise<PatientStats>;
+
+  // Patient events for calendar/upcoming
+  listPatientBirthdays: (startDate: string, endDate: string) => Promise<PatientBirthdayEvent[]>;
+  listPatientVisitsInRange: (startDate: string, endDate: string) => Promise<PatientVisitEvent[]>;
 };
 
 const api: Api = {
@@ -184,6 +190,12 @@ const api: Api = {
   // Dashboard - Patient widgets
   getConcerningRatings: (limit) => ipcRenderer.invoke('dashboard:concerningRatings', { limit }),
   getPatientStats: () => ipcRenderer.invoke('dashboard:patientStats'),
+
+  // Patient events for calendar/upcoming
+  listPatientBirthdays: (startDate, endDate) =>
+    ipcRenderer.invoke('patients:listBirthdays', { startDate, endDate }),
+  listPatientVisitsInRange: (startDate, endDate) =>
+    ipcRenderer.invoke('patients:listVisitsInRange', { startDate, endDate }),
 };
 
 contextBridge.exposeInMainWorld('api', api);

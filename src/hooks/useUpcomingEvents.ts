@@ -66,6 +66,8 @@ const useUpcomingEvents = ({ handleError }: UseUpcomingEventsParams) => {
         'birthday',
         'anniversary',
         'certificate-expiry',
+        'patient-birthday',
+        'patient-visit',
       ];
       await api.settings.setHiddenEventTypes(allTypes);
       setHiddenEventTypes(allTypes);
