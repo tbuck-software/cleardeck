@@ -1,5 +1,6 @@
 import React from 'react';
 import type { EmploymentPeriod } from '../../shared/types';
+import { formatDateDE } from '../../utils/dateFormat';
 
 type HistoryListProps = {
   items: EmploymentPeriod[];
@@ -16,7 +17,7 @@ const HistoryList = ({ items }: HistoryListProps) => (
       <div className="history-row" key={item.id ?? `${item.startDate}-${item.endDate}`}>
         <div>
           <div className="history-title">
-            {item.startDate} – {item.endDate ?? 'aktuell'}
+            {formatDateDE(item.startDate)} – {item.endDate ? formatDateDE(item.endDate) : 'aktuell'}
           </div>
           <div className="history-meta">
             Quali: {item.qualification ?? '—'}

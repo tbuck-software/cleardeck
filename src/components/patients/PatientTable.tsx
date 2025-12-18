@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash, faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-svg-icons';
 import type { PatientWithLatestVisit } from '../../shared/types';
 import QprBadge from '../ui/QprBadge';
+import { formatDateDE } from '../../utils/dateFormat';
 
 type PatientTableProps = {
   patients: PatientWithLatestVisit[];
@@ -126,12 +127,12 @@ const PatientTable = ({ patients, onSelect, onDelete, selectedId }: PatientTable
               className={selectedId === patient.id ? 'selected' : undefined}
             >
               <td>{patient.name}</td>
-              <td>{patient.birthDate ?? '-'}</td>
+              <td>{formatDateDE(patient.birthDate)}</td>
               <td>{patient.diagnosis ?? '-'}</td>
               <td>
                 <QprBadge rating={patient.latestQprRating ?? patient.qprStatus} />
               </td>
-              <td>{patient.latestVisitDate ?? '-'}</td>
+              <td>{formatDateDE(patient.latestVisitDate)}</td>
               <td>{patient.visitCount ?? 0}</td>
               <td>
                 <button

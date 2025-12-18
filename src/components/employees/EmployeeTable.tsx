@@ -4,6 +4,7 @@ import { faTrash, faSort, faSortUp, faSortDown } from '@fortawesome/free-solid-s
 import type { EmployeeWithPeriod } from '../../shared/types';
 import { fteHelp } from '../../constants';
 import Badge from '../ui/Badge';
+import { formatDateDE } from '../../utils/dateFormat';
 
 type EmployeeTableProps = {
   employees: EmployeeWithPeriod[];
@@ -131,8 +132,8 @@ const EmployeeTable = ({ employees, onSelect, onDelete, selectedId }: EmployeeTa
             >
               <td>{emp.name}</td>
               <td>{emp.qualification}</td>
-              <td>{emp.startDate}</td>
-              <td>{emp.endDate ?? '—'}</td>
+              <td>{formatDateDE(emp.startDate)}</td>
+              <td>{emp.endDate ? formatDateDE(emp.endDate) : '—'}</td>
               <td>{emp.fte !== undefined && emp.fte !== null ? Math.min(1, Number(emp.fte)).toFixed(2) : '—'}</td>
               <td>{emp.weeklyHours ?? '—'}</td>
               <td>
