@@ -64,80 +64,78 @@ const Dashboard = ({
         </div>
       </div>
 
-      <div className="dashboard-grid">
-        <div className="stack">
-          <div className="card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">Kennzahlen</p>
-                <h3>Jahr im Blick</h3>
-              </div>
-            </div>
-            <div className="grid stats-grid dashboard-stats">
-              <StatCard
-                label="Gesamt VZÄ"
-                value={`${totalFte.toFixed(2)}`}
-                sub="Summe aller Stellenanteile"
-                icon={faChartPie}
-              />
-              <StatCard
-                label="Team"
-                value={`${totalHeadcount}`}
-                sub="im gewählten Jahr"
-                icon={faUsers}
-              />
-              <StatCard
-                label="Ø VZÄ je Person"
-                value={averageFte.toFixed(2)}
-                sub="Durchschnittliche Auslastung"
-                icon={faBriefcase}
-              />
-              <StatCard
-                label="Qualifikationen"
-                value={`${dataset?.aggregation.categories.length ?? 0}`}
-                sub="mit VZÄ im Jahr"
-                icon={faGraduationCap}
-              />
-              <StatCard
-                label="Vollzeit-Quote"
-                value={`${fullTimePercent}%`}
-                sub={`${fullTimeCount} Vollzeit-Kräfte`}
-                icon={faPercent}
-              />
-              <StatCard
-                label="Neu im Jahr"
-                value={`${newHires}`}
-                sub="Neueintritte"
-                icon={faUserPlus}
-              />
-              <StatCard
-                label="Ausgeschieden"
-                value={`${leavers}`}
-                sub="Austritte im Jahr"
-                icon={faUserMinus}
-              />
+      <div className="dashboard-masonry">
+        <div className="card">
+          <div className="form-header">
+            <div>
+              <p className="eyebrow">Kennzahlen</p>
+              <h3>Jahr im Blick</h3>
             </div>
           </div>
-
-          <div className="card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">Termine</p>
-                <h3>Bevorstehende Ereignisse</h3>
-              </div>
-              <EventsFilterDropdown
-                hiddenEventTypes={hiddenEventTypes}
-                onToggleFilter={onToggleEventFilter}
-                onShowAll={onShowAllEvents}
-                onHideAll={onHideAllEvents}
-              />
-            </div>
-            <UpcomingEventsList
-              events={upcomingEvents}
-              hasActiveFilters={hiddenEventTypes.length > 0}
-              onEventClick={onEventClick}
+          <div className="grid stats-grid dashboard-stats">
+            <StatCard
+              label="Gesamt VZÄ"
+              value={`${totalFte.toFixed(2)}`}
+              sub="Summe aller Stellenanteile"
+              icon={faChartPie}
+            />
+            <StatCard
+              label="Team"
+              value={`${totalHeadcount}`}
+              sub="im gewählten Jahr"
+              icon={faUsers}
+            />
+            <StatCard
+              label="Ø VZÄ je Person"
+              value={averageFte.toFixed(2)}
+              sub="Durchschnittliche Auslastung"
+              icon={faBriefcase}
+            />
+            <StatCard
+              label="Qualifikationen"
+              value={`${dataset?.aggregation.categories.length ?? 0}`}
+              sub="mit VZÄ im Jahr"
+              icon={faGraduationCap}
+            />
+            <StatCard
+              label="Vollzeit-Quote"
+              value={`${fullTimePercent}%`}
+              sub={`${fullTimeCount} Vollzeit-Kräfte`}
+              icon={faPercent}
+            />
+            <StatCard
+              label="Neu im Jahr"
+              value={`${newHires}`}
+              sub="Neueintritte"
+              icon={faUserPlus}
+            />
+            <StatCard
+              label="Ausgeschieden"
+              value={`${leavers}`}
+              sub="Austritte im Jahr"
+              icon={faUserMinus}
             />
           </div>
+        </div>
+
+        <div className="card">
+          <div className="form-header">
+            <div>
+              <p className="eyebrow">Termine</p>
+              <h3>Bevorstehende Ereignisse</h3>
+            </div>
+            <EventsFilterDropdown
+              hiddenEventTypes={hiddenEventTypes}
+              onToggleFilter={onToggleEventFilter}
+              onShowAll={onShowAllEvents}
+              onHideAll={onHideAllEvents}
+            />
+          </div>
+          <UpcomingEventsList
+            events={upcomingEvents}
+            hasActiveFilters={hiddenEventTypes.length > 0}
+            onEventClick={onEventClick}
+          />
         </div>
 
         <div className="card">
