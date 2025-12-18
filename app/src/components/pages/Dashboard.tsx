@@ -11,6 +11,7 @@ import {
 import type { QualificationType, YearDataset, UpcomingEvent, EmployeeEventType } from '../../shared/types';
 import StatCard from '../ui/StatCard';
 import UpcomingEventsList from '../ui/UpcomingEventsList';
+import EventsFilterDropdown from '../ui/EventsFilterDropdown';
 
 type DashboardProps = {
   year: number;
@@ -124,14 +125,17 @@ const Dashboard = ({
                 <p className="eyebrow">Termine</p>
                 <h3>Bevorstehende Ereignisse</h3>
               </div>
+              <EventsFilterDropdown
+                hiddenEventTypes={hiddenEventTypes}
+                onToggleFilter={onToggleEventFilter}
+                onShowAll={onShowAllEvents}
+                onHideAll={onHideAllEvents}
+              />
             </div>
             <UpcomingEventsList
               events={upcomingEvents}
-              hiddenEventTypes={hiddenEventTypes}
+              hasActiveFilters={hiddenEventTypes.length > 0}
               onEventClick={onEventClick}
-              onToggleFilter={onToggleEventFilter}
-              onShowAll={onShowAllEvents}
-              onHideAll={onHideAllEvents}
             />
           </div>
         </div>

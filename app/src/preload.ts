@@ -54,6 +54,7 @@ export type Api = {
   }) => Promise<EmployeeEvent[]>;
   deleteEvent: (id: number, employeeId: number) => Promise<EmployeeEvent[]>;
   listUpcomingEvents: (fromDate?: string, limit?: number) => Promise<UpcomingEvent[]>;
+  listEventsInRange: (startDate: string, endDate: string) => Promise<UpcomingEvent[]>;
   exportData: (
     year: number,
     format: ExportFormat,
@@ -96,6 +97,7 @@ const api: Api = {
   saveEvent: (input) => ipcRenderer.invoke('events:save', input),
   deleteEvent: (id, employeeId) => ipcRenderer.invoke('events:delete', { id, employeeId }),
   listUpcomingEvents: (fromDate, limit) => ipcRenderer.invoke('events:listUpcoming', { fromDate, limit }),
+  listEventsInRange: (startDate, endDate) => ipcRenderer.invoke('events:listRange', { startDate, endDate }),
   exportData: (year, format) => ipcRenderer.invoke('data:export', { year, format }),
   openDocument: (path) => ipcRenderer.invoke('data:openDocument', { path }),
   listQualifications: () => ipcRenderer.invoke('qualifications:list'),

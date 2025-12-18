@@ -12,6 +12,7 @@ import EmployeeForm from './components/pages/EmployeeForm';
 import EmployeeDetail from './components/pages/EmployeeDetail';
 import SettingsPage from './components/pages/SettingsPage';
 import DevPage from './components/pages/DevPage';
+import CalendarPage from './components/pages/CalendarPage';
 import ConfirmModal from './components/modals/ConfirmModal';
 import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
@@ -58,6 +59,7 @@ const App = () => {
       recoveryReset,
       upcomingEvents,
       hiddenEventTypes,
+      calendar,
     },
     setters: {
       setYear,
@@ -114,6 +116,7 @@ const App = () => {
       toggleEventTypeFilter,
       showAllEventTypes,
       hideAllEventTypes,
+      calendarActions,
     },
   } = useAppLogic();
 
@@ -242,7 +245,7 @@ const App = () => {
             <h1>{pageTitle[page]}</h1>
             <p className="subtitle">{pageSubtitle[page]}</p>
           </div>
-          {page !== 'settings' && page !== 'view' && (
+          {page !== 'settings' && page !== 'view' && page !== 'calendar' && (
             <div className="controls">
               <YearSelector year={year} onChange={setYear} currentYear={currentYear} />
             </div>
@@ -328,6 +331,22 @@ const App = () => {
         )}
 
         {page === 'dev' && <DevPage />}
+
+        {page === 'calendar' && (
+          <CalendarPage
+            currentDate={calendar.currentDate}
+            view={calendar.view}
+            eventsByDate={calendar.eventsByDate}
+            periodLabel={calendar.periodLabel}
+            loading={calendar.loading}
+            onViewChange={calendarActions.setView}
+            onPrev={calendarActions.prevPeriod}
+            onNext={calendarActions.nextPeriod}
+            onToday={calendarActions.goToToday}
+            onMonthClick={calendarActions.goToMonth}
+            onEventClick={handleUpcomingEventClick}
+          />
+        )}
 
         {(page === 'new' || page === 'edit') && (
           <EmployeeForm
