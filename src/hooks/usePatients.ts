@@ -1,9 +1,11 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
 import type { PatientWithLatestVisit, PatientVisit, QprRating } from '../shared/types';
-import type { ConfirmActionOptions, PatientFormState, Page, VisitModalState } from '../types/ui';
+import type { ConfirmActionOptions, PatientModalState, VisitModalState } from '../types/ui';
 
-export const emptyPatientForm = (): PatientFormState => ({
+export const emptyPatientModal = (): PatientModalState => ({
+  open: false,
+  mode: 'create',
   name: '',
   birthDate: '',
   diagnosis: '',
@@ -38,9 +40,10 @@ const usePatients = ({
 }: UsePatientsParams) => {
   const [patients, setPatients] = useState<PatientWithLatestVisit[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<PatientWithLatestVisit | null>(null);
+  const selectedPatientRef = useRef(selectedPatient);
+  selectedPatientRef.current = selectedPatient;
   const [visits, setVisits] = useState<PatientVisit[]>([]);
-  const [form, setForm] = useState<PatientFormState>(emptyPatientForm());
-  const [page, setPage] = useState<Page>('patients');
+  const [patientModal, setPatientModal] = useState<PatientModalState>(emptyPatientModal());
   const [search, setSearch] = useState('');
   const [ratingFilter, setRatingFilter] = useState<'all' | QprRating>('all');
   const [visitModal, setVisitModal] = useState<VisitModalState>(emptyVisitModal());
@@ -69,48 +72,45 @@ const usePatients = ({
   const handleSelectPatient = useCallback(
     async (patient: PatientWithLatestVisit) => {
       setSelectedPatient(patient);
-      setForm({
-        id: patient.id,
-        name: patient.name,
-        birthDate: patient.birthDate ?? '',
-        diagnosis: patient.diagnosis ?? '',
-        qprStatus: patient.qprStatus ?? '',
-        note: patient.note ?? '',
-      });
       if (patient.id) {
         await loadVisits(patient.id);
       }
-      setPage('patient-view');
     },
     [loadVisits],
   );
 
   const handleSavePatient = useCallback(async () => {
-    if (!form.name.trim()) {
+    if (!patientModal.name.trim()) {
       handleError(new Error('Name darf nicht leer sein.'));
       return;
     }
     setLoading(true);
     try {
       const updated = await api.patients.save({
-        id: form.id,
-        name: form.name,
-        birthDate: form.birthDate || null,
-        diagnosis: form.diagnosis || null,
-        qprStatus: (form.qprStatus as QprRating) || null,
-        note: form.note || null,
+        id: patientModal.id,
+        name: patientModal.name,
+        birthDate: patientModal.birthDate || null,
+        diagnosis: patientModal.diagnosis || null,
+        qprStatus: (patientModal.qprStatus as QprRating) || null,
+        note: patientModal.note || null,
       });
       setPatients(updated);
+      // Update selectedPatient if we edited the currently selected patient
+      if (patientModal.mode === 'edit' && patientModal.id) {
+        const refreshed = updated.find((p) => p.id === patientModal.id);
+        if (refreshed) {
+          setSelectedPatient(refreshed);
+        }
+      }
       setToast('Patient:in gespeichert.');
-      setPage('patients');
-      setForm(emptyPatientForm());
+      setPatientModal(emptyPatientModal());
     } catch (err) {
       handleError(err);
     } finally {
       setLoading(false);
       setTimeout(() => setToast(null), 2000);
     }
-  }, [form, handleError, setLoading, setToast]);
+  }, [patientModal, handleError, setLoading, setToast]);
 
   const handleDeletePatient = useCallback(
     async (id: number) => {
@@ -119,8 +119,7 @@ const usePatients = ({
         const updated = await api.patients.delete(id);
         setPatients(updated);
         setSelectedPatient(null);
-        setForm(emptyPatientForm());
-        setPage('patients');
+        setPatientModal(emptyPatientModal());
         setToast('Patient:in geloescht.');
       } catch (err) {
         handleError(err);
@@ -162,8 +161,8 @@ const usePatients = ({
       // Refresh patients to update latestQprRating
       const updatedPatients = await api.patients.list();
       setPatients(updatedPatients);
-      // Update selected patient if it exists
-      if (selectedPatient?.id === visitModal.patientId) {
+      // Update selected patient if it exists (use ref to avoid dependency)
+      if (selectedPatientRef.current?.id === visitModal.patientId) {
         const refreshed = updatedPatients.find((p) => p.id === visitModal.patientId);
         if (refreshed) setSelectedPatient(refreshed);
       }
@@ -175,7 +174,7 @@ const usePatients = ({
       setLoading(false);
       setTimeout(() => setToast(null), 2000);
     }
-  }, [handleError, selectedPatient, setLoading, setToast, visitModal]);
+  }, [handleError, setLoading, setToast, visitModal]);
 
   const handleDeleteVisit = useCallback(
     async (id: number, patientId: number) => {
@@ -216,20 +215,34 @@ const usePatients = ({
     });
   }, [patients, search, ratingFilter]);
 
-  const goToPatients = useCallback(
-    (target: Page) => {
-      if (target === 'patient-new') {
-        setForm(emptyPatientForm());
-        setSelectedPatient(null);
-      }
-      if (target === 'patient-edit' && !form.id) {
-        return;
-      }
-      if (target === 'patient-view' && !selectedPatient) return;
-      setPage(target);
-    },
-    [form.id, selectedPatient],
-  );
+  const openCreatePatientModal = useCallback(() => {
+    setPatientModal({
+      open: true,
+      mode: 'create',
+      name: '',
+      birthDate: '',
+      diagnosis: '',
+      qprStatus: '',
+      note: '',
+    });
+  }, []);
+
+  const openEditPatientModal = useCallback((patient: PatientWithLatestVisit) => {
+    setPatientModal({
+      open: true,
+      mode: 'edit',
+      id: patient.id,
+      name: patient.name,
+      birthDate: patient.birthDate ?? '',
+      diagnosis: patient.diagnosis ?? '',
+      qprStatus: patient.qprStatus ?? '',
+      note: patient.note ?? '',
+    });
+  }, []);
+
+  const closePatientModal = useCallback(() => {
+    setPatientModal(emptyPatientModal());
+  }, []);
 
   const openVisitModal = useCallback(
     (patientId: number, visit?: PatientVisit) => {
@@ -268,7 +281,9 @@ const usePatients = ({
       confirmDeletePatient,
       handleSaveVisit,
       confirmDeleteVisit,
-      goToPatients,
+      openCreatePatientModal,
+      openEditPatientModal,
+      closePatientModal,
       openVisitModal,
       closeVisitModal,
     }),
@@ -280,7 +295,9 @@ const usePatients = ({
       confirmDeletePatient,
       handleSaveVisit,
       confirmDeleteVisit,
-      goToPatients,
+      openCreatePatientModal,
+      openEditPatientModal,
+      closePatientModal,
       openVisitModal,
       closeVisitModal,
     ],
@@ -291,8 +308,7 @@ const usePatients = ({
       patients,
       selectedPatient,
       visits,
-      form,
-      page,
+      patientModal,
       search,
       ratingFilter,
       visitModal,
@@ -301,8 +317,7 @@ const usePatients = ({
       setPatients,
       setSelectedPatient,
       setVisits,
-      setForm,
-      setPage,
+      setPatientModal,
       setSearch,
       setRatingFilter,
       setVisitModal,

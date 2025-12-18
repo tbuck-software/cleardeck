@@ -26,15 +26,12 @@ const VisitModal = ({ modal, onChange, onClose, onSave, onDelete }: VisitModalPr
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <div className="modal-icon">
-            <FontAwesomeIcon icon={faCalendarCheck} />
-          </div>
-          <h3>{modal.id ? 'Visite bearbeiten' : 'Neue Visite'}</h3>
+    <div className="modal-backdrop">
+      <div className="modal">
+        <div className="modal-icon">
+          <FontAwesomeIcon icon={faCalendarCheck} />
         </div>
-
+        <h3>{modal.id ? 'Visite bearbeiten' : 'Neue Visite'}</h3>
         <div className="modal-body">
           <label>
             Datum*
@@ -69,7 +66,7 @@ const VisitModal = ({ modal, onChange, onClose, onSave, onDelete }: VisitModalPr
           </label>
         </div>
 
-        <div className="modal-footer">
+        <div className="modal-actions" style={{ display: 'flex', justifyContent: 'space-between' }}>
           <div>
             {modal.id && onDelete && (
               <button
@@ -81,7 +78,7 @@ const VisitModal = ({ modal, onChange, onClose, onSave, onDelete }: VisitModalPr
               </button>
             )}
           </div>
-          <div className="modal-actions">
+          <div className="inline-row compact">
             <button className="ghost-button" onClick={onClose}>
               Abbrechen
             </button>

@@ -15,13 +15,11 @@ import DevPage from './components/pages/DevPage';
 import CalendarPage from './components/pages/CalendarPage';
 import PatientList from './components/pages/PatientList';
 import PatientDetail from './components/pages/PatientDetail';
-import PatientForm from './components/patients/PatientForm';
 import VisitModal from './components/patients/VisitModal';
 import ConfirmModal from './components/modals/ConfirmModal';
 import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
 import QualificationModal from './components/modals/QualificationModal';
-import { emptyPatientForm } from './hooks/usePatients';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
 import { unifyEvents } from './utils/unifyEvents';
 import useAppLogic from './hooks/useAppLogic';
@@ -70,8 +68,7 @@ const App = () => {
       patients,
       selectedPatient,
       patientVisits,
-      patientForm,
-      patientPage,
+      patientModal,
       patientSearch,
       patientRatingFilter,
       patientVisitModal,
@@ -94,11 +91,11 @@ const App = () => {
       setRecoveryReset,
       setConfirmState,
       // Patient setters
-      setPatientForm,
+      setPatientModal,
+      setSelectedPatient,
       setPatientSearch,
       setPatientRatingFilter,
       setPatientVisitModal,
-      setPatientPage,
     },
     derived: { filteredEmployees, averageFte, totalFte, totalHeadcount, displayStart, timelineItems, crumbs, sidebarPage, filteredPatients },
     actions: {
@@ -138,12 +135,14 @@ const App = () => {
       hideAllEventTypes,
       calendarActions,
       // Patient actions
-      goToPatients,
       handleSelectPatient,
       handleSavePatient,
       confirmDeletePatient,
       handleSaveVisit,
       confirmDeleteVisit,
+      openCreatePatientModal,
+      openEditPatientModal,
+      closePatientModal,
       openVisitModal,
       closeVisitModal,
     },
@@ -266,7 +265,7 @@ const App = () => {
     <div className="layout">
       <Sidebar
         current={sidebarPage}
-        onNavigate={goTo}
+        onNavigate={(p) => { if (p === 'patients') setSelectedPatient(null); goTo(p); }}
         updateStatus={updateStatus}
         onInstallUpdate={handleInstallUpdate}
         onSnoozeUpdate={handleSnoozeUpdate}
@@ -276,23 +275,27 @@ const App = () => {
         <header className="topbar">
           <div>
             <div className="breadcrumbs">
-              {crumbs().map((c, idx) => (
+              {(page === 'patients' && selectedPatient ? [
+                { label: 'Dashboard', page: 'dashboard' as const },
+                { label: 'Patient:innen', page: 'patients' as const },
+                { label: selectedPatient.name },
+              ] : crumbs()).map((c, idx, arr) => (
                 <span key={`${c.label}-${idx}`}>
                   {c.page ? (
-                    <button className="crumb-link" onClick={() => goTo(c.page!)}>
+                    <button className="crumb-link" onClick={() => c.page === 'patients' ? setSelectedPatient(null) : goTo(c.page!)}>
                       {c.label}
                     </button>
                   ) : (
                     <span className="crumb-current">{c.label}</span>
                   )}
-                  {idx < crumbs().length - 1 && <span className="crumb-sep">/</span>}
+                  {idx < arr.length - 1 && <span className="crumb-sep">/</span>}
                 </span>
               ))}
             </div>
-            <h1>{pageTitle[page]}</h1>
-            <p className="subtitle">{pageSubtitle[page]}</p>
+            <h1>{page === 'patients' && selectedPatient ? selectedPatient.name : pageTitle[page]}</h1>
+            <p className="subtitle">{page === 'patients' && selectedPatient ? (selectedPatient.diagnosis || 'Patient:in Details') : pageSubtitle[page]}</p>
           </div>
-          {page !== 'settings' && page !== 'view' && page !== 'calendar' && (
+          {page !== 'settings' && page !== 'view' && page !== 'calendar' && !(page === 'patients' && selectedPatient) && (
             <div className="controls">
               <YearSelector year={year} onChange={setYear} currentYear={currentYear} />
             </div>
@@ -395,41 +398,27 @@ const App = () => {
           />
         )}
 
-        {page === 'patients' && (
+        {page === 'patients' && !selectedPatient && (
           <PatientList
             search={patientSearch}
             ratingFilter={patientRatingFilter}
             filteredPatients={filteredPatients}
-            selectedId={patientForm.id}
+            selectedId={patientModal.id}
             onSearchChange={setPatientSearch}
             onRatingChange={setPatientRatingFilter}
-            onCreate={() => goToPatients('patient-new')}
+            onCreate={openCreatePatientModal}
             onSelect={handleSelectPatient}
             onDelete={(id) => confirmDeletePatient(id)}
           />
         )}
 
-        {page === 'patient-view' && selectedPatient && (
+        {page === 'patients' && selectedPatient && (
           <PatientDetail
             patient={selectedPatient}
             visits={patientVisits}
-            onBack={() => goToPatients('patients')}
-            onEdit={() => goToPatients('patient-edit')}
+            onEdit={() => openEditPatientModal(selectedPatient)}
             onAddVisit={() => openVisitModal(selectedPatient.id!)}
             onSelectVisit={(visit) => openVisitModal(selectedPatient.id!, visit)}
-          />
-        )}
-
-        {(page === 'patient-new' || page === 'patient-edit') && (
-          <PatientForm
-            page={page}
-            form={patientForm}
-            loading={loading}
-            onChange={setPatientForm}
-            onReset={() => setPatientForm(emptyPatientForm())}
-            onSave={handleSavePatient}
-            onDelete={patientForm.id ? () => confirmDeletePatient(patientForm.id) : undefined}
-            onBack={() => goToPatients('patients')}
           />
         )}
 
@@ -765,6 +754,60 @@ const App = () => {
                     Speichern
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {patientModal.open && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-icon">
+              <FontAwesomeIcon icon={faPlus} />
+            </div>
+            <h3>{patientModal.mode === 'create' ? 'Neue:r Patient:in' : 'Patient:in bearbeiten'}</h3>
+            <div className="modal-body">
+              <label>
+                Name*
+                <input
+                  value={patientModal.name}
+                  onChange={(e) => setPatientModal((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="Vor- und Nachname"
+                />
+              </label>
+              <label>
+                Geburtsdatum
+                <input
+                  type="date"
+                  value={patientModal.birthDate}
+                  onChange={(e) => setPatientModal((prev) => ({ ...prev, birthDate: e.target.value }))}
+                />
+              </label>
+              <label className="full-width">
+                Diagnose
+                <input
+                  value={patientModal.diagnosis}
+                  onChange={(e) => setPatientModal((prev) => ({ ...prev, diagnosis: e.target.value }))}
+                  placeholder="Hauptdiagnose oder Pflegegrund"
+                />
+              </label>
+              <label className="full-width">
+                Notiz / Bemerkung
+                <textarea
+                  value={patientModal.note}
+                  onChange={(e) => setPatientModal((prev) => ({ ...prev, note: e.target.value }))}
+                  placeholder="Besonderheiten, Angehoerige, Kontakte"
+                />
+              </label>
+            </div>
+            <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div className="inline-row compact">
+                <button className="ghost-button" onClick={closePatientModal}>
+                  Abbrechen
+                </button>
+                <button className="primary" onClick={handleSavePatient}>
+                  {patientModal.mode === 'create' ? 'Anlegen' : 'Speichern'}
+                </button>
               </div>
             </div>
           </div>

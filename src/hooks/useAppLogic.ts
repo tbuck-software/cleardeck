@@ -138,16 +138,32 @@ const useAppLogic = () => {
 
   const patientDashboardSlice = usePatientDashboard({ handleError });
 
+  // Store actions in refs to avoid dependency changes triggering the effect
+  const loadActionsRef = useRef({
+    loadHiddenEventTypes: upcomingEventsSlice.actions.loadHiddenEventTypes,
+    loadUpcomingEvents: upcomingEventsSlice.actions.loadUpcomingEvents,
+    loadDashboardWidgets: dashboardWidgetsSlice.actions.loadAll,
+    refreshPatients: patientSlice.actions.refreshPatients,
+    loadPatientDashboard: patientDashboardSlice.actions.loadAll,
+  });
+  loadActionsRef.current = {
+    loadHiddenEventTypes: upcomingEventsSlice.actions.loadHiddenEventTypes,
+    loadUpcomingEvents: upcomingEventsSlice.actions.loadUpcomingEvents,
+    loadDashboardWidgets: dashboardWidgetsSlice.actions.loadAll,
+    refreshPatients: patientSlice.actions.refreshPatients,
+    loadPatientDashboard: patientDashboardSlice.actions.loadAll,
+  };
+
   // Load upcoming events and filters when app is unlocked
   useEffect(() => {
     if (authSlice.appReady.unlocked) {
-      upcomingEventsSlice.actions.loadHiddenEventTypes();
-      upcomingEventsSlice.actions.loadUpcomingEvents();
-      dashboardWidgetsSlice.actions.loadAll();
-      patientSlice.actions.refreshPatients();
-      patientDashboardSlice.actions.loadAll();
+      loadActionsRef.current.loadHiddenEventTypes();
+      loadActionsRef.current.loadUpcomingEvents();
+      loadActionsRef.current.loadDashboardWidgets();
+      loadActionsRef.current.refreshPatients();
+      loadActionsRef.current.loadPatientDashboard();
     }
-  }, [authSlice.appReady.unlocked, upcomingEventsSlice.actions, dashboardWidgetsSlice.actions, patientSlice.actions, patientDashboardSlice.actions]);
+  }, [authSlice.appReady.unlocked]);
 
   useEffect(() => {
     if (employeeSlice.state.qualificationFilter === 'all') return;
@@ -244,8 +260,7 @@ const useAppLogic = () => {
       patients: patientSlice.state.patients,
       selectedPatient: patientSlice.state.selectedPatient,
       patientVisits: patientSlice.state.visits,
-      patientForm: patientSlice.state.form,
-      patientPage: patientSlice.state.page,
+      patientModal: patientSlice.state.patientModal,
       patientSearch: patientSlice.state.search,
       patientRatingFilter: patientSlice.state.ratingFilter,
       patientVisitModal: patientSlice.state.visitModal,
@@ -269,11 +284,11 @@ const useAppLogic = () => {
       setRecoveryReset,
       setConfirmState,
       // Patient setters
-      setPatientForm: patientSlice.setters.setForm,
+      setPatientModal: patientSlice.setters.setPatientModal,
+      setSelectedPatient: patientSlice.setters.setSelectedPatient,
       setPatientSearch: patientSlice.setters.setSearch,
       setPatientRatingFilter: patientSlice.setters.setRatingFilter,
       setPatientVisitModal: patientSlice.setters.setVisitModal,
-      setPatientPage: patientSlice.setters.setPage,
     },
     derived: {
       filteredEmployees: employeeSlice.derived.filteredEmployees,
@@ -326,12 +341,14 @@ const useAppLogic = () => {
       hideAllEventTypes: upcomingEventsSlice.actions.hideAllEventTypes,
       calendarActions: calendarSlice.actions,
       // Patient actions
-      goToPatients: patientSlice.actions.goToPatients,
       handleSelectPatient: patientSlice.actions.handleSelectPatient,
       handleSavePatient: patientSlice.actions.handleSavePatient,
       confirmDeletePatient: patientSlice.actions.confirmDeletePatient,
       handleSaveVisit: patientSlice.actions.handleSaveVisit,
       confirmDeleteVisit: patientSlice.actions.confirmDeleteVisit,
+      openCreatePatientModal: patientSlice.actions.openCreatePatientModal,
+      openEditPatientModal: patientSlice.actions.openEditPatientModal,
+      closePatientModal: patientSlice.actions.closePatientModal,
       openVisitModal: patientSlice.actions.openVisitModal,
       closeVisitModal: patientSlice.actions.closeVisitModal,
       refreshPatients: patientSlice.actions.refreshPatients,
