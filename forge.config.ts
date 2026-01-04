@@ -64,7 +64,9 @@ const config: ForgeConfig = {
             [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
             [FuseV1Options.EnableNodeCliInspectArguments]: false,
             [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-            [FuseV1Options.OnlyLoadAppFromAsar]: true,
+            // OnlyLoadAppFromAsar must be false for Squirrel.Windows updates to work
+            // Squirrel.exe needs to create temporary files outside the ASAR during updates
+            [FuseV1Options.OnlyLoadAppFromAsar]: false,
           }),
         ]
       : []),
