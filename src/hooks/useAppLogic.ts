@@ -236,6 +236,7 @@ const useAppLogic = () => {
       toast,
       error,
       updateStatus: settingsSlice.state.updateStatus,
+      lastUpdateCheckAt: settingsSlice.state.lastUpdateCheckAt,
       dbMessage: settingsSlice.state.dbMessage,
       snoozeUpdates: settingsSlice.state.snoozeUpdates,
       appInfo: settingsSlice.state.appInfo,

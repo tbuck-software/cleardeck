@@ -27,6 +27,7 @@ type SettingsPageProps = {
   dbMessage: string | null;
   baseHoursInput: string;
   updateStatus: UpdateStatus;
+  lastUpdateCheckAt: string | null;
   appInfo: AppInfo | null;
   onOpenQualificationModal: (payload: QualificationModalPayload) => void;
   onReorderQualification: (orderedIds: number[]) => void | Promise<void>;
@@ -50,6 +51,7 @@ const SettingsPage = ({
   dbMessage,
   baseHoursInput,
   updateStatus,
+  lastUpdateCheckAt,
   appInfo,
   onOpenQualificationModal,
   onReorderQualification,
@@ -66,6 +68,39 @@ const SettingsPage = ({
 }: SettingsPageProps) => {
   const [dragQualificationId, setDragQualificationId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('general');
+  const currentVersion = appInfo ? `v${appInfo.version}` : 'unbekannt';
+  const availableVersion =
+    'version' in updateStatus && updateStatus.version ? `v${updateStatus.version}` : null;
+  const releasesUrl = appInfo ? `${appInfo.github.replace(/\/$/, '')}/releases` : null;
+  const targetReleaseUrl =
+    appInfo && availableVersion
+      ? `${appInfo.github.replace(/\/$/, '')}/releases/tag/${availableVersion}`
+      : releasesUrl;
+  const lastCheckLabel = lastUpdateCheckAt
+    ? new Intl.DateTimeFormat('de-DE', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      }).format(new Date(lastUpdateCheckAt))
+    : 'noch keine';
+
+  const updateCopy = (() => {
+    if (updateStatus.state === 'available') {
+      return `Update ${availableVersion ?? ''} verfuegbar. Aktiv installiert ist weiterhin ${currentVersion}.`;
+    }
+    if (updateStatus.state === 'downloading') {
+      return `Lade ${availableVersion ?? 'Update'} (${Math.round(updateStatus.progress ?? 0)}%) ... Aktuell laeuft ${currentVersion}.`;
+    }
+    if (updateStatus.state === 'downloaded') {
+      return `${availableVersion ?? 'Das Update'} ist heruntergeladen. Aktiv bleibt ${currentVersion}, bis du installierst und neu startest.`;
+    }
+    if (updateStatus.state === 'not-available') {
+      return `Keine neueren Updates gefunden. Installiert ist ${currentVersion}.`;
+    }
+    if (updateStatus.state === 'error') {
+      return `Update-Fehler: ${updateStatus.message}`;
+    }
+    return `Installiert ist ${currentVersion}. Updates werden beim Start, stuendlich und bei Fokus geprueft.`;
+  })();
 
   const tabs: { id: TabId; label: string; icon: any }[] = [
     { id: 'general', label: 'Allgemein', icon: faCog },
@@ -142,20 +177,37 @@ const SettingsPage = ({
                   </button>
                   {updateStatus.state === 'downloaded' && (
                     <button className="primary" onClick={onInstallUpdate}>
-                      Installieren
+                      Installieren & neu starten
                     </button>
                   )}
                 </div>
+                <div className="form-grid" style={{ gap: 6 }}>
+                  <p className="subtitle small" style={{ margin: 0 }}>
+                    Installierte Version: <strong>{currentVersion}</strong>
+                  </p>
+                  <p className="subtitle small" style={{ margin: 0 }}>
+                    Letzte Pruefung: <strong>{lastCheckLabel}</strong>
+                  </p>
+                  {availableVersion && (
+                    <p className="subtitle small" style={{ margin: 0 }}>
+                      Zielversion: <strong>{availableVersion}</strong>
+                    </p>
+                  )}
+                </div>
                 <p className="subtitle small">
-                  {updateStatus.state === 'available' && `Update ${updateStatus.version ? `v${updateStatus.version}` : ''} verfügbar.`}
-                  {updateStatus.state === 'downloading' &&
-                    `Lade ${updateStatus.version ? `v${updateStatus.version}` : 'Update'} (${Math.round(updateStatus.progress ?? 0)}%) …`}
-                  {updateStatus.state === 'downloaded' &&
-                    `Update ${updateStatus.version ? `v${updateStatus.version}` : ''} heruntergeladen.`}
-                  {updateStatus.state === 'not-available' && 'Keine neueren Updates gefunden.'}
-                  {updateStatus.state === 'error' && `Update-Fehler: ${updateStatus.message}`}
-                  {updateStatus.state === 'idle' && 'Updates werden beim Start, stündlich und bei Fokus geprüft.'}
+                  {updateCopy}
                 </p>
+                {targetReleaseUrl && (
+                  <a
+                    href={targetReleaseUrl}
+                    className="ghost-button"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ textAlign: 'center' }}
+                  >
+                    Release auf GitHub oeffnen
+                  </a>
+                )}
               </div>
             </div>
           </>

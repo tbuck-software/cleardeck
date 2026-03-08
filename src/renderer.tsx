@@ -46,6 +46,7 @@ const App = () => {
       toast,
       error,
       updateStatus,
+      lastUpdateCheckAt,
       dbMessage,
       snoozeUpdates,
       appInfo,
@@ -73,7 +74,6 @@ const App = () => {
       patientSearch,
       patientRatingFilter,
       patientVisitModal,
-      patientDashboard,
     },
     setters: {
       setYear,
@@ -380,6 +380,7 @@ const App = () => {
             dbMessage={dbMessage}
             baseHoursInput={baseHoursInput}
             updateStatus={updateStatus}
+            lastUpdateCheckAt={lastUpdateCheckAt}
             appInfo={appInfo}
             onOpenQualificationModal={(payload) =>
               setQualificationModal({

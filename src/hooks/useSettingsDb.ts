@@ -30,6 +30,7 @@ const useSettingsDb = ({
   const [baseHoursInput, setBaseHoursInput] = useState<string>('36');
   const [dbMessage, setDbMessage] = useState<string | null>(null);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' });
+  const [lastUpdateCheckAt, setLastUpdateCheckAt] = useState<string | null>(null);
   const [snoozeUpdates, setSnoozeUpdates] = useState(false);
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
 
@@ -157,6 +158,14 @@ const useSettingsDb = ({
   useEffect(() => {
     const unsubscribe = api.updates.onStatus((status) => {
       setUpdateStatus(status);
+      if (
+        status.state === 'available' ||
+        status.state === 'not-available' ||
+        status.state === 'downloaded' ||
+        status.state === 'error'
+      ) {
+        setLastUpdateCheckAt(new Date().toISOString());
+      }
     });
 
     const runCheck = () => {
@@ -202,6 +211,7 @@ const useSettingsDb = ({
       baseHoursInput,
       dbMessage,
       updateStatus,
+      lastUpdateCheckAt,
       snoozeUpdates,
       appInfo,
     },
