@@ -8,10 +8,12 @@ import { app, BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
 
 import type { UpdateStatus } from '../shared/types';
+import { getPackagedUpdateConfig, resolveUpdateSource } from './updateSource';
 
 let updaterInitialized = false;
 let updateFeedConfigured = false;
 let latestUpdateVersion: string | undefined;
+let updateSetupError: string | null = null;
 
 /**
  * Send update status to the renderer process
@@ -22,6 +24,43 @@ export const sendUpdateStatus = (mainWindow: BrowserWindow | null, status: Updat
   }
 };
 
+const configureUpdateSource = (): void => {
+  if (updateFeedConfigured || updateSetupError) {
+    return;
+  }
+
+  const source = resolveUpdateSource({
+    updateFeedUrl: process.env.UPDATE_FEED_URL,
+    ghToken: process.env.GH_TOKEN,
+    packagedConfig: getPackagedUpdateConfig(process.resourcesPath),
+  });
+
+  if (source.kind === 'generic') {
+    autoUpdater.setFeedURL({ provider: 'generic', url: source.url, channel: 'latest' });
+    updateFeedConfigured = true;
+    return;
+  }
+
+  if (source.kind === 'github') {
+    autoUpdater.setFeedURL({
+      provider: 'github',
+      owner: source.owner,
+      repo: source.repo,
+      private: source.private,
+      token: source.token,
+    });
+    updateFeedConfigured = true;
+    return;
+  }
+
+  if (source.kind === 'packaged') {
+    updateFeedConfigured = true;
+    return;
+  }
+
+  updateSetupError = source.reason;
+};
+
 /**
  * Initialize the auto-updater
  */
@@ -30,21 +69,7 @@ export const initAutoUpdater = (mainWindow: BrowserWindow | null): void => {
     return;
   }
   updaterInitialized = true;
-
-  const feedUrl = process.env.UPDATE_FEED_URL;
-  if (feedUrl) {
-    autoUpdater.setFeedURL({ provider: 'generic', url: feedUrl, channel: 'latest' });
-  } else {
-    // GitHub releases (private repo needs GH_TOKEN)
-    autoUpdater.setFeedURL({
-      provider: 'github',
-      owner: 'Rasalas',
-      repo: 'employee-db',
-      private: true,
-      token: process.env.GH_TOKEN,
-    });
-  }
-  updateFeedConfigured = true;
+  configureUpdateSource();
 
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = false;
@@ -108,20 +133,13 @@ export const checkForUpdates = async (mainWindow: BrowserWindow | null): Promise
     initAutoUpdater(mainWindow);
   }
 
-  if (!updateFeedConfigured) {
-    const feedUrl = process.env.UPDATE_FEED_URL;
-    if (feedUrl) {
-      autoUpdater.setFeedURL({ provider: 'generic', url: feedUrl, channel: 'latest' });
-    } else {
-      autoUpdater.setFeedURL({
-        provider: 'github',
-        owner: 'Rasalas',
-        repo: 'employee-db',
-        private: true,
-        token: process.env.GH_TOKEN,
-      });
-    }
-    updateFeedConfigured = true;
+  if (!updateFeedConfigured && !updateSetupError) {
+    configureUpdateSource();
+  }
+
+  if (updateSetupError) {
+    sendUpdateStatus(mainWindow, { state: 'error', message: updateSetupError });
+    return false;
   }
 
   await autoUpdater.checkForUpdates();
@@ -142,5 +160,4 @@ export const installUpdate = (): boolean => {
  * Check if updater is initialized
  */
 export const isUpdaterInitialized = (): boolean => updaterInitialized;
-
 
