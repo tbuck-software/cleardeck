@@ -23,6 +23,8 @@ const typeLabels: Record<Exclude<EventModalType, 'period'>, string> = {
   leave: 'Austritt',
   'name-change': 'Namensänderung',
   'note-change': 'Notizänderung',
+  'fte-change': 'VZÄ-Änderung',
+  'weekly-hours-change': 'Wochenstundenänderung',
   'care-visit': 'Pflegevisite',
   'emergency-training': 'Notfallschulung',
   custom: 'Ereignis',

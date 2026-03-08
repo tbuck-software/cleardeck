@@ -45,6 +45,8 @@ export type EmployeeEventType =
   | 'leave'
   | 'name-change'
   | 'note-change'
+  | 'fte-change'
+  | 'weekly-hours-change'
   | 'care-visit'
   | 'emergency-training'
   | 'custom';

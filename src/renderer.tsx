@@ -643,6 +643,19 @@ const App = () => {
                     </option>
                   )}
                   <option value="custom">Sonstiges</option>
+                  {eventModal.id && (
+                    <option value="fte-change" disabled={eventModal.type !== 'fte-change'}>
+                      VZÄ-Änderung
+                    </option>
+                  )}
+                  {eventModal.id && (
+                    <option
+                      value="weekly-hours-change"
+                      disabled={eventModal.type !== 'weekly-hours-change'}
+                    >
+                      Wochenstundenänderung
+                    </option>
+                  )}
                 </select>
               </label>
 
@@ -714,6 +727,30 @@ const App = () => {
                       placeholder="Optionale Beschreibung oder Notiz zum Ereignis"
                     />
                   </label>
+                  {(eventModal.type === 'name-change' ||
+                    eventModal.type === 'fte-change' ||
+                    eventModal.type === 'weekly-hours-change') && (
+                    <>
+                      <label>
+                        Vorheriger Wert
+                        <input
+                          type="text"
+                          value={eventModal.previousValue ?? ''}
+                          onChange={(e) => setEventModal({ ...eventModal, previousValue: e.target.value })}
+                          placeholder="Wert vor der Änderung"
+                        />
+                      </label>
+                      <label>
+                        Neuer Wert
+                        <input
+                          type="text"
+                          value={eventModal.newValue ?? ''}
+                          onChange={(e) => setEventModal({ ...eventModal, newValue: e.target.value })}
+                          placeholder="Wert nach der Änderung"
+                        />
+                      </label>
+                    </>
+                  )}
                   {eventModal.type === 'note-change' && (
                     <>
                       <label className="full-width">

@@ -39,6 +39,8 @@ const typeLabels: Record<EmployeeEventType, string> = {
   leave: 'Austritt',
   'name-change': 'Namensänderung',
   'note-change': 'Notizänderung',
+  'fte-change': 'VZÄ-Änderung',
+  'weekly-hours-change': 'Wochenstundenänderung',
   'care-visit': 'Pflegevisite',
   'emergency-training': 'Notfallschulung',
   custom: 'Ereignis',
@@ -49,6 +51,8 @@ const typeIcons: Record<EmployeeEventType, IconDefinition> = {
   leave: faArrowRightFromBracket,
   'name-change': faSignature,
   'note-change': faStickyNote,
+  'fte-change': faChartPie,
+  'weekly-hours-change': faClock,
   'care-visit': faStethoscope,
   'emergency-training': faKitMedical,
   custom: faCalendarDay,
@@ -236,7 +240,10 @@ const EmployeeDetail = ({
             ev.newValue ?? (ev.meta && (ev.meta as any).to ? String((ev.meta as any).to) : undefined);
           const hasDiffValues = prevFallback !== undefined || newFallback !== undefined;
           const detail =
-            ev.type === 'name-change' && (prevFallback || newFallback)
+            (ev.type === 'name-change' ||
+              ev.type === 'fte-change' ||
+              ev.type === 'weekly-hours-change') &&
+            (prevFallback || newFallback)
               ? `${prevFallback ?? ''} → ${newFallback ?? ''}`
               : ev.details;
           const isDiff = ev.type === 'note-change' && hasDiffValues;

@@ -14,6 +14,7 @@ import type {
 } from '../../shared/types';
 
 import { getDb } from '../database/connection';
+import { buildEmployeeChangeEvents } from '../employeeHistory';
 import { saveEvent } from './events';
 
 /**
@@ -215,6 +216,10 @@ export const saveEmployee = (input: {
   };
 
   if (input.id) {
+    const previousEmployee = db
+      .prepare('SELECT fte, weeklyHours FROM employees WHERE id = ?')
+      .get(input.id) as { fte?: number | null; weeklyHours?: number | null } | undefined;
+
     db.prepare(
       `UPDATE employees
        SET name = @name, note = @note, weeklyHours = @weeklyHours, fte = @fte, birthDate = @birthDate
@@ -242,6 +247,23 @@ export const saveEmployee = (input: {
          VALUES (@employeeId, @startDate, @endDate, @qualification, @note)`,
       ).run({ ...periodPayload, employeeId: input.id });
     }
+
+    const eventDate = new Date().toISOString().slice(0, 10);
+    const changeEvents = buildEmployeeChangeEvents({
+      previous: previousEmployee ?? {},
+      next: {
+        fte: employeePayload.fte,
+        weeklyHours: employeePayload.weeklyHours,
+      },
+      eventDate,
+    });
+
+    changeEvents.forEach((changeEvent) => {
+      saveEvent({
+        employeeId: input.id as number,
+        ...changeEvent,
+      });
+    });
   } else {
     const empResult = db
       .prepare(
