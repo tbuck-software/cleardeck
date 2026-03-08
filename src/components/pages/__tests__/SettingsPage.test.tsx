@@ -19,6 +19,7 @@ const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage
   dbMessage: null,
   baseHoursInput: '36',
   updateStatus: baseStatus,
+  lastUpdateCheckAt: null,
   appInfo: null,
   onOpenQualificationModal: vi.fn<(payload: QualificationModalPayload) => void>(),
   onReorderQualification: vi.fn<(ids: number[]) => void>(),
@@ -60,6 +61,20 @@ describe('SettingsPage', () => {
     const props = createProps({
       dbMessage: 'Export erledigt',
       updateStatus: { state: 'downloaded', version: '1.2.3' },
+      lastUpdateCheckAt: '2026-03-08T09:30:00.000Z',
+      appInfo: {
+        name: 'ClearDeck',
+        version: '1.7.2',
+        author: 'Torben Buck',
+        email: 'mail@tbuck.de',
+        github: 'https://github.com/Rasalas/employee-db',
+        license: 'SEE LICENSE IN LICENSE',
+        copyright: 'Copyright',
+        electronVersion: '39.2.4',
+        nodeVersion: '20.0.0',
+        platform: 'darwin',
+        arch: 'arm64',
+      },
     });
 
     render(<SettingsPage {...props} />);
@@ -68,13 +83,20 @@ describe('SettingsPage', () => {
     fireEvent.change(screen.getByDisplayValue('36'), { target: { value: '40' } });
     expect(props.onBaseHoursInputChange).toHaveBeenCalledWith('40');
 
-    expect(screen.getByText('Update v1.2.3 heruntergeladen.')).toBeInTheDocument();
-    expect(screen.getByText('Installieren')).toBeEnabled();
+    expect(screen.getByText('Installierte Version:')).toBeInTheDocument();
+    expect(screen.getByText('v1.7.2')).toBeInTheDocument();
+    expect(
+      screen.getByText('v1.2.3 ist heruntergeladen. Aktiv bleibt v1.7.2, bis du installierst und neu startest.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Installieren & neu starten')).toBeEnabled();
+    expect(screen.getByText('Release auf GitHub oeffnen')).toHaveAttribute(
+      'href',
+      'https://github.com/Rasalas/employee-db/releases/tag/v1.2.3',
+    );
 
     // Navigate to database tab to check dbMessage
     fireEvent.click(screen.getByText('Datenbank & Sicherheit'));
     expect(screen.getByText('Export erledigt')).toBeInTheDocument();
   });
 });
-
 
