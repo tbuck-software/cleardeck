@@ -25,6 +25,8 @@ const typeIcons: Record<UnifiedEventType, IconDefinition> = {
   leave: faArrowRightFromBracket,
   'name-change': faArrowRightToBracket,
   'note-change': faArrowRightToBracket,
+  'fte-change': faArrowRightToBracket,
+  'weekly-hours-change': faArrowRightToBracket,
   'care-visit': faStethoscope,
   'emergency-training': faKitMedical,
   custom: faCalendarDay,
