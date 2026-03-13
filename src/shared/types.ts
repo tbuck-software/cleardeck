@@ -200,6 +200,29 @@ export interface BirthdayAnniversary {
   years?: number;
 }
 
+export interface DashboardEmployeeBucket {
+  employeeId: number;
+  employeeName: string;
+  count: number;
+}
+
+export interface EmployeeDashboardStats {
+  instructions: {
+    totalAssigned: number;
+    overdue: number;
+    dueSoon: number;
+    completedRate: number;
+    topOpenEmployees: DashboardEmployeeBucket[];
+  };
+  competencies: {
+    totalAssigned: number;
+    open: number;
+    pendingApproval: number;
+    approvedRate: number;
+    topGapEmployees: DashboardEmployeeBucket[];
+  };
+}
+
 export interface UnifiedEvent {
   id: string;
   employeeId?: number;

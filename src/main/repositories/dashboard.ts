@@ -10,6 +10,7 @@
 import type {
   ExpiringTraining,
   BirthdayAnniversary,
+  EmployeeDashboardStats,
 } from '../../shared/types';
 
 import { getDb } from '../database/connection';
@@ -198,4 +199,164 @@ export const getBirthdaysAndAnniversaries = (
   // Sort by date and limit
   results.sort((a, b) => a.date.localeCompare(b.date));
   return results.slice(0, limit);
+};
+
+export const getEmployeeDashboardStats = (dueSoonDays = 30, limit = 5): EmployeeDashboardStats => {
+  const db = getDb();
+  const today = new Date().toISOString().slice(0, 10);
+  const dueSoonDate = new Date();
+  dueSoonDate.setDate(dueSoonDate.getDate() + dueSoonDays);
+  const dueSoonDateStr = dueSoonDate.toISOString().slice(0, 10);
+
+  const activeEmployeesCte = `
+    WITH active_employees AS (
+      SELECT DISTINCT emp.id, emp.name
+      FROM employees emp
+      INNER JOIN employment_periods p ON p.employeeId = emp.id
+      WHERE date(p.startDate) <= date(?)
+        AND (p.endDate IS NULL OR date(p.endDate) >= date(?))
+    )
+  `;
+
+  const instructionSummary = db
+    .prepare(
+      `
+      ${activeEmployeesCte}
+      SELECT
+        COUNT(ei.id) as totalAssigned,
+        SUM(CASE WHEN ei.completedAt IS NULL AND ei.dueDate IS NOT NULL AND date(ei.dueDate) < date(?) THEN 1 ELSE 0 END) as overdue,
+        SUM(CASE WHEN ei.completedAt IS NULL AND ei.dueDate IS NOT NULL AND date(ei.dueDate) >= date(?) AND date(ei.dueDate) <= date(?) THEN 1 ELSE 0 END) as dueSoon,
+        SUM(CASE WHEN ei.completedAt IS NOT NULL THEN 1 ELSE 0 END) as completedCount
+      FROM employee_instructions ei
+      INNER JOIN active_employees ae ON ae.id = ei.employeeId
+    `
+    )
+    .get(today, today, today, today, dueSoonDateStr) as {
+    totalAssigned: number | null;
+    overdue: number | null;
+    dueSoon: number | null;
+    completedCount: number | null;
+  };
+
+  const topOpenEmployees = db
+    .prepare(
+      `
+      ${activeEmployeesCte}
+      SELECT
+        ae.id as employeeId,
+        ae.name as employeeName,
+        SUM(CASE WHEN ei.completedAt IS NULL THEN 1 ELSE 0 END) as count
+      FROM active_employees ae
+      INNER JOIN employee_instructions ei ON ei.employeeId = ae.id
+      GROUP BY ae.id, ae.name
+      HAVING SUM(CASE WHEN ei.completedAt IS NULL THEN 1 ELSE 0 END) > 0
+      ORDER BY count DESC, ae.name ASC
+      LIMIT ?
+    `
+    )
+    .all(today, today, limit) as {
+    employeeId: number;
+    employeeName: string;
+    count: number;
+  }[];
+
+  const competencySummary = db
+    .prepare(
+      `
+      ${activeEmployeesCte}
+      SELECT
+        COUNT(ec.id) as totalAssigned,
+        SUM(CASE WHEN COALESCE(ec.level, 0) = 0 THEN 1 ELSE 0 END) as open,
+        SUM(
+          CASE
+            WHEN COALESCE(ec.level, 0) > 0
+              AND ec.approvedAt IS NULL
+              AND COALESCE(ec.level, 0) < 4
+            THEN 1
+            ELSE 0
+          END
+        ) as pendingApproval,
+        SUM(
+          CASE
+            WHEN ec.approvedAt IS NOT NULL OR COALESCE(ec.level, 0) >= 4
+            THEN 1
+            ELSE 0
+          END
+        ) as approvedCount
+      FROM employee_competencies ec
+      INNER JOIN active_employees ae ON ae.id = ec.employeeId
+    `
+    )
+    .get(today, today) as {
+    totalAssigned: number | null;
+    open: number | null;
+    pendingApproval: number | null;
+    approvedCount: number | null;
+  };
+
+  const topGapEmployees = db
+    .prepare(
+      `
+      ${activeEmployeesCte}
+      SELECT
+        ae.id as employeeId,
+        ae.name as employeeName,
+        SUM(
+          CASE
+            WHEN COALESCE(ec.level, 0) = 0
+              OR (
+                COALESCE(ec.level, 0) > 0
+                AND ec.approvedAt IS NULL
+                AND COALESCE(ec.level, 0) < 4
+              )
+            THEN 1
+            ELSE 0
+          END
+        ) as count
+      FROM active_employees ae
+      INNER JOIN employee_competencies ec ON ec.employeeId = ae.id
+      GROUP BY ae.id, ae.name
+      HAVING SUM(
+        CASE
+          WHEN COALESCE(ec.level, 0) = 0
+            OR (
+              COALESCE(ec.level, 0) > 0
+              AND ec.approvedAt IS NULL
+              AND COALESCE(ec.level, 0) < 4
+            )
+          THEN 1
+          ELSE 0
+        END
+      ) > 0
+      ORDER BY count DESC, ae.name ASC
+      LIMIT ?
+    `
+    )
+    .all(today, today, limit) as {
+    employeeId: number;
+    employeeName: string;
+    count: number;
+  }[];
+
+  const instructionTotal = instructionSummary.totalAssigned ?? 0;
+  const instructionCompleted = instructionSummary.completedCount ?? 0;
+  const competencyTotal = competencySummary.totalAssigned ?? 0;
+  const competencyApproved = competencySummary.approvedCount ?? 0;
+
+  return {
+    instructions: {
+      totalAssigned: instructionTotal,
+      overdue: instructionSummary.overdue ?? 0,
+      dueSoon: instructionSummary.dueSoon ?? 0,
+      completedRate: instructionTotal > 0 ? Math.round((instructionCompleted / instructionTotal) * 100) : 0,
+      topOpenEmployees,
+    },
+    competencies: {
+      totalAssigned: competencyTotal,
+      open: competencySummary.open ?? 0,
+      pendingApproval: competencySummary.pendingApproval ?? 0,
+      approvedRate: competencyTotal > 0 ? Math.round((competencyApproved / competencyTotal) * 100) : 0,
+      topGapEmployees,
+    },
+  };
 };

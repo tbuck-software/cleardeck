@@ -19,6 +19,7 @@ import { app, BrowserWindow } from 'electron';
 
 import { configureUserDataPath } from './main/appPaths';
 import { persistEncryptedDb } from './main/database/connection';
+import { configureExternalLinkHandling } from './main/externalLinks';
 import { registerAllHandlers, initAutoUpdater } from './main/ipc';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -52,6 +53,7 @@ const createWindow = (): void => {
     },
   });
 
+  configureExternalLinkHandling(mainWindow, MAIN_WINDOW_WEBPACK_ENTRY);
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
   if (!app.isPackaged) {

@@ -400,6 +400,7 @@ const App = () => {
             qualifications={qualifications}
             unifiedEvents={unifiedEvents}
             hiddenEventTypes={hiddenEventTypes}
+            employeeDashboardStats={dashboardWidgets.employeeDashboardStats}
             onEventClick={handleUnifiedEventClick}
             onToggleEventFilter={toggleEventTypeFilter}
             onShowAllEvents={showAllEventTypes}
