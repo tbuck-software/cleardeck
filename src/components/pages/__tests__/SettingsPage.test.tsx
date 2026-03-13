@@ -231,8 +231,10 @@ describe('SettingsPage', () => {
     );
 
     fireEvent.click(screen.getByText('Info'));
-    fireEvent.click(screen.getByText('Support kontaktieren'));
-    expect(api.app.openExternal).toHaveBeenCalledWith('mailto:mail@tbuck.de');
+    fireEvent.click(screen.getByText('Torben kontaktieren'));
+    expect(api.app.openExternal).toHaveBeenCalledWith(
+      'https://wa.me/4917638955537?text=Hallo%20Torben%2C%0A%0Aich%20habe%20eine%20Frage%20zu%20ClearDeck%20v1.7.2.%0A%0ABeschreibung%3A',
+    );
 
     fireEvent.click(screen.getByText('GitHub Repository'));
     expect(api.app.openExternal).toHaveBeenCalledWith('https://github.com/Rasalas/employee-db');
