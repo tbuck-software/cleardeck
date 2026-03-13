@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import type { AppInfo, AppState, UpdateStatus } from '../shared/types';
-import type { ConfirmActionOptions } from '../types/ui';
+import type { AppInfo, AppState, StorageMode, UpdateStatus } from '../shared/types';
+import type { ConfirmActionOptions, EncryptionSetupState } from '../types/ui';
 
 type UseSettingsDbParams = {
   year: number;
@@ -15,6 +15,8 @@ type UseSettingsDbParams = {
   ) => void;
   onAfterDrop: () => void;
   onAfterReset: (state: AppState) => void;
+  onAuthStateChange: (state: AppState) => void;
+  onOpenRecoveryKey: () => Promise<void>;
 };
 
 const useSettingsDb = ({
@@ -25,6 +27,8 @@ const useSettingsDb = ({
   confirmAction,
   onAfterDrop,
   onAfterReset,
+  onAuthStateChange,
+  onOpenRecoveryKey,
 }: UseSettingsDbParams) => {
   const [baseHours, setBaseHours] = useState<number>(36);
   const [baseHoursInput, setBaseHoursInput] = useState<string>('36');
@@ -33,6 +37,14 @@ const useSettingsDb = ({
   const [lastUpdateCheckAt, setLastUpdateCheckAt] = useState<string | null>(null);
   const [snoozeUpdates, setSnoozeUpdates] = useState(false);
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
+  const [storageMode, setStorageMode] = useState<StorageMode>('encrypted');
+  const [encryptionSetup, setEncryptionSetup] = useState<EncryptionSetupState>({
+    open: false,
+    password: '',
+    repeat: '',
+    error: null,
+    nextMode: 'encrypted',
+  });
 
   const hydrateBaseHours = useCallback((hours?: number | null) => {
     setBaseHours(hours || 36);
@@ -134,6 +146,72 @@ const useSettingsDb = ({
     );
   }, [confirmAction, onAfterReset, onError, onToast]);
 
+  const openEnableEncryption = useCallback(() => {
+    setEncryptionSetup({
+      open: true,
+      password: '',
+      repeat: '',
+      error: null,
+      nextMode: 'encrypted',
+    });
+  }, []);
+
+  const closeEnableEncryption = useCallback(() => {
+    setEncryptionSetup((prev) => ({
+      ...prev,
+      open: false,
+      password: '',
+      repeat: '',
+      error: null,
+    }));
+  }, []);
+
+  const handleEnableEncryption = useCallback(async () => {
+    if (!encryptionSetup.password.trim()) {
+      setEncryptionSetup((prev) => ({ ...prev, error: 'Bitte ein Passwort eingeben.' }));
+      return;
+    }
+    if (encryptionSetup.password !== encryptionSetup.repeat) {
+      setEncryptionSetup((prev) => ({ ...prev, error: 'Passwörter stimmen nicht überein.' }));
+      return;
+    }
+    try {
+      const state = await api.auth.enableEncryption(encryptionSetup.password);
+      setStorageMode(state.storageMode);
+      onAuthStateChange(state);
+      closeEnableEncryption();
+      await onOpenRecoveryKey();
+      onToast('Verschlüsselung aktiviert. Recovery Key sicher ablegen.', 2600);
+    } catch (err) {
+      onError(err);
+    }
+  }, [
+    closeEnableEncryption,
+    encryptionSetup.password,
+    encryptionSetup.repeat,
+    onAuthStateChange,
+    onError,
+    onOpenRecoveryKey,
+    onToast,
+  ]);
+
+  const handleDisableEncryption = useCallback(() => {
+    confirmAction(
+      'Verschlüsselung deaktivieren? Die lokale Datenbank liegt danach unverschlüsselt auf diesem Gerät.',
+      async () => {
+        try {
+          const state = await api.auth.disableEncryption();
+          setStorageMode(state.storageMode);
+          onAuthStateChange(state);
+          onToast('Verschlüsselung deaktiviert.', 2400);
+        } catch (err) {
+          onError(err);
+        }
+      },
+      { confirmLabel: 'Deaktivieren', danger: true },
+    );
+  }, [confirmAction, onAuthStateChange, onError, onToast]);
+
   const handleCheckUpdates = useCallback(async () => {
     try {
       await api.updates.check();
@@ -203,6 +281,14 @@ const useSettingsDb = ({
     api.app.getInfo().then(setAppInfo).catch(() => {
       // Ignore errors loading app info
     });
+    api.auth
+      .getState()
+      .then((state) => {
+        setStorageMode(state.storageMode);
+      })
+      .catch(() => {
+        // Ignore errors loading storage mode
+      });
   }, []);
 
   return {
@@ -214,11 +300,14 @@ const useSettingsDb = ({
       lastUpdateCheckAt,
       snoozeUpdates,
       appInfo,
+      storageMode,
+      encryptionSetup,
     },
     setters: {
       setBaseHoursInput,
       setDbMessage,
       setBaseHours,
+      setEncryptionSetup,
     },
     actions: {
       hydrateBaseHours,
@@ -231,6 +320,10 @@ const useSettingsDb = ({
       handleCheckUpdates,
       handleInstallUpdate,
       handleSnoozeUpdate,
+      openEnableEncryption,
+      closeEnableEncryption,
+      handleEnableEncryption,
+      handleDisableEncryption,
     },
   };
 };

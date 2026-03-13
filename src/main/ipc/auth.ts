@@ -7,7 +7,7 @@
 import { ipcMain, app } from 'electron';
 import crypto from 'crypto';
 
-import type { AppState, AppInfo } from '../../shared/types';
+import type { AppState, AppInfo, StorageMode } from '../../shared/types';
 import {
   type AppConfig,
   deriveKey,
@@ -20,6 +20,7 @@ import {
   readConfig,
   writeConfig,
   deleteConfig,
+  getConfigStorageMode,
 } from '../crypto';
 import {
   setEncryptionKey,
@@ -28,7 +29,11 @@ import {
   persistEncryptedDb,
   closeDb,
   deleteDatabase as deleteDbFiles,
+  deleteEncryptedSnapshot,
   ensureDataDir,
+  setStorageMode,
+  getStorageMode,
+  isDbOpen,
 } from '../database/connection';
 
 // Track unlock state
@@ -39,14 +44,53 @@ export const setUnlocked = (value: boolean): void => {
   unlocked = value;
 };
 
+const getDefaultAppState = (): AppState => ({
+  configured: false,
+  unlocked: false,
+  storageMode: 'encrypted',
+});
+
+const syncRuntimeState = (): AppState => {
+  const config = readConfig();
+  if (!config) {
+    unlocked = false;
+    setEncryptionKey(null);
+    setStorageMode('encrypted');
+    return getDefaultAppState();
+  }
+
+  const storageMode = getConfigStorageMode(config);
+  setStorageMode(storageMode);
+  if (storageMode === 'plain') {
+    unlocked = true;
+    setEncryptionKey(null);
+    return {
+      configured: true,
+      unlocked: true,
+      storageMode,
+    };
+  }
+
+  return {
+    configured: true,
+    unlocked,
+    storageMode,
+  };
+};
+
+const buildConfiguredState = (storageMode: StorageMode, isOpen: boolean): AppState => ({
+  configured: true,
+  unlocked: isOpen,
+  storageMode,
+});
+
 /**
  * Register all auth-related IPC handlers
  */
 export const registerAuthHandlers = (): void => {
-  ipcMain.handle('app:state', (): AppState => ({
-    configured: isConfigured(),
-    unlocked,
-  }));
+  syncRuntimeState();
+
+  ipcMain.handle('app:state', (): AppState => syncRuntimeState());
 
   ipcMain.handle('app:info', (): AppInfo => ({
     name: app.getName(),
@@ -76,27 +120,58 @@ export const registerAuthHandlers = (): void => {
     const keyFingerprint = fingerprintKey(keyBytes);
 
     const config: AppConfig = {
+      storageMode: 'encrypted',
       salt,
       passwordHash,
       encryptedKey: encrypted.content.toString('base64'),
       keyIv: encrypted.iv.toString('base64'),
       keyTag: encrypted.tag.toString('base64'),
       keyFingerprint,
-      configVersion: 2,
+      configVersion: 3,
     };
     writeConfig(config);
 
+    setStorageMode('encrypted');
     setEncryptionKey(keyBytes);
     unlocked = true;
     openDatabase();
     persistEncryptedDb();
-    return { configured: true, unlocked: true };
+    return buildConfiguredState('encrypted', true);
+  });
+
+  ipcMain.handle('auth:registerPlain', (): AppState => {
+    if (isConfigured()) {
+      throw new Error('Die App ist bereits eingerichtet. Bitte melde dich an.');
+    }
+    ensureDataDir();
+    writeConfig({
+      storageMode: 'plain',
+      configVersion: 3,
+    });
+
+    setStorageMode('plain');
+    setEncryptionKey(null);
+    unlocked = true;
+    openDatabase();
+    return buildConfiguredState('plain', true);
   });
 
   ipcMain.handle('auth:login', (_event, password: string): AppState => {
     const config = readConfig();
     if (!config) {
       throw new Error('Die App wurde noch nicht eingerichtet. Bitte erstelle zuerst ein Passwort.');
+    }
+    if (getConfigStorageMode(config) === 'plain') {
+      setStorageMode('plain');
+      unlocked = true;
+      setEncryptionKey(null);
+      if (!isDbOpen()) {
+        openDatabase();
+      }
+      return buildConfiguredState('plain', true);
+    }
+    if (!config.salt || !config.passwordHash || !config.encryptedKey || !config.keyIv || !config.keyTag) {
+      throw new Error('Die Verschlüsselungskonfiguration ist unvollständig.');
     }
     const derived = deriveKey(password, config.salt);
     const hashed = hashPassword(password, config.salt);
@@ -117,20 +192,25 @@ export const registerAuthHandlers = (): void => {
     if (!config.keyFingerprint || (config.configVersion ?? 1) < 2) {
       const upgraded: AppConfig = {
         ...config,
+        storageMode: 'encrypted',
         keyFingerprint,
-        configVersion: 2,
+        configVersion: 3,
       };
       writeConfig(upgraded);
     }
 
+    setStorageMode('encrypted');
     setEncryptionKey(keyBytes);
     unlocked = true;
     openDatabase();
-    return { configured: true, unlocked: true };
+    return buildConfiguredState('encrypted', true);
   });
 
   ipcMain.handle('auth:recoveryKey', (): { recoveryKey: string; fingerprint: string } => {
     const key = getEncryptionKey();
+    if (getStorageMode() === 'plain') {
+      throw new Error('Im unverschlüsselten Modus gibt es keinen Recovery Key.');
+    }
     if (!unlocked || !key) {
       throw new Error('Du musst angemeldet sein, um den Recovery Key anzuzeigen.');
     }
@@ -146,6 +226,9 @@ export const registerAuthHandlers = (): void => {
       const config = readConfig();
       if (!config) {
         throw new Error('Die App wurde noch nicht eingerichtet.');
+      }
+      if (getConfigStorageMode(config) === 'plain') {
+        throw new Error('Im unverschlüsselten Modus ist kein Passwort-Reset nötig.');
       }
       const { recoveryKey, newPassword } = payload;
       if (!recoveryKey || recoveryKey.trim().length === 0) {
@@ -177,19 +260,90 @@ export const registerAuthHandlers = (): void => {
       const encrypted = encryptBuffer(keyBytes, passwordKey);
 
       const nextConfig: AppConfig = {
+        ...config,
+        storageMode: 'encrypted',
         salt,
         passwordHash,
         encryptedKey: encrypted.content.toString('base64'),
         keyIv: encrypted.iv.toString('base64'),
         keyTag: encrypted.tag.toString('base64'),
         keyFingerprint: fingerprint,
-        configVersion: Math.max(config.configVersion ?? 1, 2),
+        configVersion: Math.max(config.configVersion ?? 1, 3),
       };
       writeConfig(nextConfig);
 
-      return { configured: true, unlocked: true };
+      setStorageMode('encrypted');
+      return buildConfiguredState('encrypted', true);
     },
   );
+
+  ipcMain.handle('auth:disableEncryption', (): AppState => {
+    const config = readConfig();
+    if (!config) {
+      throw new Error('Die App wurde noch nicht eingerichtet.');
+    }
+    if (getConfigStorageMode(config) === 'plain') {
+      return buildConfiguredState('plain', true);
+    }
+    if (!unlocked || !getEncryptionKey()) {
+      throw new Error('Bitte zuerst anmelden, um die Verschlüsselung zu ändern.');
+    }
+
+    if (!isDbOpen()) {
+      openDatabase();
+    }
+    closeDb();
+    writeConfig({
+      storageMode: 'plain',
+      configVersion: 3,
+    });
+    setStorageMode('plain');
+    setEncryptionKey(null);
+    unlocked = true;
+    deleteEncryptedSnapshot();
+    openDatabase();
+    return buildConfiguredState('plain', true);
+  });
+
+  ipcMain.handle('auth:enableEncryption', (_event, password: string): AppState => {
+    const config = readConfig();
+    if (!config) {
+      throw new Error('Die App wurde noch nicht eingerichtet.');
+    }
+    if (!password || password.trim().length === 0) {
+      throw new Error('Bitte ein Passwort eingeben.');
+    }
+    if (getConfigStorageMode(config) === 'encrypted') {
+      throw new Error('Die Verschlüsselung ist bereits aktiv.');
+    }
+
+    ensureDataDir();
+    closeDb();
+
+    const salt = crypto.randomBytes(16).toString('hex');
+    const passwordHash = hashPassword(password, salt);
+    const passwordKey = deriveKey(password, salt);
+    const keyBytes = crypto.randomBytes(32);
+    const encrypted = encryptBuffer(keyBytes, passwordKey);
+    const keyFingerprint = fingerprintKey(keyBytes);
+
+    writeConfig({
+      storageMode: 'encrypted',
+      salt,
+      passwordHash,
+      encryptedKey: encrypted.content.toString('base64'),
+      keyIv: encrypted.iv.toString('base64'),
+      keyTag: encrypted.tag.toString('base64'),
+      keyFingerprint,
+      configVersion: 3,
+    });
+
+    setStorageMode('encrypted');
+    setEncryptionKey(keyBytes);
+    unlocked = true;
+    openDatabase();
+    return buildConfiguredState('encrypted', true);
+  });
 
   ipcMain.handle('app:reset', (): AppState => {
     closeDb();
@@ -197,8 +351,7 @@ export const registerAuthHandlers = (): void => {
     deleteConfig();
     unlocked = false;
     setEncryptionKey(null);
-    return { configured: false, unlocked: false };
+    setStorageMode('encrypted');
+    return getDefaultAppState();
   });
 };
-
-

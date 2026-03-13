@@ -4,7 +4,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import SettingsPage from '../SettingsPage';
 import type { QualificationType, UpdateStatus } from '../../../shared/types';
-import type { QualificationModalPayload } from '../../../types/ui';
+import type { EncryptionSetupState, QualificationModalPayload } from '../../../types/ui';
 
 const qualifications: QualificationType[] = [
   { id: 1, name: 'Alpha', note: 'Erste' },
@@ -12,6 +12,13 @@ const qualifications: QualificationType[] = [
 ];
 
 const baseStatus: UpdateStatus = { state: 'idle' };
+const baseEncryptionSetup: EncryptionSetupState = {
+  open: false,
+  password: '',
+  repeat: '',
+  error: null,
+  nextMode: 'encrypted',
+};
 
 const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage>> = {}): React.ComponentProps<typeof SettingsPage> => ({
   qualifications,
@@ -21,6 +28,8 @@ const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage
   updateStatus: baseStatus,
   lastUpdateCheckAt: null,
   appInfo: null,
+  storageMode: 'encrypted',
+  encryptionSetup: baseEncryptionSetup,
   onOpenQualificationModal: vi.fn<(payload: QualificationModalPayload) => void>(),
   onReorderQualification: vi.fn<(ids: number[]) => void>(),
   onDeleteQualification: vi.fn<(id: number) => void>(),
@@ -29,6 +38,11 @@ const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage
   onDbExport: vi.fn(),
   onDbImport: vi.fn(),
   onOpenRecoveryKey: vi.fn(),
+  onOpenEnableEncryption: vi.fn(),
+  onCloseEnableEncryption: vi.fn(),
+  onEncryptionSetupChange: vi.fn(),
+  onEnableEncryption: vi.fn(),
+  onDisableEncryption: vi.fn(),
   onCheckUpdates: vi.fn(),
   onInstallUpdate: vi.fn(),
   onDropDatabase: vi.fn(),
@@ -98,5 +112,18 @@ describe('SettingsPage', () => {
     fireEvent.click(screen.getByText('Datenbank & Sicherheit'));
     expect(screen.getByText('Export erledigt')).toBeInTheDocument();
   });
-});
 
+  it('zeigt den unverschlüsselten Modus in den Sicherheitseinstellungen', () => {
+    const props = createProps({
+      storageMode: 'plain',
+    });
+
+    render(<SettingsPage {...props} />);
+
+    fireEvent.click(screen.getByText('Datenbank & Sicherheit'));
+    expect(screen.getByText('Speichermodus:')).toBeInTheDocument();
+    expect(screen.getByText('Unverschlüsselt')).toBeInTheDocument();
+    expect(screen.getByText('Verschlüsselung aktivieren')).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Verschlüsselt Import/i })).toBeDisabled();
+  });
+});

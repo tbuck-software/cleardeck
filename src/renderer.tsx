@@ -50,6 +50,8 @@ const App = () => {
       dbMessage,
       snoozeUpdates,
       appInfo,
+      storageMode,
+      encryptionSetup,
       search,
       statusFilter,
       qualificationFilter,
@@ -84,6 +86,7 @@ const App = () => {
       setQualificationFilter,
       setQualificationModal,
       setEditModal,
+      setEncryptionSetup,
       setSearch,
       setStatusFilter,
       setPeriodToDelete,
@@ -121,6 +124,10 @@ const App = () => {
       handleCheckUpdates,
       handleInstallUpdate,
       handleSnoozeUpdate,
+      openEnableEncryption,
+      closeEnableEncryption,
+      handleEnableEncryption,
+      handleDisableEncryption,
       handleAddPeriod,
       handleSaveEvent,
       handleDeleteEvent,
@@ -259,9 +266,9 @@ const App = () => {
       <>
         <AuthScreen
           mode={authMode}
-          onSubmit={(pwd) => handleLogin(pwd, authMode)}
+          onSubmit={(payload) => handleLogin(payload, authMode)}
           busy={loading}
-          message={authMode === 'setup' ? 'Neues Passwort legt auch den lokalen Schlüssel an.' : undefined}
+          message={authMode === 'setup' ? 'Du kannst die App verschlüsselt oder unverschlüsselt einrichten.' : undefined}
           onForgotPassword={appReady.configured ? startRecoveryReset : undefined}
           globalError={error}
         />
@@ -382,6 +389,8 @@ const App = () => {
             updateStatus={updateStatus}
             lastUpdateCheckAt={lastUpdateCheckAt}
             appInfo={appInfo}
+            storageMode={storageMode}
+            encryptionSetup={encryptionSetup}
             onOpenQualificationModal={(payload) =>
               setQualificationModal({
                 open: true,
@@ -397,6 +406,11 @@ const App = () => {
             onDbExport={handleDbExport}
             onDbImport={handleDbImport}
             onOpenRecoveryKey={() => openRecoveryKey('settings')}
+            onOpenEnableEncryption={openEnableEncryption}
+            onCloseEnableEncryption={closeEnableEncryption}
+            onEncryptionSetupChange={(next) => setEncryptionSetup((prev) => ({ ...prev, ...next }))}
+            onEnableEncryption={handleEnableEncryption}
+            onDisableEncryption={handleDisableEncryption}
             onCheckUpdates={handleCheckUpdates}
             onInstallUpdate={handleInstallUpdate}
             onDropDatabase={handleDropDatabase}

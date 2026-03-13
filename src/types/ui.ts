@@ -1,5 +1,11 @@
-import type { EmploymentPeriod, EmployeeEvent, EmployeeEventType, QprRating } from '../shared/types';
-import type { RecoveryInfo } from '../shared/types';
+import type {
+  EmploymentPeriod,
+  EmployeeEvent,
+  EmployeeEventType,
+  QprRating,
+  RecoveryInfo,
+  StorageMode,
+} from '../shared/types';
 
 export type Page =
   | 'dashboard'
@@ -51,6 +57,14 @@ export type RecoveryResetState = {
   newPassword: string;
   repeat: string;
   error?: string | null;
+};
+
+export type EncryptionSetupState = {
+  open: boolean;
+  password: string;
+  repeat: string;
+  error?: string | null;
+  nextMode: StorageMode;
 };
 
 export type RecoveryKeyModalState = {
