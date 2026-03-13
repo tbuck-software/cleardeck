@@ -34,57 +34,75 @@ const AuthScreen = ({ mode, onSubmit, busy, message, onForgotPassword, onResetAp
   };
 
   const displayError = error ?? globalError ?? null;
+  const isSetup = mode === 'setup';
+  const isEncrypted = mode === 'login' || storageMode === 'encrypted';
 
   return (
-    <div className="auth-screen">
-      <div className="card auth-card">
-        <div className="auth-title">
-          <h1>{mode === 'setup' ? 'Ersteinrichtung' : 'Anmeldung'}</h1>
-          <p>
-            Lokale Datenbank (SQLite) mit Dateiverschlüsselung und Passwortschutz. Halte das Passwort sicher bereit; es
-            wird nicht synchronisiert.
+    <div className={`auth-screen auth-screen-${mode}`}>
+      <div className="auth-panel">
+        <div className="auth-intro">
+          <h1>{isSetup ? 'Ersteinrichtung' : 'Anmeldung'}</h1>
+          <p className="auth-summary">
+            {isSetup ? 'Alles bleibt auf diesem Gerät.' : 'Mit deinem lokalen Passwort entsperren.'}
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="auth-form">
-          {mode === 'setup' && (
-            <label className="full-width">
-              Speichermodus
-              <select
-                value={storageMode}
-                onChange={(e) => setStorageMode(e.target.value as StorageMode)}
+        <form onSubmit={handleSubmit} className="auth-form auth-form-panel">
+          {isSetup && (
+            <div className="auth-mode-switch" role="radiogroup" aria-label="Speichermodus">
+              <button
+                type="button"
+                role="radio"
+                aria-checked={storageMode === 'encrypted'}
+                className={`auth-mode-option ${storageMode === 'encrypted' ? 'active' : ''}`}
+                onClick={() => setStorageMode('encrypted')}
               >
-                <option value="encrypted">Verschlüsselt (mit Passwort)</option>
-                <option value="plain">Unverschlüsselt (ohne Passwort)</option>
-              </select>
-            </label>
+                <span className="auth-mode-title">Verschlüsselt</span>
+                <span className="auth-mode-meta">Mit Passwort</span>
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked={storageMode === 'plain'}
+                className={`auth-mode-option ${storageMode === 'plain' ? 'active' : ''}`}
+                onClick={() => setStorageMode('plain')}
+              >
+                <span className="auth-mode-title">Ohne Passwort</span>
+                <span className="auth-mode-meta">Direkt lokal</span>
+              </button>
+            </div>
           )}
-          {(mode === 'login' || storageMode === 'encrypted') && (
-            <label>
-              Passwort
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="••••••••"
-              />
-            </label>
+          {isEncrypted && (
+            <div className="auth-field-grid">
+              <label>
+                Passwort
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="••••••••"
+                  autoComplete={isSetup ? 'new-password' : 'current-password'}
+                />
+              </label>
+              {isSetup && storageMode === 'encrypted' && (
+                <label>
+                  Passwort wiederholen
+                  <input
+                    type="password"
+                    value={repeat}
+                    onChange={(e) => setRepeat(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    autoComplete="new-password"
+                  />
+                </label>
+              )}
+            </div>
           )}
-          {mode === 'setup' && storageMode === 'encrypted' && (
-            <label>
-              Passwort wiederholen
-              <input
-                type="password"
-                value={repeat}
-                onChange={(e) => setRepeat(e.target.value)}
-                required
-                placeholder="••••••••"
-              />
-            </label>
-          )}
-          {mode === 'setup' && storageMode === 'plain' && (
-            <div className="info">
-              Es wird kein Passwort und kein Recovery Key eingerichtet. Die Datenbank bleibt lokal unverschlüsselt.
+          {isSetup && storageMode === 'plain' && (
+            <div className="auth-mode-note auth-mode-warning" role="note" aria-live="polite">
+              <strong>Nicht empfohlen für Patientendaten.</strong>
+              <span>Kein Passwort. Kein Recovery Key.</span>
             </div>
           )}
           {displayError && <div className="error">{displayError}</div>}
@@ -92,21 +110,25 @@ const AuthScreen = ({ mode, onSubmit, busy, message, onForgotPassword, onResetAp
           <button type="submit" className="primary" disabled={busy}>
             {busy
               ? 'Bitte warten…'
-              : mode === 'setup'
+              : isSetup
                 ? storageMode === 'encrypted'
-                  ? 'Passwort setzen'
-                  : 'Ohne Verschlüsselung starten'
-                : 'Login'}
+                  ? 'Verschlüsselung aktivieren'
+                  : 'Ohne Passwort starten'
+                : 'Entsperren'}
           </button>
-          {mode === 'login' && onForgotPassword && (
-            <button className="ghost-button" type="button" onClick={onForgotPassword}>
-              Passwort vergessen? Recovery Key nutzen
-            </button>
-          )}
-          {mode === 'login' && onResetApp && (
-            <button className="ghost-button danger" type="button" onClick={() => void onResetApp()} disabled={busy}>
-              Datenbank nicht wiederherstellbar? Neu anlegen
-            </button>
+          {!isSetup && (onForgotPassword || onResetApp) && (
+            <div className="auth-actions">
+              {onForgotPassword && (
+                <button className="ghost-button" type="button" onClick={onForgotPassword}>
+                  Recovery Key nutzen
+                </button>
+              )}
+              {onResetApp && (
+                <button className="ghost-button danger" type="button" onClick={() => void onResetApp()} disabled={busy}>
+                  Neu anlegen
+                </button>
+              )}
+            </div>
           )}
         </form>
       </div>

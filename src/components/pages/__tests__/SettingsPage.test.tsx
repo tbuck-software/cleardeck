@@ -89,8 +89,8 @@ describe('SettingsPage', () => {
     fireEvent.click(screen.getByText('Neu'));
     expect(props.onOpenQualificationModal).toHaveBeenCalledWith({ value: '', note: '', id: undefined });
 
-    const firstRow = screen.getByText('Alpha').closest('tr')!;
-    const secondRow = screen.getByText('Beta').closest('tr')!;
+    const firstRow = screen.getByText('Alpha').closest('.settings-list-item')!;
+    const secondRow = screen.getByText('Beta').closest('.settings-list-item')!;
 
     fireEvent.dragStart(firstRow);
     fireEvent.dragOver(secondRow);
@@ -115,8 +115,8 @@ describe('SettingsPage', () => {
       note: '',
     });
 
-    const firstRow = screen.getByText('Einarbeitung').closest('tr')!;
-    const secondRow = screen.getByText('Wundversorgung').closest('tr')!;
+    const firstRow = screen.getByText('Einarbeitung').closest('.settings-list-item')!;
+    const secondRow = screen.getByText('Wundversorgung').closest('.settings-list-item')!;
 
     fireEvent.dragStart(firstRow);
     fireEvent.dragOver(secondRow);
@@ -166,13 +166,13 @@ describe('SettingsPage', () => {
     fireEvent.change(screen.getByDisplayValue('36'), { target: { value: '40' } });
     expect(props.onBaseHoursInputChange).toHaveBeenCalledWith('40');
 
-    expect(screen.getByText('Installierte Version:')).toBeInTheDocument();
+    expect(screen.getByText('Installiert')).toBeInTheDocument();
     expect(screen.getByText('v1.7.2')).toBeInTheDocument();
     expect(
       screen.getByText('v1.2.3 ist heruntergeladen. Aktiv bleibt v1.7.2, bis du installierst und neu startest.'),
     ).toBeInTheDocument();
     expect(screen.getByText('Installieren & neu starten')).toBeEnabled();
-    expect(screen.getByText('Release auf GitHub oeffnen')).toHaveAttribute(
+    expect(screen.getByText('Release auf GitHub öffnen')).toHaveAttribute(
       'href',
       'https://github.com/Rasalas/employee-db/releases/tag/v1.2.3',
     );
@@ -190,7 +190,7 @@ describe('SettingsPage', () => {
     render(<SettingsPage {...props} />);
 
     fireEvent.click(screen.getByText('Datenbank & Sicherheit'));
-    expect(screen.getByText('Speichermodus:')).toBeInTheDocument();
+    expect(screen.getByText('Speichermodus')).toBeInTheDocument();
     expect(screen.getByText('Unverschlüsselt')).toBeInTheDocument();
     expect(screen.getByText('Verschlüsselung aktivieren')).toBeEnabled();
     expect(screen.getByRole('button', { name: /Verschlüsselt Import/i })).toBeDisabled();

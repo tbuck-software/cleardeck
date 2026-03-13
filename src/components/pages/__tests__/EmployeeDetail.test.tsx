@@ -20,7 +20,7 @@ const employee: EmployeeWithPeriod = {
 describe('EmployeeDetail', () => {
   it('zeigt Kompetenzen pro Teammitglied mit Hinzufuegen-Aktion', () => {
     const onAddCompetency = vi.fn();
-    const onAddSuggestedCompetencies = vi.fn();
+    const onOpenSuggestedCompetencies = vi.fn();
 
     render(
       <EmployeeDetail
@@ -34,7 +34,7 @@ describe('EmployeeDetail', () => {
         timelineItems={[]}
         onAddCompetency={onAddCompetency}
         onAddInstruction={vi.fn()}
-        onAddSuggestedCompetencies={onAddSuggestedCompetencies}
+        onOpenSuggestedCompetencies={onOpenSuggestedCompetencies}
         onOpenEditModal={vi.fn()}
         onStartNewPeriod={vi.fn()}
         onSelectCompetency={vi.fn()}
@@ -44,13 +44,15 @@ describe('EmployeeDetail', () => {
       />,
     );
 
-    expect(screen.getByText('Kompetenzen')).toBeInTheDocument();
+    expect(screen.getByText('Übersicht')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Kompetenzen/i }));
     expect(screen.getByText('Noch keine Kompetenzen zugeordnet.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByText('Kompetenz hinzufügen'));
     expect(onAddCompetency).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByText('2 passend zur Qualifikation'));
-    expect(onAddSuggestedCompetencies).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByText('Vorschläge aus Qualifikation'));
+    expect(onOpenSuggestedCompetencies).toHaveBeenCalledTimes(1);
   });
 });

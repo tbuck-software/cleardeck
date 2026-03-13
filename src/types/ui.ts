@@ -166,6 +166,11 @@ export type EmployeeInstructionModalState = {
   note: string;
 };
 
+export type SuggestedCompetencyModalState = {
+  open: boolean;
+  selectedDefinitionIds: number[];
+};
+
 export type PeriodToDeleteState = { periodId: number; label: string } | null;
 
 // Patient-related UI types
