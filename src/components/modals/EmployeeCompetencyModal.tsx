@@ -3,6 +3,7 @@ import { faClipboardCheck } from '@fortawesome/free-solid-svg-icons';
 import type { CompetencyDefinition } from '../../shared/types';
 import type { EmployeeCompetencyModalState } from '../../types/ui';
 import ModalHeader from './ModalHeader';
+import CompetencyLevelPicker from '../ui/CompetencyLevelPicker';
 
 type EmployeeCompetencyModalProps = {
   state: EmployeeCompetencyModalState;
@@ -23,6 +24,7 @@ const EmployeeCompetencyModal = ({
 }: EmployeeCompetencyModalProps) => {
   if (!state.open) return null;
   const isAssigned = Boolean(state.id);
+  const selectedValue = state.level ?? 0;
 
   return (
     <div className="modal-backdrop">
@@ -59,21 +61,10 @@ const EmployeeCompetencyModal = ({
           )}
           <label className="full-width">
             Kompetenzstufe
-            <select
-              value={state.level ?? ''}
-              onChange={(e) =>
-                onChange({
-                  level: e.target.value ? Number(e.target.value) : null,
-                })
-              }
-            >
-              <option value="">Noch offen</option>
-              <option value="1">1 - Unterwiesen</option>
-              <option value="2">2 - Beobachtet</option>
-              <option value="3">3 - Unter Aufsicht</option>
-              <option value="4">4 - Selbstständig</option>
-              <option value="5">5 - Kann anleiten</option>
-            </select>
+            <CompetencyLevelPicker
+              value={selectedValue}
+              onChange={(level) => onChange({ level })}
+            />
           </label>
           <div className="form-grid">
             <label>
