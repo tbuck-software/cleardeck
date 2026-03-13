@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import type { AppState, CompetencyDefinition, QualificationType, StorageMode } from '../shared/types';
+import type {
+  AppState,
+  CompetencyDefinition,
+  InstructionDefinition,
+  QualificationType,
+  StorageMode,
+} from '../shared/types';
 import type { FormState } from '../types/ui';
 
 type UseAuthParams = {
@@ -14,6 +20,7 @@ type UseAuthParams = {
   setQualificationEdits: (edits: Record<number, string>) => void;
   setCompetencyDefinitions: (list: CompetencyDefinition[]) => void;
   setCompetencyEdits: (edits: Record<number, string>) => void;
+  setInstructionDefinitions: (list: InstructionDefinition[]) => void;
   hydrateBaseHours: (hours?: number | null) => void;
 };
 
@@ -28,6 +35,7 @@ const useAuth = ({
   setQualificationEdits,
   setCompetencyDefinitions,
   setCompetencyEdits,
+  setInstructionDefinitions,
   hydrateBaseHours,
 }: UseAuthParams) => {
   const [appReady, setAppReady] = useState<AppState>({
@@ -69,6 +77,8 @@ const useAuth = ({
           if (item.id) competencyMap[item.id] = item.name;
         });
         setCompetencyEdits(competencyMap);
+        const instructions = await api.instructions.listDefinitions();
+        setInstructionDefinitions(instructions);
         await refreshDataset(year);
       }
     } catch (err) {
@@ -81,6 +91,7 @@ const useAuth = ({
     refreshDataset,
     setCompetencyDefinitions,
     setCompetencyEdits,
+    setInstructionDefinitions,
     year,
   ]);
 
@@ -118,6 +129,16 @@ const useAuth = ({
       })
       .catch(handleError);
   }, [appReady.unlocked, handleError, setCompetencyDefinitions, setCompetencyEdits]);
+
+  useEffect(() => {
+    if (!appReady.unlocked) return;
+    api.instructions
+      .listDefinitions()
+      .then((list) => {
+        setInstructionDefinitions(list);
+      })
+      .catch(handleError);
+  }, [appReady.unlocked, handleError, setInstructionDefinitions]);
 
   const handleLogin = useCallback(
     async (payload: { password: string; storageMode: StorageMode }, mode: 'setup' | 'login') => {

@@ -12,23 +12,48 @@ export interface QualificationType {
 
 export interface CompetencyDefinition {
   id?: number;
+  code?: string | null;
   name: string;
+  category?: string | null;
+  relevance?: string | null;
   note?: string | null;
   sortOrder?: number | null;
 }
-
-export type EmployeeCompetencyStatus = 'open' | 'in-progress' | 'completed' | 'not-applicable';
 
 export interface EmployeeCompetency {
   id?: number;
   employeeId?: number;
   competencyDefinitionId: number;
+  competencyCode?: string | null;
   competencyName: string;
-  status: EmployeeCompetencyStatus;
-  startedAt?: string | null;
-  completedAt?: string | null;
+  category?: string | null;
+  relevance?: string | null;
+  level?: number | null;
+  approvedAt?: string | null;
+  approvedBy?: string | null;
   note?: string | null;
   definitionNote?: string | null;
+  sortOrder?: number | null;
+}
+
+export interface InstructionDefinition {
+  id?: number;
+  topic: string;
+  legalBasis?: string | null;
+  note?: string | null;
+  sortOrder?: number | null;
+}
+
+export interface EmployeeInstruction {
+  id?: number;
+  employeeId?: number;
+  instructionDefinitionId: number;
+  instructionName: string;
+  legalBasis?: string | null;
+  dueDate?: string | null;
+  completedAt?: string | null;
+  conductedBy?: string | null;
+  note?: string | null;
   sortOrder?: number | null;
 }
 

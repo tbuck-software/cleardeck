@@ -1,7 +1,6 @@
 import type {
   CompetencyDefinition,
   EmployeeCompetency,
-  EmployeeCompetencyStatus,
 } from '../../shared/types';
 
 import { getDb } from '../database/connection';
@@ -9,7 +8,10 @@ import { getDb } from '../database/connection';
 const normalizeDefinitionRows = (rows: any[]): CompetencyDefinition[] =>
   rows.map((row) => ({
     id: row.id,
+    code: row.code ?? null,
     name: row.name,
+    category: row.category ?? 'Allgemein',
+    relevance: row.relevance ?? 'Alle',
     note: row.note ?? null,
     sortOrder: row.sortOrder ?? null,
   }));
@@ -17,14 +19,26 @@ const normalizeDefinitionRows = (rows: any[]): CompetencyDefinition[] =>
 export const listCompetencyDefinitions = (): CompetencyDefinition[] => {
   const db = getDb();
   const rows = db
-    .prepare('SELECT id, name, sortOrder, note FROM competency_definitions ORDER BY sortOrder ASC, id ASC')
+    .prepare(
+      `
+      SELECT id, code, name, category, relevance, sortOrder, note
+      FROM competency_definitions
+      ORDER BY sortOrder ASC, id ASC
+    `,
+    )
     .all() as any[];
   return normalizeDefinitionRows(rows);
 };
 
-export const addCompetencyDefinition = (name: string, note?: string | null): CompetencyDefinition[] => {
+export const addCompetencyDefinition = (input: {
+  code?: string | null;
+  name: string;
+  category?: string | null;
+  relevance?: string | null;
+  note?: string | null;
+}): CompetencyDefinition[] => {
   const db = getDb();
-  const trimmed = name.trim();
+  const trimmed = input.name.trim();
   if (!trimmed) {
     throw new Error('Kompetenz darf nicht leer sein.');
   }
@@ -33,25 +47,51 @@ export const addCompetencyDefinition = (name: string, note?: string | null): Com
   };
   const nextSort = (maxSort.mx ?? 0) + 1;
   db.prepare(
-    'INSERT INTO competency_definitions (name, sortOrder, note) VALUES (@name, @sortOrder, @note)',
-  ).run({ name: trimmed, sortOrder: nextSort, note: note ?? null });
+    `
+    INSERT INTO competency_definitions (code, name, category, relevance, sortOrder, note)
+    VALUES (@code, @name, @category, @relevance, @sortOrder, @note)
+  `,
+  ).run({
+    code: input.code?.trim() || null,
+    name: trimmed,
+    category: input.category?.trim() || 'Allgemein',
+    relevance: input.relevance?.trim() || 'Alle',
+    sortOrder: nextSort,
+    note: input.note ?? null,
+  });
   return listCompetencyDefinitions();
 };
 
-export const updateCompetencyDefinition = (
-  id: number,
-  name: string,
-  note?: string | null,
-): CompetencyDefinition[] => {
+export const updateCompetencyDefinition = (input: {
+  id: number;
+  code?: string | null;
+  name: string;
+  category?: string | null;
+  relevance?: string | null;
+  note?: string | null;
+}): CompetencyDefinition[] => {
   const db = getDb();
-  const trimmed = name.trim();
+  const trimmed = input.name.trim();
   if (!trimmed) {
     throw new Error('Kompetenz darf nicht leer sein.');
   }
-  db.prepare('UPDATE competency_definitions SET name = @name, note = @note WHERE id = @id').run({
-    id,
+  db.prepare(
+    `
+    UPDATE competency_definitions
+    SET code = @code,
+        name = @name,
+        category = @category,
+        relevance = @relevance,
+        note = @note
+    WHERE id = @id
+  `,
+  ).run({
+    id: input.id,
+    code: input.code?.trim() || null,
     name: trimmed,
-    note: note ?? null,
+    category: input.category?.trim() || 'Allgemein',
+    relevance: input.relevance?.trim() || 'Alle',
+    note: input.note ?? null,
   });
   return listCompetencyDefinitions();
 };
@@ -78,17 +118,20 @@ export const listEmployeeCompetencies = (employeeId: number): EmployeeCompetency
         ec.id,
         ec.employeeId,
         cd.id as competencyDefinitionId,
+        cd.code as competencyCode,
         cd.name as competencyName,
+        cd.category,
+        cd.relevance,
         cd.note as definitionNote,
         cd.sortOrder,
-        COALESCE(ec.status, 'open') as status,
-        ec.startedAt,
-        ec.completedAt,
+        ec.level,
+        ec.approvedAt,
+        ec.approvedBy,
         ec.note
-      FROM competency_definitions cd
-      LEFT JOIN employee_competencies ec
-        ON ec.competencyDefinitionId = cd.id
-       AND ec.employeeId = @employeeId
+      FROM employee_competencies ec
+      INNER JOIN competency_definitions cd
+        ON cd.id = ec.competencyDefinitionId
+      WHERE ec.employeeId = @employeeId
       ORDER BY cd.sortOrder ASC, cd.id ASC
     `,
     )
@@ -98,10 +141,13 @@ export const listEmployeeCompetencies = (employeeId: number): EmployeeCompetency
     id: row.id ?? undefined,
     employeeId: row.employeeId ?? employeeId,
     competencyDefinitionId: row.competencyDefinitionId,
+    competencyCode: row.competencyCode ?? null,
     competencyName: row.competencyName,
-    status: row.status as EmployeeCompetencyStatus,
-    startedAt: row.startedAt ?? null,
-    completedAt: row.completedAt ?? null,
+    category: row.category ?? 'Allgemein',
+    relevance: row.relevance ?? 'Alle',
+    level: row.level ?? null,
+    approvedAt: row.approvedAt ?? null,
+    approvedBy: row.approvedBy ?? null,
     note: row.note ?? null,
     definitionNote: row.definitionNote ?? null,
     sortOrder: row.sortOrder ?? null,
@@ -112,60 +158,60 @@ export const saveEmployeeCompetency = (input: {
   id?: number;
   employeeId: number;
   competencyDefinitionId: number;
-  status: EmployeeCompetencyStatus;
-  startedAt?: string | null;
-  completedAt?: string | null;
+  level?: number | null;
+  approvedAt?: string | null;
+  approvedBy?: string | null;
   note?: string | null;
 }): EmployeeCompetency[] => {
   const db = getDb();
   const normalizedNote = input.note?.trim() ? input.note.trim() : null;
-  const normalizedStartedAt = input.startedAt ?? null;
-  const normalizedCompletedAt = input.completedAt ?? null;
-
-  if (
-    input.status === 'open' &&
-    !normalizedStartedAt &&
-    !normalizedCompletedAt &&
-    !normalizedNote
-  ) {
-    db.prepare(
-      'DELETE FROM employee_competencies WHERE employeeId = ? AND competencyDefinitionId = ?',
-    ).run(input.employeeId, input.competencyDefinitionId);
-    return listEmployeeCompetencies(input.employeeId);
-  }
+  const normalizedApprovedAt = input.approvedAt ?? null;
+  const normalizedApprovedBy = input.approvedBy?.trim() ? input.approvedBy.trim() : null;
+  const normalizedLevel = input.level ?? null;
 
   db.prepare(
     `
     INSERT INTO employee_competencies (
       employeeId,
       competencyDefinitionId,
-      status,
-      startedAt,
-      completedAt,
+      level,
+      approvedAt,
+      approvedBy,
       note
     )
     VALUES (
       @employeeId,
       @competencyDefinitionId,
-      @status,
-      @startedAt,
-      @completedAt,
+      @level,
+      @approvedAt,
+      @approvedBy,
       @note
     )
     ON CONFLICT(employeeId, competencyDefinitionId) DO UPDATE SET
-      status = excluded.status,
-      startedAt = excluded.startedAt,
-      completedAt = excluded.completedAt,
+      level = excluded.level,
+      approvedAt = excluded.approvedAt,
+      approvedBy = excluded.approvedBy,
       note = excluded.note
   `,
   ).run({
     employeeId: input.employeeId,
     competencyDefinitionId: input.competencyDefinitionId,
-    status: input.status,
-    startedAt: normalizedStartedAt,
-    completedAt: normalizedCompletedAt,
+    level: normalizedLevel,
+    approvedAt: normalizedApprovedAt,
+    approvedBy: normalizedApprovedBy,
     note: normalizedNote,
   });
 
   return listEmployeeCompetencies(input.employeeId);
+};
+
+export const deleteEmployeeCompetency = (
+  employeeId: number,
+  competencyDefinitionId: number,
+): EmployeeCompetency[] => {
+  const db = getDb();
+  db.prepare(
+    'DELETE FROM employee_competencies WHERE employeeId = ? AND competencyDefinitionId = ?',
+  ).run(employeeId, competencyDefinitionId);
+  return listEmployeeCompetencies(employeeId);
 };

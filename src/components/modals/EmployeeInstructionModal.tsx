@@ -1,26 +1,26 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClipboardCheck } from '@fortawesome/free-solid-svg-icons';
-import type { CompetencyDefinition } from '../../shared/types';
-import type { EmployeeCompetencyModalState } from '../../types/ui';
+import type { InstructionDefinition } from '../../shared/types';
+import type { EmployeeInstructionModalState } from '../../types/ui';
 
-type EmployeeCompetencyModalProps = {
-  state: EmployeeCompetencyModalState;
-  availableDefinitions: CompetencyDefinition[];
-  onChange: (next: Partial<EmployeeCompetencyModalState>) => void;
+type EmployeeInstructionModalProps = {
+  state: EmployeeInstructionModalState;
+  availableDefinitions: InstructionDefinition[];
+  onChange: (next: Partial<EmployeeInstructionModalState>) => void;
   onClose: () => void;
   onSave: () => void;
   onDelete: () => void;
 };
 
-const EmployeeCompetencyModal = ({
+const EmployeeInstructionModal = ({
   state,
   availableDefinitions,
   onChange,
   onClose,
   onSave,
   onDelete,
-}: EmployeeCompetencyModalProps) => {
+}: EmployeeInstructionModalProps) => {
   if (!state.open) return null;
   const isAssigned = Boolean(state.id);
 
@@ -30,74 +30,64 @@ const EmployeeCompetencyModal = ({
         <div className="modal-icon">
           <FontAwesomeIcon icon={faClipboardCheck} />
         </div>
-        <h3>{isAssigned ? state.competencyName : 'Kompetenz hinzufügen'}</h3>
+        <h3>{isAssigned ? state.instructionName : 'Einweisung hinzufügen'}</h3>
         <div className="modal-body">
           {!isAssigned && (
             <label className="full-width">
-              Kompetenz
+              Einweisung
               <select
-                value={state.competencyDefinitionId ?? ''}
+                value={state.instructionDefinitionId ?? ''}
                 onChange={(e) => {
                   const selectedId = Number(e.target.value);
                   const selectedDefinition = availableDefinitions.find(
                     (definition) => definition.id === selectedId,
                   );
                   onChange({
-                    competencyDefinitionId: selectedId,
-                    competencyName: selectedDefinition?.name ?? '',
+                    instructionDefinitionId: selectedId,
+                    instructionName: selectedDefinition?.topic ?? '',
                   });
                 }}
               >
                 {availableDefinitions.map((definition) => (
                   <option key={definition.id} value={definition.id}>
-                    {definition.name}
+                    {definition.topic}
                   </option>
                 ))}
               </select>
             </label>
           )}
-          <label className="full-width">
-            Kompetenzstufe
-            <select
-              value={state.level ?? ''}
-              onChange={(e) =>
-                onChange({
-                  level: e.target.value ? Number(e.target.value) : null,
-                })
-              }
-            >
-              <option value="">Noch offen</option>
-              <option value="1">1 - Unterwiesen</option>
-              <option value="2">2 - Beobachtet</option>
-              <option value="3">3 - Unter Aufsicht</option>
-              <option value="4">4 - Selbstständig</option>
-              <option value="5">5 - Kann anleiten</option>
-            </select>
-          </label>
           <div className="form-grid">
             <label>
-              Freigegeben am
+              Fällig bis
               <input
                 type="date"
-                value={state.approvedAt}
-                onChange={(e) => onChange({ approvedAt: e.target.value })}
+                value={state.dueDate}
+                onChange={(e) => onChange({ dueDate: e.target.value })}
               />
             </label>
             <label>
-              Freigegeben durch
+              Durchgeführt am
               <input
-                value={state.approvedBy}
-                onChange={(e) => onChange({ approvedBy: e.target.value })}
-                placeholder="z. B. Praxisanleitung"
+                type="date"
+                value={state.completedAt}
+                onChange={(e) => onChange({ completedAt: e.target.value })}
               />
             </label>
           </div>
+          <label className="full-width">
+            Durchgeführt durch
+            <input
+              value={state.conductedBy}
+              onChange={(e) => onChange({ conductedBy: e.target.value })}
+              placeholder="z. B. Praxisanleitung oder PDL"
+            />
+          </label>
           <label className="full-width">
             Notiz
             <textarea
               value={state.note}
               onChange={(e) => onChange({ note: e.target.value })}
-              placeholder="Optional: Beobachtungen, Freigabehinweis, Besonderheiten"
+              placeholder="Optional: Besonderheiten oder Nachweis"
             />
           </label>
         </div>
@@ -123,4 +113,4 @@ const EmployeeCompetencyModal = ({
   );
 };
 
-export default EmployeeCompetencyModal;
+export default EmployeeInstructionModal;

@@ -17,13 +17,26 @@ import {
   faInfoCircle,
   faEnvelope
 } from '@fortawesome/free-solid-svg-icons';
-import type { CompetencyDefinition, QualificationType, UpdateStatus, AppInfo, StorageMode } from '../../shared/types';
-import type { CompetencyModalPayload, EncryptionSetupState, QualificationModalPayload } from '../../types/ui';
+import type {
+  CompetencyDefinition,
+  InstructionDefinition,
+  QualificationType,
+  UpdateStatus,
+  AppInfo,
+  StorageMode,
+} from '../../shared/types';
+import type {
+  CompetencyModalPayload,
+  EncryptionSetupState,
+  InstructionModalPayload,
+  QualificationModalPayload,
+} from '../../types/ui';
 import logoUrl from '../../assets/logo.png';
 
 type SettingsPageProps = {
   qualifications: QualificationType[];
   competencies: CompetencyDefinition[];
+  instructions: InstructionDefinition[];
   qualificationEdits: Record<number, string>;
   competencyEdits: Record<number, string>;
   dbMessage: string | null;
@@ -35,10 +48,13 @@ type SettingsPageProps = {
   encryptionSetup: EncryptionSetupState;
   onOpenQualificationModal: (payload: QualificationModalPayload) => void;
   onOpenCompetencyModal: (payload: CompetencyModalPayload) => void;
+  onOpenInstructionModal: (payload: InstructionModalPayload) => void;
   onReorderQualification: (orderedIds: number[]) => void | Promise<void>;
   onReorderCompetency: (orderedIds: number[]) => void | Promise<void>;
+  onReorderInstruction: (orderedIds: number[]) => void | Promise<void>;
   onDeleteQualification: (id: number) => void;
   onDeleteCompetency: (id: number) => void;
+  onDeleteInstruction: (id: number) => void;
   onBaseHoursInputChange: (val: string) => void;
   onSaveBaseHours: () => void | Promise<void>;
   onDbExport: (mode: 'encrypted' | 'plain') => void | Promise<void>;
@@ -55,11 +71,19 @@ type SettingsPageProps = {
   onFullReset: () => void | Promise<void>;
 };
 
-type TabId = 'general' | 'qualifications' | 'competencies' | 'database' | 'danger' | 'info';
+type TabId =
+  | 'general'
+  | 'qualifications'
+  | 'competencies'
+  | 'instructions'
+  | 'database'
+  | 'danger'
+  | 'info';
 
 const SettingsPage = ({
   qualifications,
   competencies,
+  instructions,
   qualificationEdits,
   competencyEdits,
   dbMessage,
@@ -71,10 +95,13 @@ const SettingsPage = ({
   encryptionSetup,
   onOpenQualificationModal,
   onOpenCompetencyModal,
+  onOpenInstructionModal,
   onReorderQualification,
   onReorderCompetency,
+  onReorderInstruction,
   onDeleteQualification,
   onDeleteCompetency,
+  onDeleteInstruction,
   onBaseHoursInputChange,
   onSaveBaseHours,
   onDbExport,
@@ -129,7 +156,8 @@ const SettingsPage = ({
   const tabs: { id: TabId; label: string; icon: any }[] = [
     { id: 'general', label: 'Allgemein', icon: faCog },
     { id: 'qualifications', label: 'Qualifikationen', icon: faList },
-    { id: 'competencies', label: 'Kompetenzpass', icon: faList },
+    { id: 'competencies', label: 'Kompetenzen', icon: faList },
+    { id: 'instructions', label: 'Einweisungen', icon: faList },
     { id: 'database', label: 'Datenbank & Sicherheit', icon: faDatabase },
     { id: 'danger', label: 'Gefahrenzone', icon: faExclamationTriangle },
     { id: 'info', label: 'Info', icon: faInfoCircle },
@@ -256,7 +284,10 @@ const SettingsPage = ({
               <table>
                 <thead>
                   <tr>
+                    <th>Kürzel</th>
                     <th>Name</th>
+                    <th>Kategorie</th>
+                    <th>Relevanz</th>
                     <th>Notiz</th>
                     <th style={{ width: 80 }}>Aktionen</th>
                   </tr>
@@ -330,7 +361,16 @@ const SettingsPage = ({
               </div>
               <button
                 className="primary"
-                onClick={() => onOpenCompetencyModal({ value: '', note: '', id: undefined })}
+                onClick={() =>
+                  onOpenCompetencyModal({
+                    id: undefined,
+                    code: '',
+                    value: '',
+                    category: 'Allgemein',
+                    relevance: 'Alle',
+                    note: '',
+                  })
+                }
               >
                 <FontAwesomeIcon icon={faPlus} /> Neu
               </button>
@@ -339,7 +379,10 @@ const SettingsPage = ({
               <table>
                 <thead>
                   <tr>
+                    <th>Kürzel</th>
                     <th>Name</th>
+                    <th>Kategorie</th>
+                    <th>Relevanz</th>
                     <th>Notiz</th>
                     <th style={{ width: 80 }}>Aktionen</th>
                   </tr>
@@ -368,12 +411,18 @@ const SettingsPage = ({
                         item.id &&
                         onOpenCompetencyModal({
                           id: item.id as number,
+                          code: item.code ?? '',
                           value: competencyEdits[item.id as number] ?? item.name,
+                          category: item.category ?? 'Allgemein',
+                          relevance: item.relevance ?? 'Alle',
                           note: item.note ?? '',
                         })
                       }
                     >
+                      <td>{item.code ?? '—'}</td>
                       <td>{item.name}</td>
+                      <td>{item.category ?? 'Allgemein'}</td>
+                      <td>{item.relevance ?? 'Alle'}</td>
                       <td className="muted">{item.note ?? '—'}</td>
                       <td>
                         {item.id && (
@@ -393,8 +442,101 @@ const SettingsPage = ({
                   ))}
                   {competencies.length === 0 && (
                     <tr>
-                      <td colSpan={3} className="empty">
+                      <td colSpan={6} className="empty">
                         Keine Kompetenzen hinterlegt.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'instructions' && (
+          <div className="card form-card">
+            <div className="form-header">
+              <div>
+                <p className="eyebrow">Verwaltung</p>
+                <h3>Einweisungen</h3>
+              </div>
+              <button
+                className="primary"
+                onClick={() =>
+                  onOpenInstructionModal({
+                    topic: '',
+                    legalBasis: '',
+                    note: '',
+                    id: undefined,
+                  })
+                }
+              >
+                <FontAwesomeIcon icon={faPlus} /> Neu
+              </button>
+            </div>
+            <div className="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Thema</th>
+                    <th>Grundlage</th>
+                    <th>Notiz</th>
+                    <th style={{ width: 80 }}>Aktionen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {instructions.map((item) => (
+                    <tr
+                      key={item.id ?? item.topic}
+                      className="clickable-row"
+                      draggable={!!item.id}
+                      onDragStart={() => setDragQualificationId(item.id ?? null)}
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (!dragQualificationId || !item.id || dragQualificationId === item.id) return;
+                        const orderedIds = instructions.map((entry) => entry.id!).filter(Boolean);
+                        const from = orderedIds.indexOf(dragQualificationId);
+                        const to = orderedIds.indexOf(item.id);
+                        if (from === -1 || to === -1) return;
+                        const reordered = [...orderedIds];
+                        const [moved] = reordered.splice(from, 1);
+                        reordered.splice(to, 0, moved);
+                        onReorderInstruction(reordered);
+                      }}
+                      onClick={() =>
+                        item.id &&
+                        onOpenInstructionModal({
+                          id: item.id as number,
+                          topic: item.topic,
+                          legalBasis: item.legalBasis ?? '',
+                          note: item.note ?? '',
+                        })
+                      }
+                    >
+                      <td>{item.topic}</td>
+                      <td>{item.legalBasis ?? '—'}</td>
+                      <td className="muted">{item.note ?? '—'}</td>
+                      <td>
+                        {item.id && (
+                          <button
+                            className="ghost-button danger icon-button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDeleteInstruction(item.id as number);
+                            }}
+                            title="Löschen"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                  {instructions.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="empty">
+                        Keine Einweisungen hinterlegt.
                       </td>
                     </tr>
                   )}

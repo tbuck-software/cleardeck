@@ -18,6 +18,7 @@ import { v008_fix_employee_foreign_keys } from './v008_fix_employee_foreign_keys
 import { v009_employee_fields } from './v009_employee_fields';
 import { v010_patients } from './v010_patients';
 import { v012_employee_competencies } from './v012_employee_competencies';
+import { v013_competency_matrix } from './v013_competency_matrix';
 
 export type Migration = {
   version: number;
@@ -41,6 +42,7 @@ export const migrations: Migration[] = [
   v009_employee_fields,
   v010_patients,
   v012_employee_competencies,
+  v013_competency_matrix,
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations[migrations.length - 1]?.version ?? 0;
@@ -148,6 +150,34 @@ export const runMigrations = (db: DatabaseType): void => {
     const v012 = migrations.find((m) => m.version === 12);
     if (v012) {
       v012.up(db);
+    }
+  }
+
+  const hasInstructionDefinitions = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='instruction_definitions'")
+    .get();
+  const hasEmployeeInstructions = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='employee_instructions'")
+    .get();
+  const competencyColumns = db
+    .prepare("PRAGMA table_info('competency_definitions')")
+    .all() as Array<{ name: string }>;
+  const employeeCompetencyColumns = db
+    .prepare("PRAGMA table_info('employee_competencies')")
+    .all() as Array<{ name: string }>;
+  const needsV013Repair =
+    !hasInstructionDefinitions ||
+    !hasEmployeeInstructions ||
+    !competencyColumns.some((column) => column.name === 'category') ||
+    !competencyColumns.some((column) => column.name === 'relevance') ||
+    !employeeCompetencyColumns.some((column) => column.name === 'level') ||
+    !employeeCompetencyColumns.some((column) => column.name === 'approvedAt') ||
+    !employeeCompetencyColumns.some((column) => column.name === 'approvedBy');
+  if (needsV013Repair) {
+    console.log('Repairing: competency matrix tables/columns missing, running v013 migration...');
+    const v013 = migrations.find((m) => m.version === 13);
+    if (v013) {
+      v013.up(db);
     }
   }
 };

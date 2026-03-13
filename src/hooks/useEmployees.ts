@@ -3,7 +3,9 @@ import api from '../services/api';
 import type {
   CompetencyDefinition,
   EmployeeCompetency,
+  EmployeeInstruction,
   EmployeeWithPeriod,
+  InstructionDefinition,
   QualificationType,
   YearDataset,
 } from '../shared/types';
@@ -12,11 +14,14 @@ import type {
   ConfirmActionOptions,
   EditModalState,
   EmployeeCompetencyModalState,
+  EmployeeInstructionModalState,
   FormState,
+  InstructionModalState,
   Page,
   QualificationModalState,
 } from '../types/ui';
 import { deriveFteFromWeeklyHours } from '../utils/fte';
+import { matchesQualificationRelevance } from '../utils/qualificationRelevance';
 
 export const emptyForm = (year: number, defaultQualification = ''): FormState => ({
   name: '',
@@ -33,6 +38,42 @@ const clampFte = (val?: number | null) => {
   if (val === undefined || val === null || Number.isNaN(val)) return 0;
   return Math.min(1, val);
 };
+
+const emptyCompetencyModal = (): CompetencyModalState => ({
+  open: false,
+  code: '',
+  value: '',
+  category: 'Allgemein',
+  relevance: 'Alle',
+  note: '',
+});
+
+const emptyEmployeeCompetencyModal = (): EmployeeCompetencyModalState => ({
+  open: false,
+  competencyDefinitionId: null,
+  competencyName: '',
+  level: null,
+  approvedAt: '',
+  approvedBy: '',
+  note: '',
+});
+
+const emptyInstructionModal = (): InstructionModalState => ({
+  open: false,
+  topic: '',
+  legalBasis: '',
+  note: '',
+});
+
+const emptyEmployeeInstructionModal = (): EmployeeInstructionModalState => ({
+  open: false,
+  instructionDefinitionId: null,
+  instructionName: '',
+  dueDate: '',
+  completedAt: '',
+  conductedBy: '',
+  note: '',
+});
 
 type UseEmployeesParams = {
   year: number;
@@ -82,23 +123,21 @@ const useEmployees = ({
   });
   const [competencyDefinitions, setCompetencyDefinitions] = useState<CompetencyDefinition[]>([]);
   const [competencyEdits, setCompetencyEdits] = useState<Record<number, string>>({});
-  const [competencyModal, setCompetencyModal] = useState<CompetencyModalState>({
-    open: false,
-    value: '',
-    note: '',
-  });
+  const [competencyModal, setCompetencyModal] = useState<CompetencyModalState>(
+    emptyCompetencyModal(),
+  );
+  const [instructionDefinitions, setInstructionDefinitions] = useState<InstructionDefinition[]>([]);
+  const [instructionModal, setInstructionModal] = useState<InstructionModalState>(
+    emptyInstructionModal(),
+  );
   const [form, setForm] = useState<FormState>(emptyForm(currentYear));
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithPeriod | null>(null);
   const [employeeCompetencies, setEmployeeCompetencies] = useState<EmployeeCompetency[]>([]);
-  const [employeeCompetencyModal, setEmployeeCompetencyModal] = useState<EmployeeCompetencyModalState>({
-    open: false,
-    competencyDefinitionId: null,
-    competencyName: '',
-    status: 'open',
-    startedAt: '',
-    completedAt: '',
-    note: '',
-  });
+  const [employeeInstructions, setEmployeeInstructions] = useState<EmployeeInstruction[]>([]);
+  const [employeeCompetencyModal, setEmployeeCompetencyModal] =
+    useState<EmployeeCompetencyModalState>(emptyEmployeeCompetencyModal());
+  const [employeeInstructionModal, setEmployeeInstructionModal] =
+    useState<EmployeeInstructionModalState>(emptyEmployeeInstructionModal());
   const [page, setPage] = useState<Page>('dashboard');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeWithPeriod['status']>('all');
@@ -134,6 +173,7 @@ const useEmployees = ({
     setForm(emptyForm(year, qualifications[0]?.name ?? ''));
     setAddNewPeriod(false);
     setEmployeeCompetencies([]);
+    setEmployeeInstructions([]);
   }, [qualifications, year]);
 
   const loadEmployeeCompetencies = useCallback(
@@ -141,6 +181,18 @@ const useEmployees = ({
       try {
         const list = await api.competencies.listEmployee(employeeId);
         setEmployeeCompetencies(list);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [handleError],
+  );
+
+  const loadEmployeeInstructions = useCallback(
+    async (employeeId: number) => {
+      try {
+        const list = await api.instructions.listEmployee(employeeId);
+        setEmployeeInstructions(list);
       } catch (err) {
         handleError(err);
       }
@@ -192,12 +244,13 @@ const useEmployees = ({
       });
       setAddNewPeriod(false);
       if (emp.id) {
-        await loadEmployeeCompetencies(emp.id);
+        await Promise.all([loadEmployeeCompetencies(emp.id), loadEmployeeInstructions(emp.id)]);
       } else {
         setEmployeeCompetencies([]);
+        setEmployeeInstructions([]);
       }
     },
-    [baseHours, loadEmployeeCompetencies],
+    [baseHours, loadEmployeeCompetencies, loadEmployeeInstructions],
   );
 
   const handleSave = useCallback(async () => {
@@ -286,12 +339,9 @@ const useEmployees = ({
     const val = qualificationModal.value.trim();
     if (!val) return;
     try {
-      let list: QualificationType[] = qualifications;
-      if (qualificationModal.id) {
-        list = await api.qualifications.update(qualificationModal.id, val, qualificationModal.note);
-      } else {
-        list = await api.qualifications.add(val, qualificationModal.note);
-      }
+      const list = qualificationModal.id
+        ? await api.qualifications.update(qualificationModal.id, val, qualificationModal.note)
+        : await api.qualifications.add(val, qualificationModal.note);
       setQualifications(list);
       const edits: Record<number, string> = {};
       list.forEach((q) => {
@@ -304,7 +354,7 @@ const useEmployees = ({
     } catch (err) {
       handleError(err);
     }
-  }, [handleError, qualificationModal, qualifications, setToast]);
+  }, [handleError, qualificationModal, setToast]);
 
   const handleDeleteQualification = useCallback(
     async (id: number) => {
@@ -349,22 +399,32 @@ const useEmployees = ({
   );
 
   const handleSaveCompetencyModal = useCallback(async () => {
-    const val = competencyModal.value.trim();
-    if (!val) return;
+    const name = competencyModal.value.trim();
+    if (!name) return;
     try {
-      let list: CompetencyDefinition[] = competencyDefinitions;
-      if (competencyModal.id) {
-        list = await api.competencies.updateDefinition(competencyModal.id, val, competencyModal.note);
-      } else {
-        list = await api.competencies.addDefinition(val, competencyModal.note);
-      }
+      const list = competencyModal.id
+        ? await api.competencies.updateDefinition({
+            id: competencyModal.id,
+            code: competencyModal.code,
+            name,
+            category: competencyModal.category,
+            relevance: competencyModal.relevance,
+            note: competencyModal.note,
+          })
+        : await api.competencies.addDefinition({
+            code: competencyModal.code,
+            name,
+            category: competencyModal.category,
+            relevance: competencyModal.relevance,
+            note: competencyModal.note,
+          });
       setCompetencyDefinitions(list);
       const edits: Record<number, string> = {};
       list.forEach((item) => {
         if (item.id) edits[item.id] = item.name;
       });
       setCompetencyEdits(edits);
-      setCompetencyModal({ open: false, value: '', note: '' });
+      setCompetencyModal(emptyCompetencyModal());
       if (selectedEmployee?.id) {
         await loadEmployeeCompetencies(selectedEmployee.id);
       }
@@ -373,14 +433,7 @@ const useEmployees = ({
     } catch (err) {
       handleError(err);
     }
-  }, [
-    competencyDefinitions,
-    competencyModal,
-    handleError,
-    loadEmployeeCompetencies,
-    selectedEmployee,
-    setToast,
-  ]);
+  }, [competencyModal, handleError, loadEmployeeCompetencies, selectedEmployee, setToast]);
 
   const handleDeleteCompetencyDefinition = useCallback(
     async (id: number) => {
@@ -434,18 +487,113 @@ const useEmployees = ({
     [handleError, loadEmployeeCompetencies, selectedEmployee],
   );
 
+  const handleSaveInstructionModal = useCallback(async () => {
+    const topic = instructionModal.topic.trim();
+    if (!topic) return;
+    try {
+      const list = instructionModal.id
+        ? await api.instructions.updateDefinition({
+            id: instructionModal.id,
+            topic,
+            legalBasis: instructionModal.legalBasis,
+            note: instructionModal.note,
+          })
+        : await api.instructions.addDefinition({
+            topic,
+            legalBasis: instructionModal.legalBasis,
+            note: instructionModal.note,
+          });
+      setInstructionDefinitions(list);
+      setInstructionModal(emptyInstructionModal());
+      if (selectedEmployee?.id) {
+        await loadEmployeeInstructions(selectedEmployee.id);
+      }
+      setToast('Einweisung gespeichert.');
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      handleError(err);
+    }
+  }, [handleError, instructionModal, loadEmployeeInstructions, selectedEmployee, setToast]);
+
+  const handleDeleteInstructionDefinition = useCallback(
+    async (id: number) => {
+      try {
+        const list = await api.instructions.deleteDefinition(id);
+        setInstructionDefinitions(list);
+        if (selectedEmployee?.id) {
+          await loadEmployeeInstructions(selectedEmployee.id);
+        }
+        setToast('Einweisung gelöscht.');
+        setTimeout(() => setToast(null), 2000);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [handleError, loadEmployeeInstructions, selectedEmployee, setToast],
+  );
+
+  const confirmDeleteInstructionDefinition = useCallback(
+    (id: number) => {
+      confirmAction('Einweisung wirklich löschen?', () => handleDeleteInstructionDefinition(id), {
+        confirmLabel: 'Löschen',
+        danger: true,
+      });
+    },
+    [confirmAction, handleDeleteInstructionDefinition],
+  );
+
+  const reorderInstructionDefinition = useCallback(
+    async (orderedIds: number[]) => {
+      try {
+        const list = await api.instructions.reorderDefinitions(orderedIds);
+        setInstructionDefinitions(list);
+        if (selectedEmployee?.id) {
+          await loadEmployeeInstructions(selectedEmployee.id);
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [handleError, loadEmployeeInstructions, selectedEmployee],
+  );
+
   const openEmployeeCompetencyModal = useCallback((entry: EmployeeCompetency) => {
     setEmployeeCompetencyModal({
       open: true,
       id: entry.id,
       competencyDefinitionId: entry.competencyDefinitionId,
       competencyName: entry.competencyName,
-      status: entry.status,
-      startedAt: entry.startedAt ?? '',
-      completedAt: entry.completedAt ?? '',
+      level: entry.level ?? null,
+      approvedAt: entry.approvedAt ?? '',
+      approvedBy: entry.approvedBy ?? '',
       note: entry.note ?? '',
     });
   }, []);
+
+  const openNewEmployeeCompetencyModal = useCallback(() => {
+    const assignedDefinitionIds = new Set(
+      employeeCompetencies.map((entry) => entry.competencyDefinitionId),
+    );
+    const nextDefinition = competencyDefinitions.find(
+      (definition) => definition.id && !assignedDefinitionIds.has(definition.id),
+    );
+
+    if (!nextDefinition?.id) {
+      setToast('Alle Kompetenzen sind bereits zugeordnet.');
+      setTimeout(() => setToast(null), 2000);
+      return;
+    }
+
+    setEmployeeCompetencyModal({
+      open: true,
+      competencyDefinitionId: nextDefinition.id,
+      competencyName: nextDefinition.name,
+      level: null,
+      approvedAt: '',
+      approvedBy: '',
+      note: '',
+    });
+  }, [competencyDefinitions, employeeCompetencies, setToast]);
 
   const handleSaveEmployeeCompetency = useCallback(async () => {
     if (!selectedEmployee?.id || !employeeCompetencyModal.competencyDefinitionId) return;
@@ -454,27 +602,159 @@ const useEmployees = ({
         id: employeeCompetencyModal.id,
         employeeId: selectedEmployee.id,
         competencyDefinitionId: employeeCompetencyModal.competencyDefinitionId,
-        status: employeeCompetencyModal.status,
-        startedAt: employeeCompetencyModal.startedAt || null,
-        completedAt: employeeCompetencyModal.completedAt || null,
+        level: employeeCompetencyModal.level,
+        approvedAt: employeeCompetencyModal.approvedAt || null,
+        approvedBy: employeeCompetencyModal.approvedBy || null,
         note: employeeCompetencyModal.note || null,
       });
       setEmployeeCompetencies(list);
-      setEmployeeCompetencyModal({
-        open: false,
-        competencyDefinitionId: null,
-        competencyName: '',
-        status: 'open',
-        startedAt: '',
-        completedAt: '',
-        note: '',
-      });
-      setToast('Kompetenzpass aktualisiert.');
+      setEmployeeCompetencyModal(emptyEmployeeCompetencyModal());
+      setToast('Kompetenz gespeichert.');
       setTimeout(() => setToast(null), 2000);
     } catch (err) {
       handleError(err);
     }
   }, [employeeCompetencyModal, handleError, selectedEmployee, setToast]);
+
+  const handleDeleteEmployeeCompetency = useCallback(async () => {
+    if (!selectedEmployee?.id || !employeeCompetencyModal.competencyDefinitionId) return;
+    try {
+      const list = await api.competencies.deleteEmployee(
+        selectedEmployee.id,
+        employeeCompetencyModal.competencyDefinitionId,
+      );
+      setEmployeeCompetencies(list);
+      setEmployeeCompetencyModal(emptyEmployeeCompetencyModal());
+      setToast('Kompetenz entfernt.');
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      handleError(err);
+    }
+  }, [employeeCompetencyModal.competencyDefinitionId, handleError, selectedEmployee, setToast]);
+
+  const handleAddRecommendedCompetencies = useCallback(async () => {
+    if (!selectedEmployee?.id) return;
+
+    const assignedDefinitionIds = new Set(
+      employeeCompetencies.map((entry) => entry.competencyDefinitionId),
+    );
+    const recommendedDefinitions = competencyDefinitions.filter(
+      (definition) =>
+        definition.id &&
+        !assignedDefinitionIds.has(definition.id) &&
+        matchesQualificationRelevance(selectedEmployee.qualification, definition.relevance),
+    );
+
+    if (recommendedDefinitions.length === 0) {
+      setToast('Keine passenden Kompetenzen zur Qualifikation gefunden.');
+      setTimeout(() => setToast(null), 2000);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let list: EmployeeCompetency[] = employeeCompetencies;
+      for (const definition of recommendedDefinitions) {
+        list = await api.competencies.saveEmployee({
+          employeeId: selectedEmployee.id,
+          competencyDefinitionId: definition.id as number,
+          level: null,
+          approvedAt: null,
+          approvedBy: null,
+          note: null,
+        });
+      }
+      setEmployeeCompetencies(list);
+      setToast(`${recommendedDefinitions.length} passende Kompetenzen hinzugefügt.`);
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    competencyDefinitions,
+    employeeCompetencies,
+    handleError,
+    selectedEmployee,
+    setLoading,
+    setToast,
+  ]);
+
+  const openEmployeeInstructionModal = useCallback((entry: EmployeeInstruction) => {
+    setEmployeeInstructionModal({
+      open: true,
+      id: entry.id,
+      instructionDefinitionId: entry.instructionDefinitionId,
+      instructionName: entry.instructionName,
+      dueDate: entry.dueDate ?? '',
+      completedAt: entry.completedAt ?? '',
+      conductedBy: entry.conductedBy ?? '',
+      note: entry.note ?? '',
+    });
+  }, []);
+
+  const openNewEmployeeInstructionModal = useCallback(() => {
+    const assignedDefinitionIds = new Set(
+      employeeInstructions.map((entry) => entry.instructionDefinitionId),
+    );
+    const nextDefinition = instructionDefinitions.find(
+      (definition) => definition.id && !assignedDefinitionIds.has(definition.id),
+    );
+
+    if (!nextDefinition?.id) {
+      setToast('Alle Einweisungen sind bereits zugeordnet.');
+      setTimeout(() => setToast(null), 2000);
+      return;
+    }
+
+    setEmployeeInstructionModal({
+      open: true,
+      instructionDefinitionId: nextDefinition.id,
+      instructionName: nextDefinition.topic,
+      dueDate: '',
+      completedAt: '',
+      conductedBy: '',
+      note: '',
+    });
+  }, [employeeInstructions, instructionDefinitions, setToast]);
+
+  const handleSaveEmployeeInstruction = useCallback(async () => {
+    if (!selectedEmployee?.id || !employeeInstructionModal.instructionDefinitionId) return;
+    try {
+      const list = await api.instructions.saveEmployee({
+        id: employeeInstructionModal.id,
+        employeeId: selectedEmployee.id,
+        instructionDefinitionId: employeeInstructionModal.instructionDefinitionId,
+        dueDate: employeeInstructionModal.dueDate || null,
+        completedAt: employeeInstructionModal.completedAt || null,
+        conductedBy: employeeInstructionModal.conductedBy || null,
+        note: employeeInstructionModal.note || null,
+      });
+      setEmployeeInstructions(list);
+      setEmployeeInstructionModal(emptyEmployeeInstructionModal());
+      setToast('Einweisung gespeichert.');
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      handleError(err);
+    }
+  }, [employeeInstructionModal, handleError, selectedEmployee, setToast]);
+
+  const handleDeleteEmployeeInstruction = useCallback(async () => {
+    if (!selectedEmployee?.id || !employeeInstructionModal.instructionDefinitionId) return;
+    try {
+      const list = await api.instructions.deleteEmployee(
+        selectedEmployee.id,
+        employeeInstructionModal.instructionDefinitionId,
+      );
+      setEmployeeInstructions(list);
+      setEmployeeInstructionModal(emptyEmployeeInstructionModal());
+      setToast('Einweisung entfernt.');
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      handleError(err);
+    }
+  }, [employeeInstructionModal.instructionDefinitionId, handleError, selectedEmployee, setToast]);
 
   const openEditModal = useCallback(() => {
     if (!selectedEmployee) return;
@@ -504,6 +784,7 @@ const useEmployees = ({
     setAddNewPeriod(false);
     setSelectedEmployee(null);
     setEmployeeCompetencies([]);
+    setEmployeeInstructions([]);
     setEditModal({
       open: true,
       mode: 'create',
@@ -514,7 +795,7 @@ const useEmployees = ({
       fteValue: freshForm.fte ? clampFte(freshForm.fte).toFixed(2) : '',
       birthDate: '',
     });
-  }, [qualifications, setAddNewPeriod, setForm, setSelectedEmployee, year]);
+  }, [qualifications, year]);
 
   const handleEditModalSave = useCallback(async () => {
     if (editModal.mode === 'create') {
@@ -524,7 +805,8 @@ const useEmployees = ({
       }
       setLoading(true);
       try {
-        const weeklyHoursNum = editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : form.weeklyHours ?? null;
+        const weeklyHoursNum =
+          editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : form.weeklyHours ?? null;
         const useLinked = editModal.linked ?? true;
         const derivedFte =
           useLinked && typeof weeklyHoursNum === 'number' && !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0
@@ -569,7 +851,8 @@ const useEmployees = ({
     if (!selectedEmployee) return;
     setLoading(true);
     try {
-      const weeklyHoursNum = editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : form.weeklyHours ?? null;
+      const weeklyHoursNum =
+        editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : form.weeklyHours ?? null;
       const useLinked = editModal.linked ?? true;
       const derivedFte =
         useLinked && typeof weeklyHoursNum === 'number' && !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0
@@ -704,14 +987,18 @@ const useEmployees = ({
       dataset,
       qualifications,
       competencyDefinitions,
+      instructionDefinitions,
       qualificationEdits,
       competencyEdits,
       qualificationModal,
       competencyModal,
+      instructionModal,
       form,
       selectedEmployee,
       employeeCompetencies,
+      employeeInstructions,
       employeeCompetencyModal,
+      employeeInstructionModal,
       page,
       search,
       statusFilter,
@@ -723,14 +1010,18 @@ const useEmployees = ({
       setDataset,
       setQualifications,
       setCompetencyDefinitions,
+      setInstructionDefinitions,
       setQualificationEdits,
       setCompetencyEdits,
       setQualificationModal,
       setCompetencyModal,
+      setInstructionModal,
       setForm,
       setSelectedEmployee,
       setEmployeeCompetencies,
+      setEmployeeInstructions,
       setEmployeeCompetencyModal,
+      setEmployeeInstructionModal,
       setPage,
       setSearch,
       setStatusFilter,
@@ -761,9 +1052,20 @@ const useEmployees = ({
       handleSaveCompetencyModal,
       confirmDeleteCompetencyDefinition,
       reorderCompetencyDefinition,
+      handleSaveInstructionModal,
+      confirmDeleteInstructionDefinition,
+      reorderInstructionDefinition,
       loadEmployeeCompetencies,
+      loadEmployeeInstructions,
       openEmployeeCompetencyModal,
+      openNewEmployeeCompetencyModal,
+      handleAddRecommendedCompetencies,
       handleSaveEmployeeCompetency,
+      handleDeleteEmployeeCompetency,
+      openEmployeeInstructionModal,
+      openNewEmployeeInstructionModal,
+      handleSaveEmployeeInstruction,
+      handleDeleteEmployeeInstruction,
       openEditModal,
       openCreateModal,
       handleEditModalSave,

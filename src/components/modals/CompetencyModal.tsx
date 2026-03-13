@@ -21,6 +21,39 @@ const CompetencyModal = ({ state, onChange, onClose, onSave }: CompetencyModalPr
         </div>
         <h3>{state.id ? 'Kompetenz bearbeiten' : 'Neue Kompetenz'}</h3>
         <div className="form-grid">
+          <label>
+            Kürzel
+            <input
+              value={state.code}
+              onChange={(e) => onChange({ code: e.target.value })}
+              placeholder="z. B. P01"
+            />
+          </label>
+          <label>
+            Kategorie
+            <select
+              value={state.category}
+              onChange={(e) => onChange({ category: e.target.value })}
+            >
+              <option value="Allgemein">Allgemein</option>
+              <option value="SGB XI">SGB XI</option>
+              <option value="SGB V">SGB V</option>
+            </select>
+          </label>
+          <label className="full-width">
+            Relevanz
+            <select
+              value={state.relevance}
+              onChange={(e) => onChange({ relevance: e.target.value })}
+            >
+              <option value="Alle">Alle</option>
+              <option value="Nur PFK">Nur PFK</option>
+              <option value="Nur PHK">Nur PHK</option>
+              <option value="Azubi">Azubi</option>
+              <option value="Praxisanleitung">Praxisanleitung</option>
+              <option value="QMB">QMB</option>
+            </select>
+          </label>
           <label className="full-width">
             Bezeichnung
             <input

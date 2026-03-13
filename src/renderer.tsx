@@ -21,9 +21,12 @@ import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
 import QualificationModal from './components/modals/QualificationModal';
 import CompetencyModal from './components/modals/CompetencyModal';
+import InstructionModal from './components/modals/InstructionModal';
 import EmployeeCompetencyModal from './components/modals/EmployeeCompetencyModal';
+import EmployeeInstructionModal from './components/modals/EmployeeInstructionModal';
 import BirthDateInput from './components/ui/BirthDateInput';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
+import { matchesQualificationRelevance } from './utils/qualificationRelevance';
 import { unifyEvents } from './utils/unifyEvents';
 import useAppLogic from './hooks/useAppLogic';
 import type { EventModalType } from './types/ui';
@@ -40,10 +43,12 @@ const App = () => {
       baseHoursInput,
       qualifications,
       competencyDefinitions,
+      instructionDefinitions,
       form,
       periods,
       selectedEmployee,
       employeeCompetencies,
+      employeeInstructions,
       appReady,
       page,
       loading,
@@ -64,8 +69,10 @@ const App = () => {
       competencyEdits,
       qualificationModal,
       competencyModal,
+      instructionModal,
       editModal,
       employeeCompetencyModal,
+      employeeInstructionModal,
       addPeriodForm,
       eventModal,
       confirmState,
@@ -93,8 +100,10 @@ const App = () => {
       setQualificationFilter,
       setQualificationModal,
       setCompetencyModal,
+      setInstructionModal,
       setEditModal,
       setEmployeeCompetencyModal,
+      setEmployeeInstructionModal,
       setEncryptionSetup,
       setSearch,
       setStatusFilter,
@@ -124,8 +133,18 @@ const App = () => {
       confirmDeleteCompetencyDefinition,
       handleSaveCompetencyModal,
       reorderCompetencyDefinition,
+      handleSaveInstructionModal,
+      confirmDeleteInstructionDefinition,
+      reorderInstructionDefinition,
       openEmployeeCompetencyModal,
+      openNewEmployeeCompetencyModal,
+      handleAddRecommendedCompetencies,
       handleSaveEmployeeCompetency,
+      handleDeleteEmployeeCompetency,
+      openEmployeeInstructionModal,
+      openNewEmployeeInstructionModal,
+      handleSaveEmployeeInstruction,
+      handleDeleteEmployeeInstruction,
       openRecoveryKey,
       handleCopyRecoveryKey,
       startRecoveryReset,
@@ -226,6 +245,22 @@ const App = () => {
   };
 
   const isCreateMode = editModal.mode === 'create';
+  const availableCompetencyDefinitions = competencyDefinitions.filter(
+    (definition) =>
+      definition.id &&
+      !employeeCompetencies.some((entry) => entry.competencyDefinitionId === definition.id),
+  );
+  const suggestedCompetencyDefinitions =
+    selectedEmployee == null
+      ? []
+      : availableCompetencyDefinitions.filter((definition) =>
+          matchesQualificationRelevance(selectedEmployee.qualification, definition.relevance),
+        );
+  const availableInstructionDefinitions = instructionDefinitions.filter(
+    (definition) =>
+      definition.id &&
+      !employeeInstructions.some((entry) => entry.instructionDefinitionId === definition.id),
+  );
 
   const unifiedEvents = useMemo(
     () =>
@@ -368,11 +403,19 @@ const App = () => {
           <EmployeeDetail
             employee={selectedEmployee}
             employeeCompetencies={employeeCompetencies}
+            employeeInstructions={employeeInstructions}
+            canAddCompetency={availableCompetencyDefinitions.length > 0}
+            canAddInstruction={availableInstructionDefinitions.length > 0}
+            suggestedCompetencyCount={suggestedCompetencyDefinitions.length}
             displayStart={displayStart}
             timelineItems={timelineItems}
+            onAddCompetency={openNewEmployeeCompetencyModal}
+            onAddInstruction={openNewEmployeeInstructionModal}
+            onAddSuggestedCompetencies={handleAddRecommendedCompetencies}
             onOpenEditModal={openEditModal}
             onStartNewPeriod={openNewPeriodModal}
             onSelectCompetency={openEmployeeCompetencyModal}
+            onSelectInstruction={openEmployeeInstructionModal}
             onSelectPeriod={openExistingPeriodModal}
             onSelectEvent={openEventModalForEvent}
           />
@@ -400,6 +443,7 @@ const App = () => {
           <SettingsPage
             qualifications={qualifications}
             competencies={competencyDefinitions}
+            instructions={instructionDefinitions}
             qualificationEdits={qualificationEdits}
             competencyEdits={competencyEdits}
             dbMessage={dbMessage}
@@ -421,14 +465,28 @@ const App = () => {
               setCompetencyModal({
                 open: true,
                 id: payload.id,
+                code: payload.code,
                 value: payload.value,
+                category: payload.category,
+                relevance: payload.relevance,
+                note: payload.note,
+              })
+            }
+            onOpenInstructionModal={(payload) =>
+              setInstructionModal({
+                open: true,
+                id: payload.id,
+                topic: payload.topic,
+                legalBasis: payload.legalBasis,
                 note: payload.note,
               })
             }
             onReorderQualification={reorderQualification}
             onReorderCompetency={reorderCompetencyDefinition}
+            onReorderInstruction={reorderInstructionDefinition}
             onDeleteQualification={confirmDeleteQualification}
             onDeleteCompetency={confirmDeleteCompetencyDefinition}
+            onDeleteInstruction={confirmDeleteInstructionDefinition}
             onBaseHoursInputChange={setBaseHoursInput}
             onSaveBaseHours={handleSaveBaseHoursValue}
             onDbExport={handleDbExport}
@@ -530,24 +588,59 @@ const App = () => {
       <CompetencyModal
         state={competencyModal}
         onChange={(next) => setCompetencyModal((prev) => ({ ...prev, ...next }))}
-        onClose={() => setCompetencyModal({ open: false, value: '', note: '' })}
+        onClose={() =>
+          setCompetencyModal({
+            open: false,
+            code: '',
+            value: '',
+            category: 'Allgemein',
+            relevance: 'Alle',
+            note: '',
+          })
+        }
         onSave={handleSaveCompetencyModal}
+      />
+      <InstructionModal
+        state={instructionModal}
+        onChange={(next) => setInstructionModal((prev) => ({ ...prev, ...next }))}
+        onClose={() => setInstructionModal({ open: false, topic: '', legalBasis: '', note: '' })}
+        onSave={handleSaveInstructionModal}
       />
       <EmployeeCompetencyModal
         state={employeeCompetencyModal}
+        availableDefinitions={availableCompetencyDefinitions}
         onChange={(next) => setEmployeeCompetencyModal((prev) => ({ ...prev, ...next }))}
         onClose={() =>
           setEmployeeCompetencyModal({
             open: false,
             competencyDefinitionId: null,
             competencyName: '',
-            status: 'open',
-            startedAt: '',
-            completedAt: '',
+            level: null,
+            approvedAt: '',
+            approvedBy: '',
             note: '',
           })
         }
         onSave={handleSaveEmployeeCompetency}
+        onDelete={handleDeleteEmployeeCompetency}
+      />
+      <EmployeeInstructionModal
+        state={employeeInstructionModal}
+        availableDefinitions={availableInstructionDefinitions}
+        onChange={(next) => setEmployeeInstructionModal((prev) => ({ ...prev, ...next }))}
+        onClose={() =>
+          setEmployeeInstructionModal({
+            open: false,
+            instructionDefinitionId: null,
+            instructionName: '',
+            dueDate: '',
+            completedAt: '',
+            conductedBy: '',
+            note: '',
+          })
+        }
+        onSave={handleSaveEmployeeInstruction}
+        onDelete={handleDeleteEmployeeInstruction}
       />
       {editModal.open && (
         <div className="modal-backdrop">
