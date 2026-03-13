@@ -19,7 +19,6 @@ import {
   isConfigured,
   readConfig,
   writeConfig,
-  deleteConfig,
   getConfigStorageMode,
 } from '../crypto';
 import {
@@ -28,13 +27,13 @@ import {
   openDatabase,
   persistEncryptedDb,
   closeDb,
-  deleteDatabase as deleteDbFiles,
   deleteEncryptedSnapshot,
   ensureDataDir,
   setStorageMode,
   getStorageMode,
   isDbOpen,
 } from '../database/connection';
+import { archiveAppData } from '../dataArchive';
 
 // Track unlock state
 let unlocked = false;
@@ -346,9 +345,9 @@ export const registerAuthHandlers = (): void => {
   });
 
   ipcMain.handle('app:reset', (): AppState => {
+    persistEncryptedDb();
     closeDb();
-    deleteDbFiles();
-    deleteConfig();
+    archiveAppData();
     unlocked = false;
     setEncryptionKey(null);
     setStorageMode('encrypted');

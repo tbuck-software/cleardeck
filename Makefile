@@ -1,6 +1,6 @@
 VERSION_CMD=node -p "require('./package.json').version"
 
-.PHONY: ensure-clean show-version build release release-patch release-minor release-major
+.PHONY: ensure-clean show-version build allow allow-out reseed-dev reseed-prod release release-patch release-minor release-major
 
 # Fail fast if there are uncommitted changes
 ensure-clean:
@@ -11,6 +11,18 @@ show-version:
 
 build:
 	@SKIP_FUSES=1 npm run make:release
+
+allow:
+	@./scripts/macos-allow-app.sh "$(APP)"
+
+allow-out:
+	@./scripts/macos-allow-app.sh --out "$(APP)"
+
+reseed-dev:
+	@node ./scripts/reseed-dev.js --profile=dev
+
+reseed-prod:
+	@node ./scripts/reseed-dev.js --profile=prod
 
 release: ensure-clean build
 	@echo "Release-Build fuer Version $$( $(VERSION_CMD) ) erstellt."

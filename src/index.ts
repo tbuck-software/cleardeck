@@ -17,6 +17,7 @@
 
 import { app, BrowserWindow } from 'electron';
 
+import { configureUserDataPath } from './main/appPaths';
 import { persistEncryptedDb } from './main/database/connection';
 import { registerAllHandlers, initAutoUpdater } from './main/ipc';
 
@@ -28,6 +29,8 @@ declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
 if (require('electron-squirrel-startup')) {
   app.quit();
 }
+
+configureUserDataPath();
 
 // =============================================================================
 // WINDOW MANAGEMENT

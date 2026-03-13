@@ -23,4 +23,21 @@ describe('AuthScreen', () => {
 
     expect(onSubmit).toHaveBeenCalledWith({ password: '', storageMode: 'plain' });
   });
+
+  it('zeigt im Login einen Reset-Knopf für nicht wiederherstellbare Datenbanken', () => {
+    const onResetApp = vi.fn();
+
+    render(
+      <AuthScreen
+        mode="login"
+        onSubmit={vi.fn().mockResolvedValue(undefined)}
+        onResetApp={onResetApp}
+        busy={false}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Datenbank nicht wiederherstellbar? Neu anlegen' }));
+
+    expect(onResetApp).toHaveBeenCalledTimes(1);
+  });
 });
