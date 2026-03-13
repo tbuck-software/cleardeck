@@ -17,8 +17,8 @@ import {
   faInfoCircle,
   faEnvelope
 } from '@fortawesome/free-solid-svg-icons';
-import type { QualificationType, UpdateStatus, AppInfo } from '../../shared/types';
-import type { QualificationModalPayload } from '../../types/ui';
+import type { QualificationType, UpdateStatus, AppInfo, StorageMode } from '../../shared/types';
+import type { EncryptionSetupState, QualificationModalPayload } from '../../types/ui';
 import logoUrl from '../../assets/logo.png';
 
 type SettingsPageProps = {
@@ -29,6 +29,8 @@ type SettingsPageProps = {
   updateStatus: UpdateStatus;
   lastUpdateCheckAt: string | null;
   appInfo: AppInfo | null;
+  storageMode: StorageMode;
+  encryptionSetup: EncryptionSetupState;
   onOpenQualificationModal: (payload: QualificationModalPayload) => void;
   onReorderQualification: (orderedIds: number[]) => void | Promise<void>;
   onDeleteQualification: (id: number) => void;
@@ -37,6 +39,11 @@ type SettingsPageProps = {
   onDbExport: (mode: 'encrypted' | 'plain') => void | Promise<void>;
   onDbImport: (mode: 'encrypted' | 'plain') => void | Promise<void>;
   onOpenRecoveryKey: () => void;
+  onOpenEnableEncryption: () => void;
+  onCloseEnableEncryption: () => void;
+  onEncryptionSetupChange: (next: Partial<EncryptionSetupState>) => void;
+  onEnableEncryption: () => void | Promise<void>;
+  onDisableEncryption: () => void | Promise<void>;
   onCheckUpdates: () => void | Promise<void>;
   onInstallUpdate: () => void | Promise<void>;
   onDropDatabase: () => void | Promise<void>;
@@ -53,6 +60,8 @@ const SettingsPage = ({
   updateStatus,
   lastUpdateCheckAt,
   appInfo,
+  storageMode,
+  encryptionSetup,
   onOpenQualificationModal,
   onReorderQualification,
   onDeleteQualification,
@@ -61,6 +70,11 @@ const SettingsPage = ({
   onDbExport,
   onDbImport,
   onOpenRecoveryKey,
+  onOpenEnableEncryption,
+  onCloseEnableEncryption,
+  onEncryptionSetupChange,
+  onEnableEncryption,
+  onDisableEncryption,
   onCheckUpdates,
   onInstallUpdate,
   onDropDatabase,
@@ -313,7 +327,11 @@ const SettingsPage = ({
                   <button className="ghost-button" onClick={() => onDbExport('plain')}>
                     <FontAwesomeIcon icon={faDownload} /> SQL
                   </button>
-                  <button className="ghost-button" onClick={() => onDbExport('encrypted')}>
+                  <button
+                    className="ghost-button"
+                    onClick={() => onDbExport('encrypted')}
+                    disabled={storageMode !== 'encrypted'}
+                  >
                     <FontAwesomeIcon icon={faDownload} /> Verschlüsselt
                   </button>
                 </div>
@@ -324,7 +342,11 @@ const SettingsPage = ({
                   <button className="ghost-button danger" onClick={() => onDbImport('plain')}>
                     <FontAwesomeIcon icon={faUpload} /> SQL Import
                   </button>
-                  <button className="ghost-button danger" onClick={() => onDbImport('encrypted')}>
+                  <button
+                    className="ghost-button danger"
+                    onClick={() => onDbImport('encrypted')}
+                    disabled={storageMode !== 'encrypted'}
+                  >
                     <FontAwesomeIcon icon={faUpload} /> Verschlüsselt Import
                   </button>
                 </div>
@@ -345,11 +367,27 @@ const SettingsPage = ({
                 </div>
               </div>
               <div className="form-grid">
-                <button className="ghost-button" onClick={onOpenRecoveryKey} style={{ justifyContent: 'flex-start' }}>
-                  <FontAwesomeIcon icon={faKey} /> Recovery Key anzeigen
-                </button>
+                <p className="subtitle small" style={{ margin: 0 }}>
+                  Speichermodus: <strong>{storageMode === 'encrypted' ? 'Verschlüsselt' : 'Unverschlüsselt'}</strong>
+                </p>
+                {storageMode === 'encrypted' ? (
+                  <>
+                    <button className="ghost-button" onClick={onOpenRecoveryKey} style={{ justifyContent: 'flex-start' }}>
+                      <FontAwesomeIcon icon={faKey} /> Recovery Key anzeigen
+                    </button>
+                    <button className="ghost-button danger" onClick={onDisableEncryption} style={{ justifyContent: 'flex-start' }}>
+                      <FontAwesomeIcon icon={faShieldAlt} /> Verschlüsselung deaktivieren
+                    </button>
+                  </>
+                ) : (
+                  <button className="primary" onClick={onOpenEnableEncryption} style={{ justifyContent: 'flex-start' }}>
+                    <FontAwesomeIcon icon={faShieldAlt} /> Verschlüsselung aktivieren
+                  </button>
+                )}
                 <p className="subtitle small">
-                  Sicher offline ablegen. Wer den Key besitzt, kann alle Daten ohne Passwort lesen.
+                  {storageMode === 'encrypted'
+                    ? 'Sicher offline ablegen. Wer den Key besitzt, kann alle Daten ohne Passwort lesen.'
+                    : 'Im unverschlüsselten Modus gibt es keinen Recovery Key. Die Datenbank liegt lokal ohne Passwortschutz vor.'}
                 </p>
               </div>
             </div>
@@ -481,6 +519,48 @@ const SettingsPage = ({
           </div>
         )}
       </div>
+      {encryptionSetup.open && (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-icon">
+              <FontAwesomeIcon icon={faShieldAlt} />
+            </div>
+            <h3>Verschlüsselung aktivieren</h3>
+            <div className="modal-body">
+              <p className="modal-text">
+                Lege ein Passwort fest. Danach wird beim Start wieder ein Login verlangt und ein Recovery Key bereitgestellt.
+              </p>
+              <label className="full-width">
+                Passwort
+                <input
+                  type="password"
+                  value={encryptionSetup.password}
+                  onChange={(e) => onEncryptionSetupChange({ password: e.target.value, error: null })}
+                  placeholder="Neues Passwort"
+                />
+              </label>
+              <label className="full-width">
+                Wiederholen
+                <input
+                  type="password"
+                  value={encryptionSetup.repeat}
+                  onChange={(e) => onEncryptionSetupChange({ repeat: e.target.value, error: null })}
+                  placeholder="Wiederholen"
+                />
+              </label>
+              {encryptionSetup.error && <div className="error">{encryptionSetup.error}</div>}
+            </div>
+            <div className="modal-actions">
+              <button className="ghost-button" onClick={onCloseEnableEncryption}>
+                Abbrechen
+              </button>
+              <button className="primary" onClick={onEnableEncryption}>
+                Aktivieren
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

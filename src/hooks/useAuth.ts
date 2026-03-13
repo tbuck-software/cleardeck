@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import type { AppState, QualificationType } from '../shared/types';
+import type { AppState, QualificationType, StorageMode } from '../shared/types';
 import type { FormState } from '../types/ui';
 
 type UseAuthParams = {
@@ -29,6 +29,7 @@ const useAuth = ({
   const [appReady, setAppReady] = useState<AppState>({
     configured: false,
     unlocked: false,
+    storageMode: 'encrypted',
   });
 
   const hydrateQualifications = useCallback(
@@ -62,7 +63,13 @@ const useAuth = ({
     } catch (err) {
       handleError(err);
     }
-  }, [handleError, hydrateBaseHours, hydrateQualifications, refreshDataset, year]);
+  }, [
+    handleError,
+    hydrateBaseHours,
+    hydrateQualifications,
+    refreshDataset,
+    year,
+  ]);
 
   useEffect(() => {
     bootstrap();
@@ -85,15 +92,19 @@ const useAuth = ({
   }, [appReady.unlocked, handleError, hydrateQualifications]);
 
   const handleLogin = useCallback(
-    async (password: string, mode: 'setup' | 'login') => {
+    async (payload: { password: string; storageMode: StorageMode }, mode: 'setup' | 'login') => {
       try {
         setLoading(true);
         const state =
-          mode === 'setup' ? await api.auth.register(password) : await api.auth.login(password);
+          mode === 'setup'
+            ? payload.storageMode === 'plain'
+              ? await api.auth.registerPlain()
+              : await api.auth.register(payload.password)
+            : await api.auth.login(payload.password);
         setAppReady(state);
         if (state.unlocked) {
           await refreshDataset(year);
-          if (mode === 'setup') {
+          if (mode === 'setup' && state.storageMode === 'encrypted') {
             await openRecoveryKey('setup');
           }
         }

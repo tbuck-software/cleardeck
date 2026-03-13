@@ -9,6 +9,7 @@ import path from 'path';
 import { app } from 'electron';
 import Database from 'better-sqlite3';
 import type { Database as DatabaseType } from 'better-sqlite3';
+import type { StorageMode } from '../../shared/types';
 
 import { runMigrations } from './migrations';
 import { seedDatabase } from './seed';
@@ -22,6 +23,7 @@ const workingDbPath = path.join(dataDir, 'employee.db');
 // Database state
 let db: DatabaseType | null = null;
 let encryptionKey: Buffer | null = null;
+let storageMode: StorageMode = 'encrypted';
 
 /**
  * Get the current database instance
@@ -52,6 +54,27 @@ export const setEncryptionKey = (key: Buffer | null): void => {
 export const getEncryptionKey = (): Buffer | null => encryptionKey;
 
 /**
+ * Set current storage mode
+ */
+export const setStorageMode = (mode: StorageMode): void => {
+  storageMode = mode;
+};
+
+/**
+ * Get current storage mode
+ */
+export const getStorageMode = (): StorageMode => storageMode;
+
+/**
+ * Remove only the encrypted database snapshot
+ */
+export const deleteEncryptedSnapshot = (): void => {
+  if (fs.existsSync(encryptedDbPath)) {
+    fs.rmSync(encryptedDbPath, { force: true });
+  }
+};
+
+/**
  * Ensure the data directory exists
  */
 export const ensureDataDir = (): void => {
@@ -69,8 +92,12 @@ const ensureWorkingDb = (): void => {
     return;
   }
 
-  if (fs.existsSync(encryptedDbPath) && encryptionKey) {
+  if (fs.existsSync(encryptedDbPath) && storageMode === 'encrypted' && encryptionKey) {
     decryptFile(encryptedDbPath, workingDbPath, encryptionKey);
+  } else if (fs.existsSync(encryptedDbPath) && storageMode === 'plain') {
+    throw new Error(
+      'Konfiguration ist auf unverschlüsselte Daten gestellt, aber es wurde nur eine verschlüsselte Datenbank gefunden.',
+    );
   } else if (!fs.existsSync(workingDbPath)) {
     fs.writeFileSync(workingDbPath, '');
   }
@@ -81,7 +108,7 @@ const ensureWorkingDb = (): void => {
  * @throws Error if encryption key is not set
  */
 export const openDatabase = (): void => {
-  if (!encryptionKey) {
+  if (storageMode === 'encrypted' && !encryptionKey) {
     throw new Error('Datenbank ist gesperrt.');
   }
   ensureWorkingDb();
@@ -94,11 +121,14 @@ export const openDatabase = (): void => {
  * Close database and encrypt to disk
  */
 export const persistEncryptedDb = (): void => {
-  if (!encryptionKey) return;
   if (db) {
     db.close();
     db = null;
   }
+  if (storageMode === 'plain') {
+    return;
+  }
+  if (!encryptionKey) return;
   if (fs.existsSync(workingDbPath)) {
     encryptFile(workingDbPath, encryptedDbPath, encryptionKey);
     fs.rmSync(workingDbPath, { force: true });
@@ -110,7 +140,10 @@ export const persistEncryptedDb = (): void => {
  * @throws Error if not unlocked
  */
 export const ensureDbReady = (unlocked: boolean): void => {
-  if (!unlocked || !encryptionKey) {
+  if (!unlocked) {
+    throw new Error('Bitte zuerst anmelden.');
+  }
+  if (storageMode === 'encrypted' && !encryptionKey) {
     throw new Error('Bitte zuerst anmelden.');
   }
   if (!db) {
@@ -162,5 +195,3 @@ export const backupDatabase = (): string => {
 
 // Re-export paths for use elsewhere
 export { dataDir, encryptedDbPath, workingDbPath };
-
-

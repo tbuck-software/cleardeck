@@ -94,9 +94,12 @@ export interface YearDataset {
   baseHours?: number;
 }
 
+export type StorageMode = 'encrypted' | 'plain';
+
 export interface AppState {
   configured: boolean;
   unlocked: boolean;
+  storageMode: StorageMode;
 }
 
 export interface RecoveryInfo {

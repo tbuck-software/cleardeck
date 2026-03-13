@@ -6,20 +6,25 @@ import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
+import type { StorageMode } from '../shared/types';
 
 // Config file path
 const dataDir = path.join(app.getPath('userData'), 'data');
 const configPath = path.join(dataDir, 'config.json');
 
 export type AppConfig = {
-  salt: string;
-  passwordHash: string;
-  encryptedKey: string;
-  keyIv: string;
-  keyTag: string;
+  storageMode?: StorageMode;
+  salt?: string;
+  passwordHash?: string;
+  encryptedKey?: string;
+  keyIv?: string;
+  keyTag?: string;
   keyFingerprint?: string;
   configVersion: number;
 };
+
+export const getConfigStorageMode = (config?: AppConfig | null): StorageMode =>
+  config?.storageMode === 'plain' ? 'plain' : 'encrypted';
 
 /**
  * Ensure the data directory exists
@@ -134,7 +139,12 @@ export const isConfigured = (): boolean => fs.existsSync(configPath);
 export const readConfig = (): AppConfig | null => {
   try {
     const content = fs.readFileSync(configPath, 'utf8');
-    return JSON.parse(content) as AppConfig;
+    const parsed = JSON.parse(content) as AppConfig;
+    return {
+      ...parsed,
+      storageMode: getConfigStorageMode(parsed),
+      configVersion: parsed.configVersion ?? 2,
+    };
   } catch {
     return null;
   }
@@ -159,5 +169,4 @@ export const deleteConfig = (): void => {
 
 // Re-export paths
 export { configPath, dataDir };
-
 

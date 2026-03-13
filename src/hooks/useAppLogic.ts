@@ -99,6 +99,10 @@ const useAppLogic = () => {
       employeeSlice.actions.resetForm();
       employeeSlice.setters.setPage('dashboard');
     },
+    onAuthStateChange: (state) => {
+      appReadySetterRef.current(state);
+    },
+    onOpenRecoveryKey: async () => openRecoveryKey('settings'),
   });
 
   useEffect(() => {
@@ -240,6 +244,8 @@ const useAppLogic = () => {
       dbMessage: settingsSlice.state.dbMessage,
       snoozeUpdates: settingsSlice.state.snoozeUpdates,
       appInfo: settingsSlice.state.appInfo,
+      storageMode: settingsSlice.state.storageMode,
+      encryptionSetup: settingsSlice.state.encryptionSetup,
       search: employeeSlice.state.search,
       statusFilter: employeeSlice.state.statusFilter,
       qualificationFilter: employeeSlice.state.qualificationFilter,
@@ -277,6 +283,7 @@ const useAppLogic = () => {
       setQualificationFilter: employeeSlice.setters.setQualificationFilter,
       setQualificationModal: employeeSlice.setters.setQualificationModal,
       setEditModal: employeeSlice.setters.setEditModal,
+      setEncryptionSetup: settingsSlice.setters.setEncryptionSetup,
       setSearch: employeeSlice.setters.setSearch,
       setStatusFilter: employeeSlice.setters.setStatusFilter,
       setPeriodToDelete: eventSlice.setters.setPeriodToDelete,
@@ -325,6 +332,10 @@ const useAppLogic = () => {
       handleCheckUpdates: settingsSlice.actions.handleCheckUpdates,
       handleInstallUpdate: settingsSlice.actions.handleInstallUpdate,
       handleSnoozeUpdate: settingsSlice.actions.handleSnoozeUpdate,
+      openEnableEncryption: settingsSlice.actions.openEnableEncryption,
+      closeEnableEncryption: settingsSlice.actions.closeEnableEncryption,
+      handleEnableEncryption: settingsSlice.actions.handleEnableEncryption,
+      handleDisableEncryption: settingsSlice.actions.handleDisableEncryption,
       handleAddPeriod: eventSlice.actions.handleAddPeriod,
       handleSaveEvent: eventSlice.actions.handleSaveEvent,
       handleDeleteEvent: eventSlice.actions.handleDeleteEvent,

@@ -30,7 +30,10 @@ export const api = {
   auth: {
     getState: () => call('getAppState', baseApi.getAppState),
     register: (password: string) => call('register', baseApi.register, password),
+    registerPlain: () => call('registerPlain', baseApi.registerPlain),
     login: (password: string) => call('login', baseApi.login, password),
+    enableEncryption: (password: string) => call('enableEncryption', baseApi.enableEncryption, password),
+    disableEncryption: () => call('disableEncryption', baseApi.disableEncryption),
   },
   recovery: {
     getKey: () => call('getRecoveryKey', baseApi.getRecoveryKey),
@@ -79,6 +82,7 @@ export const api = {
   settings: {
     getBaseHours: () => call('getBaseHours', baseApi.getBaseHours),
     setBaseHours: (hours: number) => call('setBaseHours', baseApi.setBaseHours, hours),
+    getStorageMode: () => call('getStorageMode', baseApi.getStorageMode),
     getHiddenEventTypes: () => call('getHiddenEventTypes', baseApi.getHiddenEventTypes),
     setHiddenEventTypes: (types: string[]) =>
       call('setHiddenEventTypes', baseApi.setHiddenEventTypes, types),

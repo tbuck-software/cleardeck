@@ -20,6 +20,7 @@ import type {
   PatientBirthdayEvent,
   PatientVisitEvent,
   QprRating,
+  StorageMode,
 } from './shared/types';
 
 type ExportFormat = 'csv' | 'xlsx';
@@ -28,7 +29,10 @@ export type Api = {
   getAppState: () => Promise<AppState>;
   getAppInfo: () => Promise<AppInfo>;
   register: (password: string) => Promise<AppState>;
+  registerPlain: () => Promise<AppState>;
   login: (password: string) => Promise<AppState>;
+  enableEncryption: (password: string) => Promise<AppState>;
+  disableEncryption: () => Promise<AppState>;
   getRecoveryKey: () => Promise<RecoveryInfo>;
   recoverWithKey: (input: { recoveryKey: string; newPassword: string }) => Promise<AppState>;
   listEmployees: (year: number) => Promise<YearDataset>;
@@ -87,6 +91,7 @@ export type Api = {
   resetApp: () => Promise<AppState>;
   getBaseHours: () => Promise<number>;
   setBaseHours: (hours: number) => Promise<number>;
+  getStorageMode: () => Promise<StorageMode>;
   getHiddenEventTypes: () => Promise<string[]>;
   setHiddenEventTypes: (types: string[]) => Promise<string[]>;
   checkUpdates: () => Promise<boolean>;
@@ -134,7 +139,10 @@ const api: Api = {
   getAppState: () => ipcRenderer.invoke('app:state'),
   getAppInfo: () => ipcRenderer.invoke('app:info'),
   register: (password) => ipcRenderer.invoke('auth:register', password),
+  registerPlain: () => ipcRenderer.invoke('auth:registerPlain'),
   login: (password) => ipcRenderer.invoke('auth:login', password),
+  enableEncryption: (password) => ipcRenderer.invoke('auth:enableEncryption', password),
+  disableEncryption: () => ipcRenderer.invoke('auth:disableEncryption'),
   getRecoveryKey: () => ipcRenderer.invoke('auth:recoveryKey'),
   recoverWithKey: (input) => ipcRenderer.invoke('auth:recover', input),
   listEmployees: (year) => ipcRenderer.invoke('data:list', { year }),
@@ -160,6 +168,7 @@ const api: Api = {
   resetApp: () => ipcRenderer.invoke('app:reset'),
   getBaseHours: () => ipcRenderer.invoke('settings:getBaseHours'),
   setBaseHours: (hours) => ipcRenderer.invoke('settings:setBaseHours', { hours }),
+  getStorageMode: () => ipcRenderer.invoke('app:state').then((state: AppState) => state.storageMode),
   getHiddenEventTypes: () => ipcRenderer.invoke('settings:getHiddenEventTypes'),
   setHiddenEventTypes: (types) => ipcRenderer.invoke('settings:setHiddenEventTypes', { types }),
   checkUpdates: () => ipcRenderer.invoke('updates:check'),

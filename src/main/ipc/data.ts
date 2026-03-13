@@ -7,7 +7,7 @@
 import { ipcMain, shell } from 'electron';
 
 import type { EmployeeEventType, YearDataset, QprRating } from '../../shared/types';
-import { getDb, isDbOpen, getEncryptionKey, openDatabase, closeDb, deleteDatabase as deleteDbFiles, ensureDataDir } from '../database/connection';
+import { getDb, isDbOpen, getEncryptionKey, getStorageMode, openDatabase, closeDb, deleteDatabase as deleteDbFiles, ensureDataDir } from '../database/connection';
 import {
   getYearDataset,
   listPeriods,
@@ -48,7 +48,10 @@ import { isUnlocked } from './auth';
  * Ensure database is ready for operations
  */
 const ensureDbReady = (): void => {
-  if (!isUnlocked() || !getEncryptionKey()) {
+  if (!isUnlocked()) {
+    throw new Error('Bitte zuerst anmelden.');
+  }
+  if (getStorageMode() === 'encrypted' && !getEncryptionKey()) {
     throw new Error('Bitte zuerst anmelden.');
   }
   if (!isDbOpen()) {
@@ -341,5 +344,3 @@ export const registerDataHandlers = (): void => {
     },
   );
 };
-
-
