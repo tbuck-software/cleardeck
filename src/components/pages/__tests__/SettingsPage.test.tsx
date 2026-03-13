@@ -3,12 +3,17 @@
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import SettingsPage from '../SettingsPage';
-import type { QualificationType, UpdateStatus } from '../../../shared/types';
-import type { EncryptionSetupState, QualificationModalPayload } from '../../../types/ui';
+import type { CompetencyDefinition, QualificationType, UpdateStatus } from '../../../shared/types';
+import type { CompetencyModalPayload, EncryptionSetupState, QualificationModalPayload } from '../../../types/ui';
 
 const qualifications: QualificationType[] = [
   { id: 1, name: 'Alpha', note: 'Erste' },
   { id: 2, name: 'Beta', note: 'Zweite' },
+];
+
+const competencies: CompetencyDefinition[] = [
+  { id: 1, name: 'Einarbeitung', note: 'Praktische Einarbeitung' },
+  { id: 2, name: 'Wundversorgung', note: 'Freigabe im Alltag' },
 ];
 
 const baseStatus: UpdateStatus = { state: 'idle' };
@@ -22,7 +27,9 @@ const baseEncryptionSetup: EncryptionSetupState = {
 
 const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage>> = {}): React.ComponentProps<typeof SettingsPage> => ({
   qualifications,
+  competencies,
   qualificationEdits: {},
+  competencyEdits: {},
   dbMessage: null,
   baseHoursInput: '36',
   updateStatus: baseStatus,
@@ -31,8 +38,11 @@ const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage
   storageMode: 'encrypted',
   encryptionSetup: baseEncryptionSetup,
   onOpenQualificationModal: vi.fn<(payload: QualificationModalPayload) => void>(),
+  onOpenCompetencyModal: vi.fn<(payload: CompetencyModalPayload) => void>(),
   onReorderQualification: vi.fn<(ids: number[]) => void>(),
+  onReorderCompetency: vi.fn<(ids: number[]) => void>(),
   onDeleteQualification: vi.fn<(id: number) => void>(),
+  onDeleteCompetency: vi.fn<(id: number) => void>(),
   onBaseHoursInputChange: vi.fn<(val: string) => void>(),
   onSaveBaseHours: vi.fn(),
   onDbExport: vi.fn(),
@@ -69,6 +79,25 @@ describe('SettingsPage', () => {
     fireEvent.drop(secondRow);
 
     expect(props.onReorderQualification).toHaveBeenCalledWith([2, 1]);
+  });
+
+  it('verwaltet Kompetenzen im eigenen Tab', () => {
+    const props = createProps();
+    render(<SettingsPage {...props} />);
+
+    fireEvent.click(screen.getByText('Kompetenzpass'));
+    fireEvent.click(screen.getByText('Neu'));
+
+    expect(props.onOpenCompetencyModal).toHaveBeenCalledWith({ value: '', note: '', id: undefined });
+
+    const firstRow = screen.getByText('Einarbeitung').closest('tr')!;
+    const secondRow = screen.getByText('Wundversorgung').closest('tr')!;
+
+    fireEvent.dragStart(firstRow);
+    fireEvent.dragOver(secondRow);
+    fireEvent.drop(secondRow);
+
+    expect(props.onReorderCompetency).toHaveBeenCalledWith([2, 1]);
   });
 
   it('zeigt Update- und Basisstunden-Status an', () => {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import type { AppState, QualificationType, StorageMode } from '../shared/types';
+import type { AppState, CompetencyDefinition, QualificationType, StorageMode } from '../shared/types';
 import type { FormState } from '../types/ui';
 
 type UseAuthParams = {
@@ -12,6 +12,8 @@ type UseAuthParams = {
   setForm: (updater: FormState | ((prev: FormState) => FormState)) => void;
   setQualifications: (list: QualificationType[]) => void;
   setQualificationEdits: (edits: Record<number, string>) => void;
+  setCompetencyDefinitions: (list: CompetencyDefinition[]) => void;
+  setCompetencyEdits: (edits: Record<number, string>) => void;
   hydrateBaseHours: (hours?: number | null) => void;
 };
 
@@ -24,6 +26,8 @@ const useAuth = ({
   setForm,
   setQualifications,
   setQualificationEdits,
+  setCompetencyDefinitions,
+  setCompetencyEdits,
   hydrateBaseHours,
 }: UseAuthParams) => {
   const [appReady, setAppReady] = useState<AppState>({
@@ -58,6 +62,13 @@ const useAuth = ({
         }
         const qualis = await api.qualifications.list();
         hydrateQualifications(qualis);
+        const competencies = await api.competencies.listDefinitions();
+        setCompetencyDefinitions(competencies);
+        const competencyMap: Record<number, string> = {};
+        competencies.forEach((item) => {
+          if (item.id) competencyMap[item.id] = item.name;
+        });
+        setCompetencyEdits(competencyMap);
         await refreshDataset(year);
       }
     } catch (err) {
@@ -68,6 +79,8 @@ const useAuth = ({
     hydrateBaseHours,
     hydrateQualifications,
     refreshDataset,
+    setCompetencyDefinitions,
+    setCompetencyEdits,
     year,
   ]);
 
@@ -90,6 +103,21 @@ const useAuth = ({
       })
       .catch(handleError);
   }, [appReady.unlocked, handleError, hydrateQualifications]);
+
+  useEffect(() => {
+    if (!appReady.unlocked) return;
+    api.competencies
+      .listDefinitions()
+      .then((list) => {
+        setCompetencyDefinitions(list);
+        const edits: Record<number, string> = {};
+        list.forEach((item) => {
+          if (item.id) edits[item.id] = item.name;
+        });
+        setCompetencyEdits(edits);
+      })
+      .catch(handleError);
+  }, [appReady.unlocked, handleError, setCompetencyDefinitions, setCompetencyEdits]);
 
   const handleLogin = useCallback(
     async (payload: { password: string; storageMode: StorageMode }, mode: 'setup' | 'login') => {

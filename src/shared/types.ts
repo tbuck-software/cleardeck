@@ -10,6 +10,28 @@ export interface QualificationType {
   note?: string | null;
 }
 
+export interface CompetencyDefinition {
+  id?: number;
+  name: string;
+  note?: string | null;
+  sortOrder?: number | null;
+}
+
+export type EmployeeCompetencyStatus = 'open' | 'in-progress' | 'completed' | 'not-applicable';
+
+export interface EmployeeCompetency {
+  id?: number;
+  employeeId?: number;
+  competencyDefinitionId: number;
+  competencyName: string;
+  status: EmployeeCompetencyStatus;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  note?: string | null;
+  definitionNote?: string | null;
+  sortOrder?: number | null;
+}
+
 export interface Employee {
   id?: number;
   name: string;

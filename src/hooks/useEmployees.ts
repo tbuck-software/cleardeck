@@ -1,7 +1,21 @@
 import { useCallback, useMemo, useState } from 'react';
 import api from '../services/api';
-import type { EmployeeWithPeriod, QualificationType, YearDataset } from '../shared/types';
-import type { ConfirmActionOptions, EditModalState, FormState, Page, QualificationModalState } from '../types/ui';
+import type {
+  CompetencyDefinition,
+  EmployeeCompetency,
+  EmployeeWithPeriod,
+  QualificationType,
+  YearDataset,
+} from '../shared/types';
+import type {
+  CompetencyModalState,
+  ConfirmActionOptions,
+  EditModalState,
+  EmployeeCompetencyModalState,
+  FormState,
+  Page,
+  QualificationModalState,
+} from '../types/ui';
 import { deriveFteFromWeeklyHours } from '../utils/fte';
 
 export const emptyForm = (year: number, defaultQualification = ''): FormState => ({
@@ -66,8 +80,25 @@ const useEmployees = ({
     value: '',
     note: '',
   });
+  const [competencyDefinitions, setCompetencyDefinitions] = useState<CompetencyDefinition[]>([]);
+  const [competencyEdits, setCompetencyEdits] = useState<Record<number, string>>({});
+  const [competencyModal, setCompetencyModal] = useState<CompetencyModalState>({
+    open: false,
+    value: '',
+    note: '',
+  });
   const [form, setForm] = useState<FormState>(emptyForm(currentYear));
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithPeriod | null>(null);
+  const [employeeCompetencies, setEmployeeCompetencies] = useState<EmployeeCompetency[]>([]);
+  const [employeeCompetencyModal, setEmployeeCompetencyModal] = useState<EmployeeCompetencyModalState>({
+    open: false,
+    competencyDefinitionId: null,
+    competencyName: '',
+    status: 'open',
+    startedAt: '',
+    completedAt: '',
+    note: '',
+  });
   const [page, setPage] = useState<Page>('dashboard');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | EmployeeWithPeriod['status']>('all');
@@ -102,7 +133,20 @@ const useEmployees = ({
   const resetForm = useCallback(() => {
     setForm(emptyForm(year, qualifications[0]?.name ?? ''));
     setAddNewPeriod(false);
+    setEmployeeCompetencies([]);
   }, [qualifications, year]);
+
+  const loadEmployeeCompetencies = useCallback(
+    async (employeeId: number) => {
+      try {
+        const list = await api.competencies.listEmployee(employeeId);
+        setEmployeeCompetencies(list);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [handleError],
+  );
 
   const goTo = useCallback(
     (target: Page) => {
@@ -147,8 +191,13 @@ const useEmployees = ({
         linked: true,
       });
       setAddNewPeriod(false);
+      if (emp.id) {
+        await loadEmployeeCompetencies(emp.id);
+      } else {
+        setEmployeeCompetencies([]);
+      }
     },
-    [baseHours],
+    [baseHours, loadEmployeeCompetencies],
   );
 
   const handleSave = useCallback(async () => {
@@ -299,6 +348,134 @@ const useEmployees = ({
     [handleError],
   );
 
+  const handleSaveCompetencyModal = useCallback(async () => {
+    const val = competencyModal.value.trim();
+    if (!val) return;
+    try {
+      let list: CompetencyDefinition[] = competencyDefinitions;
+      if (competencyModal.id) {
+        list = await api.competencies.updateDefinition(competencyModal.id, val, competencyModal.note);
+      } else {
+        list = await api.competencies.addDefinition(val, competencyModal.note);
+      }
+      setCompetencyDefinitions(list);
+      const edits: Record<number, string> = {};
+      list.forEach((item) => {
+        if (item.id) edits[item.id] = item.name;
+      });
+      setCompetencyEdits(edits);
+      setCompetencyModal({ open: false, value: '', note: '' });
+      if (selectedEmployee?.id) {
+        await loadEmployeeCompetencies(selectedEmployee.id);
+      }
+      setToast('Kompetenz gespeichert.');
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      handleError(err);
+    }
+  }, [
+    competencyDefinitions,
+    competencyModal,
+    handleError,
+    loadEmployeeCompetencies,
+    selectedEmployee,
+    setToast,
+  ]);
+
+  const handleDeleteCompetencyDefinition = useCallback(
+    async (id: number) => {
+      try {
+        const list = await api.competencies.deleteDefinition(id);
+        setCompetencyDefinitions(list);
+        const edits: Record<number, string> = {};
+        list.forEach((item) => {
+          if (item.id) edits[item.id] = item.name;
+        });
+        setCompetencyEdits(edits);
+        if (selectedEmployee?.id) {
+          await loadEmployeeCompetencies(selectedEmployee.id);
+        }
+        setToast('Kompetenz gelöscht.');
+        setTimeout(() => setToast(null), 2000);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [handleError, loadEmployeeCompetencies, selectedEmployee, setToast],
+  );
+
+  const confirmDeleteCompetencyDefinition = useCallback(
+    (id: number) => {
+      confirmAction('Kompetenz wirklich löschen?', () => handleDeleteCompetencyDefinition(id), {
+        confirmLabel: 'Löschen',
+        danger: true,
+      });
+    },
+    [confirmAction, handleDeleteCompetencyDefinition],
+  );
+
+  const reorderCompetencyDefinition = useCallback(
+    async (orderedIds: number[]) => {
+      try {
+        const list = await api.competencies.reorderDefinitions(orderedIds);
+        setCompetencyDefinitions(list);
+        const edits: Record<number, string> = {};
+        list.forEach((item) => {
+          if (item.id) edits[item.id] = item.name;
+        });
+        setCompetencyEdits(edits);
+        if (selectedEmployee?.id) {
+          await loadEmployeeCompetencies(selectedEmployee.id);
+        }
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [handleError, loadEmployeeCompetencies, selectedEmployee],
+  );
+
+  const openEmployeeCompetencyModal = useCallback((entry: EmployeeCompetency) => {
+    setEmployeeCompetencyModal({
+      open: true,
+      id: entry.id,
+      competencyDefinitionId: entry.competencyDefinitionId,
+      competencyName: entry.competencyName,
+      status: entry.status,
+      startedAt: entry.startedAt ?? '',
+      completedAt: entry.completedAt ?? '',
+      note: entry.note ?? '',
+    });
+  }, []);
+
+  const handleSaveEmployeeCompetency = useCallback(async () => {
+    if (!selectedEmployee?.id || !employeeCompetencyModal.competencyDefinitionId) return;
+    try {
+      const list = await api.competencies.saveEmployee({
+        id: employeeCompetencyModal.id,
+        employeeId: selectedEmployee.id,
+        competencyDefinitionId: employeeCompetencyModal.competencyDefinitionId,
+        status: employeeCompetencyModal.status,
+        startedAt: employeeCompetencyModal.startedAt || null,
+        completedAt: employeeCompetencyModal.completedAt || null,
+        note: employeeCompetencyModal.note || null,
+      });
+      setEmployeeCompetencies(list);
+      setEmployeeCompetencyModal({
+        open: false,
+        competencyDefinitionId: null,
+        competencyName: '',
+        status: 'open',
+        startedAt: '',
+        completedAt: '',
+        note: '',
+      });
+      setToast('Kompetenzpass aktualisiert.');
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      handleError(err);
+    }
+  }, [employeeCompetencyModal, handleError, selectedEmployee, setToast]);
+
   const openEditModal = useCallback(() => {
     if (!selectedEmployee) return;
     const cappedSelectedFte = clampFte(selectedEmployee.fte);
@@ -326,6 +503,7 @@ const useEmployees = ({
     setForm(freshForm);
     setAddNewPeriod(false);
     setSelectedEmployee(null);
+    setEmployeeCompetencies([]);
     setEditModal({
       open: true,
       mode: 'create',
@@ -525,10 +703,15 @@ const useEmployees = ({
     state: {
       dataset,
       qualifications,
+      competencyDefinitions,
       qualificationEdits,
+      competencyEdits,
       qualificationModal,
+      competencyModal,
       form,
       selectedEmployee,
+      employeeCompetencies,
+      employeeCompetencyModal,
       page,
       search,
       statusFilter,
@@ -539,10 +722,15 @@ const useEmployees = ({
     setters: {
       setDataset,
       setQualifications,
+      setCompetencyDefinitions,
       setQualificationEdits,
+      setCompetencyEdits,
       setQualificationModal,
+      setCompetencyModal,
       setForm,
       setSelectedEmployee,
+      setEmployeeCompetencies,
+      setEmployeeCompetencyModal,
       setPage,
       setSearch,
       setStatusFilter,
@@ -570,6 +758,12 @@ const useEmployees = ({
       handleSaveQualificationModal,
       confirmDeleteQualification,
       reorderQualification,
+      handleSaveCompetencyModal,
+      confirmDeleteCompetencyDefinition,
+      reorderCompetencyDefinition,
+      loadEmployeeCompetencies,
+      openEmployeeCompetencyModal,
+      handleSaveEmployeeCompetency,
       openEditModal,
       openCreateModal,
       handleEditModalSave,

@@ -65,6 +65,21 @@ export const api = {
     delete: (id: number) => call('deleteQualification', baseApi.deleteQualification, id),
     reorder: (ids: number[]) => call('reorderQualifications', baseApi.reorderQualifications, ids),
   },
+  competencies: {
+    listDefinitions: () => call('listCompetencyDefinitions', baseApi.listCompetencyDefinitions),
+    addDefinition: (name: string, note?: string | null) =>
+      call('addCompetencyDefinition', baseApi.addCompetencyDefinition, name, note),
+    updateDefinition: (id: number, name: string, note?: string | null) =>
+      call('updateCompetencyDefinition', baseApi.updateCompetencyDefinition, id, name, note),
+    deleteDefinition: (id: number) =>
+      call('deleteCompetencyDefinition', baseApi.deleteCompetencyDefinition, id),
+    reorderDefinitions: (ids: number[]) =>
+      call('reorderCompetencyDefinitions', baseApi.reorderCompetencyDefinitions, ids),
+    listEmployee: (employeeId: number) =>
+      call('listEmployeeCompetencies', baseApi.listEmployeeCompetencies, employeeId),
+    saveEmployee: (input: Parameters<Api['saveEmployeeCompetency']>[0]) =>
+      call('saveEmployeeCompetency', baseApi.saveEmployeeCompetency, input),
+  },
   data: {
     export: (year: number, format: ExportFormat) => call('exportData', baseApi.exportData, year, format),
     openDocument: (path: string) => call('openDocument', baseApi.openDocument, path),

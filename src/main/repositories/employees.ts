@@ -222,7 +222,11 @@ export const saveEmployee = (input: {
 
     db.prepare(
       `UPDATE employees
-       SET name = @name, note = @note, weeklyHours = @weeklyHours, fte = @fte, birthDate = @birthDate
+       SET name = @name,
+           note = @note,
+           weeklyHours = @weeklyHours,
+           fte = @fte,
+           birthDate = @birthDate
        WHERE id = @id`,
     ).run({ ...employeePayload, id: input.id });
 
@@ -267,8 +271,20 @@ export const saveEmployee = (input: {
   } else {
     const empResult = db
       .prepare(
-        `INSERT INTO employees (name, note, weeklyHours, fte, birthDate)
-         VALUES (@name, @note, @weeklyHours, @fte, @birthDate)`,
+        `INSERT INTO employees (
+           name,
+           note,
+           weeklyHours,
+           fte,
+           birthDate
+         )
+         VALUES (
+           @name,
+           @note,
+           @weeklyHours,
+           @fte,
+           @birthDate
+         )`,
       )
       .run(employeePayload);
     const newId = empResult.lastInsertRowid as number;
