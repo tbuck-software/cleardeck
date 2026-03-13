@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faCalendarCheck, faTrash } from '@fortawesome/free-solid-svg-icons';
 import type { QprRating } from '../../shared/types';
 import type { VisitModalState } from '../../types/ui';
+import ModalHeader from '../modals/ModalHeader';
 
 type VisitModalProps = {
   modal: VisitModalState;
@@ -28,10 +29,11 @@ const VisitModal = ({ modal, onChange, onClose, onSave, onDelete }: VisitModalPr
   return (
     <div className="modal-backdrop">
       <div className="modal">
-        <div className="modal-icon">
-          <FontAwesomeIcon icon={faCalendarCheck} />
-        </div>
-        <h3>{modal.id ? 'Visite bearbeiten' : 'Neue Visite'}</h3>
+        <ModalHeader
+          icon={faCalendarCheck}
+          title={modal.id ? 'Visite bearbeiten' : 'Neue Visite'}
+          onClose={onClose}
+        />
         <div className="modal-body">
           <label>
             Datum*
@@ -66,8 +68,8 @@ const VisitModal = ({ modal, onChange, onClose, onSave, onDelete }: VisitModalPr
           </label>
         </div>
 
-        <div className="modal-actions" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <div>
+        <div className="modal-actions">
+          <div className="modal-actions-left">
             {modal.id && onDelete && (
               <button
                 className="ghost-button danger icon-button"
@@ -78,7 +80,7 @@ const VisitModal = ({ modal, onChange, onClose, onSave, onDelete }: VisitModalPr
               </button>
             )}
           </div>
-          <div className="inline-row compact">
+          <div className="modal-actions-right">
             <button className="ghost-button" onClick={onClose}>
               Abbrechen
             </button>

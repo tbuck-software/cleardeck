@@ -1,8 +1,8 @@
 import React from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClipboardCheck } from '@fortawesome/free-solid-svg-icons';
 import type { InstructionDefinition } from '../../shared/types';
 import type { EmployeeInstructionModalState } from '../../types/ui';
+import ModalHeader from './ModalHeader';
 
 type EmployeeInstructionModalProps = {
   state: EmployeeInstructionModalState;
@@ -27,10 +27,11 @@ const EmployeeInstructionModal = ({
   return (
     <div className="modal-backdrop">
       <div className="modal">
-        <div className="modal-icon">
-          <FontAwesomeIcon icon={faClipboardCheck} />
-        </div>
-        <h3>{isAssigned ? state.instructionName : 'Einweisung hinzufügen'}</h3>
+        <ModalHeader
+          icon={faClipboardCheck}
+          title={isAssigned ? state.instructionName : 'Einweisung hinzufügen'}
+          onClose={onClose}
+        />
         <div className="modal-body">
           {!isAssigned && (
             <label className="full-width">
@@ -92,14 +93,14 @@ const EmployeeInstructionModal = ({
           </label>
         </div>
         <div className="modal-actions">
-          <div>
+          <div className="modal-actions-left">
             {isAssigned && (
               <button className="ghost-button danger" onClick={onDelete}>
                 Entfernen
               </button>
             )}
           </div>
-          <div className="inline-row compact">
+          <div className="modal-actions-right">
             <button className="ghost-button" onClick={onClose}>
               Abbrechen
             </button>

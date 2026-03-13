@@ -1,7 +1,7 @@
 import React from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faPlus } from '@fortawesome/free-solid-svg-icons';
 import type { QualificationModalState } from '../../types/ui';
+import ModalHeader from './ModalHeader';
 
 type QualificationModalProps = {
   state: QualificationModalState;
@@ -16,10 +16,11 @@ const QualificationModal = ({ state, onChange, onClose, onSave }: QualificationM
   return (
     <div className="modal-backdrop">
       <div className="modal">
-        <div className="modal-icon">
-          <FontAwesomeIcon icon={state.id ? faPen : faPlus} />
-        </div>
-        <h3>{state.id ? 'Qualifikation bearbeiten' : 'Neue Qualifikation'}</h3>
+        <ModalHeader
+          icon={state.id ? faPen : faPlus}
+          title={state.id ? 'Qualifikation bearbeiten' : 'Neue Qualifikation'}
+          onClose={onClose}
+        />
         <div className="form-grid">
           <label className="full-width">
             Bezeichnung
@@ -39,8 +40,8 @@ const QualificationModal = ({ state, onChange, onClose, onSave }: QualificationM
           </label>
         </div>
         <div className="modal-actions">
-          <div></div>
-          <div className="inline-row compact">
+          <div className="modal-actions-left" />
+          <div className="modal-actions-right">
             <button className="ghost-button" onClick={onClose}>
               Abbrechen
             </button>

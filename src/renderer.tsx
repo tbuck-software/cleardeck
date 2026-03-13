@@ -25,6 +25,7 @@ import InstructionModal from './components/modals/InstructionModal';
 import EmployeeCompetencyModal from './components/modals/EmployeeCompetencyModal';
 import EmployeeInstructionModal from './components/modals/EmployeeInstructionModal';
 import RecommendedCompetenciesModal from './components/modals/RecommendedCompetenciesModal';
+import ModalHeader from './components/modals/ModalHeader';
 import BirthDateInput from './components/ui/BirthDateInput';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
 import { matchesQualificationRelevance } from './utils/qualificationRelevance';
@@ -660,10 +661,11 @@ const App = () => {
       {editModal.open && (
         <div className="modal-backdrop">
           <div className="modal">
-            <div className="modal-icon">
-              <FontAwesomeIcon icon={isCreateMode ? faPlus : faPen} />
-            </div>
-            <h3>{isCreateMode ? 'Teammitglied anlegen' : 'Teammitglied bearbeiten'}</h3>
+            <ModalHeader
+              icon={isCreateMode ? faPlus : faPen}
+              title={isCreateMode ? 'Teammitglied anlegen' : 'Teammitglied bearbeiten'}
+              onClose={() => setEditModal((prev) => ({ ...prev, open: false }))}
+            />
             <div className="modal-body">
               {isCreateMode && (
                 <div className="form-grid">
@@ -764,8 +766,9 @@ const App = () => {
                 />
               </label>
             </div>
-            <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <div className="inline-row compact">
+            <div className="modal-actions">
+              <div className="modal-actions-left" />
+              <div className="modal-actions-right">
                 <button className="ghost-button" onClick={() => setEditModal((prev) => ({ ...prev, open: false }))}>
                   Abbrechen
                 </button>
@@ -780,10 +783,11 @@ const App = () => {
       {eventModal.open && selectedEmployee && (
         <div className="modal-backdrop">
           <div className="modal">
-            <div className="modal-icon">
-              <FontAwesomeIcon icon={faPlus} />
-            </div>
-            <h3>{eventModal.id ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}</h3>
+            <ModalHeader
+              icon={faPlus}
+              title={eventModal.id ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}
+              onClose={() => setEventModal((prev) => ({ ...prev, open: false }))}
+            />
             <div className="modal-body">
               <label className="full-width">
                 Typ
@@ -948,7 +952,7 @@ const App = () => {
               )}
             </div>
             <div className="modal-actions">
-              <div>
+              <div className="modal-actions-left">
                 {eventModal.id && eventModal.type !== 'period' && (
                   <button
                     className="ghost-button danger icon-button"
@@ -973,7 +977,7 @@ const App = () => {
                   </button>
                 )}
               </div>
-              <div className="inline-row compact">
+              <div className="modal-actions-right">
                 <button className="ghost-button" onClick={() => setEventModal((prev) => ({ ...prev, open: false }))}>
                   Abbrechen
                 </button>
@@ -994,10 +998,11 @@ const App = () => {
       {patientModal.open && (
         <div className="modal-backdrop">
           <div className="modal">
-            <div className="modal-icon">
-              <FontAwesomeIcon icon={faPlus} />
-            </div>
-            <h3>{patientModal.mode === 'create' ? 'Neue:r Patient:in' : 'Patient:in bearbeiten'}</h3>
+            <ModalHeader
+              icon={faPlus}
+              title={patientModal.mode === 'create' ? 'Neue:r Patient:in' : 'Patient:in bearbeiten'}
+              onClose={closePatientModal}
+            />
             <div className="modal-body">
               <label>
                 Name*
@@ -1031,8 +1036,9 @@ const App = () => {
                 />
               </label>
             </div>
-            <div className="modal-actions" style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <div className="inline-row compact">
+            <div className="modal-actions">
+              <div className="modal-actions-left" />
+              <div className="modal-actions-right">
                 <button className="ghost-button" onClick={closePatientModal}>
                   Abbrechen
                 </button>

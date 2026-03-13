@@ -1,7 +1,7 @@
 import React from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faKey } from '@fortawesome/free-solid-svg-icons';
 import type { RecoveryResetState } from '../../types/ui';
+import ModalHeader from './ModalHeader';
 
 type RecoveryResetModalProps = {
   state: RecoveryResetState;
@@ -17,10 +17,7 @@ const RecoveryResetModal = ({ state, loading, onChange, onClose, onSubmit }: Rec
   return (
     <div className="modal-backdrop">
       <div className="modal">
-        <div className="modal-icon">
-          <FontAwesomeIcon icon={faKey} />
-        </div>
-        <h3>Passwort mit Recovery Key setzen</h3>
+        <ModalHeader icon={faKey} title="Passwort mit Recovery Key setzen" onClose={onClose} />
         <div className="modal-body">
           <p className="modal-text">
             Setzt ein neues Passwort. Der Recovery Key bleibt derselbe und sollte sicher aufbewahrt sein.
@@ -56,12 +53,15 @@ const RecoveryResetModal = ({ state, loading, onChange, onClose, onSubmit }: Rec
           {state.error && <div className="error">{state.error}</div>}
         </div>
         <div className="modal-actions">
-          <button className="ghost-button" onClick={onClose}>
-            Abbrechen
-          </button>
-          <button className="primary" onClick={onSubmit} disabled={loading}>
-            Zurücksetzen
-          </button>
+          <div className="modal-actions-left" />
+          <div className="modal-actions-right">
+            <button className="ghost-button" onClick={onClose}>
+              Abbrechen
+            </button>
+            <button className="primary" onClick={onSubmit} disabled={loading}>
+              Zurücksetzen
+            </button>
+          </div>
         </div>
       </div>
     </div>

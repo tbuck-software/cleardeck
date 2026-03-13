@@ -1,7 +1,7 @@
 import React from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faPlus } from '@fortawesome/free-solid-svg-icons';
 import type { CompetencyModalState } from '../../types/ui';
+import ModalHeader from './ModalHeader';
 
 type CompetencyModalProps = {
   state: CompetencyModalState;
@@ -16,10 +16,11 @@ const CompetencyModal = ({ state, onChange, onClose, onSave }: CompetencyModalPr
   return (
     <div className="modal-backdrop">
       <div className="modal">
-        <div className="modal-icon">
-          <FontAwesomeIcon icon={state.id ? faPen : faPlus} />
-        </div>
-        <h3>{state.id ? 'Kompetenz bearbeiten' : 'Neue Kompetenz'}</h3>
+        <ModalHeader
+          icon={state.id ? faPen : faPlus}
+          title={state.id ? 'Kompetenz bearbeiten' : 'Neue Kompetenz'}
+          onClose={onClose}
+        />
         <div className="form-grid">
           <label>
             Kürzel
@@ -72,8 +73,8 @@ const CompetencyModal = ({ state, onChange, onClose, onSave }: CompetencyModalPr
           </label>
         </div>
         <div className="modal-actions">
-          <div></div>
-          <div className="inline-row compact">
+          <div className="modal-actions-left" />
+          <div className="modal-actions-right">
             <button className="ghost-button" onClick={onClose}>
               Abbrechen
             </button>
