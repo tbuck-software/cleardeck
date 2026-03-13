@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGithub } from '@fortawesome/free-brands-svg-icons';
+import { faGithub, faWhatsapp } from '@fortawesome/free-brands-svg-icons';
 import {
   faPlus,
   faTrash,
@@ -15,7 +15,6 @@ import {
   faClock,
   faCog,
   faInfoCircle,
-  faEnvelope
 } from '@fortawesome/free-solid-svg-icons';
 import type {
   CompetencyDefinition,
@@ -219,6 +218,16 @@ const SettingsPage = ({
         timeStyle: 'short',
       }).format(new Date(lastUpdateCheckAt))
     : 'noch keine';
+  const whatsappMessage = appInfo
+    ? [
+        'Hallo Torben,',
+        '',
+        `ich habe eine Frage zu ${appInfo.name} v${appInfo.version}.`,
+        '',
+        'Beschreibung:',
+      ].join('\n')
+    : 'Hallo Torben,\n\nich habe eine Frage zu ClearDeck.';
+  const whatsappUrl = `https://wa.me/4917638955537?text=${encodeURIComponent(whatsappMessage)}`;
 
   const updateCopy = (() => {
     if (updateStatus.state === 'available') {
@@ -256,15 +265,9 @@ const SettingsPage = ({
     { id: 'info', label: 'Info', icon: faInfoCircle, description: 'Version, Links und Systemumgebung.' },
   ];
 
-  const activeTabConfig = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
-
   return (
     <div className="settings-layout">
       <div className="settings-sidebar">
-        <div className="settings-sidebar-head">
-          <p className="settings-sidebar-kicker">Steuerzentrale</p>
-          <h2>Einstellungen</h2>
-        </div>
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -278,13 +281,6 @@ const SettingsPage = ({
       </div>
 
       <div className="settings-content">
-        <div className="settings-page-head">
-          <div>
-            <p className="settings-page-kicker">{activeTabConfig.label}</p>
-            <h2>{activeTabConfig.label}</h2>
-          </div>
-          <p className="settings-page-summary">{activeTabConfig.description}</p>
-        </div>
         {activeTab === 'general' && (
           <div className="settings-stack">
             <SettingsSection
@@ -695,14 +691,14 @@ const SettingsPage = ({
                     <h4 className="about-section-header">Links</h4>
                     <div className="about-links">
                       <a
-                        href={`mailto:${appInfo.email}`}
+                        href={whatsappUrl}
                         className="about-link-button"
-                        onClick={(event) => handleExternalLinkClick(event, `mailto:${appInfo.email}`)}
+                        onClick={(event) => handleExternalLinkClick(event, whatsappUrl)}
                       >
                         <span className="link-icon">
-                          <FontAwesomeIcon icon={faEnvelope} />
+                          <FontAwesomeIcon icon={faWhatsapp} />
                         </span>
-                        Support kontaktieren
+                        Torben kontaktieren
                       </a>
                       <a
                         href={appInfo.github}

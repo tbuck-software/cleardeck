@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faTrash, faLink, faLinkSlash, faPen } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faTrash, faLink, faLinkSlash, faPen, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import AuthScreen from './components/auth/AuthScreen';
@@ -28,11 +28,17 @@ import RecommendedCompetenciesModal from './components/modals/RecommendedCompete
 import ModalHeader from './components/modals/ModalHeader';
 import BirthDateInput from './components/ui/BirthDateInput';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
+import {
+  buildNavigationSnapshot,
+  createAppHistoryState,
+  isAppHistoryState,
+  resolveNavigationSnapshot,
+} from './utils/navigationHistory';
 import { matchesQualificationRelevance } from './utils/qualificationRelevance';
 import { unifyEvents } from './utils/unifyEvents';
 import useAppLogic from './hooks/useAppLogic';
-import type { EventModalType } from './types/ui';
-import type { UnifiedEvent } from './shared/types';
+import type { EventModalType, Page } from './types/ui';
+import type { EmployeeWithPeriod, PatientWithLatestVisit, UnifiedEvent } from './shared/types';
 
 const App = () => {
   const {
@@ -195,6 +201,17 @@ const App = () => {
       closeVisitModal,
     },
   } = useAppLogic();
+  const [canGoBack, setCanGoBack] = useState(false);
+  const historyIndexRef = useRef(0);
+  const restoringHistoryRef = useRef(false);
+  const selectedEmployeeRef = useRef(selectedEmployee);
+  const selectedPatientRef = useRef(selectedPatient);
+  const currentSnapshotRef = useRef(
+    buildNavigationSnapshot(page, selectedEmployee?.id ?? null, selectedPatient?.id ?? null),
+  );
+
+  selectedEmployeeRef.current = selectedEmployee;
+  selectedPatientRef.current = selectedPatient;
 
   const updateWeeklyHours = (value: string) => {
     setEditModal((prev) => {
@@ -282,20 +299,163 @@ const App = () => {
     [upcomingEvents, dashboardWidgets.expiringTrainings, dashboardWidgets.birthdaysAnniversaries, hiddenEventTypes, dashboardWidgets.patientBirthdays, dashboardWidgets.patientVisits],
   );
 
+  const pushHistorySnapshot = useCallback(
+    (snapshot: ReturnType<typeof buildNavigationSnapshot>) => {
+      if (!appReady.unlocked) return;
+
+      const nextIndex = historyIndexRef.current + 1;
+      window.history.pushState(createAppHistoryState(nextIndex, snapshot), '');
+      historyIndexRef.current = nextIndex;
+      setCanGoBack(nextIndex > 0);
+    },
+    [appReady.unlocked],
+  );
+
+  const restoreSnapshot = useCallback(
+    async (snapshot: ReturnType<typeof buildNavigationSnapshot>) => {
+      const { page: resolvedPage, employee, patient } = resolveNavigationSnapshot(
+        snapshot,
+        dataset?.employees ?? [],
+        patients,
+      );
+
+      if (resolvedPage !== 'patients') {
+        setSelectedPatient(null);
+      }
+
+      if (resolvedPage === 'view' && employee) {
+        await handleSelect(employee);
+        return;
+      }
+
+      if (resolvedPage === 'patients') {
+        goTo('patients');
+        if (patient) {
+          await handleSelectPatient(patient);
+        } else {
+          setSelectedPatient(null);
+        }
+        return;
+      }
+
+      goTo(resolvedPage);
+    },
+    [dataset?.employees, patients, setSelectedPatient, handleSelect, handleSelectPatient, goTo],
+  );
+
+  const currentSnapshot = useMemo(
+    () => buildNavigationSnapshot(page, selectedEmployee?.id ?? null, selectedPatient?.id ?? null),
+    [page, selectedEmployee?.id, selectedPatient?.id],
+  );
+
+  currentSnapshotRef.current = currentSnapshot;
+
+  useEffect(() => {
+    if (!appReady.unlocked) return;
+
+    const state = window.history.state;
+    const index = isAppHistoryState(state) ? state.index : historyIndexRef.current;
+    window.history.replaceState(createAppHistoryState(index, currentSnapshot), '');
+    historyIndexRef.current = index;
+    setCanGoBack(index > 0);
+  }, [appReady.unlocked, currentSnapshot]);
+
+  useEffect(() => {
+    if (!appReady.unlocked) return;
+
+    if (!isAppHistoryState(window.history.state)) {
+      window.history.replaceState(createAppHistoryState(0, currentSnapshotRef.current), '');
+      historyIndexRef.current = 0;
+      setCanGoBack(false);
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      const state = isAppHistoryState(event.state)
+        ? event.state
+        : createAppHistoryState(0, currentSnapshotRef.current);
+
+      historyIndexRef.current = state.index;
+      setCanGoBack(state.index > 0);
+      restoringHistoryRef.current = true;
+      void restoreSnapshot(state.snapshot).finally(() => {
+        restoringHistoryRef.current = false;
+      });
+    };
+
+    const handleMouseUp = (event: MouseEvent) => {
+      if (event.button === 3 && historyIndexRef.current > 0) {
+        event.preventDefault();
+        window.history.back();
+      }
+      if (event.button === 4) {
+        event.preventDefault();
+        window.history.forward();
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [appReady.unlocked, restoreSnapshot]);
+
+  const navigateToPage = useCallback(
+    (target: Page) => {
+      if (!restoringHistoryRef.current) {
+        const snapshot = buildNavigationSnapshot(
+          target,
+          selectedEmployeeRef.current?.id ?? null,
+          target === 'patients' ? null : selectedPatientRef.current?.id ?? null,
+        );
+        pushHistorySnapshot(snapshot);
+      }
+
+      if (target === 'patients') {
+        setSelectedPatient(null);
+      }
+
+      goTo(target);
+    },
+    [goTo, pushHistorySnapshot, setSelectedPatient],
+  );
+
+  const navigateToEmployee = useCallback(
+    async (employee: EmployeeWithPeriod) => {
+      if (!restoringHistoryRef.current) {
+        pushHistorySnapshot(buildNavigationSnapshot('view', employee.id ?? null, null));
+      }
+      await handleSelect(employee);
+    },
+    [handleSelect, pushHistorySnapshot],
+  );
+
+  const navigateToPatient = useCallback(
+    async (patient: PatientWithLatestVisit) => {
+      if (!restoringHistoryRef.current) {
+        pushHistorySnapshot(buildNavigationSnapshot('patients', null, patient.id ?? null));
+      }
+      goTo('patients');
+      await handleSelectPatient(patient);
+    },
+    [goTo, handleSelectPatient, pushHistorySnapshot],
+  );
+
   const handleUnifiedEventClick = async (event: UnifiedEvent) => {
     // Handle patient events
     if (event.patientId) {
       const patient = patients.find((p) => p.id === event.patientId);
       if (patient) {
-        await handleSelectPatient(patient);
-        goTo('patients');
+        await navigateToPatient(patient);
       }
       return;
     }
     // Handle employee events
     const employee = dataset?.employees.find((emp) => emp.id === event.employeeId);
     if (employee) {
-      await handleSelect(employee);
+      await navigateToEmployee(employee);
     }
   };
 
@@ -304,15 +464,14 @@ const App = () => {
     if (event.patientId) {
       const patient = patients.find((p) => p.id === event.patientId);
       if (patient) {
-        await handleSelectPatient(patient);
-        goTo('patients');
+        await navigateToPatient(patient);
       }
       return;
     }
     // Handle employee events
     const employee = dataset?.employees.find((emp) => emp.id === event.employeeId);
     if (employee) {
-      await handleSelect(employee);
+      await navigateToEmployee(employee);
     }
   };
 
@@ -352,7 +511,7 @@ const App = () => {
     <div className="layout">
       <Sidebar
         current={sidebarPage}
-        onNavigate={(p) => { if (p === 'patients') setSelectedPatient(null); goTo(p); }}
+        onNavigate={navigateToPage}
         updateStatus={updateStatus}
         onInstallUpdate={handleInstallUpdate}
         onSnoozeUpdate={handleSnoozeUpdate}
@@ -360,16 +519,26 @@ const App = () => {
       />
       <div className="main">
         <header className="topbar">
-          <div>
+          <div className="topbar-main">
             <div className="breadcrumbs">
+              <button
+                type="button"
+                className="topbar-back-button"
+                onClick={() => window.history.back()}
+                disabled={!canGoBack}
+                aria-label="Zurück"
+                title="Zurück"
+              >
+                <FontAwesomeIcon icon={faArrowLeft} />
+              </button>
               {(page === 'patients' && selectedPatient ? [
                 { label: 'Dashboard', page: 'dashboard' as const },
                 { label: 'Patient:innen', page: 'patients' as const },
                 { label: selectedPatient.name },
               ] : crumbs()).map((c, idx, arr) => (
-                <span key={`${c.label}-${idx}`}>
+                <span key={`${c.label}-${idx}`} className="crumb-item">
                   {c.page ? (
-                    <button className="crumb-link" onClick={() => c.page === 'patients' ? setSelectedPatient(null) : goTo(c.page!)}>
+                    <button className="crumb-link" onClick={() => navigateToPage(c.page!)}>
                       {c.label}
                     </button>
                   ) : (
@@ -443,7 +612,7 @@ const App = () => {
             onQualificationChange={setQualificationFilter}
             onExport={handleExport}
             onCreate={openCreateModal}
-            onSelect={handleSelect}
+            onSelect={navigateToEmployee}
             onDelete={confirmDeleteEmployee}
           />
         )}
@@ -540,7 +709,7 @@ const App = () => {
             onSearchChange={setPatientSearch}
             onRatingChange={setPatientRatingFilter}
             onCreate={openCreatePatientModal}
-            onSelect={handleSelectPatient}
+            onSelect={navigateToPatient}
             onDelete={(id) => confirmDeletePatient(id)}
           />
         )}

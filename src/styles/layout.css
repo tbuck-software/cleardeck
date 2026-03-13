@@ -164,6 +164,13 @@
   color: var(--muted);
   font-size: 12px;
   margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.crumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .crumb-link {
@@ -189,6 +196,37 @@
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 18px;
+}
+
+.topbar-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.topbar-back-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--accent-strong);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.topbar-back-button:hover:not(:disabled) {
+  background: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.22);
+}
+
+.topbar-back-button:disabled {
+  color: var(--muted);
+  cursor: default;
+  opacity: 0.55;
 }
 
 .year-selector {
@@ -1707,6 +1745,7 @@ button.detail-item.clickable:hover {
   gap: 8px;
   position: sticky;
   top: 28px;
+  padding-top: 18px;
 }
 
 .settings-sidebar-head {
@@ -1780,14 +1819,6 @@ button.detail-item.clickable:hover {
   font-size: clamp(2rem, 4vw, 3rem);
   line-height: 0.95;
   letter-spacing: -0.05em;
-}
-
-.settings-page-kicker {
-  margin: 0 0 10px;
-  color: #3156c8;
-  font: 700 12px/1 'Manrope', 'Inter', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
 }
 
 .settings-page-summary {
@@ -1992,7 +2023,7 @@ button.detail-item.clickable:hover {
 
 .settings-list-main {
   display: grid;
-  gap: 10px;
+  gap: 5px;
   padding: 8px;
   border-radius: 16px;
   background: transparent;
@@ -2007,7 +2038,8 @@ button.detail-item.clickable:hover {
 }
 
 .settings-list-title-row strong {
-  font-size: 1rem;
+  font-size: 1.08rem;
+  line-height: 1.2;
 }
 
 .settings-list-tags {
@@ -2029,7 +2061,7 @@ button.detail-item.clickable:hover {
 .settings-list-note {
   margin: 0;
   color: #64748b;
-  font: 500 0.93rem/1.5 'Manrope', 'Inter', sans-serif;
+  font: 400 0.85rem/1.35 'Manrope', 'Inter', sans-serif;
 }
 
 .settings-list-delete {
@@ -2172,6 +2204,7 @@ button.detail-item.clickable:hover {
     flex-direction: row;
     overflow-x: auto;
     padding-bottom: 12px;
+    padding-top: 0;
     border-bottom: 1px solid var(--card-border);
     margin-bottom: 8px;
     position: static;
