@@ -87,6 +87,25 @@ const competencyLevelLabels: Record<number, string> = {
 const formatCompetencyLevel = (level?: number | null): string =>
   level ? competencyLevelLabels[level] ?? `Stufe ${level}` : 'Noch offen';
 
+const levelBadgeLabel = (level?: number | null): string => {
+  if (!level) return 'Offen';
+  const labels: Record<number, string> = {
+    1: 'Unterwiesen',
+    2: 'Beobachtet',
+    3: 'U. Aufsicht',
+    4: 'Selbstständig',
+    5: 'Kann anleiten',
+  };
+  return labels[level] ?? `Stufe ${level}`;
+};
+
+const levelBadgeClass = (level?: number | null): string => {
+  if (!level) return 'level-open';
+  if (level <= 2) return 'level-low';
+  if (level <= 3) return 'level-mid';
+  return 'level-high';
+};
+
 const buildNoteDiff = (prev: string, next: string): DiffLine[] => {
   const left = prev.split('\n');
   const right = next.split('\n');
@@ -157,6 +176,82 @@ const EmployeeDetail = ({
     })
     .slice(0, 6);
   const historyPreview = timelineItems.slice(0, 4);
+
+  const renderTimelineItem = (item: TimelineItem, keyPrefix: string) => {
+    if (item.kind === 'period') {
+      const p = item.record;
+      return (
+        <button
+          className="timeline-item"
+          key={`${keyPrefix}-p-${p.id ?? `${p.startDate}-${p.endDate}`}`}
+          onClick={() => onSelectPeriod(p)}
+        >
+          <div className="timeline-dot period-dot">
+            <FontAwesomeIcon icon={faGraduationCap} />
+          </div>
+          <div className="timeline-content">
+            <div className="timeline-header">
+              <span className="timeline-title">{p.qualification ?? employee.qualification}</span>
+              <span className="timeline-date">
+                {formatDateDE(p.startDate)} – {p.endDate ? formatDateDE(p.endDate) : 'aktuell'}
+              </span>
+            </div>
+            {p.note && <div className="timeline-note muted">{p.note}</div>}
+          </div>
+        </button>
+      );
+    }
+
+    const ev = item.record;
+    const prevFallback =
+      ev.previousValue ??
+      (ev.meta && (ev.meta as { from?: unknown }).from ? String((ev.meta as { from?: unknown }).from) : undefined);
+    const newFallback =
+      ev.newValue ??
+      (ev.meta && (ev.meta as { to?: unknown }).to ? String((ev.meta as { to?: unknown }).to) : undefined);
+    const hasDiffValues = prevFallback !== undefined || newFallback !== undefined;
+    const detail =
+      (ev.type === 'name-change' || ev.type === 'fte-change' || ev.type === 'weekly-hours-change') &&
+      (prevFallback || newFallback)
+        ? `${prevFallback ?? ''} → ${newFallback ?? ''}`
+        : ev.details;
+    const isDiff = ev.type === 'note-change' && hasDiffValues;
+    const prevVal = prevFallback ?? '';
+    const newVal = newFallback ?? '';
+    const diffLines = isDiff ? buildNoteDiff(prevVal, newVal) : [];
+    const evType = ev.type as EmployeeEventType;
+
+    return (
+      <button
+        className="timeline-item event"
+        key={`${keyPrefix}-e-${ev.id ?? `${ev.eventDate}-${ev.title}`}`}
+        onClick={() => onSelectEvent(ev)}
+      >
+        <div className={`timeline-dot event-dot event-${ev.type}`}>
+          <FontAwesomeIcon icon={typeIcons[evType]} />
+        </div>
+        <div className="timeline-content">
+          <div className="timeline-header">
+            <span className="timeline-title">{typeLabels[evType]}</span>
+            <span className="timeline-date">{formatDateDE(ev.eventDate)}</span>
+          </div>
+          {detail && !isDiff && <div className="timeline-note muted">{detail}</div>}
+          {isDiff && (
+            <pre className="diff-text">
+              {diffLines.map((line, idx) => (
+                <span
+                  key={`${line.text}-${idx}`}
+                  className={`diff-line ${line.kind === 'del' ? 'diff-del' : ''} ${line.kind === 'add' ? 'diff-add' : ''} ${line.kind === 'same' ? 'diff-same' : ''}`}
+                >
+                  {line.kind === 'del' ? `-${line.text}` : line.kind === 'add' ? `+${line.text}` : line.text}
+                </span>
+              ))}
+            </pre>
+          )}
+        </div>
+      </button>
+    );
+  };
 
   const sectionButtons: Array<{ id: DetailSection; label: string; count?: number }> = [
     { id: 'overview', label: 'Übersicht' },
@@ -317,11 +412,11 @@ const EmployeeDetail = ({
                   >
                     <div>
                       <strong>{entry.competencyName}</strong>
-                      <span className="muted">
-                        {(entry.category ?? 'Allgemein')} · {formatCompetencyLevel(entry.level)}
-                      </span>
+                      <span className="detail-mini-subline muted">{entry.category ?? 'Allgemein'}</span>
                     </div>
-                    <span className="detail-mini-tag">{entry.relevance ?? 'Alle'}</span>
+                    <span className={`detail-level-badge ${levelBadgeClass(entry.level)}`}>
+                      {levelBadgeLabel(entry.level)}
+                    </span>
                   </button>
                 ))
               ) : (
@@ -356,21 +451,27 @@ const EmployeeDetail = ({
             </div>
             <div className="detail-mini-list">
               {nextInstructionItems.length > 0 ? (
-                nextInstructionItems.map((entry) => (
-                  <button
-                    key={`${entry.instructionDefinitionId}-${entry.id ?? 'new'}`}
-                    className="detail-mini-item"
-                    onClick={() => onSelectInstruction(entry)}
-                  >
-                    <div>
-                      <strong>{entry.instructionName}</strong>
-                      <span className="muted">
-                        {entry.dueDate ? `Fällig bis ${formatDateDE(entry.dueDate)}` : 'Noch ohne Termin'}
-                      </span>
-                    </div>
-                    <span className="detail-mini-tag">{entry.legalBasis ?? 'Intern'}</span>
-                  </button>
-                ))
+                nextInstructionItems.map((entry) => {
+                  const isOverdue = Boolean(entry.dueDate && entry.dueDate < today);
+                  const statusClass = isOverdue ? 'status-overdue' : 'status-open';
+                  const statusLabel = isOverdue ? 'Überfällig' : 'Offen';
+
+                  return (
+                    <button
+                      key={`${entry.instructionDefinitionId}-${entry.id ?? 'new'}`}
+                      className="detail-mini-item"
+                      onClick={() => onSelectInstruction(entry)}
+                    >
+                      <div>
+                        <strong>{entry.instructionName}</strong>
+                        <span className="detail-mini-subline muted">
+                          {entry.legalBasis ?? 'Intern'} · {entry.dueDate ? formatDateDE(entry.dueDate) : 'Ohne Termin'}
+                        </span>
+                      </div>
+                      <span className={`detail-level-badge ${statusClass}`}>{statusLabel}</span>
+                    </button>
+                  );
+                })
               ) : (
                 <div className="empty compact-empty">Noch keine Einweisungen zugeordnet.</div>
               )}
@@ -387,38 +488,9 @@ const EmployeeDetail = ({
                 Chronik öffnen
               </button>
             </div>
-            <div className="detail-mini-list">
+            <div className="timeline timeline-preview">
               {historyPreview.length > 0 ? (
-                historyPreview.map((item) =>
-                  item.kind === 'period' ? (
-                    <button
-                      key={`preview-period-${item.record.id ?? item.record.startDate}`}
-                      className="detail-mini-item"
-                      onClick={() => onSelectPeriod(item.record)}
-                    >
-                      <div>
-                        <strong>{item.record.qualification ?? employee.qualification}</strong>
-                        <span className="muted">
-                          {formatDateDE(item.record.startDate)} –{' '}
-                          {item.record.endDate ? formatDateDE(item.record.endDate) : 'aktuell'}
-                        </span>
-                      </div>
-                      <span className="detail-mini-tag">Beschäftigung</span>
-                    </button>
-                  ) : (
-                    <button
-                      key={`preview-event-${item.record.id ?? item.record.eventDate}`}
-                      className="detail-mini-item"
-                      onClick={() => onSelectEvent(item.record)}
-                    >
-                      <div>
-                        <strong>{typeLabels[item.record.type as EmployeeEventType]}</strong>
-                        <span className="muted">{formatDateDE(item.record.eventDate)}</span>
-                      </div>
-                      <span className="detail-mini-tag">{item.record.title}</span>
-                    </button>
-                  ),
-                )
+                historyPreview.map((item) => renderTimelineItem(item, 'preview'))
               ) : (
                 <div className="empty compact-empty">Keine Historie vorhanden.</div>
               )}
@@ -589,89 +661,7 @@ const EmployeeDetail = ({
             </div>
           </div>
           <div className="timeline">
-            {timelineItems.map((item) => {
-              if (item.kind === 'period') {
-                const p = item.record;
-                return (
-                  <button
-                    className="timeline-item"
-                    key={`p-${p.id ?? `${p.startDate}-${p.endDate}`}`}
-                    onClick={() => onSelectPeriod(p)}
-                  >
-                    <div className="timeline-dot period-dot">
-                      <FontAwesomeIcon icon={faGraduationCap} />
-                    </div>
-                    <div className="timeline-content">
-                      <div className="timeline-header">
-                        <span className="timeline-title">{p.qualification ?? employee.qualification}</span>
-                        <span className="timeline-date">
-                          {formatDateDE(p.startDate)} – {p.endDate ? formatDateDE(p.endDate) : 'aktuell'}
-                        </span>
-                      </div>
-                      {p.note && <div className="timeline-note muted">{p.note}</div>}
-                    </div>
-                  </button>
-                );
-              }
-              const ev = item.record;
-              const prevFallback =
-                ev.previousValue ??
-                (ev.meta && (ev.meta as { from?: unknown }).from
-                  ? String((ev.meta as { from?: unknown }).from)
-                  : undefined);
-              const newFallback =
-                ev.newValue ??
-                (ev.meta && (ev.meta as { to?: unknown }).to
-                  ? String((ev.meta as { to?: unknown }).to)
-                  : undefined);
-              const hasDiffValues = prevFallback !== undefined || newFallback !== undefined;
-              const detail =
-                (ev.type === 'name-change' ||
-                  ev.type === 'fte-change' ||
-                  ev.type === 'weekly-hours-change') &&
-                (prevFallback || newFallback)
-                  ? `${prevFallback ?? ''} → ${newFallback ?? ''}`
-                  : ev.details;
-              const isDiff = ev.type === 'note-change' && hasDiffValues;
-              const prevVal = prevFallback ?? '';
-              const newVal = newFallback ?? '';
-              const diffLines = isDiff ? buildNoteDiff(prevVal, newVal) : [];
-              const evType = ev.type as EmployeeEventType;
-              return (
-                <button
-                  className="timeline-item event"
-                  key={`e-${ev.id ?? `${ev.eventDate}-${ev.title}`}`}
-                  onClick={() => onSelectEvent(ev)}
-                >
-                  <div className={`timeline-dot event-dot event-${ev.type}`}>
-                    <FontAwesomeIcon icon={typeIcons[evType]} />
-                  </div>
-                  <div className="timeline-content">
-                    <div className="timeline-header">
-                      <span className="timeline-title">{typeLabels[evType]}</span>
-                      <span className="timeline-date">{formatDateDE(ev.eventDate)}</span>
-                    </div>
-                    {detail && !isDiff && <div className="timeline-note muted">{detail}</div>}
-                    {isDiff && (
-                      <pre className="diff-text">
-                        {diffLines.map((line, idx) => (
-                          <span
-                            key={`${line.text}-${idx}`}
-                            className={`diff-line ${line.kind === 'del' ? 'diff-del' : ''} ${line.kind === 'add' ? 'diff-add' : ''} ${line.kind === 'same' ? 'diff-same' : ''}`}
-                          >
-                            {line.kind === 'del'
-                              ? `-${line.text}`
-                              : line.kind === 'add'
-                                ? `+${line.text}`
-                                : line.text}
-                          </span>
-                        ))}
-                      </pre>
-                    )}
-                  </div>
-                </button>
-              );
-            })}
+            {timelineItems.map((item) => renderTimelineItem(item, 'full'))}
             {timelineItems.length === 0 && <div className="empty">Keine Historie vorhanden.</div>}
           </div>
         </div>
