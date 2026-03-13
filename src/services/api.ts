@@ -67,10 +67,10 @@ export const api = {
   },
   competencies: {
     listDefinitions: () => call('listCompetencyDefinitions', baseApi.listCompetencyDefinitions),
-    addDefinition: (name: string, note?: string | null) =>
-      call('addCompetencyDefinition', baseApi.addCompetencyDefinition, name, note),
-    updateDefinition: (id: number, name: string, note?: string | null) =>
-      call('updateCompetencyDefinition', baseApi.updateCompetencyDefinition, id, name, note),
+    addDefinition: (input: Parameters<Api['addCompetencyDefinition']>[0]) =>
+      call('addCompetencyDefinition', baseApi.addCompetencyDefinition, input),
+    updateDefinition: (input: Parameters<Api['updateCompetencyDefinition']>[0]) =>
+      call('updateCompetencyDefinition', baseApi.updateCompetencyDefinition, input),
     deleteDefinition: (id: number) =>
       call('deleteCompetencyDefinition', baseApi.deleteCompetencyDefinition, id),
     reorderDefinitions: (ids: number[]) =>
@@ -79,6 +79,35 @@ export const api = {
       call('listEmployeeCompetencies', baseApi.listEmployeeCompetencies, employeeId),
     saveEmployee: (input: Parameters<Api['saveEmployeeCompetency']>[0]) =>
       call('saveEmployeeCompetency', baseApi.saveEmployeeCompetency, input),
+    deleteEmployee: (employeeId: number, competencyDefinitionId: number) =>
+      call(
+        'deleteEmployeeCompetency',
+        baseApi.deleteEmployeeCompetency,
+        employeeId,
+        competencyDefinitionId,
+      ),
+  },
+  instructions: {
+    listDefinitions: () => call('listInstructionDefinitions', baseApi.listInstructionDefinitions),
+    addDefinition: (input: Parameters<Api['addInstructionDefinition']>[0]) =>
+      call('addInstructionDefinition', baseApi.addInstructionDefinition, input),
+    updateDefinition: (input: Parameters<Api['updateInstructionDefinition']>[0]) =>
+      call('updateInstructionDefinition', baseApi.updateInstructionDefinition, input),
+    deleteDefinition: (id: number) =>
+      call('deleteInstructionDefinition', baseApi.deleteInstructionDefinition, id),
+    reorderDefinitions: (ids: number[]) =>
+      call('reorderInstructionDefinitions', baseApi.reorderInstructionDefinitions, ids),
+    listEmployee: (employeeId: number) =>
+      call('listEmployeeInstructions', baseApi.listEmployeeInstructions, employeeId),
+    saveEmployee: (input: Parameters<Api['saveEmployeeInstruction']>[0]) =>
+      call('saveEmployeeInstruction', baseApi.saveEmployeeInstruction, input),
+    deleteEmployee: (employeeId: number, instructionDefinitionId: number) =>
+      call(
+        'deleteEmployeeInstruction',
+        baseApi.deleteEmployeeInstruction,
+        employeeId,
+        instructionDefinitionId,
+      ),
   },
   data: {
     export: (year: number, format: ExportFormat) => call('exportData', baseApi.exportData, year, format),

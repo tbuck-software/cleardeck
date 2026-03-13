@@ -3,8 +3,18 @@
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import SettingsPage from '../SettingsPage';
-import type { CompetencyDefinition, QualificationType, UpdateStatus } from '../../../shared/types';
-import type { CompetencyModalPayload, EncryptionSetupState, QualificationModalPayload } from '../../../types/ui';
+import type {
+  CompetencyDefinition,
+  InstructionDefinition,
+  QualificationType,
+  UpdateStatus,
+} from '../../../shared/types';
+import type {
+  CompetencyModalPayload,
+  EncryptionSetupState,
+  InstructionModalPayload,
+  QualificationModalPayload,
+} from '../../../types/ui';
 
 const qualifications: QualificationType[] = [
   { id: 1, name: 'Alpha', note: 'Erste' },
@@ -12,8 +22,12 @@ const qualifications: QualificationType[] = [
 ];
 
 const competencies: CompetencyDefinition[] = [
-  { id: 1, name: 'Einarbeitung', note: 'Praktische Einarbeitung' },
-  { id: 2, name: 'Wundversorgung', note: 'Freigabe im Alltag' },
+  { id: 1, code: '', name: 'Einarbeitung', category: 'Allgemein', relevance: 'Alle', note: 'Praktische Einarbeitung' },
+  { id: 2, code: 'BPf 10', name: 'Wundversorgung', category: 'SGB V', relevance: 'Nur PFK', note: 'Freigabe im Alltag' },
+];
+const instructions: InstructionDefinition[] = [
+  { id: 1, topic: 'Hygieneunterweisung', legalBasis: 'IfSG / KRINKO' },
+  { id: 2, topic: 'Brandschutzunterweisung', legalBasis: 'ArbStättV' },
 ];
 
 const baseStatus: UpdateStatus = { state: 'idle' };
@@ -28,6 +42,7 @@ const baseEncryptionSetup: EncryptionSetupState = {
 const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage>> = {}): React.ComponentProps<typeof SettingsPage> => ({
   qualifications,
   competencies,
+  instructions,
   qualificationEdits: {},
   competencyEdits: {},
   dbMessage: null,
@@ -39,10 +54,13 @@ const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage
   encryptionSetup: baseEncryptionSetup,
   onOpenQualificationModal: vi.fn<(payload: QualificationModalPayload) => void>(),
   onOpenCompetencyModal: vi.fn<(payload: CompetencyModalPayload) => void>(),
+  onOpenInstructionModal: vi.fn<(payload: InstructionModalPayload) => void>(),
   onReorderQualification: vi.fn<(ids: number[]) => void>(),
   onReorderCompetency: vi.fn<(ids: number[]) => void>(),
+  onReorderInstruction: vi.fn<(ids: number[]) => void>(),
   onDeleteQualification: vi.fn<(id: number) => void>(),
   onDeleteCompetency: vi.fn<(id: number) => void>(),
+  onDeleteInstruction: vi.fn<(id: number) => void>(),
   onBaseHoursInputChange: vi.fn<(val: string) => void>(),
   onSaveBaseHours: vi.fn(),
   onDbExport: vi.fn(),
@@ -85,10 +103,17 @@ describe('SettingsPage', () => {
     const props = createProps();
     render(<SettingsPage {...props} />);
 
-    fireEvent.click(screen.getByText('Kompetenzpass'));
+    fireEvent.click(screen.getByText('Kompetenzen'));
     fireEvent.click(screen.getByText('Neu'));
 
-    expect(props.onOpenCompetencyModal).toHaveBeenCalledWith({ value: '', note: '', id: undefined });
+    expect(props.onOpenCompetencyModal).toHaveBeenCalledWith({
+      id: undefined,
+      code: '',
+      value: '',
+      category: 'Allgemein',
+      relevance: 'Alle',
+      note: '',
+    });
 
     const firstRow = screen.getByText('Einarbeitung').closest('tr')!;
     const secondRow = screen.getByText('Wundversorgung').closest('tr')!;
@@ -98,6 +123,21 @@ describe('SettingsPage', () => {
     fireEvent.drop(secondRow);
 
     expect(props.onReorderCompetency).toHaveBeenCalledWith([2, 1]);
+  });
+
+  it('verwaltet Einweisungen im eigenen Tab', () => {
+    const props = createProps();
+    render(<SettingsPage {...props} />);
+
+    fireEvent.click(screen.getByText('Einweisungen'));
+    fireEvent.click(screen.getByText('Neu'));
+
+    expect(props.onOpenInstructionModal).toHaveBeenCalledWith({
+      id: undefined,
+      topic: '',
+      legalBasis: '',
+      note: '',
+    });
   });
 
   it('zeigt Update- und Basisstunden-Status an', () => {
