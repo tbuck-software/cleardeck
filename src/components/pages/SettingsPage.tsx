@@ -31,6 +31,7 @@ import type {
   InstructionModalPayload,
   QualificationModalPayload,
 } from '../../types/ui';
+import api from '../../services/api';
 import logoUrl from '../../assets/logo.png';
 import ModalHeader from '../modals/ModalHeader';
 
@@ -238,6 +239,13 @@ const SettingsPage = ({
     return `Installiert ist ${currentVersion}. Updates werden beim Start, stuendlich und bei Fokus geprueft.`;
   })();
 
+  const handleExternalLinkClick = (event: React.MouseEvent<HTMLAnchorElement>, url: string) => {
+    event.preventDefault();
+    void api.app.openExternal(url).catch((error) => {
+      console.error('external link failed', error);
+    });
+  };
+
   const tabs: { id: TabId; label: string; icon: any; description: string }[] = [
     { id: 'general', label: 'Allgemein', icon: faCog, description: 'Arbeitszeit, Updates und Grundkonfiguration.' },
     { id: 'qualifications', label: 'Qualifikationen', icon: faList, description: 'Pflegeprofile und Sortierung pflegen.' },
@@ -332,6 +340,7 @@ const SettingsPage = ({
                     className="ghost-button settings-link-button"
                     target="_blank"
                     rel="noreferrer"
+                    onClick={(event) => handleExternalLinkClick(event, targetReleaseUrl)}
                   >
                     Release auf GitHub öffnen
                   </a>
@@ -685,7 +694,11 @@ const SettingsPage = ({
                   <div className="about-card">
                     <h4 className="about-section-header">Links</h4>
                     <div className="about-links">
-                      <a href={`mailto:${appInfo.email}`} className="about-link-button">
+                      <a
+                        href={`mailto:${appInfo.email}`}
+                        className="about-link-button"
+                        onClick={(event) => handleExternalLinkClick(event, `mailto:${appInfo.email}`)}
+                      >
                         <span className="link-icon">
                           <FontAwesomeIcon icon={faEnvelope} />
                         </span>
@@ -696,6 +709,7 @@ const SettingsPage = ({
                         target="_blank"
                         rel="noopener noreferrer"
                         className="about-link-button"
+                        onClick={(event) => handleExternalLinkClick(event, appInfo.github)}
                       >
                         <span className="link-icon">
                           <FontAwesomeIcon icon={faGithub} />

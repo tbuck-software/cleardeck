@@ -26,6 +26,7 @@ export type ExportFormat = 'csv' | 'xlsx';
 export const api = {
   app: {
     getInfo: () => call('getAppInfo', baseApi.getAppInfo),
+    openExternal: (url: string) => call('openExternal', baseApi.openExternal, url),
   },
   auth: {
     getState: () => call('getAppState', baseApi.getAppState),

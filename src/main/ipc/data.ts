@@ -19,6 +19,7 @@ import { listEvents, saveEvent, deleteEvent, listUpcomingEvents, listEventsInRan
 import {
   getExpiringTrainings,
   getBirthdaysAndAnniversaries,
+  getEmployeeDashboardStats,
 } from '../repositories/dashboard';
 import {
   listQualifications,
@@ -435,6 +436,14 @@ export const registerDataHandlers = (): void => {
     (_event, { withinDays, limit }: { withinDays?: number; limit?: number }) => {
       ensureDbReady();
       return getBirthdaysAndAnniversaries(withinDays, limit);
+    }
+  );
+
+  ipcMain.handle(
+    'dashboard:employeeStats',
+    (_event, { dueSoonDays, limit }: { dueSoonDays?: number; limit?: number }) => {
+      ensureDbReady();
+      return getEmployeeDashboardStats(dueSoonDays, limit);
     }
   );
 

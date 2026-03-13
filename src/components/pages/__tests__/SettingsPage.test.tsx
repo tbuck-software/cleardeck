@@ -2,6 +2,7 @@
 /// <reference types="@testing-library/jest-dom" />
 
 import { fireEvent, render, screen } from '@testing-library/react';
+import api from '../../../services/api';
 import SettingsPage from '../SettingsPage';
 import type {
   CompetencyDefinition,
@@ -15,6 +16,14 @@ import type {
   InstructionModalPayload,
   QualificationModalPayload,
 } from '../../../types/ui';
+
+vi.mock('../../../services/api', () => ({
+  default: {
+    app: {
+      openExternal: vi.fn<(_: string) => Promise<boolean>>().mockResolvedValue(true),
+    },
+  },
+}));
 
 const qualifications: QualificationType[] = [
   { id: 1, name: 'Alpha', note: 'Erste' },
@@ -194,5 +203,38 @@ describe('SettingsPage', () => {
     expect(screen.getByText('Unverschlüsselt')).toBeInTheDocument();
     expect(screen.getByText('Verschlüsselung aktivieren')).toBeEnabled();
     expect(screen.getByRole('button', { name: /Verschlüsselt Import/i })).toBeDisabled();
+  });
+
+  it('öffnet Info- und Release-Links explizit extern', () => {
+    const props = createProps({
+      appInfo: {
+        name: 'ClearDeck',
+        version: '1.7.2',
+        author: 'Torben Buck',
+        email: 'mail@tbuck.de',
+        github: 'https://github.com/Rasalas/employee-db',
+        license: 'SEE LICENSE IN LICENSE',
+        copyright: 'Copyright',
+        electronVersion: '39.2.4',
+        nodeVersion: '20.0.0',
+        platform: 'darwin',
+        arch: 'arm64',
+      },
+      updateStatus: { state: 'downloaded', version: '1.2.3' },
+    });
+
+    render(<SettingsPage {...props} />);
+
+    fireEvent.click(screen.getByText('Release auf GitHub öffnen'));
+    expect(api.app.openExternal).toHaveBeenCalledWith(
+      'https://github.com/Rasalas/employee-db/releases/tag/v1.2.3',
+    );
+
+    fireEvent.click(screen.getByText('Info'));
+    fireEvent.click(screen.getByText('Support kontaktieren'));
+    expect(api.app.openExternal).toHaveBeenCalledWith('mailto:mail@tbuck.de');
+
+    fireEvent.click(screen.getByText('GitHub Repository'));
+    expect(api.app.openExternal).toHaveBeenCalledWith('https://github.com/Rasalas/employee-db');
   });
 });

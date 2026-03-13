@@ -16,6 +16,7 @@ import type {
   UpcomingEvent,
   ExpiringTraining,
   BirthdayAnniversary,
+  EmployeeDashboardStats,
   Patient,
   PatientVisit,
   PatientWithLatestVisit,
@@ -32,6 +33,7 @@ type ExportFormat = 'csv' | 'xlsx';
 export type Api = {
   getAppState: () => Promise<AppState>;
   getAppInfo: () => Promise<AppInfo>;
+  openExternal: (url: string) => Promise<boolean>;
   register: (password: string) => Promise<AppState>;
   registerPlain: () => Promise<AppState>;
   login: (password: string) => Promise<AppState>;
@@ -159,6 +161,7 @@ export type Api = {
   // Dashboard widgets
   getExpiringTrainings: (withinDays?: number, limit?: number) => Promise<ExpiringTraining[]>;
   getBirthdaysAndAnniversaries: (withinDays?: number, limit?: number) => Promise<BirthdayAnniversary[]>;
+  getEmployeeDashboardStats: (dueSoonDays?: number, limit?: number) => Promise<EmployeeDashboardStats>;
 
   // Patients
   listPatients: () => Promise<PatientWithLatestVisit[]>;
@@ -196,6 +199,7 @@ export type Api = {
 const api: Api = {
   getAppState: () => ipcRenderer.invoke('app:state'),
   getAppInfo: () => ipcRenderer.invoke('app:info'),
+  openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
   register: (password) => ipcRenderer.invoke('auth:register', password),
   registerPlain: () => ipcRenderer.invoke('auth:registerPlain'),
   login: (password) => ipcRenderer.invoke('auth:login', password),
@@ -261,6 +265,8 @@ const api: Api = {
     ipcRenderer.invoke('dashboard:expiringTrainings', { withinDays, limit }),
   getBirthdaysAndAnniversaries: (withinDays, limit) =>
     ipcRenderer.invoke('dashboard:birthdaysAnniversaries', { withinDays, limit }),
+  getEmployeeDashboardStats: (dueSoonDays, limit) =>
+    ipcRenderer.invoke('dashboard:employeeStats', { dueSoonDays, limit }),
 
   // Patients
   listPatients: () => ipcRenderer.invoke('patients:list'),

@@ -4,7 +4,7 @@
  * Handles registration, login, and password recovery.
  */
 
-import { ipcMain, app } from 'electron';
+import { ipcMain, app, shell } from 'electron';
 import crypto from 'crypto';
 
 import type { AppState, AppInfo, StorageMode } from '../../shared/types';
@@ -104,6 +104,12 @@ export const registerAuthHandlers = (): void => {
     platform: process.platform,
     arch: process.arch,
   }));
+
+  ipcMain.handle('app:openExternal', async (_event, url: string): Promise<boolean> => {
+    if (!url) return false;
+    await shell.openExternal(url);
+    return true;
+  });
 
   ipcMain.handle('auth:register', (_event, password: string): AppState => {
     if (isConfigured()) {

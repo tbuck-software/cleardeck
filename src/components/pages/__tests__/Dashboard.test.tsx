@@ -3,7 +3,13 @@
 
 import { render, screen } from '@testing-library/react';
 import Dashboard from '../Dashboard';
-import type { QualificationType, YearDataset, UnifiedEvent, UnifiedEventType } from '../../../shared/types';
+import type {
+  EmployeeDashboardStats,
+  QualificationType,
+  YearDataset,
+  UnifiedEvent,
+  UnifiedEventType,
+} from '../../../shared/types';
 
 const sampleDataset: YearDataset = {
   employees: [],
@@ -39,6 +45,22 @@ const mockOnToggleEventFilter = vi.fn();
 const mockOnShowAllEvents = vi.fn();
 const mockOnHideAllEvents = vi.fn();
 const mockHiddenEventTypes: UnifiedEventType[] = [];
+const mockEmployeeDashboardStats: EmployeeDashboardStats = {
+  instructions: {
+    totalAssigned: 12,
+    overdue: 2,
+    dueSoon: 3,
+    completedRate: 58,
+    topOpenEmployees: [{ employeeId: 1, employeeName: 'Max Mustermann', count: 2 }],
+  },
+  competencies: {
+    totalAssigned: 16,
+    open: 4,
+    pendingApproval: 3,
+    approvedRate: 56,
+    topGapEmployees: [{ employeeId: 2, employeeName: 'Erika Musterfrau', count: 3 }],
+  },
+};
 
 describe('Dashboard', () => {
   it('zeigt Kennzahlen und Qualifikationen', () => {
@@ -53,6 +75,7 @@ describe('Dashboard', () => {
         qualifications={qualifications}
         unifiedEvents={mockUnifiedEvents}
         hiddenEventTypes={mockHiddenEventTypes}
+        employeeDashboardStats={mockEmployeeDashboardStats}
         onEventClick={mockOnEventClick}
         onToggleEventFilter={mockOnToggleEventFilter}
         onShowAllEvents={mockOnShowAllEvents}
@@ -86,6 +109,7 @@ describe('Dashboard', () => {
         qualifications={[]}
         unifiedEvents={[]}
         hiddenEventTypes={mockHiddenEventTypes}
+        employeeDashboardStats={mockEmployeeDashboardStats}
         onEventClick={mockOnEventClick}
         onToggleEventFilter={mockOnToggleEventFilter}
         onShowAllEvents={mockOnShowAllEvents}
@@ -109,6 +133,7 @@ describe('Dashboard', () => {
         qualifications={qualifications}
         unifiedEvents={mockUnifiedEvents}
         hiddenEventTypes={mockHiddenEventTypes}
+        employeeDashboardStats={mockEmployeeDashboardStats}
         onEventClick={mockOnEventClick}
         onToggleEventFilter={mockOnToggleEventFilter}
         onShowAllEvents={mockOnShowAllEvents}
@@ -117,9 +142,7 @@ describe('Dashboard', () => {
     );
 
     expect(screen.getByText('Bevorstehende Ereignisse')).toBeInTheDocument();
-    expect(screen.getByText('Max Mustermann')).toBeInTheDocument();
+    expect(screen.getAllByText('Max Mustermann').length).toBeGreaterThan(0);
     expect(screen.getByText('Pflegevisite')).toBeInTheDocument();
   });
 });
-
-

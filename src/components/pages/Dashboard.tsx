@@ -2,13 +2,18 @@ import React from 'react';
 import {
   faBriefcase,
   faChartPie,
+  faClipboardCheck,
   faGraduationCap,
+  faListCheck,
+  faShieldHalved,
+  faTriangleExclamation,
   faUsers,
   faUserPlus,
   faUserMinus,
   faPercent,
 } from '@fortawesome/free-solid-svg-icons';
 import type {
+  EmployeeDashboardStats,
   QualificationType,
   YearDataset,
   UnifiedEvent,
@@ -28,6 +33,7 @@ type DashboardProps = {
   qualifications: QualificationType[];
   unifiedEvents: UnifiedEvent[];
   hiddenEventTypes: UnifiedEventType[];
+  employeeDashboardStats: EmployeeDashboardStats | null;
   onEventClick: (event: UnifiedEvent) => void;
   onToggleEventFilter: (type: UnifiedEventType) => void;
   onShowAllEvents: () => void;
@@ -43,6 +49,7 @@ const Dashboard = ({
   qualifications,
   unifiedEvents,
   hiddenEventTypes,
+  employeeDashboardStats,
   onEventClick,
   onToggleEventFilter,
   onShowAllEvents,
@@ -55,6 +62,8 @@ const Dashboard = ({
     dataset?.employees.filter((e) => e.startDate.startsWith(`${year}`)).length ?? 0;
   const leavers =
     dataset?.employees.filter((e) => e.endDate?.startsWith(`${year}`)).length ?? 0;
+  const instructionStats = employeeDashboardStats?.instructions;
+  const competencyStats = employeeDashboardStats?.competencies;
 
   return (
     <div className="stack dashboard">
@@ -186,6 +195,104 @@ const Dashboard = ({
               sub="Austritte im Jahr"
               icon={faUserMinus}
             />
+          </div>
+        </div>
+
+        <div className="card dashboard-focus-card dashboard-focus-card-alert">
+          <div className="form-header">
+            <div>
+              <p className="eyebrow">Compliance</p>
+              <h3>Einweisungen im Fokus</h3>
+              <p className="subtitle small">Aktive Mitarbeitende, offene Pflichten und kurzfristige Faelligkeiten.</p>
+            </div>
+          </div>
+          <div className="dashboard-focus-metrics">
+            <StatCard
+              label="Überfällig"
+              value={`${instructionStats?.overdue ?? 0}`}
+              sub="sofort handeln"
+              icon={faTriangleExclamation}
+            />
+            <StatCard
+              label="30 Tage"
+              value={`${instructionStats?.dueSoon ?? 0}`}
+              sub="bald fällig"
+              icon={faClipboardCheck}
+            />
+            <StatCard
+              label="Erledigt"
+              value={`${instructionStats?.completedRate ?? 0}%`}
+              sub={`${instructionStats?.totalAssigned ?? 0} zugewiesen`}
+              icon={faShieldHalved}
+            />
+          </div>
+          <div className="dashboard-focus-list">
+            <div className="dashboard-focus-list-head">
+              <span>Meiste offenen Einweisungen</span>
+              <span>{instructionStats?.topOpenEmployees.length ?? 0} Treffer</span>
+            </div>
+            {instructionStats && instructionStats.topOpenEmployees.length > 0 ? (
+              instructionStats.topOpenEmployees.map((entry) => (
+                <div className="dashboard-focus-row" key={`instruction-gap-${entry.employeeId}`}>
+                  <div>
+                    <strong>{entry.employeeName}</strong>
+                    <span>{entry.count} offen</span>
+                  </div>
+                  <span className="dashboard-focus-pill danger">{entry.count}</span>
+                </div>
+              ))
+            ) : (
+              <div className="empty compact-empty">Keine offenen Einweisungen im aktiven Team.</div>
+            )}
+          </div>
+        </div>
+
+        <div className="card dashboard-focus-card">
+          <div className="form-header">
+            <div>
+              <p className="eyebrow">Kompetenzstatus</p>
+              <h3>Freigaben und Lücken</h3>
+              <p className="subtitle small">Offene Kompetenzen und ausstehende Freigaben im aktuellen Team.</p>
+            </div>
+          </div>
+          <div className="dashboard-focus-metrics">
+            <StatCard
+              label="Offen"
+              value={`${competencyStats?.open ?? 0}`}
+              sub="ohne Stufe"
+              icon={faGraduationCap}
+            />
+            <StatCard
+              label="Freigaben"
+              value={`${competencyStats?.pendingApproval ?? 0}`}
+              sub="ausstehend"
+              icon={faListCheck}
+            />
+            <StatCard
+              label="Freigegeben"
+              value={`${competencyStats?.approvedRate ?? 0}%`}
+              sub={`${competencyStats?.totalAssigned ?? 0} zugewiesen`}
+              icon={faUsers}
+            />
+          </div>
+          <div className="dashboard-focus-list">
+            <div className="dashboard-focus-list-head">
+              <span>Größte Kompetenzlücken</span>
+              <span>{competencyStats?.topGapEmployees.length ?? 0} Treffer</span>
+            </div>
+            {competencyStats && competencyStats.topGapEmployees.length > 0 ? (
+              competencyStats.topGapEmployees.map((entry) => (
+                <div className="dashboard-focus-row" key={`competency-gap-${entry.employeeId}`}>
+                  <div>
+                    <strong>{entry.employeeName}</strong>
+                    <span>{entry.count} Themen mit Gap</span>
+                  </div>
+                  <span className="dashboard-focus-pill">{entry.count}</span>
+                </div>
+              ))
+            ) : (
+              <div className="empty compact-empty">Keine offenen Kompetenzlücken im aktiven Team.</div>
+            )}
           </div>
         </div>
       </div>

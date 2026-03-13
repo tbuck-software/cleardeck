@@ -4,6 +4,7 @@ import type {
   BirthdayAnniversary,
   PatientBirthdayEvent,
   PatientVisitEvent,
+  EmployeeDashboardStats,
 } from '../shared/types';
 
 type UseDashboardWidgetsProps = {
@@ -15,6 +16,7 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
   const [birthdaysAnniversaries, setBirthdaysAnniversaries] = useState<BirthdayAnniversary[]>([]);
   const [patientBirthdays, setPatientBirthdays] = useState<PatientBirthdayEvent[]>([]);
   const [patientVisits, setPatientVisits] = useState<PatientVisitEvent[]>([]);
+  const [employeeDashboardStats, setEmployeeDashboardStats] = useState<EmployeeDashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
 
   const loadExpiringTrainings = useCallback(
@@ -77,6 +79,18 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
     [handleError]
   );
 
+  const loadEmployeeDashboardStats = useCallback(
+    async (dueSoonDays = 30, limit = 5) => {
+      try {
+        const data = await window.api.getEmployeeDashboardStats(dueSoonDays, limit);
+        setEmployeeDashboardStats(data);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [handleError]
+  );
+
   const loadAll = useCallback(
     async () => {
       setLoading(true);
@@ -86,12 +100,19 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
           loadBirthdaysAnniversaries(),
           loadPatientBirthdays(),
           loadPatientVisits(),
+          loadEmployeeDashboardStats(),
         ]);
       } finally {
         setLoading(false);
       }
     },
-    [loadExpiringTrainings, loadBirthdaysAnniversaries, loadPatientBirthdays, loadPatientVisits]
+    [
+      loadExpiringTrainings,
+      loadBirthdaysAnniversaries,
+      loadPatientBirthdays,
+      loadPatientVisits,
+      loadEmployeeDashboardStats,
+    ]
   );
 
   const actions = useMemo(
@@ -100,9 +121,17 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
       loadBirthdaysAnniversaries,
       loadPatientBirthdays,
       loadPatientVisits,
+      loadEmployeeDashboardStats,
       loadAll,
     }),
-    [loadExpiringTrainings, loadBirthdaysAnniversaries, loadPatientBirthdays, loadPatientVisits, loadAll],
+    [
+      loadExpiringTrainings,
+      loadBirthdaysAnniversaries,
+      loadPatientBirthdays,
+      loadPatientVisits,
+      loadEmployeeDashboardStats,
+      loadAll,
+    ],
   );
 
   return {
@@ -111,6 +140,7 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
       birthdaysAnniversaries,
       patientBirthdays,
       patientVisits,
+      employeeDashboardStats,
       loading,
     },
     actions,
