@@ -80,6 +80,90 @@ type TabId =
   | 'danger'
   | 'info';
 
+type SettingsSectionProps = {
+  eyebrow?: React.ReactNode;
+  title: string;
+  subtitle?: React.ReactNode;
+  actions?: React.ReactNode;
+  tone?: 'default' | 'danger';
+  children: React.ReactNode;
+};
+
+type CollectionEntryProps = {
+  title: string;
+  meta?: string[];
+  note?: string | null;
+  draggable?: boolean;
+  onOpen: () => void;
+  onDelete?: () => void;
+  onDragStart?: () => void;
+  onDragOver?: (event: React.DragEvent<HTMLElement>) => void;
+  onDrop?: (event: React.DragEvent<HTMLElement>) => void;
+};
+
+const SettingsSection = ({ eyebrow, title, subtitle, actions, tone = 'default', children }: SettingsSectionProps) => (
+  <section className={`settings-section ${tone === 'danger' ? 'settings-section-danger' : ''}`}>
+    <div className="settings-section-head">
+      <div className="settings-section-copy">
+        {eyebrow && <p className="eyebrow settings-eyebrow">{eyebrow}</p>}
+        <h3 className="settings-section-title">{title}</h3>
+        {subtitle && <p className="settings-section-subtitle">{subtitle}</p>}
+      </div>
+      {actions && <div className="settings-section-cta">{actions}</div>}
+    </div>
+    <div className="settings-section-body">{children}</div>
+  </section>
+);
+
+const CollectionEntry = ({
+  title,
+  meta = [],
+  note,
+  draggable,
+  onOpen,
+  onDelete,
+  onDragStart,
+  onDragOver,
+  onDrop,
+}: CollectionEntryProps) => (
+  <article
+    className="settings-list-item"
+    draggable={draggable}
+    onDragStart={onDragStart}
+    onDragOver={onDragOver}
+    onDrop={onDrop}
+  >
+    <button type="button" className="settings-list-main" onClick={onOpen}>
+      <div className="settings-list-title-row">
+        <strong>{title}</strong>
+        {meta.length > 0 && (
+          <div className="settings-list-tags">
+            {meta.map((entry) => (
+              <span key={entry} className="settings-list-tag">
+                {entry}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      <p className="settings-list-note">{note && note.trim().length > 0 ? note : 'Keine Notiz'}</p>
+    </button>
+    {onDelete && (
+      <button
+        type="button"
+        className="ghost-button danger icon-button settings-list-delete"
+        onClick={(event) => {
+          event.stopPropagation();
+          onDelete();
+        }}
+        title="Löschen"
+      >
+        <FontAwesomeIcon icon={faTrash} />
+      </button>
+    )}
+  </article>
+);
+
 const SettingsPage = ({
   qualifications,
   competencies,
@@ -117,7 +201,7 @@ const SettingsPage = ({
   onDropDatabase,
   onFullReset,
 }: SettingsPageProps) => {
-  const [dragQualificationId, setDragQualificationId] = useState<number | null>(null);
+  const [dragItemId, setDragItemId] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('general');
   const currentVersion = appInfo ? `v${appInfo.version}` : 'unbekannt';
   const availableVersion =
@@ -153,19 +237,25 @@ const SettingsPage = ({
     return `Installiert ist ${currentVersion}. Updates werden beim Start, stuendlich und bei Fokus geprueft.`;
   })();
 
-  const tabs: { id: TabId; label: string; icon: any }[] = [
-    { id: 'general', label: 'Allgemein', icon: faCog },
-    { id: 'qualifications', label: 'Qualifikationen', icon: faList },
-    { id: 'competencies', label: 'Kompetenzen', icon: faList },
-    { id: 'instructions', label: 'Einweisungen', icon: faList },
-    { id: 'database', label: 'Datenbank & Sicherheit', icon: faDatabase },
-    { id: 'danger', label: 'Gefahrenzone', icon: faExclamationTriangle },
-    { id: 'info', label: 'Info', icon: faInfoCircle },
+  const tabs: { id: TabId; label: string; icon: any; description: string }[] = [
+    { id: 'general', label: 'Allgemein', icon: faCog, description: 'Arbeitszeit, Updates und Grundkonfiguration.' },
+    { id: 'qualifications', label: 'Qualifikationen', icon: faList, description: 'Pflegeprofile und Sortierung pflegen.' },
+    { id: 'competencies', label: 'Kompetenzen', icon: faList, description: 'Fachthemen, Relevanz und Kategorien steuern.' },
+    { id: 'instructions', label: 'Einweisungen', icon: faList, description: 'Unterweisungen zentral verwalten und sortieren.' },
+    { id: 'database', label: 'Datenbank & Sicherheit', icon: faDatabase, description: 'Backups, Import und Zugriffsschutz.' },
+    { id: 'danger', label: 'Gefahrenzone', icon: faExclamationTriangle, description: 'Irreversible Aktionen mit voller Absicht.' },
+    { id: 'info', label: 'Info', icon: faInfoCircle, description: 'Version, Links und Systemumgebung.' },
   ];
+
+  const activeTabConfig = tabs.find((tab) => tab.id === activeTab) ?? tabs[0];
 
   return (
     <div className="settings-layout">
       <div className="settings-sidebar">
+        <div className="settings-sidebar-head">
+          <p className="settings-sidebar-kicker">Steuerzentrale</p>
+          <h2>Einstellungen</h2>
+        </div>
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -179,21 +269,29 @@ const SettingsPage = ({
       </div>
 
       <div className="settings-content">
+        <div className="settings-page-head">
+          <div>
+            <p className="settings-page-kicker">{activeTabConfig.label}</p>
+            <h2>{activeTabConfig.label}</h2>
+          </div>
+          <p className="settings-page-summary">{activeTabConfig.description}</p>
+        </div>
         {activeTab === 'general' && (
-          <>
-            <div className="card form-card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">
-                    <FontAwesomeIcon icon={faClock} style={{ marginRight: 8 }} /> Arbeitszeit
-                  </p>
-                  <h3>Konfiguration</h3>
+          <div className="settings-stack">
+            <SettingsSection
+              eyebrow={<><FontAwesomeIcon icon={faClock} style={{ marginRight: 8 }} /> Arbeitszeit</>}
+              title="Basis für VZÄ"
+              subtitle="Der Referenzwert für Auswertungen und Personalquoten."
+            >
+              <div className="settings-split-panel">
+                <div className="settings-highlight-tile">
+                  <span>Aktuell</span>
+                  <strong>{baseHoursInput || '36'}</strong>
+                  <em>Std./Woche</em>
                 </div>
-              </div>
-              <div className="form-grid">
-                <label className="full-width">
-                  Basis-Wochenstunden für VZÄ (Default 36)
-                  <div className="inline-row" style={{ marginTop: 8 }}>
+                <label className="settings-inline-field">
+                  Basis-Wochenstunden
+                  <div className="settings-inline-action">
                     <input
                       type="number"
                       min="1"
@@ -201,164 +299,121 @@ const SettingsPage = ({
                       value={baseHoursInput}
                       onChange={(e) => onBaseHoursInputChange(e.target.value)}
                     />
-                    <button className="ghost-button" onClick={onSaveBaseHours}>
+                    <button className="primary" onClick={onSaveBaseHours}>
                       Speichern
                     </button>
                   </div>
                 </label>
               </div>
-            </div>
+            </SettingsSection>
 
-            <div className="card form-card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">
-                    <FontAwesomeIcon icon={faSync} style={{ marginRight: 8 }} /> System
-                  </p>
-                  <h3>Software Updates</h3>
-                </div>
-              </div>
-              <div className="form-grid">
-                <div className="inline-row">
-                  <button
-                    className="ghost-button"
-                    onClick={onCheckUpdates}
-                    disabled={updateStatus.state === 'checking' || updateStatus.state === 'downloading'}
-                    style={{ width: '100%' }}
-                  >
-                    {updateStatus.state === 'checking' ? 'Suche …' : 'Nach Updates suchen'}
+            <SettingsSection
+              eyebrow={<><FontAwesomeIcon icon={faSync} style={{ marginRight: 8 }} /> System</>}
+              title="Software Updates"
+              subtitle={updateCopy}
+            >
+              <div className="settings-action-band">
+                <button
+                  className="ghost-button"
+                  onClick={onCheckUpdates}
+                  disabled={updateStatus.state === 'checking' || updateStatus.state === 'downloading'}
+                >
+                  {updateStatus.state === 'checking' ? 'Suche …' : 'Nach Updates suchen'}
+                </button>
+                {updateStatus.state === 'downloaded' && (
+                  <button className="primary" onClick={onInstallUpdate}>
+                    Installieren & neu starten
                   </button>
-                  {updateStatus.state === 'downloaded' && (
-                    <button className="primary" onClick={onInstallUpdate}>
-                      Installieren & neu starten
-                    </button>
-                  )}
-                </div>
-                <div className="form-grid" style={{ gap: 6 }}>
-                  <p className="subtitle small" style={{ margin: 0 }}>
-                    Installierte Version: <strong>{currentVersion}</strong>
-                  </p>
-                  <p className="subtitle small" style={{ margin: 0 }}>
-                    Letzte Pruefung: <strong>{lastCheckLabel}</strong>
-                  </p>
-                  {availableVersion && (
-                    <p className="subtitle small" style={{ margin: 0 }}>
-                      Zielversion: <strong>{availableVersion}</strong>
-                    </p>
-                  )}
-                </div>
-                <p className="subtitle small">
-                  {updateCopy}
-                </p>
+                )}
                 {targetReleaseUrl && (
                   <a
                     href={targetReleaseUrl}
-                    className="ghost-button"
+                    className="ghost-button settings-link-button"
                     target="_blank"
                     rel="noreferrer"
-                    style={{ textAlign: 'center' }}
                   >
-                    Release auf GitHub oeffnen
+                    Release auf GitHub öffnen
                   </a>
                 )}
               </div>
-            </div>
-          </>
+              <div className="settings-meta-grid">
+                <div className="settings-meta-item">
+                  <span>Installiert</span>
+                  <strong>{currentVersion}</strong>
+                </div>
+                <div className="settings-meta-item">
+                  <span>Letzte Prüfung</span>
+                  <strong>{lastCheckLabel}</strong>
+                </div>
+                {availableVersion && (
+                  <div className="settings-meta-item">
+                    <span>Zielversion</span>
+                    <strong>{availableVersion}</strong>
+                  </div>
+                )}
+              </div>
+            </SettingsSection>
+          </div>
         )}
 
         {activeTab === 'qualifications' && (
-          <div className="card form-card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">Verwaltung</p>
-                <h3>Qualifikationen</h3>
-              </div>
+          <SettingsSection
+            eyebrow="Verwaltung"
+            title="Qualifikationen"
+            subtitle={`${qualifications.length} Einträge. Ziehen zum Sortieren, antippen zum Bearbeiten.`}
+            actions={
               <button
                 className="primary"
                 onClick={() => onOpenQualificationModal({ value: '', note: '', id: undefined })}
               >
                 <FontAwesomeIcon icon={faPlus} /> Neu
               </button>
+            }
+          >
+            <div className="settings-list">
+              {qualifications.map((q) => (
+                <CollectionEntry
+                  key={q.id ?? q.name}
+                  title={q.name}
+                  note={q.note}
+                  meta={q.id ? [`#${q.id}`] : []}
+                  draggable={!!q.id}
+                  onDragStart={() => setDragItemId(q.id ?? null)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (!dragItemId || !q.id || dragItemId === q.id) return;
+                    const orderedIds = qualifications.map((item) => item.id!).filter(Boolean);
+                    const from = orderedIds.indexOf(dragItemId);
+                    const to = orderedIds.indexOf(q.id);
+                    if (from === -1 || to === -1) return;
+                    const reordered = [...orderedIds];
+                    const [moved] = reordered.splice(from, 1);
+                    reordered.splice(to, 0, moved);
+                    onReorderQualification(reordered);
+                  }}
+                  onOpen={() =>
+                    q.id &&
+                    onOpenQualificationModal({
+                      id: q.id as number,
+                      value: qualificationEdits[q.id as number] ?? q.name,
+                      note: q.note ?? '',
+                    })
+                  }
+                  onDelete={q.id ? () => onDeleteQualification(q.id as number) : undefined}
+                />
+              ))}
+              {qualifications.length === 0 && <div className="settings-empty-state">Keine Qualifikationen hinterlegt.</div>}
             </div>
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Kürzel</th>
-                    <th>Name</th>
-                    <th>Kategorie</th>
-                    <th>Relevanz</th>
-                    <th>Notiz</th>
-                    <th style={{ width: 80 }}>Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {qualifications.map((q) => (
-                    <tr
-                      key={q.id ?? q.name}
-                      className="clickable-row"
-                      draggable={!!q.id}
-                      onDragStart={() => setDragQualificationId(q.id ?? null)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (!dragQualificationId || !q.id || dragQualificationId === q.id) return;
-                        const orderedIds = qualifications.map((item) => item.id!).filter(Boolean);
-                        const from = orderedIds.indexOf(dragQualificationId);
-                        const to = orderedIds.indexOf(q.id);
-                        if (from === -1 || to === -1) return;
-                        const reordered = [...orderedIds];
-                        const [moved] = reordered.splice(from, 1);
-                        reordered.splice(to, 0, moved);
-                        onReorderQualification(reordered);
-                      }}
-                      onClick={() =>
-                        q.id &&
-                        onOpenQualificationModal({
-                          id: q.id as number,
-                          value: qualificationEdits[q.id as number] ?? q.name,
-                          note: q.note ?? '',
-                        })
-                      }
-                    >
-                      <td>{q.name}</td>
-                      <td className="muted">{q.note ?? '—'}</td>
-                      <td>
-                        {q.id && (
-                          <button
-                            className="ghost-button danger icon-button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteQualification(q.id as number);
-                            }}
-                            title="Löschen"
-                          >
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {qualifications.length === 0 && (
-                    <tr>
-                      <td colSpan={3} className="empty">
-                        Keine Qualifikationen hinterlegt.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          </SettingsSection>
         )}
 
         {activeTab === 'competencies' && (
-          <div className="card form-card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">Verwaltung</p>
-                <h3>Kompetenzen</h3>
-              </div>
+          <SettingsSection
+            eyebrow="Verwaltung"
+            title="Kompetenzen"
+            subtitle={`${competencies.length} Einträge. Kategorien und Relevanz direkt im Überblick.`}
+            actions={
               <button
                 className="primary"
                 onClick={() =>
@@ -374,92 +429,55 @@ const SettingsPage = ({
               >
                 <FontAwesomeIcon icon={faPlus} /> Neu
               </button>
+            }
+          >
+            <div className="settings-list">
+              {competencies.map((item) => (
+                <CollectionEntry
+                  key={item.id ?? item.name}
+                  title={item.name}
+                  note={item.note}
+                  meta={[item.code, item.category ?? 'Allgemein', item.relevance ?? 'Alle'].filter(Boolean) as string[]}
+                  draggable={!!item.id}
+                  onDragStart={() => setDragItemId(item.id ?? null)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (!dragItemId || !item.id || dragItemId === item.id) return;
+                    const orderedIds = competencies.map((entry) => entry.id!).filter(Boolean);
+                    const from = orderedIds.indexOf(dragItemId);
+                    const to = orderedIds.indexOf(item.id);
+                    if (from === -1 || to === -1) return;
+                    const reordered = [...orderedIds];
+                    const [moved] = reordered.splice(from, 1);
+                    reordered.splice(to, 0, moved);
+                    onReorderCompetency(reordered);
+                  }}
+                  onOpen={() =>
+                    item.id &&
+                    onOpenCompetencyModal({
+                      id: item.id as number,
+                      code: item.code ?? '',
+                      value: competencyEdits[item.id as number] ?? item.name,
+                      category: item.category ?? 'Allgemein',
+                      relevance: item.relevance ?? 'Alle',
+                      note: item.note ?? '',
+                    })
+                  }
+                  onDelete={item.id ? () => onDeleteCompetency(item.id as number) : undefined}
+                />
+              ))}
+              {competencies.length === 0 && <div className="settings-empty-state">Keine Kompetenzen hinterlegt.</div>}
             </div>
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Kürzel</th>
-                    <th>Name</th>
-                    <th>Kategorie</th>
-                    <th>Relevanz</th>
-                    <th>Notiz</th>
-                    <th style={{ width: 80 }}>Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {competencies.map((item) => (
-                    <tr
-                      key={item.id ?? item.name}
-                      className="clickable-row"
-                      draggable={!!item.id}
-                      onDragStart={() => setDragQualificationId(item.id ?? null)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (!dragQualificationId || !item.id || dragQualificationId === item.id) return;
-                        const orderedIds = competencies.map((entry) => entry.id!).filter(Boolean);
-                        const from = orderedIds.indexOf(dragQualificationId);
-                        const to = orderedIds.indexOf(item.id);
-                        if (from === -1 || to === -1) return;
-                        const reordered = [...orderedIds];
-                        const [moved] = reordered.splice(from, 1);
-                        reordered.splice(to, 0, moved);
-                        onReorderCompetency(reordered);
-                      }}
-                      onClick={() =>
-                        item.id &&
-                        onOpenCompetencyModal({
-                          id: item.id as number,
-                          code: item.code ?? '',
-                          value: competencyEdits[item.id as number] ?? item.name,
-                          category: item.category ?? 'Allgemein',
-                          relevance: item.relevance ?? 'Alle',
-                          note: item.note ?? '',
-                        })
-                      }
-                    >
-                      <td>{item.code ?? '—'}</td>
-                      <td>{item.name}</td>
-                      <td>{item.category ?? 'Allgemein'}</td>
-                      <td>{item.relevance ?? 'Alle'}</td>
-                      <td className="muted">{item.note ?? '—'}</td>
-                      <td>
-                        {item.id && (
-                          <button
-                            className="ghost-button danger icon-button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteCompetency(item.id as number);
-                            }}
-                            title="Löschen"
-                          >
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {competencies.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="empty">
-                        Keine Kompetenzen hinterlegt.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          </SettingsSection>
         )}
 
         {activeTab === 'instructions' && (
-          <div className="card form-card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow">Verwaltung</p>
-                <h3>Einweisungen</h3>
-              </div>
+          <SettingsSection
+            eyebrow="Verwaltung"
+            title="Einweisungen"
+            subtitle={`${instructions.length} Einträge. Rechtsgrundlagen und Hinweise bleiben sichtbar.`}
+            actions={
               <button
                 className="primary"
                 onClick={() =>
@@ -473,196 +491,158 @@ const SettingsPage = ({
               >
                 <FontAwesomeIcon icon={faPlus} /> Neu
               </button>
+            }
+          >
+            <div className="settings-list">
+              {instructions.map((item) => (
+                <CollectionEntry
+                  key={item.id ?? item.topic}
+                  title={item.topic}
+                  note={item.note}
+                  meta={[item.legalBasis ?? 'Ohne Grundlage'].filter(Boolean) as string[]}
+                  draggable={!!item.id}
+                  onDragStart={() => setDragItemId(item.id ?? null)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (!dragItemId || !item.id || dragItemId === item.id) return;
+                    const orderedIds = instructions.map((entry) => entry.id!).filter(Boolean);
+                    const from = orderedIds.indexOf(dragItemId);
+                    const to = orderedIds.indexOf(item.id);
+                    if (from === -1 || to === -1) return;
+                    const reordered = [...orderedIds];
+                    const [moved] = reordered.splice(from, 1);
+                    reordered.splice(to, 0, moved);
+                    onReorderInstruction(reordered);
+                  }}
+                  onOpen={() =>
+                    item.id &&
+                    onOpenInstructionModal({
+                      id: item.id as number,
+                      topic: item.topic,
+                      legalBasis: item.legalBasis ?? '',
+                      note: item.note ?? '',
+                    })
+                  }
+                  onDelete={item.id ? () => onDeleteInstruction(item.id as number) : undefined}
+                />
+              ))}
+              {instructions.length === 0 && <div className="settings-empty-state">Keine Einweisungen hinterlegt.</div>}
             </div>
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Thema</th>
-                    <th>Grundlage</th>
-                    <th>Notiz</th>
-                    <th style={{ width: 80 }}>Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {instructions.map((item) => (
-                    <tr
-                      key={item.id ?? item.topic}
-                      className="clickable-row"
-                      draggable={!!item.id}
-                      onDragStart={() => setDragQualificationId(item.id ?? null)}
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (!dragQualificationId || !item.id || dragQualificationId === item.id) return;
-                        const orderedIds = instructions.map((entry) => entry.id!).filter(Boolean);
-                        const from = orderedIds.indexOf(dragQualificationId);
-                        const to = orderedIds.indexOf(item.id);
-                        if (from === -1 || to === -1) return;
-                        const reordered = [...orderedIds];
-                        const [moved] = reordered.splice(from, 1);
-                        reordered.splice(to, 0, moved);
-                        onReorderInstruction(reordered);
-                      }}
-                      onClick={() =>
-                        item.id &&
-                        onOpenInstructionModal({
-                          id: item.id as number,
-                          topic: item.topic,
-                          legalBasis: item.legalBasis ?? '',
-                          note: item.note ?? '',
-                        })
-                      }
-                    >
-                      <td>{item.topic}</td>
-                      <td>{item.legalBasis ?? '—'}</td>
-                      <td className="muted">{item.note ?? '—'}</td>
-                      <td>
-                        {item.id && (
-                          <button
-                            className="ghost-button danger icon-button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteInstruction(item.id as number);
-                            }}
-                            title="Löschen"
-                          >
-                            <FontAwesomeIcon icon={faTrash} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {instructions.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="empty">
-                        Keine Einweisungen hinterlegt.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          </SettingsSection>
         )}
 
         {activeTab === 'database' && (
-          <>
-            <div className="card form-card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">
-                    <FontAwesomeIcon icon={faDatabase} style={{ marginRight: 8 }} /> Datenbank
-                  </p>
-                  <h3>Wartung & Backup</h3>
+          <div className="settings-stack">
+            <SettingsSection
+              eyebrow={<><FontAwesomeIcon icon={faDatabase} style={{ marginRight: 8 }} /> Datenbank</>}
+              title="Wartung & Backup"
+              subtitle="Export für Sicherungen, Import für vollständiges Ersetzen der lokalen Datenbank."
+            >
+              <div className="settings-dual-grid">
+                <div className="settings-action-tile">
+                  <span className="settings-tile-kicker">Export</span>
+                  <strong>Lokale Sicherung erzeugen</strong>
+                  <p>Im Alltag meist als SQL. Verschlüsselt nur im geschützten Modus.</p>
+                  <div className="settings-action-band compact">
+                    <button className="ghost-button" onClick={() => onDbExport('plain')}>
+                      <FontAwesomeIcon icon={faDownload} /> SQL
+                    </button>
+                    <button
+                      className="ghost-button"
+                      onClick={() => onDbExport('encrypted')}
+                      disabled={storageMode !== 'encrypted'}
+                    >
+                      <FontAwesomeIcon icon={faDownload} /> Verschlüsselt
+                    </button>
+                  </div>
+                </div>
+                <div className="settings-action-tile settings-action-tile-warn">
+                  <span className="settings-tile-kicker">Import</span>
+                  <strong>Bestehende Daten ersetzen</strong>
+                  <p>Der Import überschreibt die lokale Datenbank vollständig.</p>
+                  <div className="settings-action-band compact">
+                    <button className="ghost-button danger" onClick={() => onDbImport('plain')}>
+                      <FontAwesomeIcon icon={faUpload} /> SQL Import
+                    </button>
+                    <button
+                      className="ghost-button danger"
+                      onClick={() => onDbImport('encrypted')}
+                      disabled={storageMode !== 'encrypted'}
+                    >
+                      <FontAwesomeIcon icon={faUpload} /> Verschlüsselt Import
+                    </button>
+                  </div>
                 </div>
               </div>
-              <div className="form-grid">
-                <label className="full-width">Exportieren</label>
-                <div className="inline-row">
-                  <button className="ghost-button" onClick={() => onDbExport('plain')}>
-                    <FontAwesomeIcon icon={faDownload} /> SQL
-                  </button>
-                  <button
-                    className="ghost-button"
-                    onClick={() => onDbExport('encrypted')}
-                    disabled={storageMode !== 'encrypted'}
-                  >
-                    <FontAwesomeIcon icon={faDownload} /> Verschlüsselt
-                  </button>
-                </div>
-                <label className="full-width" style={{ color: 'var(--danger)' }}>
-                  Importieren
-                </label>
-                <div className="inline-row">
-                  <button className="ghost-button danger" onClick={() => onDbImport('plain')}>
-                    <FontAwesomeIcon icon={faUpload} /> SQL Import
-                  </button>
-                  <button
-                    className="ghost-button danger"
-                    onClick={() => onDbImport('encrypted')}
-                    disabled={storageMode !== 'encrypted'}
-                  >
-                    <FontAwesomeIcon icon={faUpload} /> Verschlüsselt Import
-                  </button>
-                </div>
-                <p className="subtitle small">
-                  Import ersetzt die lokale Datenbank. Verschlüsselte Importe erwarten das aktuelle App-Passwort.
-                </p>
-                {dbMessage && <p className="subtitle small success-text">{dbMessage}</p>}
+              <div className="settings-inline-note">
+                Verschlüsselte Importe erwarten das aktuelle App-Passwort.
               </div>
-            </div>
+              {dbMessage && <div className="settings-inline-note success-text">{dbMessage}</div>}
+            </SettingsSection>
 
-            <div className="card form-card">
-              <div className="form-header">
-                <div>
-                  <p className="eyebrow">
-                    <FontAwesomeIcon icon={faShieldAlt} style={{ marginRight: 8 }} /> Sicherheit
-                  </p>
-                  <h3>Zugriff & Keys</h3>
-                </div>
-              </div>
-              <div className="form-grid">
-                <p className="subtitle small" style={{ margin: 0 }}>
-                  Speichermodus: <strong>{storageMode === 'encrypted' ? 'Verschlüsselt' : 'Unverschlüsselt'}</strong>
+            <SettingsSection
+              eyebrow={<><FontAwesomeIcon icon={faShieldAlt} style={{ marginRight: 8 }} /> Sicherheit</>}
+              title="Zugriff & Keys"
+              subtitle="App-Schutz und Recovery-Zugang für den lokalen Datenbestand."
+            >
+              <div className={`settings-security-band ${storageMode === 'plain' ? 'plain' : 'encrypted'}`}>
+                <span className="settings-security-label">Speichermodus</span>
+                <strong>{storageMode === 'encrypted' ? 'Verschlüsselt' : 'Unverschlüsselt'}</strong>
+                <p>
+                  {storageMode === 'encrypted'
+                    ? 'Recovery Key separat und sicher offline ablegen.'
+                    : 'Für Patientendaten nicht empfohlen.'}
                 </p>
+              </div>
+              <div className="settings-action-band">
                 {storageMode === 'encrypted' ? (
                   <>
-                    <button className="ghost-button" onClick={onOpenRecoveryKey} style={{ justifyContent: 'flex-start' }}>
+                    <button className="ghost-button" onClick={onOpenRecoveryKey}>
                       <FontAwesomeIcon icon={faKey} /> Recovery Key anzeigen
                     </button>
-                    <button className="ghost-button danger" onClick={onDisableEncryption} style={{ justifyContent: 'flex-start' }}>
+                    <button className="ghost-button danger" onClick={onDisableEncryption}>
                       <FontAwesomeIcon icon={faShieldAlt} /> Verschlüsselung deaktivieren
                     </button>
                   </>
                 ) : (
-                  <button className="primary" onClick={onOpenEnableEncryption} style={{ justifyContent: 'flex-start' }}>
+                  <button className="primary" onClick={onOpenEnableEncryption}>
                     <FontAwesomeIcon icon={faShieldAlt} /> Verschlüsselung aktivieren
                   </button>
                 )}
-                <p className="subtitle small">
-                  {storageMode === 'encrypted'
-                    ? 'Sicher offline ablegen. Wer den Key besitzt, kann alle Daten ohne Passwort lesen.'
-                    : 'Im unverschlüsselten Modus gibt es keinen Recovery Key. Die Datenbank liegt lokal ohne Passwortschutz vor.'}
-                </p>
               </div>
-            </div>
-          </>
+            </SettingsSection>
+          </div>
         )}
 
         {activeTab === 'danger' && (
-          <div className="card danger-card">
-            <div className="form-header">
-              <div>
-                <p className="eyebrow" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                  <FontAwesomeIcon icon={faExclamationTriangle} style={{ marginRight: 8 }} /> Danger Zone
-                </p>
-                <h3 style={{ color: 'white' }}>Unwiderrufliches</h3>
+          <SettingsSection
+            eyebrow={<><FontAwesomeIcon icon={faExclamationTriangle} style={{ marginRight: 8 }} /> Gefahrenzone</>}
+            title="Unwiderrufliche Aktionen"
+            subtitle="Diese Eingriffe löschen lokale Daten oder die komplette Konfiguration."
+            tone="danger"
+          >
+            <div className="settings-danger-list">
+              <div className="settings-danger-row">
+                <div>
+                  <h4>Datenbank löschen</h4>
+                  <p>Entfernt nur die lokale Datenbank. Das Passwort bleibt erhalten.</p>
+                </div>
+                <button className="ghost-button danger" onClick={onDropDatabase}>
+                  Löschen
+                </button>
+              </div>
+              <div className="settings-danger-row">
+                <div>
+                  <h4>App Reset</h4>
+                  <p>Löscht Datenbank und Konfiguration vollständig.</p>
+                </div>
+                <button className="ghost-button danger" onClick={onFullReset}>
+                  Reset
+                </button>
               </div>
             </div>
-            <div className="danger-actions">
-              <div>
-                <h4 style={{ color: 'white' }}>Datenbank löschen</h4>
-                <p className="subtitle small" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                  Entfernt die lokale Datenbank, das Passwort bleibt erhalten.
-                </p>
-              </div>
-              <button className="ghost-button danger" onClick={onDropDatabase}>
-                Löschen
-              </button>
-            </div>
-            <div className="danger-actions">
-              <div>
-                <h4 style={{ color: 'white' }}>App Reset</h4>
-                <p className="subtitle small" style={{ color: 'rgba(255,255,255,0.8)' }}>
-                  Löscht Datenbank und Konfiguration.
-                </p>
-              </div>
-              <button className="ghost-button danger" onClick={onFullReset}>
-                Reset
-              </button>
-            </div>
-          </div>
+          </SettingsSection>
         )}
 
         {activeTab === 'info' && (

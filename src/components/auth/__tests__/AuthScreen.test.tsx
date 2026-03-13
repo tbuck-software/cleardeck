@@ -16,10 +16,8 @@ describe('AuthScreen', () => {
       />,
     );
 
-    fireEvent.change(screen.getByDisplayValue('Verschlüsselt (mit Passwort)'), {
-      target: { value: 'plain' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Ohne Verschlüsselung starten' }));
+    fireEvent.click(screen.getByRole('radio', { name: /Ohne Passwort/i }));
+    fireEvent.click(screen.getByRole('button', { name: 'Ohne Passwort starten' }));
 
     expect(onSubmit).toHaveBeenCalledWith({ password: '', storageMode: 'plain' });
   });
@@ -36,7 +34,7 @@ describe('AuthScreen', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Datenbank nicht wiederherstellbar? Neu anlegen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Neu anlegen' }));
 
     expect(onResetApp).toHaveBeenCalledTimes(1);
   });

@@ -24,6 +24,7 @@ import CompetencyModal from './components/modals/CompetencyModal';
 import InstructionModal from './components/modals/InstructionModal';
 import EmployeeCompetencyModal from './components/modals/EmployeeCompetencyModal';
 import EmployeeInstructionModal from './components/modals/EmployeeInstructionModal';
+import RecommendedCompetenciesModal from './components/modals/RecommendedCompetenciesModal';
 import BirthDateInput from './components/ui/BirthDateInput';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
 import { matchesQualificationRelevance } from './utils/qualificationRelevance';
@@ -73,6 +74,7 @@ const App = () => {
       editModal,
       employeeCompetencyModal,
       employeeInstructionModal,
+      suggestedCompetencyModal,
       addPeriodForm,
       eventModal,
       confirmState,
@@ -104,6 +106,7 @@ const App = () => {
       setEditModal,
       setEmployeeCompetencyModal,
       setEmployeeInstructionModal,
+      setSuggestedCompetencyModal,
       setEncryptionSetup,
       setSearch,
       setStatusFilter,
@@ -138,6 +141,9 @@ const App = () => {
       reorderInstructionDefinition,
       openEmployeeCompetencyModal,
       openNewEmployeeCompetencyModal,
+      openSuggestedCompetencyModal,
+      toggleSuggestedCompetencySelection,
+      selectAllSuggestedCompetencies,
       handleAddRecommendedCompetencies,
       handleSaveEmployeeCompetency,
       handleDeleteEmployeeCompetency,
@@ -317,7 +323,6 @@ const App = () => {
           mode={authMode}
           onSubmit={(payload) => handleLogin(payload, authMode)}
           busy={loading}
-          message={authMode === 'setup' ? 'Du kannst die App verschlüsselt oder unverschlüsselt einrichten.' : undefined}
           onForgotPassword={appReady.configured ? startRecoveryReset : undefined}
           onResetApp={appReady.configured ? handleFullReset : undefined}
           globalError={error}
@@ -413,7 +418,7 @@ const App = () => {
             timelineItems={timelineItems}
             onAddCompetency={openNewEmployeeCompetencyModal}
             onAddInstruction={openNewEmployeeInstructionModal}
-            onAddSuggestedCompetencies={handleAddRecommendedCompetencies}
+            onOpenSuggestedCompetencies={openSuggestedCompetencyModal}
             onOpenEditModal={openEditModal}
             onStartNewPeriod={openNewPeriodModal}
             onSelectCompetency={openEmployeeCompetencyModal}
@@ -643,6 +648,14 @@ const App = () => {
         }
         onSave={handleSaveEmployeeInstruction}
         onDelete={handleDeleteEmployeeInstruction}
+      />
+      <RecommendedCompetenciesModal
+        state={suggestedCompetencyModal}
+        definitions={suggestedCompetencyDefinitions}
+        onToggle={toggleSuggestedCompetencySelection}
+        onSelectAll={selectAllSuggestedCompetencies}
+        onClose={() => setSuggestedCompetencyModal({ open: false, selectedDefinitionIds: [] })}
+        onSave={handleAddRecommendedCompetencies}
       />
       {editModal.open && (
         <div className="modal-backdrop">
