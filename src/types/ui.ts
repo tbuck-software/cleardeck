@@ -1,5 +1,6 @@
 import type {
   EmploymentPeriod,
+  EmployeeCompetencyStatus,
   EmployeeEvent,
   EmployeeEventType,
   QprRating,
@@ -50,6 +51,15 @@ export type QualificationModalState = {
 };
 
 export type QualificationModalPayload = Pick<QualificationModalState, 'id' | 'value' | 'note'>;
+
+export type CompetencyModalState = {
+  open: boolean;
+  id?: number;
+  value: string;
+  note: string;
+};
+
+export type CompetencyModalPayload = Pick<CompetencyModalState, 'id' | 'value' | 'note'>;
 
 export type RecoveryResetState = {
   open: boolean;
@@ -114,6 +124,17 @@ export type EventModalState = {
   previousValue?: string | null;
   newValue?: string | null;
   expiresAt?: string | null;
+};
+
+export type EmployeeCompetencyModalState = {
+  open: boolean;
+  id?: number;
+  competencyDefinitionId: number | null;
+  competencyName: string;
+  status: EmployeeCompetencyStatus;
+  startedAt: string;
+  completedAt: string;
+  note: string;
 };
 
 export type PeriodToDeleteState = { periodId: number; label: string } | null;

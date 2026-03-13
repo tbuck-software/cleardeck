@@ -6,7 +6,7 @@
 
 import { ipcMain, shell } from 'electron';
 
-import type { EmployeeEventType, YearDataset, QprRating } from '../../shared/types';
+import type { EmployeeCompetencyStatus, EmployeeEventType, YearDataset, QprRating } from '../../shared/types';
 import { getDb, isDbOpen, getEncryptionKey, getStorageMode, openDatabase, closeDb, deleteDatabase as deleteDbFiles, ensureDataDir } from '../database/connection';
 import {
   getYearDataset,
@@ -27,6 +27,15 @@ import {
   reorderQualifications,
   deleteQualification,
 } from '../repositories/qualifications';
+import {
+  addCompetencyDefinition,
+  deleteCompetencyDefinition,
+  listCompetencyDefinitions,
+  listEmployeeCompetencies,
+  reorderCompetencyDefinitions,
+  saveEmployeeCompetency,
+  updateCompetencyDefinition,
+} from '../repositories/competencies';
 import { getBaseHours, setBaseHours, getHiddenEventTypes, setHiddenEventTypes } from '../repositories/settings';
 import {
   listPatients,
@@ -134,6 +143,62 @@ export const registerDataHandlers = (): void => {
     ensureDbReady();
     return reorderQualifications(ids);
   });
+
+  // Competencies
+  ipcMain.handle('competencies:listDefinitions', () => {
+    ensureDbReady();
+    return listCompetencyDefinitions();
+  });
+
+  ipcMain.handle(
+    'competencies:addDefinition',
+    (_event, { name, note }: { name: string; note?: string | null }) => {
+      ensureDbReady();
+      return addCompetencyDefinition(name, note);
+    },
+  );
+
+  ipcMain.handle(
+    'competencies:updateDefinition',
+    (_event, { id, name, note }: { id: number; name: string; note?: string | null }) => {
+      ensureDbReady();
+      return updateCompetencyDefinition(id, name, note);
+    },
+  );
+
+  ipcMain.handle('competencies:deleteDefinition', (_event, { id }: { id: number }) => {
+    ensureDbReady();
+    return deleteCompetencyDefinition(id);
+  });
+
+  ipcMain.handle('competencies:reorderDefinitions', (_event, { ids }: { ids: number[] }) => {
+    ensureDbReady();
+    return reorderCompetencyDefinitions(ids);
+  });
+
+  ipcMain.handle('competencies:listEmployee', (_event, { employeeId }: { employeeId: number }) => {
+    ensureDbReady();
+    return listEmployeeCompetencies(employeeId);
+  });
+
+  ipcMain.handle(
+    'competencies:saveEmployee',
+    (
+      _event,
+      input: {
+        id?: number;
+        employeeId: number;
+        competencyDefinitionId: number;
+        status: EmployeeCompetencyStatus;
+        startedAt?: string | null;
+        completedAt?: string | null;
+        note?: string | null;
+      },
+    ) => {
+      ensureDbReady();
+      return saveEmployeeCompetency(input);
+    },
+  );
 
   // Events
   ipcMain.handle('events:list', (_event, { employeeId }: { employeeId: number }) => {

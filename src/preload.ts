@@ -4,6 +4,9 @@ import type {
   AppInfo,
   EmploymentPeriod,
   QualificationType,
+  CompetencyDefinition,
+  EmployeeCompetency,
+  EmployeeCompetencyStatus,
   YearDataset,
   EmployeeEvent,
   EmployeeEventType,
@@ -82,6 +85,25 @@ export type Api = {
   updateQualification: (id: number, name: string, note?: string | null) => Promise<QualificationType[]>;
   deleteQualification: (id: number) => Promise<QualificationType[]>;
   reorderQualifications: (ids: number[]) => Promise<QualificationType[]>;
+  listCompetencyDefinitions: () => Promise<CompetencyDefinition[]>;
+  addCompetencyDefinition: (name: string, note?: string | null) => Promise<CompetencyDefinition[]>;
+  updateCompetencyDefinition: (
+    id: number,
+    name: string,
+    note?: string | null,
+  ) => Promise<CompetencyDefinition[]>;
+  deleteCompetencyDefinition: (id: number) => Promise<CompetencyDefinition[]>;
+  reorderCompetencyDefinitions: (ids: number[]) => Promise<CompetencyDefinition[]>;
+  listEmployeeCompetencies: (employeeId: number) => Promise<EmployeeCompetency[]>;
+  saveEmployeeCompetency: (input: {
+    id?: number;
+    employeeId: number;
+    competencyDefinitionId: number;
+    status: EmployeeCompetencyStatus;
+    startedAt?: string | null;
+    completedAt?: string | null;
+    note?: string | null;
+  }) => Promise<EmployeeCompetency[]>;
   exportDatabase: (mode: 'encrypted' | 'plain') => Promise<{ saved: boolean; filePath?: string; error?: string }>;
   importDatabase: (
     mode: 'encrypted' | 'plain',
@@ -161,6 +183,14 @@ const api: Api = {
   updateQualification: (id, name, note) => ipcRenderer.invoke('qualifications:update', { id, name, note }),
   deleteQualification: (id) => ipcRenderer.invoke('qualifications:delete', { id }),
   reorderQualifications: (ids) => ipcRenderer.invoke('qualifications:reorder', { ids }),
+  listCompetencyDefinitions: () => ipcRenderer.invoke('competencies:listDefinitions'),
+  addCompetencyDefinition: (name, note) => ipcRenderer.invoke('competencies:addDefinition', { name, note }),
+  updateCompetencyDefinition: (id, name, note) =>
+    ipcRenderer.invoke('competencies:updateDefinition', { id, name, note }),
+  deleteCompetencyDefinition: (id) => ipcRenderer.invoke('competencies:deleteDefinition', { id }),
+  reorderCompetencyDefinitions: (ids) => ipcRenderer.invoke('competencies:reorderDefinitions', { ids }),
+  listEmployeeCompetencies: (employeeId) => ipcRenderer.invoke('competencies:listEmployee', { employeeId }),
+  saveEmployeeCompetency: (input) => ipcRenderer.invoke('competencies:saveEmployee', input),
   exportDatabase: (mode) => ipcRenderer.invoke('db:export', { mode }),
   importDatabase: (mode) => ipcRenderer.invoke('db:import', { mode }),
   deletePeriod: (periodId, year) => ipcRenderer.invoke('period:delete', { periodId, year }),

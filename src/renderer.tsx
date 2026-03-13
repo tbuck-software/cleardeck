@@ -20,6 +20,8 @@ import ConfirmModal from './components/modals/ConfirmModal';
 import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
 import QualificationModal from './components/modals/QualificationModal';
+import CompetencyModal from './components/modals/CompetencyModal';
+import EmployeeCompetencyModal from './components/modals/EmployeeCompetencyModal';
 import BirthDateInput from './components/ui/BirthDateInput';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
 import { unifyEvents } from './utils/unifyEvents';
@@ -37,9 +39,11 @@ const App = () => {
       baseHours,
       baseHoursInput,
       qualifications,
+      competencyDefinitions,
       form,
       periods,
       selectedEmployee,
+      employeeCompetencies,
       appReady,
       page,
       loading,
@@ -57,8 +61,11 @@ const App = () => {
       qualificationFilter,
       addNewPeriod,
       qualificationEdits,
+      competencyEdits,
       qualificationModal,
+      competencyModal,
       editModal,
+      employeeCompetencyModal,
       addPeriodForm,
       eventModal,
       confirmState,
@@ -85,7 +92,9 @@ const App = () => {
       setAddNewPeriod,
       setQualificationFilter,
       setQualificationModal,
+      setCompetencyModal,
       setEditModal,
+      setEmployeeCompetencyModal,
       setEncryptionSetup,
       setSearch,
       setStatusFilter,
@@ -112,6 +121,11 @@ const App = () => {
       confirmDeleteQualification,
       handleSaveQualificationModal,
       reorderQualification,
+      confirmDeleteCompetencyDefinition,
+      handleSaveCompetencyModal,
+      reorderCompetencyDefinition,
+      openEmployeeCompetencyModal,
+      handleSaveEmployeeCompetency,
       openRecoveryKey,
       handleCopyRecoveryKey,
       startRecoveryReset,
@@ -353,10 +367,12 @@ const App = () => {
         {page === 'view' && selectedEmployee && (
           <EmployeeDetail
             employee={selectedEmployee}
+            employeeCompetencies={employeeCompetencies}
             displayStart={displayStart}
             timelineItems={timelineItems}
             onOpenEditModal={openEditModal}
             onStartNewPeriod={openNewPeriodModal}
+            onSelectCompetency={openEmployeeCompetencyModal}
             onSelectPeriod={openExistingPeriodModal}
             onSelectEvent={openEventModalForEvent}
           />
@@ -383,7 +399,9 @@ const App = () => {
         {page === 'settings' && (
           <SettingsPage
             qualifications={qualifications}
+            competencies={competencyDefinitions}
             qualificationEdits={qualificationEdits}
+            competencyEdits={competencyEdits}
             dbMessage={dbMessage}
             baseHoursInput={baseHoursInput}
             updateStatus={updateStatus}
@@ -399,8 +417,18 @@ const App = () => {
                 note: payload.note,
               })
             }
+            onOpenCompetencyModal={(payload) =>
+              setCompetencyModal({
+                open: true,
+                id: payload.id,
+                value: payload.value,
+                note: payload.note,
+              })
+            }
             onReorderQualification={reorderQualification}
+            onReorderCompetency={reorderCompetencyDefinition}
             onDeleteQualification={confirmDeleteQualification}
+            onDeleteCompetency={confirmDeleteCompetencyDefinition}
             onBaseHoursInputChange={setBaseHoursInput}
             onSaveBaseHours={handleSaveBaseHoursValue}
             onDbExport={handleDbExport}
@@ -498,6 +526,28 @@ const App = () => {
         onChange={(next) => setQualificationModal((prev) => ({ ...prev, ...next }))}
         onClose={() => setQualificationModal({ open: false, value: '', note: '' })}
         onSave={handleSaveQualificationModal}
+      />
+      <CompetencyModal
+        state={competencyModal}
+        onChange={(next) => setCompetencyModal((prev) => ({ ...prev, ...next }))}
+        onClose={() => setCompetencyModal({ open: false, value: '', note: '' })}
+        onSave={handleSaveCompetencyModal}
+      />
+      <EmployeeCompetencyModal
+        state={employeeCompetencyModal}
+        onChange={(next) => setEmployeeCompetencyModal((prev) => ({ ...prev, ...next }))}
+        onClose={() =>
+          setEmployeeCompetencyModal({
+            open: false,
+            competencyDefinitionId: null,
+            competencyName: '',
+            status: 'open',
+            startedAt: '',
+            completedAt: '',
+            note: '',
+          })
+        }
+        onSave={handleSaveEmployeeCompetency}
       />
       {editModal.open && (
         <div className="modal-backdrop">

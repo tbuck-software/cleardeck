@@ -16,7 +16,13 @@ import {
   faCalendarDay,
 } from '@fortawesome/free-solid-svg-icons';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import type { EmployeeEvent, EmployeeEventType, EmployeeWithPeriod, EmploymentPeriod } from '../../shared/types';
+import type {
+  EmployeeCompetency,
+  EmployeeEvent,
+  EmployeeEventType,
+  EmployeeWithPeriod,
+  EmploymentPeriod,
+} from '../../shared/types';
 import type { TimelineItem } from '../../types/ui';
 import { fteHelp } from '../../constants';
 import Badge from '../ui/Badge';
@@ -24,10 +30,12 @@ import { formatDateDE } from '../../utils/dateFormat';
 
 type EmployeeDetailProps = {
   employee: EmployeeWithPeriod;
+  employeeCompetencies: EmployeeCompetency[];
   displayStart: string;
   timelineItems: TimelineItem[];
   onOpenEditModal: () => void;
   onStartNewPeriod: () => void;
+  onSelectCompetency: (entry: EmployeeCompetency) => void;
   onSelectPeriod: (period: EmploymentPeriod) => void;
   onSelectEvent: (event: EmployeeEvent) => void;
 };
@@ -58,6 +66,16 @@ const typeIcons: Record<EmployeeEventType, IconDefinition> = {
   custom: faCalendarDay,
 };
 
+const competencyStatusLabels: Record<EmployeeCompetency['status'], string> = {
+  open: 'Offen',
+  'in-progress': 'In Bearbeitung',
+  completed: 'Abgeschlossen',
+  'not-applicable': 'Nicht relevant',
+};
+
+const formatCompetencyStatus = (status: EmployeeCompetency['status']): string =>
+  competencyStatusLabels[status];
+
 const buildNoteDiff = (prev: string, next: string): DiffLine[] => {
   const left = prev.split('\n');
   const right = next.split('\n');
@@ -80,10 +98,12 @@ const buildNoteDiff = (prev: string, next: string): DiffLine[] => {
 
 const EmployeeDetail = ({
   employee,
+  employeeCompetencies,
   displayStart,
   timelineItems,
   onOpenEditModal,
   onStartNewPeriod,
+  onSelectCompetency,
   onSelectPeriod,
   onSelectEvent,
 }: EmployeeDetailProps) => {
@@ -185,6 +205,7 @@ const EmployeeDetail = ({
               </div>
             </div>
           </div>
+
         </div>
 
         <div className="detail-footer">
@@ -193,6 +214,50 @@ const EmployeeDetail = ({
             {employee.endDate ? `– ausgetreten: ${formatDateDE(employee.endDate)}` : '– heute'}
           </span>
         </div>
+      </div>
+    </div>
+
+    <div className="card">
+      <div className="form-header">
+        <div>
+          <h3>Kompetenzpass</h3>
+          <p className="subtitle small">Kompetenzen aus den Einstellungen mit Status pro Teammitglied.</p>
+        </div>
+      </div>
+      <div className="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Kompetenz</th>
+              <th>Status</th>
+              <th>Gestartet</th>
+              <th>Abgeschlossen</th>
+              <th>Notiz</th>
+            </tr>
+          </thead>
+          <tbody>
+            {employeeCompetencies.map((entry) => (
+              <tr
+                key={`${entry.competencyDefinitionId}-${entry.id ?? 'new'}`}
+                className="clickable-row"
+                onClick={() => onSelectCompetency(entry)}
+              >
+                <td>{entry.competencyName}</td>
+                <td>{formatCompetencyStatus(entry.status)}</td>
+                <td>{entry.startedAt ? formatDateDE(entry.startedAt) : '—'}</td>
+                <td>{entry.completedAt ? formatDateDE(entry.completedAt) : '—'}</td>
+                <td className="muted">{entry.note ?? entry.definitionNote ?? '—'}</td>
+              </tr>
+            ))}
+            {employeeCompetencies.length === 0 && (
+              <tr>
+                <td colSpan={5} className="empty">
+                  Keine Kompetenzen hinterlegt.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
 

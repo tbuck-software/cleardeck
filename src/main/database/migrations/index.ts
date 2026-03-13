@@ -17,6 +17,7 @@ import { v007_drop_employee_qualification } from './v007_drop_employee_qualifica
 import { v008_fix_employee_foreign_keys } from './v008_fix_employee_foreign_keys';
 import { v009_employee_fields } from './v009_employee_fields';
 import { v010_patients } from './v010_patients';
+import { v012_employee_competencies } from './v012_employee_competencies';
 
 export type Migration = {
   version: number;
@@ -39,9 +40,10 @@ export const migrations: Migration[] = [
   v008_fix_employee_foreign_keys,
   v009_employee_fields,
   v010_patients,
+  v012_employee_competencies,
 ];
 
-export const CURRENT_SCHEMA_VERSION = migrations.length;
+export const CURRENT_SCHEMA_VERSION = migrations[migrations.length - 1]?.version ?? 0;
 
 /**
  * Get the current schema version from the database
@@ -132,6 +134,20 @@ export const runMigrations = (db: DatabaseType): void => {
     const v010 = migrations.find((m) => m.version === 10);
     if (v010) {
       v010.up(db);
+    }
+  }
+
+  const hasCompetencyDefinitions = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='competency_definitions'")
+    .get();
+  const hasEmployeeCompetencies = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='employee_competencies'")
+    .get();
+  if (!hasCompetencyDefinitions || !hasEmployeeCompetencies) {
+    console.log('Repairing: competency tables missing, running v012 migration...');
+    const v012 = migrations.find((m) => m.version === 12);
+    if (v012) {
+      v012.up(db);
     }
   }
 };
