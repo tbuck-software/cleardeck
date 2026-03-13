@@ -7,10 +7,11 @@ type AuthScreenProps = {
   busy: boolean;
   message?: string | null;
   onForgotPassword?: () => void;
+  onResetApp?: () => void | Promise<void>;
   globalError?: string | null;
 };
 
-const AuthScreen = ({ mode, onSubmit, busy, message, onForgotPassword, globalError }: AuthScreenProps) => {
+const AuthScreen = ({ mode, onSubmit, busy, message, onForgotPassword, onResetApp, globalError }: AuthScreenProps) => {
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
   const [storageMode, setStorageMode] = useState<StorageMode>('encrypted');
@@ -100,6 +101,11 @@ const AuthScreen = ({ mode, onSubmit, busy, message, onForgotPassword, globalErr
           {mode === 'login' && onForgotPassword && (
             <button className="ghost-button" type="button" onClick={onForgotPassword}>
               Passwort vergessen? Recovery Key nutzen
+            </button>
+          )}
+          {mode === 'login' && onResetApp && (
+            <button className="ghost-button danger" type="button" onClick={() => void onResetApp()} disabled={busy}>
+              Datenbank nicht wiederherstellbar? Neu anlegen
             </button>
           )}
         </form>

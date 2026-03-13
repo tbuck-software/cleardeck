@@ -6,19 +6,14 @@
 
 import fs from 'fs';
 import path from 'path';
-import { app } from 'electron';
 import Database from 'better-sqlite3';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { StorageMode } from '../../shared/types';
+import { getDataDir, getEncryptedDbPath, getWorkingDbPath } from '../appPaths';
 
 import { runMigrations } from './migrations';
 import { seedDatabase } from './seed';
 import { encryptFile, decryptFile } from '../crypto';
-
-// Paths
-const dataDir = path.join(app.getPath('userData'), 'data');
-const encryptedDbPath = path.join(dataDir, 'employee.db.enc');
-const workingDbPath = path.join(dataDir, 'employee.db');
 
 // Database state
 let db: DatabaseType | null = null;
@@ -69,6 +64,7 @@ export const getStorageMode = (): StorageMode => storageMode;
  * Remove only the encrypted database snapshot
  */
 export const deleteEncryptedSnapshot = (): void => {
+  const encryptedDbPath = getEncryptedDbPath();
   if (fs.existsSync(encryptedDbPath)) {
     fs.rmSync(encryptedDbPath, { force: true });
   }
@@ -78,6 +74,7 @@ export const deleteEncryptedSnapshot = (): void => {
  * Ensure the data directory exists
  */
 export const ensureDataDir = (): void => {
+  const dataDir = getDataDir();
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
@@ -87,6 +84,8 @@ export const ensureDataDir = (): void => {
  * Ensure the working database file exists (decrypting from encrypted if needed)
  */
 const ensureWorkingDb = (): void => {
+  const workingDbPath = getWorkingDbPath();
+  const encryptedDbPath = getEncryptedDbPath();
   ensureDataDir();
   if (fs.existsSync(workingDbPath)) {
     return;
@@ -108,6 +107,7 @@ const ensureWorkingDb = (): void => {
  * @throws Error if encryption key is not set
  */
 export const openDatabase = (): void => {
+  const workingDbPath = getWorkingDbPath();
   if (storageMode === 'encrypted' && !encryptionKey) {
     throw new Error('Datenbank ist gesperrt.');
   }
@@ -121,6 +121,8 @@ export const openDatabase = (): void => {
  * Close database and encrypt to disk
  */
 export const persistEncryptedDb = (): void => {
+  const workingDbPath = getWorkingDbPath();
+  const encryptedDbPath = getEncryptedDbPath();
   if (db) {
     db.close();
     db = null;
@@ -165,6 +167,8 @@ export const closeDb = (): void => {
  * Delete all database files
  */
 export const deleteDatabase = (): void => {
+  const encryptedDbPath = getEncryptedDbPath();
+  const workingDbPath = getWorkingDbPath();
   closeDb();
   if (fs.existsSync(encryptedDbPath)) {
     fs.rmSync(encryptedDbPath, { force: true });
@@ -179,6 +183,9 @@ export const deleteDatabase = (): void => {
  * @returns Path to the backup file
  */
 export const backupDatabase = (): string => {
+  const dataDir = getDataDir();
+  const encryptedDbPath = getEncryptedDbPath();
+  const workingDbPath = getWorkingDbPath();
   ensureDataDir();
   ensureWorkingDb();
   const backupsDir = path.join(dataDir, 'backups');
@@ -193,5 +200,4 @@ export const backupDatabase = (): string => {
   return target;
 };
 
-// Re-export paths for use elsewhere
-export { dataDir, encryptedDbPath, workingDbPath };
+export { getDataDir, getEncryptedDbPath, getWorkingDbPath };

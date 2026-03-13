@@ -12,7 +12,10 @@
     "make:release": "electron-forge make && node scripts/generate-update-yml.js",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
-    "test": "vitest"
+    "test": "vitest",
+    "nuke:dev": "node scripts/nuke-db.js dev",
+    "nuke:prod": "node scripts/nuke-db.js prod",
+    "nuke:all": "node scripts/nuke-db.js all"
   },
   "keywords": [],
   "author": {

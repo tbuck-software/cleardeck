@@ -4,13 +4,8 @@
 
 import crypto from 'crypto';
 import fs from 'fs';
-import path from 'path';
-import { app } from 'electron';
 import type { StorageMode } from '../shared/types';
-
-// Config file path
-const dataDir = path.join(app.getPath('userData'), 'data');
-const configPath = path.join(dataDir, 'config.json');
+import { getConfigPath, getDataDir } from './appPaths';
 
 export type AppConfig = {
   storageMode?: StorageMode;
@@ -30,6 +25,7 @@ export const getConfigStorageMode = (config?: AppConfig | null): StorageMode =>
  * Ensure the data directory exists
  */
 export const ensureDataDir = (): void => {
+  const dataDir = getDataDir();
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
   }
@@ -131,13 +127,14 @@ export const decryptFile = (inputPath: string, outputPath: string, key: Buffer):
 /**
  * Check if the application is configured (has a config file)
  */
-export const isConfigured = (): boolean => fs.existsSync(configPath);
+export const isConfigured = (): boolean => fs.existsSync(getConfigPath());
 
 /**
  * Read the application config
  */
 export const readConfig = (): AppConfig | null => {
   try {
+    const configPath = getConfigPath();
     const content = fs.readFileSync(configPath, 'utf8');
     const parsed = JSON.parse(content) as AppConfig;
     return {
@@ -154,6 +151,7 @@ export const readConfig = (): AppConfig | null => {
  * Write the application config
  */
 export const writeConfig = (config: AppConfig): void => {
+  const configPath = getConfigPath();
   ensureDataDir();
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
 };
@@ -162,11 +160,10 @@ export const writeConfig = (config: AppConfig): void => {
  * Delete the config file
  */
 export const deleteConfig = (): void => {
+  const configPath = getConfigPath();
   if (fs.existsSync(configPath)) {
     fs.rmSync(configPath, { force: true });
   }
 };
 
-// Re-export paths
-export { configPath, dataDir };
-
+export { getConfigPath, getDataDir };

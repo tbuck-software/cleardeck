@@ -39,13 +39,18 @@ Der erste Start fragt nach einem Passwort (setzt gleichzeitig den lokalen App-Sc
 - Linux benötigt `rpm`/`fakeroot` (wird im Workflow installiert); Windows/macOS nutzen die Standard-Forge-Maker (Squirrel/ZIP, ZIP).
 
 ## Datenablage & Verschluesselung
-- Arbeits- und Konfigurationsdaten liegen unter `app.getPath('userData')/data` (OS-abhaengig).
+- Produktionsdaten liegen unter `app.getPath('userData')/data` (OS-abhaengig).
+- `npm start` verwendet automatisch ein separates Dev-Profil unter `dev-ClearDeck/data`, damit lokale Dev-Starts und die installierte App unterschiedliche Daten halten.
 - Datenbank wird beim Schliessen in `employee.db.enc` (AES-GCM) verschluesselt. Entschluesselung nur nach Login.
 - Passwort wird nicht gespeichert; bei Verlust ist die DB nicht wiederherstellbar.
 
 ## Wichtige NPM-Skripte
 - `npm start` – Entwicklung mit Hot-Reload.
 - `npm run make` – Paketieren (plattformabhaengig, erfordert System-Toolchain).
+- `npm run nuke:dev` – entfernt die Dev-Datenbank unter `dev-ClearDeck/data` nach Bestaetigung.
+- `npm run nuke:prod` – entfernt die Produktionsdatenbank unter `ClearDeck/data` nach Bestaetigung.
+- `npm run nuke:all` – entfernt Dev- und Prod-Daten nach Bestaetigung.
+- Mit `-- --yes` laeuft der jeweilige Nuke-Befehl ohne Rueckfrage.
 
 ## Bekannte TODOs / Naechste Schritte
 - Optional: dedizierte Auto-Update-Pipeline und Installationspakete pro OS.

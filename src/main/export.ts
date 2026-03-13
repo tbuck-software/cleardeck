@@ -14,7 +14,7 @@ import {
   openDatabase,
   closeDb,
   backupDatabase,
-  dataDir,
+  getDataDir,
   getEncryptionKey,
 } from './database/connection';
 import { encryptBuffer, decryptBuffer } from './crypto';
@@ -80,7 +80,7 @@ export const importDatabase = async (
   backupDatabase();
   closeDb();
 
-  const targetPath = path.join(dataDir, 'employee.db');
+  const targetPath = path.join(getDataDir(), 'employee.db');
 
   if (mode === 'encrypted') {
     const key = getEncryptionKey();

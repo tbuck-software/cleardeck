@@ -319,8 +319,10 @@ const App = () => {
           busy={loading}
           message={authMode === 'setup' ? 'Du kannst die App verschlüsselt oder unverschlüsselt einrichten.' : undefined}
           onForgotPassword={appReady.configured ? startRecoveryReset : undefined}
+          onResetApp={appReady.configured ? handleFullReset : undefined}
           globalError={error}
         />
+        <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
         <RecoveryKeyModal
           state={recoveryKeyModal}
           onClose={() => setRecoveryKeyModal((prev) => ({ ...prev, open: false, info: null }))}
