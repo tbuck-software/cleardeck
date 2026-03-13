@@ -1,7 +1,7 @@
 import React from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPen, faPlus } from '@fortawesome/free-solid-svg-icons';
 import type { InstructionModalState } from '../../types/ui';
+import ModalHeader from './ModalHeader';
 
 type InstructionModalProps = {
   state: InstructionModalState;
@@ -16,10 +16,11 @@ const InstructionModal = ({ state, onChange, onClose, onSave }: InstructionModal
   return (
     <div className="modal-backdrop">
       <div className="modal">
-        <div className="modal-icon">
-          <FontAwesomeIcon icon={state.id ? faPen : faPlus} />
-        </div>
-        <h3>{state.id ? 'Einweisung bearbeiten' : 'Neue Einweisung'}</h3>
+        <ModalHeader
+          icon={state.id ? faPen : faPlus}
+          title={state.id ? 'Einweisung bearbeiten' : 'Neue Einweisung'}
+          onClose={onClose}
+        />
         <div className="form-grid">
           <label className="full-width">
             Thema
@@ -47,8 +48,8 @@ const InstructionModal = ({ state, onChange, onClose, onSave }: InstructionModal
           </label>
         </div>
         <div className="modal-actions">
-          <div></div>
-          <div className="inline-row compact">
+          <div className="modal-actions-left" />
+          <div className="modal-actions-right">
             <button className="ghost-button" onClick={onClose}>
               Abbrechen
             </button>

@@ -1,7 +1,7 @@
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLayerGroup } from '@fortawesome/free-solid-svg-icons';
 import type { CompetencyDefinition } from '../../shared/types';
 import type { SuggestedCompetencyModalState } from '../../types/ui';
+import ModalHeader from './ModalHeader';
 
 type RecommendedCompetenciesModalProps = {
   state: SuggestedCompetencyModalState;
@@ -25,13 +25,12 @@ const RecommendedCompetenciesModal = ({
   return (
     <div className="modal-backdrop">
       <div className="modal modal-wide">
-        <div className="modal-icon">
-          <FontAwesomeIcon icon={faLayerGroup} />
-        </div>
-        <h3>Passend zur Qualifikation</h3>
-        <p className="modal-text">
-          Wähle aus, welche vorgeschlagenen Kompetenzen diesem Teammitglied zugeordnet werden sollen.
-        </p>
+        <ModalHeader
+          icon={faLayerGroup}
+          title="Passend zur Qualifikation"
+          subtitle="Wähle aus, welche vorgeschlagenen Kompetenzen diesem Teammitglied zugeordnet werden sollen."
+          onClose={onClose}
+        />
         <div className="selection-toolbar">
           <span className="selection-counter">
             {state.selectedDefinitionIds.length} von {definitions.length} ausgewählt
@@ -71,16 +70,19 @@ const RecommendedCompetenciesModal = ({
           })}
         </div>
         <div className="modal-actions">
-          <button className="ghost-button" onClick={onClose}>
-            Abbrechen
-          </button>
-          <button
-            className="primary"
-            onClick={onSave}
-            disabled={state.selectedDefinitionIds.length === 0}
-          >
-            Auswahl übernehmen
-          </button>
+          <div className="modal-actions-left" />
+          <div className="modal-actions-right">
+            <button className="ghost-button" onClick={onClose}>
+              Abbrechen
+            </button>
+            <button
+              className="primary"
+              onClick={onSave}
+              disabled={state.selectedDefinitionIds.length === 0}
+            >
+              Auswahl übernehmen
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,8 +1,8 @@
 import React from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faClipboardCheck } from '@fortawesome/free-solid-svg-icons';
 import type { CompetencyDefinition } from '../../shared/types';
 import type { EmployeeCompetencyModalState } from '../../types/ui';
+import ModalHeader from './ModalHeader';
 
 type EmployeeCompetencyModalProps = {
   state: EmployeeCompetencyModalState;
@@ -27,10 +27,11 @@ const EmployeeCompetencyModal = ({
   return (
     <div className="modal-backdrop">
       <div className="modal">
-        <div className="modal-icon">
-          <FontAwesomeIcon icon={faClipboardCheck} />
-        </div>
-        <h3>{isAssigned ? state.competencyName : 'Kompetenz hinzufügen'}</h3>
+        <ModalHeader
+          icon={faClipboardCheck}
+          title={isAssigned ? state.competencyName : 'Kompetenz hinzufügen'}
+          onClose={onClose}
+        />
         <div className="modal-body">
           {!isAssigned && (
             <label className="full-width">
@@ -102,14 +103,14 @@ const EmployeeCompetencyModal = ({
           </label>
         </div>
         <div className="modal-actions">
-          <div>
+          <div className="modal-actions-left">
             {isAssigned && (
               <button className="ghost-button danger" onClick={onDelete}>
                 Entfernen
               </button>
             )}
           </div>
-          <div className="inline-row compact">
+          <div className="modal-actions-right">
             <button className="ghost-button" onClick={onClose}>
               Abbrechen
             </button>

@@ -32,6 +32,7 @@ import type {
   QualificationModalPayload,
 } from '../../types/ui';
 import logoUrl from '../../assets/logo.png';
+import ModalHeader from '../modals/ModalHeader';
 
 type SettingsPageProps = {
   qualifications: QualificationType[];
@@ -738,10 +739,11 @@ const SettingsPage = ({
       {encryptionSetup.open && (
         <div className="modal-backdrop">
           <div className="modal">
-            <div className="modal-icon">
-              <FontAwesomeIcon icon={faShieldAlt} />
-            </div>
-            <h3>Verschlüsselung aktivieren</h3>
+            <ModalHeader
+              icon={faShieldAlt}
+              title="Verschlüsselung aktivieren"
+              onClose={onCloseEnableEncryption}
+            />
             <div className="modal-body">
               <p className="modal-text">
                 Lege ein Passwort fest. Danach wird beim Start wieder ein Login verlangt und ein Recovery Key bereitgestellt.
@@ -767,12 +769,15 @@ const SettingsPage = ({
               {encryptionSetup.error && <div className="error">{encryptionSetup.error}</div>}
             </div>
             <div className="modal-actions">
-              <button className="ghost-button" onClick={onCloseEnableEncryption}>
-                Abbrechen
-              </button>
-              <button className="primary" onClick={onEnableEncryption}>
-                Aktivieren
-              </button>
+              <div className="modal-actions-left" />
+              <div className="modal-actions-right">
+                <button className="ghost-button" onClick={onCloseEnableEncryption}>
+                  Abbrechen
+                </button>
+                <button className="primary" onClick={onEnableEncryption}>
+                  Aktivieren
+                </button>
+              </div>
             </div>
           </div>
         </div>
