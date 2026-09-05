@@ -35,7 +35,6 @@ const useSettingsDb = ({
   const [dbMessage, setDbMessage] = useState<string | null>(null);
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: 'idle' });
   const [lastUpdateCheckAt, setLastUpdateCheckAt] = useState<string | null>(null);
-  const [snoozeUpdates, setSnoozeUpdates] = useState(false);
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [storageMode, setStorageMode] = useState<StorageMode>('encrypted');
   const [encryptionSetup, setEncryptionSetup] = useState<EncryptionSetupState>({
@@ -212,26 +211,29 @@ const useSettingsDb = ({
     );
   }, [confirmAction, onAuthStateChange, onError, onToast]);
 
+  const showUpdateError = useCallback((error: unknown, retry: 'check' | 'download' | 'install') => {
+    setUpdateStatus((previous) => ({
+      version: previous.version,
+      releaseNotes: previous.releaseNotes,
+      state: 'error', retry,
+      message: error instanceof Error ? error.message : String(error),
+    }));
+  }, []);
+
   const handleCheckUpdates = useCallback(async () => {
-    try {
-      await api.updates.check();
-    } catch (err) {
-      onError(err);
-    }
-  }, [onError]);
+    try { await api.updates.check(true); }
+    catch (error) { showUpdateError(error, 'check'); }
+  }, [showUpdateError]);
+
+  const handleDownloadUpdate = useCallback(async () => {
+    try { await api.updates.download(); }
+    catch (error) { showUpdateError(error, 'download'); }
+  }, [showUpdateError]);
 
   const handleInstallUpdate = useCallback(async () => {
-    try {
-      await api.updates.install();
-    } catch (err) {
-      onError(err);
-    }
-  }, [onError]);
-
-  const handleSnoozeUpdate = useCallback(() => {
-    setSnoozeUpdates(true);
-    setUpdateStatus((prev) => (prev.state === 'downloaded' ? prev : { state: 'idle' }));
-  }, []);
+    try { await api.updates.install(); }
+    catch (error) { showUpdateError(error, 'install'); }
+  }, [showUpdateError]);
 
   useEffect(() => {
     const unsubscribe = api.updates.onStatus((status) => {
@@ -247,10 +249,7 @@ const useSettingsDb = ({
     });
 
     const runCheck = () => {
-      if (snoozeUpdates) return;
-      api.updates.check().catch(() => {
-        setUpdateStatus((prev) => prev);
-      });
+      api.updates.check().catch((error) => showUpdateError(error, 'check'));
     };
 
     runCheck();
@@ -266,7 +265,7 @@ const useSettingsDb = ({
       window.clearInterval(interval);
       window.removeEventListener('focus', handleFocus);
     };
-  }, [snoozeUpdates]);
+  }, [showUpdateError]);
 
   const hydrateFromApi = useCallback(async () => {
     try {
@@ -298,7 +297,6 @@ const useSettingsDb = ({
       dbMessage,
       updateStatus,
       lastUpdateCheckAt,
-      snoozeUpdates,
       appInfo,
       storageMode,
       encryptionSetup,
@@ -318,8 +316,8 @@ const useSettingsDb = ({
       handleDropDatabase,
       handleFullReset,
       handleCheckUpdates,
+      handleDownloadUpdate,
       handleInstallUpdate,
-      handleSnoozeUpdate,
       openEnableEncryption,
       closeEnableEncryption,
       handleEnableEncryption,

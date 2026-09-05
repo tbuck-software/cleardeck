@@ -3,24 +3,25 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGaugeHigh, faUsers, faGear, faCode, faBars, faXmark, faCalendarDays, faUserInjured } from '@fortawesome/free-solid-svg-icons';
 import type { Page } from '../../types/ui';
 import type { UpdateStatus } from '../../shared/types';
+import UpdateControl from '../ui/UpdateControl';
 import logoUrl from '../../assets/logo.png';
 
 type SidebarProps = {
   current: Page;
   onNavigate: (page: Page) => void;
   updateStatus: UpdateStatus;
+  onDownloadUpdate: () => void;
+  onCheckUpdates: () => void;
   onInstallUpdate: () => void;
-  onSnoozeUpdate: () => void;
-  snoozed: boolean;
 };
 
 const Sidebar = ({
   current,
   onNavigate,
   updateStatus,
+  onDownloadUpdate,
+  onCheckUpdates,
   onInstallUpdate,
-  onSnoozeUpdate,
-  snoozed,
 }: SidebarProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -70,20 +71,7 @@ const Sidebar = ({
           ))}
         </nav>
         <div className="nav-footer">
-          {!snoozed && updateStatus.state === 'downloaded' && (
-            <div className="update-pill">
-              <button className="update-pill-close" onClick={onSnoozeUpdate} title="Schließen">
-                ×
-              </button>
-              <div className="update-pill-text">
-                <p className="eyebrow">Update</p>
-                <strong>{updateStatus.version ? `v${updateStatus.version}` : 'Update'}</strong> bereit
-              </div>
-              <button className="primary small" onClick={onInstallUpdate} title="Neustart und Installation">
-                Installieren
-              </button>
-            </div>
-          )}
+          <UpdateControl compact status={updateStatus} onCheck={onCheckUpdates} onDownload={onDownloadUpdate} onInstall={onInstallUpdate} />
           <button
             className={`nav-item ${current === 'settings' ? 'active' : ''}`}
             onClick={() => handleNavigate('settings')}

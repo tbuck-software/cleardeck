@@ -6,22 +6,43 @@
 
 import { app, BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
+import { gt, lte, valid, rcompare } from 'semver';
 
 import type { UpdateStatus } from '../shared/types';
 import { getPackagedUpdateConfig, resolveUpdateSource } from './updateSource';
 
 let updaterInitialized = false;
 let updateFeedConfigured = false;
-let latestUpdateVersion: string | undefined;
 let updateSetupError: string | null = null;
+let updateWindow: BrowserWindow | null = null;
+let currentStatus: UpdateStatus = { state: 'idle' };
+let release: { version?: string; releaseNotes?: string } = {};
+let downloaded = false;
+let retryAction: 'check' | 'download' | 'install' = 'check';
 
-/**
- * Send update status to the renderer process
- */
+export const getUpdateStatus = (): UpdateStatus => currentStatus;
+
 export const sendUpdateStatus = (mainWindow: BrowserWindow | null, status: UpdateStatus): void => {
-  if (mainWindow) {
+  currentStatus = status;
+  if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('updates:status', status);
   }
+};
+const publish = (status: UpdateStatus) => sendUpdateStatus(updateWindow, status);
+const fail = (error: unknown) => publish({
+  ...release,
+  state: 'error',
+  message: error instanceof Error ? error.message : String(error),
+  retry: retryAction,
+});
+const rememberRelease = (info: { version: string; releaseNotes?: string | { version: string; note: string | null }[] }) => {
+  const installedVersion = app.getVersion();
+  const notes = typeof info.releaseNotes === 'string' ? info.releaseNotes : info.releaseNotes
+    ?.filter((entry) => valid(entry.version) && valid(installedVersion) && valid(info.version)
+      && gt(entry.version, installedVersion) && lte(entry.version, info.version))
+    .sort((a, b) => rcompare(a.version, b.version))
+    .map((entry) => `Version ${entry.version}\n${entry.note ?? ''}`).join('\n\n');
+  release = { version: info.version, releaseNotes: notes || (release.version === info.version ? release.releaseNotes : undefined) };
 };
 
 const configureUpdateSource = (): void => {
@@ -65,99 +86,121 @@ const configureUpdateSource = (): void => {
  * Initialize the auto-updater
  */
 export const initAutoUpdater = (mainWindow: BrowserWindow | null): void => {
-  if (updaterInitialized || !app.isPackaged) {
-    return;
-  }
+  updateWindow = mainWindow;
+  if (updaterInitialized || !app.isPackaged) return;
   updaterInitialized = true;
   configureUpdateSource();
-
-  autoUpdater.autoDownload = true;
+  autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
 
-  autoUpdater.on('checking-for-update', () => {
-    sendUpdateStatus(mainWindow, { state: 'checking' });
-  });
-
+  autoUpdater.on('checking-for-update', () => publish({ state: 'checking' }));
   autoUpdater.on('update-available', (info) => {
-    latestUpdateVersion = info.version;
-    sendUpdateStatus(mainWindow, { state: 'available', version: info.version });
+    rememberRelease(info);
+    publish({ ...release, state: 'available' });
   });
-
-  autoUpdater.on('update-not-available', () => {
-    sendUpdateStatus(mainWindow, { state: 'not-available' });
-  });
-
+  autoUpdater.on('update-not-available', () => publish({ state: 'not-available' }));
   autoUpdater.on('download-progress', (progress) => {
-    sendUpdateStatus(mainWindow, {
+    const remaining = (progress.total - progress.transferred) / progress.bytesPerSecond;
+    publish({
+      ...release,
       state: 'downloading',
-      version: latestUpdateVersion,
-      progress: Math.round(progress.percent),
+      progress: Number.isFinite(progress.percent) ? Math.max(0, Math.min(100, Math.round(progress.percent))) : undefined,
+      remainingSeconds: progress.bytesPerSecond > 0 && Number.isFinite(remaining) ? Math.max(0, Math.ceil(remaining)) : undefined,
     });
   });
-
   autoUpdater.on('update-downloaded', (info) => {
-    latestUpdateVersion = info.version;
-    sendUpdateStatus(mainWindow, { state: 'downloaded', version: info.version });
+    downloaded = true;
+    rememberRelease(info);
+    publish({ ...release, state: 'downloaded' });
   });
-
-  autoUpdater.on('error', (err) => {
-    sendUpdateStatus(mainWindow, { state: 'error', message: err.message });
-  });
-
-  sendUpdateStatus(mainWindow, { state: 'idle' });
+  autoUpdater.on('error', fail);
+  publish({ state: 'idle' });
 };
 
-/**
- * Check for updates
- */
-export const checkForUpdates = async (mainWindow: BrowserWindow | null): Promise<boolean> => {
+export const checkForUpdates = async (mainWindow: BrowserWindow | null, manual = false): Promise<boolean> => {
+  updateWindow = mainWindow;
+  // Focus and interval checks must never replace an active download, staged
+  // installer or its error. Republish the snapshot for a reloaded renderer.
+  if (downloaded || ['checking', 'downloading', 'installing'].includes(currentStatus.state)
+    || (!manual && ['available', 'error'].includes(currentStatus.state))) {
+    publish(currentStatus);
+    return true;
+  }
   if (!app.isPackaged) {
-    // Mock update for development
     if (process.env.MOCK_UPDATE_BANNER === '1') {
-      sendUpdateStatus(mainWindow, { state: 'available', version: 'dev-demo' });
-      setTimeout(
-        () => sendUpdateStatus(mainWindow, { state: 'downloading', version: 'dev-demo', progress: 42 }),
-        300,
-      );
-      setTimeout(
-        () => sendUpdateStatus(mainWindow, { state: 'downloaded', version: 'dev-demo' }),
-        1200,
-      );
+      release = { version: 'dev-demo', releaseNotes: '- Updates mit Fortschritt herunterladen.\n- Installation und Neustart selbst starten.' };
+      publish({ ...release, state: 'available' });
       return true;
     }
-    sendUpdateStatus(mainWindow, { state: 'not-available' });
+    publish({ state: 'not-available' });
     return false;
   }
-
-  if (!updaterInitialized) {
-    initAutoUpdater(mainWindow);
-  }
-
-  if (!updateFeedConfigured && !updateSetupError) {
-    configureUpdateSource();
-  }
-
+  initAutoUpdater(mainWindow);
+  retryAction = 'check';
   if (updateSetupError) {
-    sendUpdateStatus(mainWindow, { state: 'error', message: updateSetupError });
+    fail(new Error(updateSetupError));
     return false;
   }
-
-  await autoUpdater.checkForUpdates();
-  return true;
+  publish({ state: 'checking' });
+  try {
+    await autoUpdater.checkForUpdates();
+    return getUpdateStatus().state !== 'error';
+  } catch (error) {
+    fail(error);
+    return false;
+  }
 };
 
-/**
- * Install downloaded update
- */
+export const downloadUpdate = async (): Promise<boolean> => {
+  if (currentStatus.state === 'downloading') return true;
+  if (currentStatus.state !== 'available' && !(currentStatus.state === 'error' && currentStatus.retry === 'download')) return false;
+  retryAction = 'download';
+  publish({ ...release, state: 'downloading', progress: 0 });
+  if (!app.isPackaged && process.env.MOCK_UPDATE_BANNER === '1') {
+    let progress = 0;
+    const timer = setInterval(() => {
+      progress += 20;
+      if (progress >= 100) {
+        clearInterval(timer);
+        downloaded = true;
+        publish({ ...release, state: 'downloaded' });
+      } else {
+        publish({ ...release, state: 'downloading', progress, remainingSeconds: (100 - progress) / 20 });
+      }
+    }, 1000);
+    return true;
+  }
+  try {
+    await autoUpdater.downloadUpdate();
+    return getUpdateStatus().state !== 'error';
+  } catch (error) {
+    fail(error);
+    return false;
+  }
+};
+
 export const installUpdate = (): boolean => {
-  if (!app.isPackaged) return false;
-  if (!updaterInitialized) return false;
-  autoUpdater.quitAndInstall();
-  return true;
+  if (currentStatus.state === 'installing') return false;
+  if (!downloaded) {
+    retryAction = release.version ? 'download' : 'check';
+    fail(new Error('Es liegt noch kein vollständiger Download zur Installation bereit.'));
+    return false;
+  }
+  retryAction = 'install';
+  publish({ ...release, state: 'installing' });
+  if (!app.isPackaged) {
+    fail(new Error('Die Entwicklungsvorschau kann keinen Installer starten.'));
+    return false;
+  }
+  try {
+    // On macOS this also stages the ZIP in Squirrel before the app can quit.
+    // Keep the preparing state visible until quit or a native error arrives.
+    autoUpdater.quitAndInstall();
+    return getUpdateStatus().state !== 'error';
+  } catch (error) {
+    fail(error);
+    return false;
+  }
 };
 
-/**
- * Check if updater is initialized
- */
 export const isUpdaterInitialized = (): boolean => updaterInitialized;
-

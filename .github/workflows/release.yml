@@ -44,9 +44,13 @@ jobs:
       - name: Generate update yml
         run: node scripts/generate-update-yml.js
 
+      - name: Extract release notes
+        run: node scripts/release-notes.js release-notes.md
+
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
           files: out/make/**/*
+          body_path: release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

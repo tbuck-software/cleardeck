@@ -133,7 +133,8 @@ export const api = {
       call('setHiddenEventTypes', baseApi.setHiddenEventTypes, types),
   },
   updates: {
-    check: () => call('checkUpdates', baseApi.checkUpdates),
+    check: (manual = false) => call('checkUpdates', baseApi.checkUpdates, manual),
+    download: () => call('downloadUpdate', baseApi.downloadUpdate),
     install: () => call('installUpdate', baseApi.installUpdate),
     onStatus: (cb: (status: UpdateStatus) => void) => baseApi.onUpdateStatus(cb),
   },
