@@ -29,8 +29,9 @@ release: ensure-clean build
 
 release-patch: ensure-clean
 	@npm version patch --no-git-tag-version
+	@node scripts/release-notes.js --prepare
 	@VERSION=$$( $(VERSION_CMD) ); \
-	git add package.json package-lock.json; \
+	git add package.json package-lock.json CHANGELOG.md; \
 	git commit -m "chore: release v$${VERSION}"; \
 	git tag v$${VERSION}; \
 	$(MAKE) build; \
@@ -39,8 +40,9 @@ release-patch: ensure-clean
 
 release-minor: ensure-clean
 	@npm version minor --no-git-tag-version
+	@node scripts/release-notes.js --prepare
 	@VERSION=$$( $(VERSION_CMD) ); \
-	git add package.json package-lock.json; \
+	git add package.json package-lock.json CHANGELOG.md; \
 	git commit -m "chore: release v$${VERSION}"; \
 	git tag v$${VERSION}; \
 	$(MAKE) build; \
@@ -49,8 +51,9 @@ release-minor: ensure-clean
 
 release-major: ensure-clean
 	@npm version major --no-git-tag-version
+	@node scripts/release-notes.js --prepare
 	@VERSION=$$( $(VERSION_CMD) ); \
-	git add package.json package-lock.json; \
+	git add package.json package-lock.json CHANGELOG.md; \
 	git commit -m "chore: release v$${VERSION}"; \
 	git tag v$${VERSION}; \
 	$(MAKE) build; \

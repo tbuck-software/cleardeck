@@ -154,7 +154,8 @@ export type Api = {
   getStorageMode: () => Promise<StorageMode>;
   getHiddenEventTypes: () => Promise<string[]>;
   setHiddenEventTypes: (types: string[]) => Promise<string[]>;
-  checkUpdates: () => Promise<boolean>;
+  checkUpdates: (manual?: boolean) => Promise<boolean>;
+  downloadUpdate: () => Promise<boolean>;
   installUpdate: () => Promise<boolean>;
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
   getDevTables: () => Promise<Record<string, Record<string, unknown>[]>>;
@@ -252,7 +253,8 @@ const api: Api = {
   getStorageMode: () => ipcRenderer.invoke('app:state').then((state: AppState) => state.storageMode),
   getHiddenEventTypes: () => ipcRenderer.invoke('settings:getHiddenEventTypes'),
   setHiddenEventTypes: (types) => ipcRenderer.invoke('settings:setHiddenEventTypes', { types }),
-  checkUpdates: () => ipcRenderer.invoke('updates:check'),
+  checkUpdates: (manual = false) => ipcRenderer.invoke('updates:check', manual),
+  downloadUpdate: () => ipcRenderer.invoke('updates:download'),
   installUpdate: () => ipcRenderer.invoke('updates:install'),
   onUpdateStatus: (cb) => {
     const listener = (_event: Electron.IpcRendererEvent, status: UpdateStatus) => cb(status);

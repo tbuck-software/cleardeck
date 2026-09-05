@@ -81,6 +81,7 @@ const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage
   onEnableEncryption: vi.fn(),
   onDisableEncryption: vi.fn(),
   onCheckUpdates: vi.fn(),
+  onDownloadUpdate: vi.fn(),
   onInstallUpdate: vi.fn(),
   onDropDatabase: vi.fn(),
   onFullReset: vi.fn(),
@@ -188,7 +189,7 @@ describe('SettingsPage', () => {
     expect(
       screen.getByText('v1.2.3 ist heruntergeladen. Aktiv bleibt v1.7.2, bis du installierst und neu startest.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('Installieren & neu starten')).toBeEnabled();
+    expect(screen.getByText('Update installieren und neu starten')).toBeEnabled();
     expect(screen.getByText('Release auf GitHub öffnen')).toHaveAttribute(
       'href',
       'https://github.com/Rasalas/employee-db/releases/tag/v1.2.3',

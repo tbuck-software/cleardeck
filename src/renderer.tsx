@@ -67,7 +67,6 @@ const App = () => {
       updateStatus,
       lastUpdateCheckAt,
       dbMessage,
-      snoozeUpdates,
       appInfo,
       storageMode,
       encryptionSetup,
@@ -170,8 +169,8 @@ const App = () => {
       handleDropDatabase,
       handleFullReset,
       handleCheckUpdates,
+      handleDownloadUpdate,
       handleInstallUpdate,
-      handleSnoozeUpdate,
       openEnableEncryption,
       closeEnableEncryption,
       handleEnableEncryption,
@@ -488,7 +487,7 @@ const App = () => {
           onForgotPassword={appReady.configured ? startRecoveryReset : undefined}
           onResetApp={appReady.configured ? handleFullReset : undefined}
           globalError={appReady.startupError ?? error}
-          footer={<AuthUpdates status={updateStatus} version={appInfo?.version} onCheck={handleCheckUpdates} onInstall={handleInstallUpdate} />}
+          footer={<AuthUpdates status={updateStatus} version={appInfo?.version} onCheck={handleCheckUpdates} onDownload={handleDownloadUpdate} onInstall={handleInstallUpdate} />}
         />
         <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
         <RecoveryKeyModal
@@ -516,9 +515,9 @@ const App = () => {
         current={sidebarPage}
         onNavigate={navigateToPage}
         updateStatus={updateStatus}
+        onDownloadUpdate={handleDownloadUpdate}
         onInstallUpdate={handleInstallUpdate}
-        onSnoozeUpdate={handleSnoozeUpdate}
-        snoozed={snoozeUpdates}
+        onCheckUpdates={handleCheckUpdates}
       />
       <div className="main">
         <header className="topbar">
@@ -679,6 +678,7 @@ const App = () => {
             onEnableEncryption={handleEnableEncryption}
             onDisableEncryption={handleDisableEncryption}
             onCheckUpdates={handleCheckUpdates}
+            onDownloadUpdate={handleDownloadUpdate}
             onInstallUpdate={handleInstallUpdate}
             onDropDatabase={handleDropDatabase}
             onFullReset={handleFullReset}

@@ -1276,41 +1276,6 @@ button.detail-item.clickable:hover {
   border: none;
 }
 
-.update-pill {
-  margin-bottom: 16px;
-  padding: 16px;
-  border-radius: 16px;
-  background: linear-gradient(145deg, #eff6ff, #e0f2fe);
-  border: 1px solid #bae6fd;
-  color: #0f172a;
-  display: grid;
-  gap: 12px;
-  position: relative;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-
-.update-pill .primary.small {
-  padding: 8px 10px;
-  font-size: 13px;
-}
-
-.update-pill-text {
-  display: grid;
-  gap: 2px;
-}
-
-.update-pill-close {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  border: none;
-  background: transparent;
-  color: #0f172a;
-  font-size: 16px;
-  line-height: 1;
-  padding: 4px;
-  cursor: pointer;
-}
 
 .auth-screen {
   min-height: 100vh;
@@ -1679,9 +1644,7 @@ button.detail-item.clickable:hover {
   .brand-sub {
     display: none;
   }
-  .update-pill {
-    grid-column: 1 / -1;
-  }
+
 }
 
 /* DEV Page */

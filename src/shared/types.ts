@@ -155,14 +155,19 @@ export interface RecoveryInfo {
   fingerprint: string;
 }
 
-export type UpdateStatus =
+export type UpdateStatus = {
+  version?: string;
+  releaseNotes?: string;
+} & (
   | { state: 'idle' }
   | { state: 'checking' }
-  | { state: 'available'; version?: string }
+  | { state: 'available' }
   | { state: 'not-available' }
-  | { state: 'downloading'; version?: string; progress?: number }
-  | { state: 'downloaded'; version?: string }
-  | { state: 'error'; message: string };
+  | { state: 'downloading'; progress?: number; remainingSeconds?: number }
+  | { state: 'downloaded' }
+  | { state: 'installing' }
+  | { state: 'error'; message: string; retry?: 'check' | 'download' | 'install' }
+);
 
 export interface AppInfo {
   name: string;

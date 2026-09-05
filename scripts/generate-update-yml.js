@@ -13,6 +13,8 @@ const yaml = require('yaml');
 
 const packageJson = require('../package.json');
 const version = packageJson.version;
+const { getReleaseHistory } = require('./release-notes');
+const releaseNotes = getReleaseHistory(path.join(__dirname, '..', 'CHANGELOG.md'), version);
 
 /**
  * Calculate SHA512 hash of a file (base64 encoded)
@@ -122,6 +124,7 @@ function generateYml(files, version) {
     path: fileName,
     sha512,
     releaseDate: new Date().toISOString(),
+    ...(releaseNotes.length ? { releaseNotes } : {}),
   };
 
   return yaml.stringify(ymlContent);

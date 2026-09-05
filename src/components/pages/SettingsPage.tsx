@@ -33,7 +33,7 @@ import type {
 import api from '../../services/api';
 import logoUrl from '../../assets/logo.png';
 import ModalHeader from '../modals/ModalHeader';
-import UpdateErrorDetails from '../ui/UpdateErrorDetails';
+import UpdateControl from '../ui/UpdateControl';
 
 type SettingsPageProps = {
   qualifications: QualificationType[];
@@ -68,6 +68,7 @@ type SettingsPageProps = {
   onEnableEncryption: () => void | Promise<void>;
   onDisableEncryption: () => void | Promise<void>;
   onCheckUpdates: () => void | Promise<void>;
+  onDownloadUpdate: () => void | Promise<void>;
   onInstallUpdate: () => void | Promise<void>;
   onDropDatabase: () => void | Promise<void>;
   onFullReset: () => void | Promise<void>;
@@ -199,6 +200,7 @@ const SettingsPage = ({
   onEnableEncryption,
   onDisableEncryption,
   onCheckUpdates,
+  onDownloadUpdate,
   onInstallUpdate,
   onDropDatabase,
   onFullReset,
@@ -240,6 +242,7 @@ const SettingsPage = ({
     if (updateStatus.state === 'downloaded') {
       return `${availableVersion ?? 'Das Update'} ist heruntergeladen. Aktiv bleibt ${currentVersion}, bis du installierst und neu startest.`;
     }
+    if (updateStatus.state === 'installing') return 'Das Update wird installiert. ClearDeck startet anschließend neu.';
     if (updateStatus.state === 'not-available') {
       return `Keine neueren Updates gefunden. Installiert ist ${currentVersion}.`;
     }
@@ -318,20 +321,8 @@ const SettingsPage = ({
               title="Software Updates"
               subtitle={updateCopy}
             >
-              {updateStatus.state === 'error' && <UpdateErrorDetails key={updateStatus.message} message={updateStatus.message} />}
+              <UpdateControl status={updateStatus} onCheck={onCheckUpdates} onDownload={onDownloadUpdate} onInstall={onInstallUpdate} />
               <div className="settings-action-band">
-                <button
-                  className="ghost-button"
-                  onClick={onCheckUpdates}
-                  disabled={updateStatus.state === 'checking' || updateStatus.state === 'downloading'}
-                >
-                  {updateStatus.state === 'checking' ? 'Suche …' : 'Nach Updates suchen'}
-                </button>
-                {updateStatus.state === 'downloaded' && (
-                  <button className="primary" onClick={onInstallUpdate}>
-                    Installieren & neu starten
-                  </button>
-                )}
                 {targetReleaseUrl && (
                   <a
                     href={targetReleaseUrl}
