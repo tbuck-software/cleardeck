@@ -9,6 +9,7 @@
  */
 
 import type { Database as DatabaseType } from 'better-sqlite3';
+import { nextDueDate } from '../../utils/instructionSchedule';
 
 type PeriodSeed = {
   startDate: string;
@@ -596,7 +597,9 @@ export const seedDatabase = (db: DatabaseType): void => {
       weeklyHours: 12,
       fte: roundFte(12, baseHours),
       department: 'Wochenendtour',
-      birthDate: withYear(baseDate, 2002, 29),
+      // Deliberately a minor: JArbSchG § 29 Abs. 2 shortens every interval to
+      // six months for her, and that rule is invisible in demo data otherwise.
+      birthDate: withYear(baseDate, 2009, 29),
       competencyProfile: 'new-hire',
       instructionProfile: 'new-hire',
       periods: [{ startDate: shiftDays(baseDate, -5), qualification: 'Pflegekraft/-helfer' }],
@@ -651,33 +654,61 @@ export const seedDatabase = (db: DatabaseType): void => {
   ];
 
   /**
-   * Demo data has to exercise the sample, not just fill a list, so the spread
-   * is deliberate: every Teilgruppe is populated well past its target (A/B/C
-   * need 2, D needs 3), and one patient in nine is left without assessment
-   * values so the data-gap tasks on the dashboard have something real to show.
+   * Demo data has to exercise the sample and the half-finished states a real
+   * service is actually in, not just a tidy list.
+   *
+   * The mix is weighted rather than even: in ambulant care mobility impairment
+   * is the common case and "no impairment at all" the exception, so an even
+   * split would look like nothing anyone works with. Every group still lands
+   * well past its sampling target (A/B/C need 2, D needs 3).
    */
-  const ASSESSMENT = [
-    { cognition: true, mobility: true }, // A
+  const ASSESSMENT_MIX = [
+    { cognition: true, mobility: true }, // A — häufigster Fall
     { cognition: false, mobility: true }, // B
+    { cognition: true, mobility: true },
+    { cognition: false, mobility: true },
     { cognition: true, mobility: false }, // C
+    { cognition: true, mobility: true },
+    { cognition: false, mobility: true },
     { cognition: false, mobility: false }, // ohne Beeinträchtigung
+    { cognition: true, mobility: true },
+    { cognition: true, mobility: false },
   ];
   const HKP = ['6', '8', '29', '31a'];
   const INTENSIVE = ['AKI', 'AKI-B', 'pHKP', 'pHKP-EV'];
 
   const patients: PatientSeed[] = patientNames.map((name, index) => {
-    // Every ninth person has no Modul 1/2 values — a gap the app must surface.
-    const assessed = index % 9 !== 4;
-    const assessment = ASSESSMENT[index % ASSESSMENT.length];
+    const assessment = ASSESSMENT_MIX[index % ASSESSMENT_MIX.length];
 
-    // D is an additional mark: it can land on any group, including "ohne".
+    // Three states, because all three occur: fully recorded, nothing recorded,
+    // and — the case that actually breaks screens — one of the two modules
+    // entered and the other still open. teilgruppeOf returns null for that one
+    // just as it does for a blank record, and the app has to say so.
+    const recordKind = index % 9 === 4 ? 'none' : index % 9 === 7 ? 'half' : 'full';
+    const halfIsMobility = index % 18 === 7;
+    const cognitionImpaired =
+      recordKind === 'none' || (recordKind === 'half' && halfIsMobility)
+        ? null
+        : assessment.cognition;
+    const mobilityImpaired =
+      recordKind === 'none' || (recordKind === 'half' && !halfIsMobility)
+        ? null
+        : assessment.mobility;
+
+    // D is an additional mark: it can land on any group, including one whose
+    // assessment is still missing.
     const hkpCode = index % 11 === 3 ? HKP[(index / 11) | 0] ?? '31a' : null;
     // Intensive care is rare and only ever alongside an HKP service.
     const intensiveCare = hkpCode && index % 22 === 3 ? INTENSIVE[(index / 22) | 0] ?? 'AKI' : null;
 
-    const admissionDate = shiftDays(baseDate, -(30 + index * 17));
+    // Two people were admitted days ago: their first visit is coming up but not
+    // yet overdue, which is a different state from "no visit for two years".
+    const freshAdmission = index % 23 === 9;
+    const admissionDate = freshAdmission
+      ? shiftDays(baseDate, -(index % 7) - 2)
+      : shiftDays(baseDate, -(30 + index * 17));
 
-    const visitCount = index % 7 === 0 ? 0 : (index % 4) + 1;
+    const visitCount = freshAdmission || index % 7 === 0 ? 0 : (index % 4) + 1;
     const visits = Array.from({ length: visitCount }, (_item, visitIndex) => {
       const offset = -120 + index * 4 + visitIndex * 24;
       // Roughly a third of visits leave something open, so both the follow-up
@@ -712,8 +743,8 @@ export const seedDatabase = (db: DatabaseType): void => {
           ? null
           : `${patientLastNames[index % patientLastNames.length]} (Angehoerige) - 0170 ${1000000 + index * 7331}`,
       admissionDate,
-      cognitionImpaired: assessed ? assessment.cognition : null,
-      mobilityImpaired: assessed ? assessment.mobility : null,
+      cognitionImpaired,
+      mobilityImpaired,
       hkpCode,
       intensiveCare,
       careLevel: index % 8 === 5 ? null : ((index % 4) + 2),
@@ -930,8 +961,8 @@ export const seedDatabase = (db: DatabaseType): void => {
       .prepare('SELECT id, code, name FROM competency_definitions')
       .all() as Array<{ id: number; code: string | null; name: string }>;
     const instructionDefinitions = db
-      .prepare('SELECT id, topic FROM instruction_definitions')
-      .all() as Array<{ id: number; topic: string }>;
+      .prepare('SELECT id, topic, intervalMonths FROM instruction_definitions')
+      .all() as Array<{ id: number; topic: string; intervalMonths: number | null }>;
     const employeeRows = db
       .prepare('SELECT id, name FROM employees ORDER BY id ASC')
       .all() as Array<{ id: number; name: string }>;
@@ -945,8 +976,10 @@ export const seedDatabase = (db: DatabaseType): void => {
     });
 
     const instructionLookup = new Map<string, number>();
+    const intervalByDefinition = new Map<number, number | null>();
     instructionDefinitions.forEach((definition) => {
       instructionLookup.set(definition.topic, definition.id);
+      intervalByDefinition.set(definition.id, definition.intervalMonths);
     });
 
     const insertEmployeeCompetency = db.prepare(
@@ -1040,6 +1073,24 @@ export const seedDatabase = (db: DatabaseType): void => {
                 ? 'Nachweis steht noch aus.'
                 : null,
         });
+
+        // The state the app produces on completion: the finished entry stays as
+        // the record and the follow-up is a second, open row for the same topic.
+        // Without this the pair v015 was built for never appears in demo data.
+        if (completedAt) {
+          const interval = intervalByDefinition.get(instructionDefinitionId);
+          const followUp = nextDueDate(interval, employeeSeed.birthDate ?? null, completedAt);
+          if (followUp) {
+            insertEmployeeInstruction.run({
+              employeeId: employeeRow.id,
+              instructionDefinitionId,
+              dueDate: followUp,
+              completedAt: null,
+              conductedBy: null,
+              note: null,
+            });
+          }
+        }
       });
     });
   });
