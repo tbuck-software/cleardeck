@@ -48,3 +48,18 @@ Die Squirrel-/NSIS-Kombination ist offiziell nicht unterstützt. Die konkreten v
 - Lange Fehler erscheinen in einem 9 rem hohen, scrollbar und per Tastatur nutzbaren Textfeld mit Kopierknopf. Falls die Zwischenablage nicht verfügbar ist, wird der Text zum manuellen Kopieren markiert. Das gilt für Einstellungen und den neuen Startbildschirm.
 
 Diese Quellcodeänderungen sind von der sofort wirksamen Metadatenreparatur getrennt. Der vorhandene 1.8.0-Installer enthält die neue Fehleranzeige noch nicht.
+
+## Ergänzter Test des echten alten Update-Knopfs
+
+[Erfolgreicher UI-Test für 1.7.1 und 1.7.2](https://github.com/Rasalas/employee-db/actions/runs/33982051559) auf jeweils einer eigenen GitHub-Windows-VM:
+
+1. Nur den originalen alten Installer herunterladen und installieren.
+2. Die alte App über ihre sichtbare Oberfläche mit einem synthetischen Testpasswort einrichten.
+3. Die App ihren unveränderten veröffentlichten Feed prüfen und das Update selbst herunterladen lassen.
+4. Den echten „Installieren“-Knopf in ihrer Sidebar anklicken. Der Test ruft weder Update-IPC noch den neuen Installer direkt auf.
+5. Den automatisch gestarteten Prozess aus `app-1.8.0` und dessen Produktversion prüfen.
+6. Unveränderte Konfiguration und unveränderten entschlüsselten Datenbankinhalt nachweisen.
+
+Beide Ausgangsversionen bestanden diesen vollständigen Ablauf. Das bestätigt, dass die Manifestreparatur in dieser Windows-Umgebung bis zum tatsächlichen Versionswechsel reicht, ohne vorherigen Client-Patch oder manuell gestarteten neuen Installer. Es ist weiterhin keine Garantie gegen zusätzliche Fehler auf einem bestimmten Kundenrechner.
+
+Die ursprüngliche Statusanzeige kann auch unter Windows einen bereits geladenen Update-Hinweis überschreiben oder native Fehler verbergen. Diese gemeinsame UI-Lücke hat den erfolgreich geprüften Installationsaufruf nicht verhindert. Der auf dem lokalen Mac beobachtete Signaturfehler ist ein separater Befund.

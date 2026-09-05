@@ -10,7 +10,7 @@ Nach dem Download startet „Update installieren und neu starten“ die Installa
 
 Der Manifest-Generator schreibt die gesamte veröffentlichte Historie bis einschließlich der Paketversion als `releaseNotes`-Array in die Update-Metadaten. Der Client filtert semantisch auf `installierte Version < Eintrag <= angebotene Version` und sortiert neueste Versionen zuerst. Dadurch enthält die Anzeige auch die Änderungen übersprungener Zwischenversionen. Unveröffentlichte Änderungen und bereits installierte Versionen erscheinen nicht. Ältere Feeds mit einem einfachen Text bleiben lesbar; fehlende Notizen werden ausdrücklich angezeigt.
 
-Der GitHub-Release-Text verwendet aus derselben Datei nur die Notizen der veröffentlichten Version. Es sind keine zusätzlichen GitHub-Aufrufe aus dem Renderer nötig. Die Notizen werden als Text dargestellt, nicht als ausführbares HTML. Hover, Tastaturfokus und der Infoknopf öffnen die scrollbar begrenzte Liste; Escape schließt sie.
+Der GitHub-Release-Text verwendet aus derselben Datei nur die Notizen der veröffentlichten Version. Es sind keine zusätzlichen GitHub-Aufrufe aus dem Renderer nötig. Die Notizen werden als Text dargestellt, nicht als ausführbares HTML. Hover, Tastaturfokus und der Infoknopf öffnen die scrollbar begrenzte Liste; Escape schließt sie. Beim Verlassen wartet sie 250 ms. Ein Wechsel vom Auslöser ins Popover bricht das Schließen ab, sodass die Liste dort scrollbar bleibt.
 
 ## Grenzen der Prüfung
 

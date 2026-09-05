@@ -45,8 +45,8 @@ const Sidebar = ({
             <img src={logoUrl} alt="ClearDeck Logo" className="brand-logo" />
           </div>
           <div>
-            <div className="brand-title">ClearDeck</div>
-            <div className="brand-sub">Verwaltungstool</div>
+            <div className="brand-title">{process.env.NODE_ENV === 'development' ? 'ClearDeck Dev' : 'ClearDeck'}</div>
+            <div className="brand-sub">{process.env.NODE_ENV === 'development' ? 'Eigene Daten · Live' : 'Verwaltungstool'}</div>
           </div>
         </div>
         <button

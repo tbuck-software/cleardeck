@@ -1,4 +1,4 @@
-import { useId, useState, useRef, useLayoutEffect } from 'react';
+import { useId, useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDownload, faRotate, faCircleExclamation, faArrowUp } from '@fortawesome/free-solid-svg-icons';
 import type { UpdateStatus } from '../../shared/types';
@@ -21,6 +21,15 @@ const remainingTime = (seconds?: number) => {
 
 export default function UpdateControl({ status, onCheck, onDownload, onInstall, compact = false }: UpdateControlProps) {
   const [notesOpen, setNotesOpen] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelClose = () => { if (closeTimer.current) clearTimeout(closeTimer.current); };
+  const openNotes = () => { cancelClose(); setNotesOpen(true); };
+  const closeNotes = () => { cancelClose(); setNotesOpen(false); };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setNotesOpen(false), 250);
+  };
+  useEffect(() => () => { if (closeTimer.current) clearTimeout(closeTimer.current); }, []);
   const notesId = useId();
   const controlRef = useRef<HTMLElement>(null);
   const notesRef = useRef<HTMLDivElement>(null);
@@ -65,11 +74,11 @@ export default function UpdateControl({ status, onCheck, onDownload, onInstall, 
       className={`update-control ${compact ? 'update-control-compact' : ''} ${status.state === 'error' ? 'update-control-error' : ''}`}
       aria-label="Software-Update"
       ref={controlRef}
-      onMouseEnter={() => setNotesOpen(true)}
-      onMouseLeave={() => setNotesOpen(false)}
-      onFocus={() => setNotesOpen(true)}
-      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setNotesOpen(false); }}
-      onKeyDown={(event) => { if (event.key === 'Escape') { setNotesOpen(false); event.stopPropagation(); } }}
+      onMouseEnter={openNotes}
+      onMouseLeave={scheduleClose}
+      onFocus={openNotes}
+      onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) scheduleClose(); }}
+      onKeyDown={(event) => { if (event.key === 'Escape') { closeNotes(); event.stopPropagation(); } }}
     >
       <div className="update-control-heading">
         <span className="update-control-icon" aria-hidden="true"><FontAwesomeIcon icon={icon} /></span>
@@ -77,7 +86,7 @@ export default function UpdateControl({ status, onCheck, onDownload, onInstall, 
           <strong>{labels[status.state]}</strong>
           {status.version && <span>Version {status.version}</span>}
         </div>
-        {status.version && <button type="button" className="update-notes-toggle" aria-label="Neuerungen anzeigen" aria-expanded={notesOpen} aria-controls={notesId} onClick={() => setNotesOpen(true)}>ⓘ</button>}
+        {status.version && <button type="button" className="update-notes-toggle" aria-label="Neuerungen anzeigen" aria-expanded={notesOpen} aria-controls={notesId} onClick={openNotes}>ⓘ</button>}
       </div>
       {downloading && <div className="update-transfer">
         <progress max={100} value={progress} aria-label="Update-Download" />
@@ -91,7 +100,7 @@ export default function UpdateControl({ status, onCheck, onDownload, onInstall, 
       <button type="button" className="update-control-action" onClick={() => void action()} disabled={busy}>
         {busy ? installing ? 'Installation läuft …' : downloading ? 'Download läuft …' : 'Suche läuft …' : actionLabel}
       </button>
-      {status.version && notesOpen && <div ref={notesRef} popover="manual" id={notesId} className="update-notes" role="region" aria-label="Neuerungen" tabIndex={0}>
+      {status.version && notesOpen && <div ref={notesRef} popover="manual" id={notesId} className="update-notes" role="region" aria-label="Neuerungen" tabIndex={0} onMouseEnter={openNotes} onMouseLeave={scheduleClose}>
         <p className="update-notes-heading">Neuerungen bis {status.version}</p>
         {notes ? <div className="update-notes-content">{notes}</div> : <p>Für dieses Update wurden keine Neuerungen veröffentlicht.</p>}
       </div>}

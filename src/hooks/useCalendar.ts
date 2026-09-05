@@ -132,7 +132,7 @@ const useCalendar = ({ handleError, hiddenEventTypes, enabled = true }: UseCalen
       ]);
 
       // Transform patient birthdays to calendar events
-      const birthdayEvents: UpcomingEvent[] = patientBirthdays.map((item: PatientBirthdayEvent) => {
+      const birthdayEvents: UpcomingEvent[] = patientBirthdays.map((item: PatientBirthdayEvent): UpcomingEvent => {
         let details: string | undefined;
         if (item.hasKnownYear) {
           const birthYear = parseInt(item.birthDate.slice(0, 4), 10);
@@ -154,7 +154,7 @@ const useCalendar = ({ handleError, hiddenEventTypes, enabled = true }: UseCalen
       });
 
       // Transform patient visits to calendar events
-      const visitEvents: UpcomingEvent[] = patientVisits.map((item: PatientVisitEvent) => ({
+      const visitEvents: UpcomingEvent[] = patientVisits.map((item: PatientVisitEvent): UpcomingEvent => ({
         id: item.visitId,
         employeeId: undefined,
         eventDate: item.visitDate,

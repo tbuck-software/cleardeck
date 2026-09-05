@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
 import UpdateControl from '../UpdateControl';
 
@@ -54,4 +54,24 @@ describe('update controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Neuerungen anzeigen' }));
     expect(screen.getByRole('region', { name: 'Neuerungen' })).toBeInTheDocument();
   });
+  it('keeps notes open while the pointer crosses into the scrollable popup', () => {
+    vi.useFakeTimers();
+    try {
+      render(<UpdateControl status={{ state: 'available', version: '1.9.0', releaseNotes: '- Änderung\n'.repeat(60) }} {...actions()} />);
+      const control = screen.getByRole('region', { name: 'Software-Update' });
+      fireEvent.mouseEnter(control);
+      fireEvent.mouseLeave(control);
+      act(() => vi.advanceTimersByTime(100));
+      const notes = screen.getByRole('region', { name: 'Neuerungen' });
+      fireEvent.mouseEnter(notes);
+      act(() => vi.advanceTimersByTime(400));
+      expect(notes).toBeInTheDocument();
+      fireEvent.scroll(notes);
+      expect(notes).toBeInTheDocument();
+      fireEvent.mouseLeave(notes);
+      act(() => vi.advanceTimersByTime(250));
+      expect(screen.queryByRole('region', { name: 'Neuerungen' })).not.toBeInTheDocument();
+    } finally { vi.useRealTimers(); }
+  });
+
 });

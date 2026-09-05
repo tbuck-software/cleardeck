@@ -107,3 +107,6 @@ out/
 
 # Build output
 dist/
+
+# Separate Electron host for the live development app
+.dev-runtime/

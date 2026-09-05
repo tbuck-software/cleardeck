@@ -6,7 +6,7 @@
   "main": ".webpack/main",
   "scripts": {
     "postinstall": "node scripts/postinstall.js",
-    "start": "electron-forge start",
+    "start": "node scripts/start-dev.js",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "make:release": "electron-forge make && node scripts/generate-update-yml.js",
@@ -15,7 +15,8 @@
     "test": "vitest",
     "nuke:dev": "node scripts/nuke-db.js dev",
     "nuke:prod": "node scripts/nuke-db.js prod",
-    "nuke:all": "node scripts/nuke-db.js all"
+    "nuke:all": "node scripts/nuke-db.js all",
+    "dev:updates": "node scripts/start-dev.js --updates"
   },
   "keywords": [],
   "author": {
@@ -53,7 +54,7 @@
     "patch-package": "^8.0.1",
     "style-loader": "^3.3.4",
     "ts-loader": "^9.5.4",
-    "typescript": "~4.5.4",
+    "typescript": "5.9.3",
     "vitest": "^4.0.15",
     "yaml": "^2.8.2"
   },
