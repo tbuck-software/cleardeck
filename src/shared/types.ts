@@ -147,6 +147,7 @@ export interface AppState {
   configured: boolean;
   unlocked: boolean;
   storageMode: StorageMode;
+  startupError?: string;
 }
 
 export interface RecoveryInfo {
