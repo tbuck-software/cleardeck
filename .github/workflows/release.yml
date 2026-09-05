@@ -33,6 +33,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Test update manifest generation
+        run: npx vitest run scripts/__tests__/updateManifest.test.ts
+
       - name: Build artifacts
         run: ${{ runner.os == 'Windows' && 'set SKIP_FUSES=1 && npm run make' || 'SKIP_FUSES=1 npm run make' }}
         env:
