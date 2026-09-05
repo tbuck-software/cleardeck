@@ -1,7 +1,7 @@
 import React from 'react';
-import { faKey } from '@fortawesome/free-solid-svg-icons';
+import Icon from '../ui/Icon';
+import Dialog from '../ui/Dialog';
 import type { RecoveryResetState } from '../../types/ui';
-import ModalHeader from './ModalHeader';
 
 type RecoveryResetModalProps = {
   state: RecoveryResetState;
@@ -11,61 +11,57 @@ type RecoveryResetModalProps = {
   onSubmit: () => void;
 };
 
-const RecoveryResetModal = ({ state, loading, onChange, onClose, onSubmit }: RecoveryResetModalProps) => {
-  if (!state.open) return null;
-
-  return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <ModalHeader icon={faKey} title="Passwort mit Recovery Key setzen" onClose={onClose} />
-        <div className="modal-body">
-          <p className="modal-text">
-            Setzt ein neues Passwort. Der Recovery Key bleibt derselbe und sollte sicher aufbewahrt sein.
-          </p>
-          <label className="full-width">
-            Recovery Key
-            <textarea
-              value={state.recoveryKey}
-              onChange={(e) => onChange({ recoveryKey: e.target.value })}
-              rows={3}
-              placeholder="Base64 oder Hex"
-              className="long-text"
-            />
-          </label>
-          <label className="full-width">
-            Neues Passwort
-            <input
-              type="password"
-              value={state.newPassword}
-              onChange={(e) => onChange({ newPassword: e.target.value })}
-              placeholder="Neues Passwort"
-            />
-          </label>
-          <label className="full-width">
-            Wiederholen
-            <input
-              type="password"
-              value={state.repeat}
-              onChange={(e) => onChange({ repeat: e.target.value })}
-              placeholder="Wiederholen"
-            />
-          </label>
-          {state.error && <div className="error">{state.error}</div>}
-        </div>
-        <div className="modal-actions">
-          <div className="modal-actions-left" />
-          <div className="modal-actions-right">
-            <button className="ghost-button" onClick={onClose}>
-              Abbrechen
-            </button>
-            <button className="primary" onClick={onSubmit} disabled={loading}>
-              Zurücksetzen
-            </button>
-          </div>
-        </div>
+const RecoveryResetModal = ({ state, loading, onChange, onClose, onSubmit }: RecoveryResetModalProps) => (
+  <Dialog
+    open={state.open}
+    width={520}
+    title="Passwort mit Recovery-Key setzen"
+    subtitle="Setzt ein neues Passwort. Der Recovery-Key bleibt derselbe und sollte sicher aufbewahrt sein."
+    primaryLabel="Zurücksetzen"
+    primaryDisabled={loading || !state.recoveryKey.trim() || state.newPassword !== state.repeat}
+    onPrimary={onSubmit}
+    onClose={onClose}
+  >
+    <div className="field">
+      <label htmlFor="recovery-key">Recovery-Key</label>
+      <textarea
+        id="recovery-key"
+        className="input cd-mono"
+        style={{ minHeight: 70 }}
+        placeholder="Base64 oder Hex"
+        value={state.recoveryKey}
+        onChange={(event) => onChange({ recoveryKey: event.target.value })}
+      />
+    </div>
+    <div className="cd-field-grid">
+      <div className="field">
+        <label htmlFor="recovery-new">Neues Passwort</label>
+        <input
+          id="recovery-new"
+          className="input"
+          type="password"
+          value={state.newPassword}
+          onChange={(event) => onChange({ newPassword: event.target.value })}
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="recovery-repeat">Wiederholen</label>
+        <input
+          id="recovery-repeat"
+          className="input"
+          type="password"
+          value={state.repeat}
+          onChange={(event) => onChange({ repeat: event.target.value })}
+        />
       </div>
     </div>
-  );
-};
+    {state.error && (
+      <div className="cd-notice cd-notice-bad" role="alert">
+        <Icon name="warning" />
+        <span>{state.error}</span>
+      </div>
+    )}
+  </Dialog>
+);
 
 export default RecoveryResetModal;

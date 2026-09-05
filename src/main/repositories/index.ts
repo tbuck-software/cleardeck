@@ -10,4 +10,6 @@ export * from './qualifications';
 export * from './settings';
 export * from './dashboard';
 export * from './competencies';
+export * from './patients';
+export * from './audits';
 

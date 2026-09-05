@@ -21,6 +21,7 @@ import { recordAppStart } from './main/diagnostics';
 import { prepareDevelopmentScenario } from './main/devScenario';
 import { configureUserDataPath } from './main/appPaths';
 import { persistEncryptedDb } from './main/database/connection';
+import { runAutoBackupIfDue } from './main/backup';
 import { configureExternalLinkHandling } from './main/externalLinks';
 import { registerAllHandlers, initAutoUpdater } from './main/ipc';
 
@@ -82,15 +83,33 @@ app.on('ready', () => {
   initAutoUpdater(mainWindow);
 });
 
-app.on('window-all-closed', () => {
-  persistEncryptedDb();
-  if (process.platform !== 'darwin') {
-    app.quit();
+/**
+ * Shutdown order matters: an automatic backup reads the open database, so it
+ * has to run before the database is closed and encrypted to disk.
+ */
+let shuttingDown = false;
+
+const shutdown = async (): Promise<void> => {
+  try {
+    await runAutoBackupIfDue();
+  } finally {
+    persistEncryptedDb();
   }
+};
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit(); // before-quit does the work
+    return;
+  }
+  void shutdown();
 });
 
-app.on('before-quit', () => {
-  persistEncryptedDb();
+app.on('before-quit', (event) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  event.preventDefault();
+  void shutdown().finally(() => app.quit());
 });
 
 app.on('activate', () => {

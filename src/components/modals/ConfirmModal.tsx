@@ -1,7 +1,6 @@
-import React from 'react';
-import { faTriangleExclamation } from '@fortawesome/free-solid-svg-icons';
+import React, { useEffect, useState } from 'react';
+import Dialog from '../ui/Dialog';
 import type { ConfirmState } from '../../types/ui';
-import ModalHeader from './ModalHeader';
 
 type ConfirmModalProps = {
   state: ConfirmState;
@@ -9,32 +8,46 @@ type ConfirmModalProps = {
 };
 
 const ConfirmModal = ({ state, onClose }: ConfirmModalProps) => {
+  const [typed, setTyped] = useState('');
+  const phrase = state?.confirmPhrase;
+
+  useEffect(() => {
+    setTyped('');
+  }, [state?.message]);
+
   if (!state) return null;
 
+  const armed = !phrase || typed.trim().toUpperCase() === phrase.toUpperCase();
+
   return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <ModalHeader icon={faTriangleExclamation} title="Bist du sicher?" onClose={onClose} danger />
-        <p className="modal-text">{state.message}</p>
-        <div className="modal-actions">
-          <div className="modal-actions-left" />
-          <div className="modal-actions-right">
-            <button className="ghost-button" onClick={onClose}>
-              Abbrechen
-            </button>
-            <button
-              className={state.danger ? 'ghost-button danger' : 'primary'}
-              onClick={() => {
-                state.onConfirm();
-                onClose();
-              }}
-            >
-              {state.confirmLabel ?? 'OK'}
-            </button>
-          </div>
+    <Dialog
+      open
+      width={460}
+      title={state.title ?? 'Bist du sicher?'}
+      subtitle={state.message}
+      primaryLabel={state.confirmLabel ?? 'OK'}
+      primaryDanger={state.danger}
+      primaryDisabled={!armed}
+      onPrimary={() => {
+        state.onConfirm();
+        onClose();
+      }}
+      onClose={onClose}
+    >
+      {phrase && (
+        <div className="field">
+          <label htmlFor="confirm-phrase">Zur Bestätigung „{phrase}“ eingeben</label>
+          <input
+            id="confirm-phrase"
+            className="input"
+            placeholder={phrase}
+            autoComplete="off"
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+          />
         </div>
-      </div>
-    </div>
+      )}
+    </Dialog>
   );
 };
 

@@ -26,7 +26,7 @@ const UpdateErrorDetails = ({ message }: { message: string }) => {
         spellCheck={false}
       />
       <div className="update-error-actions">
-        <button type="button" className="ghost-button" onClick={() => void copyError()}>Fehler kopieren</button>
+        <button type="button" className="btn btn-secondary" onClick={() => void copyError()}>Fehler kopieren</button>
         {copyStatus && <span role="status">{copyStatus}</span>}
       </div>
     </div>

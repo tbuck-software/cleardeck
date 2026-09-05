@@ -1,22 +1,29 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faTrash, faLink, faLinkSlash, faPen, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import { createRoot } from 'react-dom/client';
 import './index.css';
+
 import AuthScreen from './components/auth/AuthScreen';
 import AuthUpdates from './components/auth/AuthUpdates';
-import Sidebar from './components/layout/Sidebar';
-import YearSelector from './components/ui/YearSelector';
+import AppSidebar from './components/layout/AppSidebar';
+import SettingsSidebar from './components/layout/SettingsSidebar';
+
 import Dashboard from './components/pages/Dashboard';
 import EmployeeList from './components/pages/EmployeeList';
-import EmployeeForm from './components/pages/EmployeeForm';
-import EmployeeDetail from './components/pages/EmployeeDetail';
-import SettingsPage from './components/pages/SettingsPage';
-import DevPage from './components/pages/DevPage';
-import CalendarPage from './components/pages/CalendarPage';
+import EmployeeDetail, { type DetailTab } from './components/pages/EmployeeDetail';
 import PatientList from './components/pages/PatientList';
 import PatientDetail from './components/pages/PatientDetail';
-import VisitModal from './components/patients/VisitModal';
+import CalendarPage from './components/pages/CalendarPage';
+import AuditPage from './components/pages/AuditPage';
+import TasksPage from './components/pages/TasksPage';
+import AdminListPage, { type AdminItem } from './components/pages/AdminListPage';
+import DevPage from './components/pages/DevPage';
+import SettingsGeneral from './components/pages/settings/SettingsGeneral';
+import SettingsSecurity from './components/pages/settings/SettingsSecurity';
+import SettingsAbout from './components/pages/settings/SettingsAbout';
+import SettingsLogs from './components/pages/settings/SettingsLogs';
+import SettingsShortcuts from './components/pages/settings/SettingsShortcuts';
+
+import CommandPalette, { type PaletteResult } from './components/ui/CommandPalette';
 import ConfirmModal from './components/modals/ConfirmModal';
 import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
@@ -26,24 +33,54 @@ import InstructionModal from './components/modals/InstructionModal';
 import EmployeeCompetencyModal from './components/modals/EmployeeCompetencyModal';
 import EmployeeInstructionModal from './components/modals/EmployeeInstructionModal';
 import RecommendedCompetenciesModal from './components/modals/RecommendedCompetenciesModal';
-import ModalHeader from './components/modals/ModalHeader';
-import BirthDateInput from './components/ui/BirthDateInput';
+import EmployeeModal from './components/modals/EmployeeModal';
+import EventModal from './components/modals/EventModal';
+import PatientModal from './components/patients/PatientModal';
+import VisitModal from './components/patients/VisitModal';
+import AuditModal from './components/modals/AuditModal';
+import PasswordModal from './components/modals/PasswordModal';
+import { BackupExportModal, BackupRestoreModal } from './components/modals/BackupTransferModal';
+import AuditViewModal from './components/modals/AuditViewModal';
+import DayModal from './components/modals/DayModal';
+import ReportModal from './components/modals/ReportModal';
+
+import api from './services/api';
+import useAppLogic from './hooks/useAppLogic';
+import useViewport from './hooks/useViewport';
+import useQprData from './hooks/useQprData';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
+import { buildDashboardTasks, buildDataQuality, type TaskTarget } from './utils/dashboardTasks';
+import { groupOfEvent, type EventGroup } from './utils/eventStyle';
+import { matchesQualificationRelevance } from './utils/qualificationRelevance';
+import { unifyEvents } from './utils/unifyEvents';
 import {
   buildNavigationSnapshot,
   createAppHistoryState,
   isAppHistoryState,
   resolveNavigationSnapshot,
 } from './utils/navigationHistory';
-import { matchesQualificationRelevance } from './utils/qualificationRelevance';
-import { unifyEvents } from './utils/unifyEvents';
-import useAppLogic from './hooks/useAppLogic';
-import type { EventModalType, Page } from './types/ui';
-import type { EmployeeWithPeriod, PatientWithLatestVisit, UnifiedEvent } from './shared/types';
+import { SETTINGS_PAGES, type AuditModalState, type Page } from './types/ui';
+import type {
+  AuditWithDetails,
+  BackupState,
+  EmployeeWithPeriod,
+  PatientWithLatestVisit,
+} from './shared/types';
+
+const emptyAuditModal = (): AuditModalState => ({
+  open: false,
+  mode: 'create',
+  auditDate: new Date().toISOString().slice(0, 10),
+  inspector: '',
+  kind: 'regel',
+  findings: '',
+  results: { qb1: 'A', qb2: 'A', qb3: 'A', qb4: 'text', qb5: 'ok', billing: 'ok' },
+  clientIds: [],
+});
 
 const App = () => {
   const {
-    constants: { fteHelp, pageTitle, pageSubtitle },
+    constants: { fteHelp },
     state: {
       currentYear,
       year,
@@ -54,7 +91,6 @@ const App = () => {
       competencyDefinitions,
       instructionDefinitions,
       form,
-      periods,
       selectedEmployee,
       employeeCompetencies,
       employeeInstructions,
@@ -73,9 +109,6 @@ const App = () => {
       search,
       statusFilter,
       qualificationFilter,
-      addNewPeriod,
-      qualificationEdits,
-      competencyEdits,
       qualificationModal,
       competencyModal,
       instructionModal,
@@ -92,13 +125,12 @@ const App = () => {
       hiddenEventTypes,
       calendar,
       dashboardWidgets,
-      // Patient state
       patients,
       selectedPatient,
       patientVisits,
       patientModal,
       patientSearch,
-      patientRatingFilter,
+      patientGroupFilter,
       patientVisitModal,
     },
     setters: {
@@ -106,7 +138,6 @@ const App = () => {
       setBaseHoursInput,
       setForm,
       setAddPeriodForm,
-      setAddNewPeriod,
       setQualificationFilter,
       setQualificationModal,
       setCompetencyModal,
@@ -115,7 +146,6 @@ const App = () => {
       setEmployeeCompetencyModal,
       setEmployeeInstructionModal,
       setSuggestedCompetencyModal,
-      setEncryptionSetup,
       setSearch,
       setStatusFilter,
       setPeriodToDelete,
@@ -123,18 +153,17 @@ const App = () => {
       setRecoveryKeyModal,
       setRecoveryReset,
       setConfirmState,
-      // Patient setters
       setPatientModal,
       setSelectedPatient,
       setPatientSearch,
-      setPatientRatingFilter,
+      setPatientGroupFilter,
       setPatientVisitModal,
     },
-    derived: { filteredEmployees, averageFte, totalFte, totalHeadcount, displayStart, timelineItems, crumbs, sidebarPage, filteredPatients },
+    derived: { filteredEmployees, totalFte, timelineItems, sidebarPage, filteredPatients },
     actions: {
       goTo,
       handleLogin,
-      handleSave,
+      handleLock,
       handleExport,
       handleSelect,
       confirmDeleteEmployee,
@@ -172,8 +201,6 @@ const App = () => {
       handleDownloadUpdate,
       handleInstallUpdate,
       openEnableEncryption,
-      closeEnableEncryption,
-      handleEnableEncryption,
       handleDisableEncryption,
       handleAddPeriod,
       handleSaveEvent,
@@ -181,15 +208,12 @@ const App = () => {
       openNewPeriodModal,
       openExistingPeriodModal,
       openEventModalForEvent,
+      calendarActions,
       openCreateModal,
       openEditModal,
       handleEditModalSave,
-      resetForm,
-      toggleEventTypeFilter,
-      showAllEventTypes,
-      hideAllEventTypes,
-      calendarActions,
-      // Patient actions
+      setToastMessage,
+      handleError,
       handleSelectPatient,
       handleSavePatient,
       confirmDeletePatient,
@@ -202,7 +226,45 @@ const App = () => {
       closeVisitModal,
     },
   } = useAppLogic();
-  const [canGoBack, setCanGoBack] = useState(false);
+
+  const { wideSidebar, wideTable } = useViewport();
+  const {
+    careSettings,
+    recentVisits,
+    audits,
+    auditSections,
+    definitionUsage,
+    actions: qprActions,
+  } = useQprData({
+    ready: appReady.unlocked,
+    handleError,
+  });
+
+  const [detailTab, setDetailTab] = useState<DetailTab>('comp');
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [doneTaskIds, setDoneTaskIds] = useState<string[]>([]);
+  const [hiddenEventGroups, setHiddenEventGroups] = useState<EventGroup[]>([]);
+  const [dayModalDate, setDayModalDate] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportYear, setReportYear] = useState(currentYear - 1);
+  const [auditModal, setAuditModal] = useState<AuditModalState>(emptyAuditModal);
+  const [auditView, setAuditView] = useState<AuditWithDetails | null>(null);
+  const [previousPage, setPreviousPage] = useState<Page>('dashboard');
+  const [backup, setBackup] = useState<BackupState>({
+    folder: null,
+    auto: 'off',
+    keep: 10,
+    lastBackupAt: null,
+    backups: [],
+  });
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [restoreOpen, setRestoreOpen] = useState(false);
+  const [restoreBusy, setRestoreBusy] = useState(false);
+
   const historyIndexRef = useRef(0);
   const restoringHistoryRef = useRef(false);
   const selectedEmployeeRef = useRef(selectedEmployee);
@@ -214,17 +276,21 @@ const App = () => {
   selectedEmployeeRef.current = selectedEmployee;
   selectedPatientRef.current = selectedPatient;
 
+  const inSettings = SETTINGS_PAGES.includes(page);
+  const years = useMemo(
+    () => [currentYear - 2, currentYear - 1, currentYear],
+    [currentYear],
+  );
+
+  // — employee edit modal: hours and VZÄ stay in step while linked —
+
   const updateWeeklyHours = (value: string) => {
     setEditModal((prev) => {
       const next = { ...prev, weeklyHours: value };
       if (prev.linked) {
-        const hoursNum = Number(value);
-        if (!Number.isNaN(hoursNum) && hoursNum > 0) {
-          const fteVal = deriveFteFromWeeklyHours(hoursNum, baseHours || 36);
-          next.fteValue = fteVal ? fteVal.toFixed(2) : '';
-        } else {
-          next.fteValue = '';
-        }
+        const hours = Number(value);
+        const fte = !Number.isNaN(hours) && hours > 0 ? deriveFteFromWeeklyHours(hours, baseHours || 36) : null;
+        next.fteValue = fte ? fte.toFixed(2) : '';
       }
       return next;
     });
@@ -234,13 +300,9 @@ const App = () => {
     setEditModal((prev) => {
       const next = { ...prev, fteValue: value };
       if (prev.linked) {
-        const fteNum = Number(value);
-        if (!Number.isNaN(fteNum) && fteNum > 0) {
-          const hoursVal = deriveWeeklyHoursFromFte(fteNum, baseHours || 36);
-          next.weeklyHours = hoursVal ? hoursVal.toFixed(1) : '';
-        } else {
-          next.weeklyHours = '';
-        }
+        const fte = Number(value);
+        const hours = !Number.isNaN(fte) && fte > 0 ? deriveWeeklyHoursFromFte(fte, baseHours || 36) : null;
+        next.weeklyHours = hours ? hours.toFixed(1) : '';
       }
       return next;
     });
@@ -249,27 +311,20 @@ const App = () => {
   const toggleLinked = (checked: boolean) => {
     setEditModal((prev) => {
       const next = { ...prev, linked: checked };
-      if (checked) {
-        // Recompute derived value when re-linking
-        if (prev.weeklyHours) {
-          const hoursNum = Number(prev.weeklyHours);
-          if (!Number.isNaN(hoursNum) && hoursNum > 0) {
-            const fteVal = deriveFteFromWeeklyHours(hoursNum, baseHours || 36);
-            next.fteValue = fteVal ? fteVal.toFixed(2) : '';
-          }
-        } else if (prev.fteValue) {
-          const fteNum = Number(prev.fteValue);
-          if (!Number.isNaN(fteNum) && fteNum > 0) {
-            const hoursVal = deriveWeeklyHoursFromFte(fteNum, baseHours || 36);
-            next.weeklyHours = hoursVal ? hoursVal.toFixed(1) : '';
-          }
-        }
+      if (!checked) return next;
+      if (prev.weeklyHours) {
+        const hours = Number(prev.weeklyHours);
+        const fte = !Number.isNaN(hours) && hours > 0 ? deriveFteFromWeeklyHours(hours, baseHours || 36) : null;
+        if (fte) next.fteValue = fte.toFixed(2);
+      } else if (prev.fteValue) {
+        const fte = Number(prev.fteValue);
+        const hours = !Number.isNaN(fte) && fte > 0 ? deriveWeeklyHoursFromFte(fte, baseHours || 36) : null;
+        if (hours) next.weeklyHours = hours.toFixed(1);
       }
       return next;
     });
   };
 
-  const isCreateMode = editModal.mode === 'create';
   const availableCompetencyDefinitions = competencyDefinitions.filter(
     (definition) =>
       definition.id &&
@@ -281,10 +336,14 @@ const App = () => {
       : availableCompetencyDefinitions.filter((definition) =>
           matchesQualificationRelevance(selectedEmployee.qualification, definition.relevance),
         );
+  // Since v015 a person can hold several rows per topic (the completed record
+  // plus its follow-up), so only an *open* one blocks assigning it again.
   const availableInstructionDefinitions = instructionDefinitions.filter(
     (definition) =>
       definition.id &&
-      !employeeInstructions.some((entry) => entry.instructionDefinitionId === definition.id),
+      !employeeInstructions.some(
+        (entry) => entry.instructionDefinitionId === definition.id && !entry.completedAt,
+      ),
   );
 
   const unifiedEvents = useMemo(
@@ -297,17 +356,120 @@ const App = () => {
         dashboardWidgets.patientBirthdays,
         dashboardWidgets.patientVisits,
       ),
-    [upcomingEvents, dashboardWidgets.expiringTrainings, dashboardWidgets.birthdaysAnniversaries, hiddenEventTypes, dashboardWidgets.patientBirthdays, dashboardWidgets.patientVisits],
+    [
+      upcomingEvents,
+      dashboardWidgets.expiringTrainings,
+      dashboardWidgets.birthdaysAnniversaries,
+      hiddenEventTypes,
+      dashboardWidgets.patientBirthdays,
+      dashboardWidgets.patientVisits,
+    ],
   );
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Visits change through the detail page, so the list's trend bars are
+  // refreshed whenever the patient list itself is reloaded.
+  useEffect(() => {
+    if (!appReady.unlocked) return;
+    void qprActions.refreshRecentVisits();
+  }, [appReady.unlocked, patients, qprActions]);
+
+  const tasks = useMemo(
+    () =>
+      buildDashboardTasks({
+        today,
+        patients,
+        employees: dataset?.employees ?? [],
+        openInstructions: dashboardWidgets.openInstructions,
+        visitIntervalDays: careSettings.visitIntervalDays,
+      }),
+    [today, patients, dataset?.employees, dashboardWidgets.openInstructions, careSettings.visitIntervalDays],
+  );
+
+  const quality = useMemo(
+    () => buildDataQuality(dataset?.employees ?? [], patients),
+    [dataset?.employees, patients],
+  );
+
+  const upcoming = useMemo(
+    () =>
+      unifiedEvents
+        .filter((event) => {
+          const days = Math.round(
+            (new Date(`${event.date}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000,
+          );
+          return days >= 0 && days <= 30;
+        })
+        .slice(0, 7),
+    [unifiedEvents, today],
+  );
+
+  useEffect(() => {
+    if (!appReady.unlocked) return;
+    void (async () => {
+      try {
+        setBackup(await api.backup.get());
+      } catch (err) {
+        handleError(err);
+      }
+    })();
+  }, [appReady.unlocked, handleError]);
+
+  const runBackup = async () => {
+    setBackupBusy(true);
+    try {
+      const result = await api.backup.run();
+      setBackup(result.settings);
+      setToastMessage(result.saved ? `Backup geschrieben: ${result.file}` : (result.error ?? 'Backup fehlgeschlagen.'));
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setBackupBusy(false);
+    }
+  };
+
+  const restoreFromBackup = async (source: string) => {
+    setRestoreBusy(true);
+    try {
+      const result = await api.backup.restore(source);
+      setBackup(result.settings);
+      if (result.saved) {
+        setRestoreOpen(false);
+        setToastMessage(`Wiederhergestellt aus ${result.file}. Bitte Daten prüfen.`);
+        window.location.reload();
+      } else {
+        setToastMessage(result.error ?? 'Wiederherstellung fehlgeschlagen.');
+      }
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setRestoreBusy(false);
+    }
+  };
+
+  const changePassword = async (input: { currentPassword: string; newPassword: string }) => {
+    setPasswordBusy(true);
+    setPasswordError(null);
+    try {
+      await api.auth.changePassword(input);
+      setPasswordOpen(false);
+      setToastMessage('Passwort geändert.');
+    } catch (err) {
+      setPasswordError(err instanceof Error ? err.message : 'Das Passwort konnte nicht geändert werden.');
+    } finally {
+      setPasswordBusy(false);
+    }
+  };
+
+  // — navigation —
 
   const pushHistorySnapshot = useCallback(
     (snapshot: ReturnType<typeof buildNavigationSnapshot>) => {
       if (!appReady.unlocked) return;
-
       const nextIndex = historyIndexRef.current + 1;
       window.history.pushState(createAppHistoryState(nextIndex, snapshot), '');
       historyIndexRef.current = nextIndex;
-      setCanGoBack(nextIndex > 0);
     },
     [appReady.unlocked],
   );
@@ -320,25 +482,18 @@ const App = () => {
         patients,
       );
 
-      if (resolvedPage !== 'patients') {
-        setSelectedPatient(null);
-      }
+      if (resolvedPage !== 'patients') setSelectedPatient(null);
 
       if (resolvedPage === 'view' && employee) {
         await handleSelect(employee);
         return;
       }
-
       if (resolvedPage === 'patients') {
         goTo('patients');
-        if (patient) {
-          await handleSelectPatient(patient);
-        } else {
-          setSelectedPatient(null);
-        }
+        if (patient) await handleSelectPatient(patient);
+        else setSelectedPatient(null);
         return;
       }
-
       goTo(resolvedPage);
     },
     [dataset?.employees, patients, setSelectedPatient, handleSelect, handleSelectPatient, goTo],
@@ -348,17 +503,14 @@ const App = () => {
     () => buildNavigationSnapshot(page, selectedEmployee?.id ?? null, selectedPatient?.id ?? null),
     [page, selectedEmployee?.id, selectedPatient?.id],
   );
-
   currentSnapshotRef.current = currentSnapshot;
 
   useEffect(() => {
     if (!appReady.unlocked) return;
-
     const state = window.history.state;
     const index = isAppHistoryState(state) ? state.index : historyIndexRef.current;
     window.history.replaceState(createAppHistoryState(index, currentSnapshot), '');
     historyIndexRef.current = index;
-    setCanGoBack(index > 0);
   }, [appReady.unlocked, currentSnapshot]);
 
   useEffect(() => {
@@ -367,16 +519,13 @@ const App = () => {
     if (!isAppHistoryState(window.history.state)) {
       window.history.replaceState(createAppHistoryState(0, currentSnapshotRef.current), '');
       historyIndexRef.current = 0;
-      setCanGoBack(false);
     }
 
     const handlePopState = (event: PopStateEvent) => {
       const state = isAppHistoryState(event.state)
         ? event.state
         : createAppHistoryState(0, currentSnapshotRef.current);
-
       historyIndexRef.current = state.index;
-      setCanGoBack(state.index > 0);
       restoringHistoryRef.current = true;
       void restoreSnapshot(state.snapshot).finally(() => {
         restoringHistoryRef.current = false;
@@ -396,7 +545,6 @@ const App = () => {
 
     window.addEventListener('popstate', handlePopState);
     window.addEventListener('mouseup', handleMouseUp);
-
     return () => {
       window.removeEventListener('popstate', handlePopState);
       window.removeEventListener('mouseup', handleMouseUp);
@@ -406,28 +554,27 @@ const App = () => {
   const navigateToPage = useCallback(
     (target: Page) => {
       if (!restoringHistoryRef.current) {
-        const snapshot = buildNavigationSnapshot(
-          target,
-          selectedEmployeeRef.current?.id ?? null,
-          target === 'patients' ? null : selectedPatientRef.current?.id ?? null,
+        pushHistorySnapshot(
+          buildNavigationSnapshot(
+            target,
+            selectedEmployeeRef.current?.id ?? null,
+            target === 'patients' ? null : (selectedPatientRef.current?.id ?? null),
+          ),
         );
-        pushHistorySnapshot(snapshot);
       }
-
-      if (target === 'patients') {
-        setSelectedPatient(null);
-      }
-
+      if (target === 'patients') setSelectedPatient(null);
+      if (!SETTINGS_PAGES.includes(target) && !SETTINGS_PAGES.includes(page)) setPreviousPage(target);
       goTo(target);
     },
-    [goTo, pushHistorySnapshot, setSelectedPatient],
+    [goTo, page, pushHistorySnapshot, setSelectedPatient],
   );
 
   const navigateToEmployee = useCallback(
-    async (employee: EmployeeWithPeriod) => {
+    async (employee: EmployeeWithPeriod, tab: DetailTab = 'comp') => {
       if (!restoringHistoryRef.current) {
         pushHistorySnapshot(buildNavigationSnapshot('view', employee.id ?? null, null));
       }
+      setDetailTab(tab);
       await handleSelect(employee);
     },
     [handleSelect, pushHistorySnapshot],
@@ -444,37 +591,260 @@ const App = () => {
     [goTo, handleSelectPatient, pushHistorySnapshot],
   );
 
-  const handleUnifiedEventClick = async (event: UnifiedEvent) => {
-    // Handle patient events
-    if (event.patientId) {
-      const patient = patients.find((p) => p.id === event.patientId);
-      if (patient) {
-        await navigateToPatient(patient);
+  const openTarget = useCallback(
+    (target: TaskTarget) => {
+      if (target.kind === 'employee') {
+        const employee = dataset?.employees.find((entry) => entry.id === target.id);
+        if (employee) void navigateToEmployee(employee, target.tab ?? 'comp');
+        return;
       }
-      return;
-    }
-    // Handle employee events
-    const employee = dataset?.employees.find((emp) => emp.id === event.employeeId);
-    if (employee) {
-      await navigateToEmployee(employee);
+      const patient = patients.find((entry) => entry.id === target.id);
+      if (patient) void navigateToPatient(patient);
+    },
+    [dataset?.employees, patients, navigateToEmployee, navigateToPatient],
+  );
+
+  const openEvent = useCallback(
+    async (event: { employeeId?: number; patientId?: number }) => {
+      if (event.patientId) {
+        const patient = patients.find((entry) => entry.id === event.patientId);
+        if (patient) await navigateToPatient(patient);
+        return;
+      }
+      const employee = dataset?.employees.find((entry) => entry.id === event.employeeId);
+      if (employee) await navigateToEmployee(employee);
+    },
+    [dataset?.employees, patients, navigateToEmployee, navigateToPatient],
+  );
+
+  // — keyboard —
+
+  useEffect(() => {
+    if (!appReady.unlocked) return;
+    const onKey = (event: KeyboardEvent) => {
+      const mod = event.metaKey || event.ctrlKey;
+      if (mod && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setPaletteOpen(true);
+      }
+      if (mod && event.key === ',') {
+        event.preventDefault();
+        navigateToPage('settings');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [appReady.unlocked, navigateToPage]);
+
+  // — command palette —
+
+  const paletteResults = useCallback(
+    (query: string): PaletteResult[] => {
+      const needle = query.trim().toLowerCase();
+      const matches = (text: string) => text.toLowerCase().includes(needle);
+
+      const pages: { page: Page; label: string }[] = [
+        { page: 'dashboard', label: 'Übersicht' },
+        { page: 'list', label: 'Team' },
+        { page: 'patients', label: 'Patient:innen' },
+        { page: 'audit', label: 'MD-Prüfung' },
+        { page: 'calendar', label: 'Kalender' },
+        { page: 'quals', label: 'Qualifikationen' },
+        { page: 'comps', label: 'Kompetenzen' },
+        { page: 'instrs', label: 'Einweisungen' },
+        { page: 'settings', label: 'Einstellungen' },
+        { page: 'security', label: 'Sicherheit & Backup' },
+        { page: 'shortcuts', label: 'Tastenkürzel' },
+        { page: 'logs', label: 'Logs & Diagnose' },
+        { page: 'about', label: 'Über ClearDeck' },
+      ];
+
+      const paletteActions: { label: string; run: () => void }[] = [
+        { label: 'Jahresnachweis erstellen', run: (): void => setReportOpen(true) },
+        { label: 'Person anlegen', run: openCreateModal },
+        { label: 'Patient:in anlegen', run: openCreatePatientModal },
+        {
+          label: 'Personenliste für den MD exportieren (Anlage 7)',
+          run: (): void => void exportPersonList(),
+        },
+        {
+          label: 'Prüfung erfassen',
+          run: (): void => setAuditModal({ ...emptyAuditModal(), open: true }),
+        },
+      ];
+
+      return [
+        ...(dataset?.employees ?? [])
+          .filter((employee) => matches(employee.name))
+          .map((employee): PaletteResult => ({
+            id: `employee-${employee.id}`,
+            kind: 'Team',
+            title: employee.name,
+            sub: String(employee.qualification),
+            run: () => void navigateToEmployee(employee),
+          })),
+        ...patients
+          .filter((patient) => matches(`${patient.name} ${patient.diagnosis ?? ''}`))
+          .map((patient): PaletteResult => ({
+            id: `patient-${patient.id}`,
+            kind: 'Patient:in',
+            title: patient.name,
+            sub: patient.diagnosis ?? '',
+            run: () => void navigateToPatient(patient),
+          })),
+        ...pages
+          .filter((entry) => matches(entry.label))
+          .map((entry): PaletteResult => ({
+            id: `page-${entry.page}`,
+            kind: 'Seite',
+            title: entry.label,
+            run: () => navigateToPage(entry.page),
+          })),
+        ...paletteActions
+          .filter((entry) => matches(entry.label))
+          .map((entry): PaletteResult => ({
+            id: `action-${entry.label}`,
+            kind: 'Aktion',
+            title: entry.label,
+            run: entry.run,
+          })),
+      ];
+    },
+    [
+      dataset?.employees,
+      patients,
+      navigateToEmployee,
+      navigateToPatient,
+      navigateToPage,
+      openCreateModal,
+      openCreatePatientModal,
+    ],
+  );
+
+  // — MD-Prüfung —
+
+  const exportPersonList = async () => {
+    try {
+      const result = await api.audits.exportPersonList();
+      if (result.saved) {
+        setToastMessage(
+          `Personenliste nach Anlage 7 gespeichert — ${result.total} Personen alphabetisch${
+            result.withoutGroup ? `, ${result.withoutGroup} ohne Teilgruppe` : ''
+          }.`,
+        );
+      }
+    } catch (err) {
+      handleError(err);
     }
   };
 
-  const handleCalendarEventClick = async (event: { employeeId?: number; patientId?: number }) => {
-    // Handle patient events
-    if (event.patientId) {
-      const patient = patients.find((p) => p.id === event.patientId);
-      if (patient) {
-        await navigateToPatient(patient);
-      }
-      return;
-    }
-    // Handle employee events
-    const employee = dataset?.employees.find((emp) => emp.id === event.employeeId);
-    if (employee) {
-      await navigateToEmployee(employee);
+  const saveAudit = async () => {
+    try {
+      const results = auditSections.map((section) => ({
+        sectionKey: section.key,
+        result: auditModal.results[section.key] ?? (section.scale === 'text' ? 'text' : 'A'),
+      }));
+      const updated = await api.audits.save({
+        id: auditModal.id,
+        auditDate: auditModal.auditDate,
+        inspector: auditModal.inspector || null,
+        kind: auditModal.kind,
+        findings: auditModal.findings || null,
+        results,
+        clientIds: auditModal.clientIds,
+      });
+      qprActions.setAudits(updated);
+      setAuditModal(emptyAuditModal());
+      setToastMessage('Prüfung gespeichert.');
+    } catch (err) {
+      handleError(err);
     }
   };
+
+  const deleteAudit = () => {
+    if (!auditModal.id) return;
+    setConfirmState({
+      message: 'Prüfung und alle erfassten Ergebnisse wirklich löschen?',
+      danger: true,
+      confirmLabel: 'Löschen',
+      onConfirm: async () => {
+        try {
+          qprActions.setAudits(await api.audits.delete(auditModal.id as number));
+          setAuditModal(emptyAuditModal());
+          setToastMessage('Prüfung gelöscht.');
+        } catch (err) {
+          handleError(err);
+        }
+      },
+    });
+  };
+
+  // — Verwaltung lists —
+
+  const adminPage = (): { title: string; subtitle: string; items: AdminItem[]; empty: string } | null => {
+    if (page === 'quals') {
+      return {
+        title: 'Qualifikationen',
+        subtitle: 'Kategorien für den Jahresnachweis. Reihenfolge = Reihenfolge im Export.',
+        empty: 'Noch keine Qualifikation angelegt.',
+        items: qualifications
+          .filter((entry) => entry.id != null)
+          .map((entry) => ({
+            id: entry.id as number,
+            title: entry.name,
+            note: entry.note ?? 'Ohne Notiz',
+            tags: [] as string[],
+            usage: `${(dataset?.employees ?? []).filter((employee) => employee.qualification === entry.name).length} Personen`,
+          })),
+      };
+    }
+    if (page === 'comps') {
+      return {
+        title: 'Kompetenzen',
+        subtitle: 'Fachthemen mit Kategorie und Relevanz — Grundlage der Kompetenzmatrix.',
+        empty: 'Noch keine Kompetenz angelegt.',
+        items: competencyDefinitions
+          .filter((entry) => entry.id != null)
+          .map((entry) => ({
+            id: entry.id as number,
+            title: entry.code ? `${entry.code} · ${entry.name}` : entry.name,
+            note: entry.note ?? `Relevanz: ${entry.relevance ?? 'Alle'}`,
+            tags: [entry.category ?? 'Allgemein'],
+            usage: `${definitionUsage.competencies[entry.id as number] ?? 0} zugeordnet`,
+          })),
+      };
+    }
+    if (page === 'instrs') {
+      return {
+        title: 'Einweisungen',
+        subtitle: 'Pflichtunterweisungen mit Rechtsgrundlage und Wiederholungsintervall.',
+        empty: 'Noch keine Einweisung angelegt.',
+        items: instructionDefinitions
+          .filter((entry) => entry.id != null)
+          .map((entry) => ({
+            id: entry.id as number,
+            title: entry.topic,
+            note: entry.note ?? 'Nachweis als Unterschriftenliste',
+            tags: entry.legalBasis ? [entry.legalBasis] : [],
+            usage: `${definitionUsage.instructions[entry.id as number] ?? 0} zugeordnet`,
+          })),
+      };
+    }
+    return null;
+  };
+
+  const reorderTo = (
+    ids: number[],
+    id: number,
+    targetIndex: number,
+    persist: (ordered: number[]) => void | Promise<void>,
+  ) => {
+    const without = ids.filter((entry) => entry !== id);
+    without.splice(targetIndex, 0, id);
+    void persist(without);
+  };
+
+  // — auth gate —
 
   if (authLoading || appReady.startupError || !appReady.configured || !appReady.unlocked) {
     const authMode: 'setup' | 'login' = appReady.configured ? 'login' : 'setup';
@@ -487,7 +857,16 @@ const App = () => {
           onForgotPassword={appReady.configured ? startRecoveryReset : undefined}
           onResetApp={appReady.configured ? handleFullReset : undefined}
           globalError={appReady.startupError ?? error}
-          footer={<AuthUpdates status={updateStatus} version={appInfo?.version} onCheck={handleCheckUpdates} onDownload={handleDownloadUpdate} onInstall={handleInstallUpdate} />}
+          configuredStorageMode={appReady.storageMode}
+          footer={
+            <AuthUpdates
+              status={updateStatus}
+              version={appInfo?.version}
+              onCheck={handleCheckUpdates}
+              onDownload={handleDownloadUpdate}
+              onInstall={handleInstallUpdate}
+            />
+          }
         />
         <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
         <RecoveryKeyModal
@@ -499,221 +878,161 @@ const App = () => {
           state={recoveryReset}
           loading={loading}
           onChange={(next) => setRecoveryReset((prev) => ({ ...prev, ...next }))}
-          onClose={() => setRecoveryReset({ open: false, recoveryKey: '', newPassword: '', repeat: '', error: null })}
+          onClose={() =>
+            setRecoveryReset({ open: false, recoveryKey: '', newPassword: '', repeat: '', error: null })
+          }
           onSubmit={handleRecoveryReset}
         />
-        {toast && <div className="toast">{toast}</div>}
-        {error && <div className="toast error-toast">{error}</div>}
-        {loading && <div className="loading">Lade / speichere …</div>}
+        {toast && <div className="cd-toast">{toast}</div>}
+        {error && <div className="cd-toast cd-toast-error">{error}</div>}
+        {loading && <div className="cd-loading">Lade / speichere …</div>}
       </>
     );
   }
 
-  return (
-    <div className="layout">
-      <Sidebar
-        current={sidebarPage}
-        onNavigate={navigateToPage}
-        updateStatus={updateStatus}
-        onDownloadUpdate={handleDownloadUpdate}
-        onInstallUpdate={handleInstallUpdate}
-        onCheckUpdates={handleCheckUpdates}
-      />
-      <div className="main">
-        <header className="topbar">
-          <div className="topbar-main">
-            <div className="breadcrumbs">
-              <button
-                type="button"
-                className="topbar-back-button"
-                onClick={() => window.history.back()}
-                disabled={!canGoBack}
-                aria-label="Zurück"
-                title="Zurück"
-              >
-                <FontAwesomeIcon icon={faArrowLeft} />
-              </button>
-              {(page === 'patients' && selectedPatient ? [
-                { label: 'Dashboard', page: 'dashboard' as const },
-                { label: 'Patient:innen', page: 'patients' as const },
-                { label: selectedPatient.name },
-              ] : crumbs()).map((c, idx, arr) => (
-                <span key={`${c.label}-${idx}`} className="crumb-item">
-                  {c.page ? (
-                    <button className="crumb-link" onClick={() => navigateToPage(c.page!)}>
-                      {c.label}
-                    </button>
-                  ) : (
-                    <span className="crumb-current">{c.label}</span>
-                  )}
-                  {idx < arr.length - 1 && <span className="crumb-sep">/</span>}
-                </span>
-              ))}
-            </div>
-            <h1>{page === 'patients' && selectedPatient ? selectedPatient.name : pageTitle[page]}</h1>
-            <p className="subtitle">{page === 'patients' && selectedPatient ? (selectedPatient.diagnosis || 'Patient:in Details') : pageSubtitle[page]}</p>
-          </div>
-          {page !== 'settings' && page !== 'view' && page !== 'calendar' && !(page === 'patients' && selectedPatient) && (
-            <div className="controls">
-              <YearSelector year={year} onChange={setYear} currentYear={currentYear} />
-            </div>
-          )}
-        </header>
+  const admin = adminPage();
+  const visibleCalendarEvents = Object.fromEntries(
+    Object.entries(calendar.eventsByDate).map(([key, events]) => [
+      key,
+      events.filter((event) => !hiddenEventGroups.includes(groupOfEvent(event.type))),
+    ]),
+  );
+  const dayEvents = dayModalDate ? (calendar.eventsByDate[dayModalDate] ?? []) : [];
 
+  return (
+    <div className="app-shell">
+      {inSettings ? (
+        <SettingsSidebar
+          current={page}
+          wide={wideSidebar}
+          storageMode={storageMode}
+          onNavigate={navigateToPage}
+          onLeave={() => navigateToPage(previousPage)}
+          onLock={() => void handleLock()}
+        />
+      ) : (
+        <AppSidebar
+          current={sidebarPage}
+          wide={wideSidebar}
+          storageMode={storageMode}
+          openTaskCount={tasks.filter((task) => !doneTaskIds.includes(task.id)).length}
+          updateStatus={updateStatus}
+          currentVersion={appInfo?.version}
+          onNavigate={navigateToPage}
+          onOpenPalette={() => setPaletteOpen(true)}
+          onLock={() => void handleLock()}
+          onCheckUpdates={handleCheckUpdates}
+          onDownloadUpdate={handleDownloadUpdate}
+          onInstallUpdate={handleInstallUpdate}
+        />
+      )}
+
+      <main className="app-main">
         {page === 'dashboard' && (
           <Dashboard
             year={year}
+            years={years}
             dataset={dataset}
             baseHours={baseHours}
-            averageFte={averageFte}
             totalFte={totalFte}
-            totalHeadcount={totalHeadcount}
+            totalHeadcount={dataset?.aggregation.totalHeadcount ?? 0}
+            actionNeededCount={patients.filter((patient) => patient.latestActionNeeded).length}
+            tasks={tasks}
+            doneTaskIds={doneTaskIds}
+            quality={quality}
+            upcoming={upcoming}
+            onYearChange={setYear}
+            onToggleTask={(id) =>
+              setDoneTaskIds((current) =>
+                current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id],
+              )
+            }
+            onOpenTarget={openTarget}
+            onOpenEvent={(event) => void openEvent(event)}
+            onOpenReport={() => {
+              setReportYear(year - 1);
+              setReportOpen(true);
+            }}
+            onGoCalendar={() => navigateToPage('calendar')}
+            onOpenTasks={() => navigateToPage('tasks')}
+          />
+        )}
+
+        {page === 'tasks' && (
+          <TasksPage
+            tasks={tasks}
+            doneTaskIds={doneTaskIds}
+            onToggleTask={(id) =>
+              setDoneTaskIds((current) =>
+                current.includes(id) ? current.filter((entry) => entry !== id) : [...current, id],
+              )
+            }
+            onOpenTarget={openTarget}
+          />
+        )}
+
+        {page === 'list' && (
+          <EmployeeList
+            year={year}
+            years={years}
+            search={search}
+            statusFilter={statusFilter}
+            qualificationFilter={qualificationFilter}
             qualifications={qualifications}
-            unifiedEvents={unifiedEvents}
-            hiddenEventTypes={hiddenEventTypes}
-            employeeDashboardStats={dashboardWidgets.employeeDashboardStats}
-            onEventClick={handleUnifiedEventClick}
-            onToggleEventFilter={toggleEventTypeFilter}
-            onShowAllEvents={showAllEventTypes}
-            onHideAllEvents={hideAllEventTypes}
+            filteredEmployees={filteredEmployees}
+            totalFte={totalFte}
+            wideTable={wideTable}
+            onSearchChange={setSearch}
+            onStatusChange={setStatusFilter}
+            onQualificationChange={setQualificationFilter}
+            onYearChange={setYear}
+            onExport={handleExport}
+            onOpenReport={() => {
+              setReportYear(year);
+              setReportOpen(true);
+            }}
+            onCreate={openCreateModal}
+            onSelect={(employee) => void navigateToEmployee(employee)}
           />
         )}
 
         {page === 'view' && selectedEmployee && (
           <EmployeeDetail
             employee={selectedEmployee}
-            employeeCompetencies={employeeCompetencies}
-            employeeInstructions={employeeInstructions}
-            canAddCompetency={availableCompetencyDefinitions.length > 0}
-            canAddInstruction={availableInstructionDefinitions.length > 0}
-            suggestedCompetencyCount={suggestedCompetencyDefinitions.length}
-            displayStart={displayStart}
+            baseHours={baseHours}
+            tab={detailTab}
+            competencies={employeeCompetencies}
+            instructions={employeeInstructions}
             timelineItems={timelineItems}
+            suggestedCompetencyCount={suggestedCompetencyDefinitions.length}
+            availableCompetencyCount={availableCompetencyDefinitions.length}
+            availableInstructionCount={availableInstructionDefinitions.length}
+            onTabChange={setDetailTab}
+            onEdit={openEditModal}
             onAddCompetency={openNewEmployeeCompetencyModal}
             onAddInstruction={openNewEmployeeInstructionModal}
             onOpenSuggestedCompetencies={openSuggestedCompetencyModal}
-            onOpenEditModal={openEditModal}
-            onStartNewPeriod={openNewPeriodModal}
             onSelectCompetency={openEmployeeCompetencyModal}
             onSelectInstruction={openEmployeeInstructionModal}
-            onSelectPeriod={openExistingPeriodModal}
-            onSelectEvent={openEventModalForEvent}
-          />
-        )}
-
-        {page === 'list' && (
-          <EmployeeList
-            search={search}
-            statusFilter={statusFilter}
-            qualificationFilter={qualificationFilter}
-            qualifications={qualifications}
-            filteredEmployees={filteredEmployees}
-            selectedId={form.id}
-            onSearchChange={setSearch}
-            onStatusChange={(val) => setStatusFilter(val)}
-            onQualificationChange={setQualificationFilter}
-            onExport={handleExport}
-            onCreate={openCreateModal}
-            onSelect={navigateToEmployee}
-            onDelete={confirmDeleteEmployee}
-          />
-        )}
-
-        {page === 'settings' && (
-          <SettingsPage
-            qualifications={qualifications}
-            competencies={competencyDefinitions}
-            instructions={instructionDefinitions}
-            qualificationEdits={qualificationEdits}
-            competencyEdits={competencyEdits}
-            dbMessage={dbMessage}
-            baseHoursInput={baseHoursInput}
-            updateStatus={updateStatus}
-            lastUpdateCheckAt={lastUpdateCheckAt}
-            appInfo={appInfo}
-            storageMode={storageMode}
-            encryptionSetup={encryptionSetup}
-            onOpenQualificationModal={(payload) =>
-              setQualificationModal({
-                open: true,
-                id: payload.id,
-                value: payload.value,
-                note: payload.note,
-              })
+            onStartNewPeriod={openNewPeriodModal}
+            onSelectTimelineItem={(item) =>
+              item.kind === 'period' ? openExistingPeriodModal(item.record) : openEventModalForEvent(item.record)
             }
-            onOpenCompetencyModal={(payload) =>
-              setCompetencyModal({
-                open: true,
-                id: payload.id,
-                code: payload.code,
-                value: payload.value,
-                category: payload.category,
-                relevance: payload.relevance,
-                note: payload.note,
-              })
-            }
-            onOpenInstructionModal={(payload) =>
-              setInstructionModal({
-                open: true,
-                id: payload.id,
-                topic: payload.topic,
-                legalBasis: payload.legalBasis,
-                note: payload.note,
-              })
-            }
-            onReorderQualification={reorderQualification}
-            onReorderCompetency={reorderCompetencyDefinition}
-            onReorderInstruction={reorderInstructionDefinition}
-            onDeleteQualification={confirmDeleteQualification}
-            onDeleteCompetency={confirmDeleteCompetencyDefinition}
-            onDeleteInstruction={confirmDeleteInstructionDefinition}
-            onBaseHoursInputChange={setBaseHoursInput}
-            onSaveBaseHours={handleSaveBaseHoursValue}
-            onDbExport={handleDbExport}
-            onDbImport={handleDbImport}
-            onOpenRecoveryKey={() => openRecoveryKey('settings')}
-            onOpenEnableEncryption={openEnableEncryption}
-            onCloseEnableEncryption={closeEnableEncryption}
-            onEncryptionSetupChange={(next) => setEncryptionSetup((prev) => ({ ...prev, ...next }))}
-            onEnableEncryption={handleEnableEncryption}
-            onDisableEncryption={handleDisableEncryption}
-            onCheckUpdates={handleCheckUpdates}
-            onDownloadUpdate={handleDownloadUpdate}
-            onInstallUpdate={handleInstallUpdate}
-            onDropDatabase={handleDropDatabase}
-            onFullReset={handleFullReset}
-          />
-        )}
-
-        {page === 'dev' && <DevPage />}
-
-        {page === 'calendar' && (
-          <CalendarPage
-            currentDate={calendar.currentDate}
-            view={calendar.view}
-            eventsByDate={calendar.eventsByDate}
-            periodLabel={calendar.periodLabel}
-            loading={calendar.loading}
-            onViewChange={calendarActions.setView}
-            onPrev={calendarActions.prevPeriod}
-            onNext={calendarActions.nextPeriod}
-            onToday={calendarActions.goToToday}
-            onMonthClick={calendarActions.goToMonth}
-            onEventClick={handleCalendarEventClick}
           />
         )}
 
         {page === 'patients' && !selectedPatient && (
           <PatientList
             search={patientSearch}
-            ratingFilter={patientRatingFilter}
-            filteredPatients={filteredPatients}
-            selectedId={patientModal.id}
+            groupFilter={patientGroupFilter}
+            patients={filteredPatients}
+            visitTrends={recentVisits}
+            visitIntervalDays={careSettings.visitIntervalDays}
+            wideTable={wideTable}
             onSearchChange={setPatientSearch}
-            onRatingChange={setPatientRatingFilter}
+            onGroupChange={setPatientGroupFilter}
             onCreate={openCreatePatientModal}
-            onSelect={navigateToPatient}
-            onDelete={(id) => confirmDeletePatient(id)}
+            onSelect={(patient) => void navigateToPatient(patient)}
           />
         )}
 
@@ -721,29 +1040,193 @@ const App = () => {
           <PatientDetail
             patient={selectedPatient}
             visits={patientVisits}
+            visitIntervalDays={careSettings.visitIntervalDays}
             onEdit={() => openEditPatientModal(selectedPatient)}
-            onAddVisit={() => openVisitModal(selectedPatient.id!)}
-            onSelectVisit={(visit) => openVisitModal(selectedPatient.id!, visit)}
+            onNewVisit={() => openVisitModal(selectedPatient.id as number)}
+            onSelectVisit={(visit) => openVisitModal(selectedPatient.id as number, visit)}
           />
         )}
 
-        {(page === 'new' || page === 'edit') && (
-          <EmployeeForm
-            page={page}
-            form={form}
-            qualifications={qualifications}
-            addNewPeriod={addNewPeriod}
-            periods={periods}
-            loading={loading}
-            onChange={setForm}
-            onReset={resetForm}
-            onSave={handleSave}
-            onToggleAddPeriod={setAddNewPeriod}
-            onDelete={form.id ? () => confirmDeleteEmployee(form.id) : undefined}
+        {page === 'calendar' && (
+          <CalendarPage
+            currentDate={calendar.currentDate}
+            view={calendar.view}
+            eventsByDate={visibleCalendarEvents}
+            periodLabel={calendar.periodLabel}
+            loading={calendar.loading}
+            hiddenGroups={hiddenEventGroups}
+            onToggleGroup={(group) =>
+              setHiddenEventGroups((current) =>
+                current.includes(group) ? current.filter((entry) => entry !== group) : [...current, group],
+              )
+            }
+            onViewChange={calendarActions.setView}
+            onPrev={calendarActions.prevPeriod}
+            onNext={calendarActions.nextPeriod}
+            onToday={calendarActions.goToToday}
+            onMonthClick={calendarActions.goToMonth}
+            onEventClick={(event) => void openEvent(event)}
+            onDayClick={setDayModalDate}
           />
         )}
-      </div>
 
+        {page === 'audit' && (
+          <AuditPage
+            patients={patients}
+            audits={audits}
+            visitIntervalDays={careSettings.visitIntervalDays}
+            onCreateAudit={() => setAuditModal({ ...emptyAuditModal(), open: true })}
+            onOpenAudit={setAuditView}
+            onExportPersonList={() => void exportPersonList()}
+            onGoPatients={() => navigateToPage('patients')}
+            onOpenPatient={(id) => openTarget({ kind: 'patient', id })}
+          />
+        )}
+
+        {admin && (
+          <AdminListPage
+            title={admin.title}
+            subtitle={admin.subtitle}
+            items={admin.items}
+            emptyLabel={admin.empty}
+            onCreate={() => {
+              if (page === 'quals') setQualificationModal({ open: true, value: '', note: '' });
+              if (page === 'comps')
+                setCompetencyModal({
+                  open: true,
+                  code: '',
+                  value: '',
+                  category: 'Allgemein',
+                  relevance: 'Alle',
+                  note: '',
+                });
+              if (page === 'instrs')
+                setInstructionModal({
+                  open: true,
+                  topic: '',
+                  legalBasis: '',
+                  note: '',
+                  intervalMonths: null,
+                  intervalSource: 'betrieblich',
+                });
+            }}
+            onEdit={(id) => {
+              if (page === 'quals') {
+                const entry = qualifications.find((item) => item.id === id);
+                if (entry) setQualificationModal({ open: true, id, value: entry.name, note: entry.note ?? '' });
+              }
+              if (page === 'comps') {
+                const entry = competencyDefinitions.find((item) => item.id === id);
+                if (entry)
+                  setCompetencyModal({
+                    open: true,
+                    id,
+                    code: entry.code ?? '',
+                    value: entry.name,
+                    category: entry.category ?? 'Allgemein',
+                    relevance: entry.relevance ?? 'Alle',
+                    note: entry.note ?? '',
+                  });
+              }
+              if (page === 'instrs') {
+                const entry = instructionDefinitions.find((item) => item.id === id);
+                if (entry)
+                  setInstructionModal({
+                    open: true,
+                    id,
+                    topic: entry.topic,
+                    legalBasis: entry.legalBasis ?? '',
+                    note: entry.note ?? '',
+                    intervalMonths: entry.intervalMonths ?? null,
+                    intervalSource: entry.intervalSource ?? 'betrieblich',
+                  });
+              }
+            }}
+            onReorder={(id, targetIndex) => {
+              if (page === 'quals')
+                reorderTo(admin.items.map((item) => item.id), id, targetIndex, reorderQualification);
+              if (page === 'comps')
+                reorderTo(admin.items.map((item) => item.id), id, targetIndex, reorderCompetencyDefinition);
+              if (page === 'instrs')
+                reorderTo(admin.items.map((item) => item.id), id, targetIndex, reorderInstructionDefinition);
+            }}
+          />
+        )}
+
+        {page === 'settings' && (
+          <SettingsGeneral
+            baseHoursInput={baseHoursInput}
+            careSettings={careSettings}
+            onBaseHoursInputChange={setBaseHoursInput}
+            onSaveBaseHours={handleSaveBaseHoursValue}
+            onCareSettingsChange={qprActions.saveCareSettings}
+          />
+        )}
+
+        {page === 'security' && (
+          <SettingsSecurity
+            storageMode={storageMode}
+            encryptionSetup={encryptionSetup}
+            dbMessage={dbMessage}
+            backup={backup}
+            backupBusy={backupBusy}
+            onRunBackup={() => void runBackup()}
+            onChooseBackupFolder={() => {
+              void (async () => {
+                try {
+                  setBackup(await api.backup.chooseFolder());
+                } catch (err) {
+                  handleError(err);
+                }
+              })();
+            }}
+            onBackupSettingsChange={(next) => {
+              void (async () => {
+                try {
+                  setBackup(await api.backup.set(next));
+                } catch (err) {
+                  handleError(err);
+                }
+              })();
+            }}
+            onOpenExport={() => setExportOpen(true)}
+            onOpenRestore={() => setRestoreOpen(true)}
+            onOpenPassword={() => {
+              setPasswordError(null);
+              setPasswordOpen(true);
+            }}
+            onOpenRecoveryKey={() => openRecoveryKey('settings')}
+            onOpenEnableEncryption={openEnableEncryption}
+            onDisableEncryption={handleDisableEncryption}
+            onDropDatabase={handleDropDatabase}
+            onFullReset={handleFullReset}
+          />
+        )}
+
+        {page === 'about' && (
+          <SettingsAbout
+            appInfo={appInfo}
+            updateStatus={updateStatus}
+            lastUpdateCheckAt={lastUpdateCheckAt}
+            onCheckUpdates={handleCheckUpdates}
+            onContact={() => {
+              if (appInfo?.email) void api.app.openExternal(`mailto:${appInfo.email}`);
+            }}
+          />
+        )}
+
+        {page === 'logs' && (
+          <SettingsLogs appInfo={appInfo} storageMode={storageMode} onNotice={setToastMessage} />
+        )}
+
+        {page === 'shortcuts' && <SettingsShortcuts />}
+
+        {page === 'dev' && <DevPage />}
+      </main>
+
+      <CommandPalette open={paletteOpen} results={paletteResults} onClose={() => setPaletteOpen(false)} />
+
+      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
       <RecoveryKeyModal
         state={recoveryKeyModal}
         onClose={() => setRecoveryKeyModal((prev) => ({ ...prev, open: false, info: null }))}
@@ -753,18 +1236,18 @@ const App = () => {
         state={recoveryReset}
         loading={loading}
         onChange={(next) => setRecoveryReset((prev) => ({ ...prev, ...next }))}
-        onClose={() => setRecoveryReset({ open: false, recoveryKey: '', newPassword: '', repeat: '', error: null })}
+        onClose={() =>
+          setRecoveryReset({ open: false, recoveryKey: '', newPassword: '', repeat: '', error: null })
+        }
         onSubmit={handleRecoveryReset}
       />
-      {toast && <div className="toast">{toast}</div>}
-      {error && <div className="toast error-toast">{error}</div>}
-      {loading && <div className="loading">Lade / speichere …</div>}
-      <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
+
       <QualificationModal
         state={qualificationModal}
         onChange={(next) => setQualificationModal((prev) => ({ ...prev, ...next }))}
         onClose={() => setQualificationModal({ open: false, value: '', note: '' })}
         onSave={handleSaveQualificationModal}
+        onDelete={confirmDeleteQualification}
       />
       <CompetencyModal
         state={competencyModal}
@@ -780,15 +1263,28 @@ const App = () => {
           })
         }
         onSave={handleSaveCompetencyModal}
+        onDelete={confirmDeleteCompetencyDefinition}
       />
       <InstructionModal
         state={instructionModal}
         onChange={(next) => setInstructionModal((prev) => ({ ...prev, ...next }))}
-        onClose={() => setInstructionModal({ open: false, topic: '', legalBasis: '', note: '' })}
+        onClose={() =>
+          setInstructionModal({
+            open: false,
+            topic: '',
+            legalBasis: '',
+            note: '',
+            intervalMonths: null,
+            intervalSource: 'betrieblich',
+          })
+        }
         onSave={handleSaveInstructionModal}
+        onDelete={confirmDeleteInstructionDefinition}
       />
+
       <EmployeeCompetencyModal
         state={employeeCompetencyModal}
+        employeeName={selectedEmployee?.name ?? ''}
         availableDefinitions={availableCompetencyDefinitions}
         onChange={(next) => setEmployeeCompetencyModal((prev) => ({ ...prev, ...next }))}
         onClose={() =>
@@ -807,6 +1303,11 @@ const App = () => {
       />
       <EmployeeInstructionModal
         state={employeeInstructionModal}
+        employeeName={selectedEmployee?.name ?? ''}
+        employeeBirthDate={selectedEmployee?.birthDate}
+        definition={instructionDefinitions.find(
+          (entry) => entry.id === employeeInstructionModal.instructionDefinitionId,
+        )}
         availableDefinitions={availableInstructionDefinitions}
         onChange={(next) => setEmployeeInstructionModal((prev) => ({ ...prev, ...next }))}
         onClose={() =>
@@ -818,6 +1319,7 @@ const App = () => {
             completedAt: '',
             conductedBy: '',
             note: '',
+            scheduleFollowUp: false,
           })
         }
         onSave={handleSaveEmployeeInstruction}
@@ -831,405 +1333,156 @@ const App = () => {
         onClose={() => setSuggestedCompetencyModal({ open: false, selectedDefinitionIds: [] })}
         onSave={handleAddRecommendedCompetencies}
       />
-      {editModal.open && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <ModalHeader
-              icon={isCreateMode ? faPlus : faPen}
-              title={isCreateMode ? 'Teammitglied anlegen' : 'Teammitglied bearbeiten'}
-              onClose={() => setEditModal((prev) => ({ ...prev, open: false }))}
-            />
-            <div className="modal-body">
-              {isCreateMode && (
-                <div className="form-grid">
-                  <label>
-                    Qualifikation
-                    <select
-                      value={form.qualification}
-                      onChange={(e) => setForm((prev) => ({ ...prev, qualification: e.target.value }))}
-                    >
-                      {qualifications.map((q) => (
-                        <option key={q.id ?? q.name} value={q.name}>
-                          {q.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Start
-                    <input
-                      type="date"
-                      value={form.startDate}
-                      onChange={(e) => setForm((prev) => ({ ...prev, startDate: e.target.value }))}
-                    />
-                  </label>
-                  <label>
-                    Ende
-                    <input
-                      type="date"
-                      value={form.endDate}
-                      onChange={(e) => setForm((prev) => ({ ...prev, endDate: e.target.value }))}
-                    />
-                  </label>
-                </div>
-              )}
-              <label className="full-width">
-                Name*
-                <input
-                  value={editModal.name}
-                  onChange={(e) => setEditModal((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Vor- und Nachname"
-                />
-              </label>
-              <div
-                className="inline-row compact"
-                style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: '0.75rem', alignItems: 'end' }}
-              >
-                <label className="grow">
-                  Wochenstunden
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={editModal.weeklyHours}
-                    onChange={(e) => updateWeeklyHours(e.target.value)}
-                    placeholder="z. B. 36"
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="ghost-button icon-button"
-                  onClick={() => toggleLinked(!editModal.linked)}
-                  title={
-                    editModal.linked
-                      ? 'Verknüpfung aktiv – VZÄ wird aus Wochenstunden berechnet'
-                      : 'Verknüpfung aus – Felder manuell pflegen'
-                  }
-                >
-                  <FontAwesomeIcon icon={editModal.linked ? faLink : faLinkSlash} />
-                </button>
-                <label className="grow">
-                  <abbr className="help" title={fteHelp}>
-                    FTE / VZÄ
-                  </abbr>
-                  <input
-                    type="number"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={editModal.fteValue}
-                    onChange={(e) => updateFteValue(e.target.value)}
-                    disabled={editModal.linked}
-                  />
-                </label>
-              </div>
-              <label className="full-width">
-                Geburtsdatum
-                <BirthDateInput
-                  value={editModal.birthDate}
-                  onChange={(value) => setEditModal((prev) => ({ ...prev, birthDate: value }))}
-                />
-              </label>
-              <label className="full-width">
-                Notiz / Bemerkung
-                <textarea
-                  value={editModal.note}
-                  onChange={(e) => setEditModal((prev) => ({ ...prev, note: e.target.value }))}
-                  placeholder="Fortbildungen, Besonderheiten, Ansprechpartner"
-                />
-              </label>
-            </div>
-            <div className="modal-actions">
-              <div className="modal-actions-left" />
-              <div className="modal-actions-right">
-                <button className="ghost-button" onClick={() => setEditModal((prev) => ({ ...prev, open: false }))}>
-                  Abbrechen
-                </button>
-                <button className="primary" onClick={handleEditModalSave}>
-                  {isCreateMode ? 'Anlegen' : 'Speichern'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {eventModal.open && selectedEmployee && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <ModalHeader
-              icon={faPlus}
-              title={eventModal.id ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}
-              onClose={() => setEventModal((prev) => ({ ...prev, open: false }))}
-            />
-            <div className="modal-body">
-              <label className="full-width">
-                Typ
-                <select
-                  value={eventModal.type}
-                  onChange={(e) => {
-                    const nextType = e.target.value as EventModalType;
-                    if ((nextType === 'name-change' || nextType === 'note-change') && !eventModal.id) return;
-                    setEventModal((prev) => ({
-                      ...prev,
-                      type: nextType,
-                      title: '',
-                      details: '',
-                    }));
-                  }}
-                >
-                  <option value="period">Qualifikation/Periode</option>
-                  <option value="join">Eintritt</option>
-                  <option value="leave">Austritt</option>
-                  <option value="care-visit">Pflegevisite</option>
-                  <option value="emergency-training">Notfallschulung</option>
-                  {eventModal.id && (
-                    <option value="name-change" disabled={eventModal.type !== 'name-change'}>
-                      Namensänderung
-                    </option>
-                  )}
-                  {eventModal.id && (
-                    <option value="note-change" disabled={eventModal.type !== 'note-change'}>
-                      Notizänderung
-                    </option>
-                  )}
-                  <option value="custom">Sonstiges</option>
-                  {eventModal.id && (
-                    <option value="fte-change" disabled={eventModal.type !== 'fte-change'}>
-                      VZÄ-Änderung
-                    </option>
-                  )}
-                  {eventModal.id && (
-                    <option
-                      value="weekly-hours-change"
-                      disabled={eventModal.type !== 'weekly-hours-change'}
-                    >
-                      Wochenstundenänderung
-                    </option>
-                  )}
-                </select>
-              </label>
 
-              {eventModal.type === 'period' ? (
-                <div className="form-grid">
-                  <label>
-                    Start
-                    <input
-                      type="date"
-                      value={addPeriodForm.startDate}
-                      onChange={(e) => setAddPeriodForm({ ...addPeriodForm, startDate: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    Ende
-                    <input
-                      type="date"
-                      value={addPeriodForm.endDate}
-                      onChange={(e) => setAddPeriodForm({ ...addPeriodForm, endDate: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    Qualifikation
-                    <select
-                      value={addPeriodForm.qualification}
-                      onChange={(e) => setAddPeriodForm({ ...addPeriodForm, qualification: e.target.value })}
-                    >
-                      {qualifications.map((q) => (
-                        <option key={q.id ?? q.name} value={q.name}>
-                          {q.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="full-width">
-                    Notiz
-                    <textarea
-                      value={addPeriodForm.note ?? ''}
-                      onChange={(e) => setAddPeriodForm({ ...addPeriodForm, note: e.target.value })}
-                      placeholder="Optional: Kontext zur Qualifikation/Periode"
-                    />
-                  </label>
-                </div>
-              ) : (
-                <div className="form-grid">
-                  <label>
-                    Datum
-                    <input
-                      type="date"
-                      value={eventModal.eventDate}
-                      onChange={(e) => setEventModal({ ...eventModal, eventDate: e.target.value })}
-                    />
-                  </label>
-                  {(eventModal.type === 'care-visit' || eventModal.type === 'emergency-training') && (
-                    <label>
-                      Gültig bis
-                      <input
-                        type="date"
-                        value={eventModal.expiresAt ?? ''}
-                        onChange={(e) => setEventModal({ ...eventModal, expiresAt: e.target.value || null })}
-                      />
-                    </label>
-                  )}
-                  <label className="full-width">
-                    Details
-                    <textarea
-                      value={eventModal.details}
-                      onChange={(e) => setEventModal({ ...eventModal, details: e.target.value })}
-                      placeholder="Optionale Beschreibung oder Notiz zum Ereignis"
-                    />
-                  </label>
-                  {(eventModal.type === 'name-change' ||
-                    eventModal.type === 'fte-change' ||
-                    eventModal.type === 'weekly-hours-change') && (
-                    <>
-                      <label>
-                        Vorheriger Wert
-                        <input
-                          type="text"
-                          value={eventModal.previousValue ?? ''}
-                          onChange={(e) => setEventModal({ ...eventModal, previousValue: e.target.value })}
-                          placeholder="Wert vor der Änderung"
-                        />
-                      </label>
-                      <label>
-                        Neuer Wert
-                        <input
-                          type="text"
-                          value={eventModal.newValue ?? ''}
-                          onChange={(e) => setEventModal({ ...eventModal, newValue: e.target.value })}
-                          placeholder="Wert nach der Änderung"
-                        />
-                      </label>
-                    </>
-                  )}
-                  {eventModal.type === 'note-change' && (
-                    <>
-                      <label className="full-width">
-                        Vorherige Notiz
-                        <textarea
-                          value={eventModal.previousValue ?? ''}
-                          onChange={(e) => setEventModal({ ...eventModal, previousValue: e.target.value })}
-                          placeholder="Text vor der Änderung"
-                        />
-                      </label>
-                      <label className="full-width">
-                        Neue Notiz
-                        <textarea
-                          value={eventModal.newValue ?? ''}
-                          onChange={(e) => setEventModal({ ...eventModal, newValue: e.target.value })}
-                          placeholder="Text nach der Änderung"
-                        />
-                      </label>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="modal-actions">
-              <div className="modal-actions-left">
-                {eventModal.id && eventModal.type !== 'period' && (
-                  <button
-                    className="ghost-button danger icon-button"
-                    onClick={() => eventModal.id && handleDeleteEvent(eventModal.id)}
-                    title="Ereignis löschen"
-                  >
-                    <FontAwesomeIcon icon={faTrash} />
-                  </button>
-                )}
-                {addPeriodForm.periodId && eventModal.type === 'period' && (
-                  <button
-                    className="ghost-button danger icon-button"
-                    onClick={() =>
-                      setPeriodToDelete({
-                        periodId: addPeriodForm.periodId as number,
-                        label: `${addPeriodForm.startDate} – ${addPeriodForm.endDate || 'aktuell'}`,
-                      })
-                    }
-                    title="Periode löschen"
-                  >
-                    <FontAwesomeIcon icon={faTrash} />
-                  </button>
-                )}
-              </div>
-              <div className="modal-actions-right">
-                <button className="ghost-button" onClick={() => setEventModal((prev) => ({ ...prev, open: false }))}>
-                  Abbrechen
-                </button>
-                {eventModal.type === 'period' ? (
-                  <button className="primary" onClick={handleAddPeriod}>
-                    Speichern
-                  </button>
-                ) : (
-                  <button className="primary" onClick={handleSaveEvent}>
-                    Speichern
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+      <EmployeeModal
+        state={editModal}
+        form={form}
+        qualifications={qualifications}
+        fteHelp={fteHelp}
+        onStateChange={(next) => setEditModal((prev) => ({ ...prev, ...next }))}
+        onFormChange={(next) => setForm((prev) => ({ ...prev, ...next }))}
+        onWeeklyHoursChange={updateWeeklyHours}
+        onFteChange={updateFteValue}
+        onToggleLinked={toggleLinked}
+        onClose={() => setEditModal((prev) => ({ ...prev, open: false }))}
+        onSave={handleEditModalSave}
+        onDelete={form.id ? () => confirmDeleteEmployee(form.id) : undefined}
+      />
+
+      {eventModal.open && selectedEmployee && (
+        <EventModal
+          state={eventModal}
+          periodForm={addPeriodForm}
+          qualifications={qualifications}
+          onStateChange={(next) => setEventModal((prev) => ({ ...prev, ...next }))}
+          onPeriodFormChange={setAddPeriodForm}
+          onClose={() => setEventModal((prev) => ({ ...prev, open: false }))}
+          onSaveEvent={handleSaveEvent}
+          onSavePeriod={handleAddPeriod}
+          onDeleteEvent={handleDeleteEvent}
+          onDeletePeriod={(periodId, label) => setPeriodToDelete({ periodId, label })}
+        />
       )}
-      {patientModal.open && (
-        <div className="modal-backdrop">
-          <div className="modal">
-            <ModalHeader
-              icon={faPlus}
-              title={patientModal.mode === 'create' ? 'Neue:r Patient:in' : 'Patient:in bearbeiten'}
-              onClose={closePatientModal}
-            />
-            <div className="modal-body">
-              <label>
-                Name*
-                <input
-                  value={patientModal.name}
-                  onChange={(e) => setPatientModal((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Vor- und Nachname"
-                />
-              </label>
-              <label className="full-width">
-                Geburtsdatum
-                <BirthDateInput
-                  value={patientModal.birthDate}
-                  onChange={(value) => setPatientModal((prev) => ({ ...prev, birthDate: value }))}
-                />
-              </label>
-              <label className="full-width">
-                Diagnose
-                <input
-                  value={patientModal.diagnosis}
-                  onChange={(e) => setPatientModal((prev) => ({ ...prev, diagnosis: e.target.value }))}
-                  placeholder="Hauptdiagnose oder Pflegegrund"
-                />
-              </label>
-              <label className="full-width">
-                Notiz / Bemerkung
-                <textarea
-                  value={patientModal.note}
-                  onChange={(e) => setPatientModal((prev) => ({ ...prev, note: e.target.value }))}
-                  placeholder="Besonderheiten, Angehoerige, Kontakte"
-                />
-              </label>
-            </div>
-            <div className="modal-actions">
-              <div className="modal-actions-left" />
-              <div className="modal-actions-right">
-                <button className="ghost-button" onClick={closePatientModal}>
-                  Abbrechen
-                </button>
-                <button className="primary" onClick={handleSavePatient}>
-                  {patientModal.mode === 'create' ? 'Anlegen' : 'Speichern'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
+      <PatientModal
+        modal={patientModal}
+        onChange={setPatientModal}
+        onClose={closePatientModal}
+        onSave={handleSavePatient}
+        onDelete={patientModal.id ? () => confirmDeletePatient(patientModal.id) : undefined}
+      />
       <VisitModal
         modal={patientVisitModal}
+        patientName={selectedPatient?.name ?? ''}
         onChange={setPatientVisitModal}
         onClose={closeVisitModal}
         onSave={handleSaveVisit}
         onDelete={confirmDeleteVisit}
       />
+
+      <BackupExportModal
+        open={exportOpen}
+        onExport={(mode) => {
+          setExportOpen(false);
+          void handleDbExport(mode);
+        }}
+        onClose={() => setExportOpen(false)}
+      />
+      <BackupRestoreModal
+        open={restoreOpen}
+        busy={restoreBusy}
+        backups={backup.backups}
+        folder={backup.folder}
+        onRestore={(source) => void restoreFromBackup(source)}
+        onPickFile={() => {
+          setRestoreOpen(false);
+          void handleDbImport(storageMode === 'encrypted' ? 'encrypted' : 'plain');
+        }}
+        onClose={() => setRestoreOpen(false)}
+      />
+
+      <PasswordModal
+        open={passwordOpen}
+        busy={passwordBusy}
+        error={passwordError}
+        onSubmit={(input) => void changePassword(input)}
+        onClose={() => setPasswordOpen(false)}
+      />
+
+      <AuditModal
+        modal={auditModal}
+        sections={auditSections}
+        patients={patients}
+        onChange={setAuditModal}
+        onClose={() => setAuditModal(emptyAuditModal())}
+        onSave={() => void saveAudit()}
+        onDelete={auditModal.id ? deleteAudit : undefined}
+      />
+      <AuditViewModal
+        audit={auditView}
+        sections={auditSections}
+        patients={patients}
+        onEdit={() => {
+          if (!auditView) return;
+          setAuditModal({
+            open: true,
+            mode: 'edit',
+            id: auditView.id,
+            auditDate: auditView.auditDate,
+            inspector: auditView.inspector ?? '',
+            kind: auditView.kind ?? 'regel',
+            findings: auditView.findings ?? '',
+            results: Object.fromEntries(
+              auditView.results.map((entry) => [entry.sectionKey, entry.result]),
+            ),
+            clientIds: auditView.clientIds,
+          });
+          setAuditView(null);
+        }}
+        onOpenPatient={(id) => {
+          setAuditView(null);
+          openTarget({ kind: 'patient', id });
+        }}
+        onClose={() => setAuditView(null)}
+      />
+
+      <DayModal
+        date={dayModalDate}
+        events={dayEvents}
+        onSelectEvent={(event) => {
+          setDayModalDate(null);
+          void openEvent(event);
+        }}
+        onClose={() => setDayModalDate(null)}
+      />
+
+      <ReportModal
+        open={reportOpen}
+        year={reportYear}
+        years={years}
+        baseHours={baseHours}
+        dataset={dataset}
+        onYearChange={(next) => {
+          setReportYear(next);
+          setYear(next);
+        }}
+        onExport={() => {
+          setReportOpen(false);
+          void handleExport('xlsx');
+        }}
+        onFixMissingHours={() => {
+          const target = (dataset?.employees ?? []).find((employee) => employee.weeklyHours == null);
+          if (target?.id != null) {
+            setReportOpen(false);
+            openTarget({ kind: 'employee', id: target.id, tab: 'hist' });
+          }
+        }}
+        onClose={() => setReportOpen(false)}
+      />
+
+      {toast && <div className="cd-toast">{toast}</div>}
+      {error && <div className="cd-toast cd-toast-error">{error}</div>}
+      {loading && <div className="cd-loading">Lade / speichere …</div>}
     </div>
   );
 };

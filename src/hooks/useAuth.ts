@@ -180,7 +180,15 @@ const useAuth = ({
     [handleError, openRecoveryKey, refreshDataset, setLoading, year],
   );
 
-  return { appReady, authLoading, handleLogin, hydrateQualifications, setAppReady };
+  const handleLock = useCallback(async () => {
+    try {
+      setAppReady(await api.auth.lock());
+    } catch (err) {
+      handleError(err);
+    }
+  }, [handleError]);
+
+  return { appReady, authLoading, handleLogin, handleLock, hydrateQualifications, setAppReady };
 };
 
 export default useAuth;

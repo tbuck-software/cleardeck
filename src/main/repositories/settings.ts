@@ -59,3 +59,90 @@ export const setHiddenEventTypes = (types: string[]): string[] => {
 
 
 
+
+/**
+ * Interval between Pflegevisiten. The QPR sets no fixed number, so the service
+ * picks one and the app measures against it; 90 days is the common choice.
+ */
+export const getVisitIntervalDays = (): number => {
+  const db = getDb();
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'visitIntervalDays'").get() as
+    | { value?: string }
+    | undefined;
+  return row?.value ? Number(row.value) || 90 : 90;
+};
+
+export const setVisitIntervalDays = (days: number): number => {
+  const db = getDb();
+  const clamped = Math.max(7, Math.min(365, days));
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('visitIntervalDays', ?)").run(
+    String(clamped),
+  );
+  return clamped;
+};
+
+/** How far ahead an upcoming Einweisung counts as "bald fällig". */
+export const getInstructionReminderDays = (): number => {
+  const db = getDb();
+  const row = db.prepare("SELECT value FROM settings WHERE key = 'instructionReminderDays'").get() as
+    | { value?: string }
+    | undefined;
+  return row?.value ? Number(row.value) || 30 : 30;
+};
+
+export const setInstructionReminderDays = (days: number): number => {
+  const db = getDb();
+  const clamped = Math.max(1, Math.min(365, days));
+  db.prepare(
+    "INSERT OR REPLACE INTO settings (key, value) VALUES ('instructionReminderDays', ?)",
+  ).run(String(clamped));
+  return clamped;
+};
+
+export type AutoBackupMode = 'off' | 'close' | 'daily' | 'weekly';
+
+export interface BackupSettings {
+  folder: string | null;
+  auto: AutoBackupMode;
+  /** How many backups to keep in the folder; older ones are pruned. */
+  keep: number;
+  lastBackupAt: string | null;
+}
+
+const readSetting = (key: string): string | null => {
+  const db = getDb();
+  const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
+    | { value?: string }
+    | undefined;
+  return row?.value ?? null;
+};
+
+const writeSetting = (key: string, value: string | null): void => {
+  const db = getDb();
+  if (value == null) {
+    db.prepare('DELETE FROM settings WHERE key = ?').run(key);
+    return;
+  }
+  db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, value);
+};
+
+const AUTO_MODES: AutoBackupMode[] = ['off', 'close', 'daily', 'weekly'];
+
+export const getBackupSettings = (): BackupSettings => {
+  const auto = readSetting('backupAuto');
+  const keep = Number(readSetting('backupKeep'));
+  return {
+    folder: readSetting('backupFolder'),
+    auto: AUTO_MODES.includes(auto as AutoBackupMode) ? (auto as AutoBackupMode) : 'off',
+    keep: Number.isFinite(keep) && keep > 0 ? keep : 10,
+    lastBackupAt: readSetting('backupLastAt'),
+  };
+};
+
+export const setBackupSettings = (next: Partial<BackupSettings>): BackupSettings => {
+  if (next.folder !== undefined) writeSetting('backupFolder', next.folder);
+  if (next.auto !== undefined) writeSetting('backupAuto', next.auto);
+  if (next.keep !== undefined) writeSetting('backupKeep', String(Math.max(1, Math.min(365, next.keep))));
+  if (next.lastBackupAt !== undefined) writeSetting('backupLastAt', next.lastBackupAt);
+  return getBackupSettings();
+};

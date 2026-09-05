@@ -23,9 +23,8 @@ const patients: PatientWithLatestVisit[] = [
     name: 'Helga Test',
     birthDate: null,
     diagnosis: 'Beispiel',
-    qprStatus: 'B',
     latestVisitDate: null,
-    latestQprRating: null,
+    latestActionNeeded: null,
     note: null,
   },
 ];

@@ -6,7 +6,7 @@
 
 import { ipcMain, shell } from 'electron';
 
-import type { EmployeeEventType, YearDataset, QprRating } from '../../shared/types';
+import type { AuditResult, EmployeeEventType, IntervalSource, YearDataset } from '../../shared/types';
 import { getDb, isDbOpen, getEncryptionKey, getStorageMode, openDatabase, closeDb, deleteDatabase as deleteDbFiles, ensureDataDir } from '../database/connection';
 import {
   getYearDataset,
@@ -20,6 +20,8 @@ import {
   getExpiringTrainings,
   getBirthdaysAndAnniversaries,
   getEmployeeDashboardStats,
+  listOpenInstructions,
+  getDefinitionUsage,
 } from '../repositories/dashboard';
 import {
   listQualifications,
@@ -48,7 +50,20 @@ import {
   saveEmployeeInstruction,
   updateInstructionDefinition,
 } from '../repositories/instructions';
-import { getBaseHours, setBaseHours, getHiddenEventTypes, setHiddenEventTypes } from '../repositories/settings';
+import {
+  getBaseHours,
+  setBaseHours,
+  getHiddenEventTypes,
+  setHiddenEventTypes,
+  getVisitIntervalDays,
+  setVisitIntervalDays,
+  getInstructionReminderDays,
+  setInstructionReminderDays,
+  getBackupSettings,
+  setBackupSettings,
+} from '../repositories/settings';
+import type { BackupSettings } from '../repositories/settings';
+import { chooseBackupFolder, listBackups, restoreBackup, runBackup } from '../backup';
 import {
   listPatients,
   getPatient,
@@ -57,12 +72,15 @@ import {
   listVisits,
   saveVisit,
   deleteVisit,
-  getConcerningRatings,
+  getActionNeeded,
+  listRecentVisits,
   getPatientStats,
   listPatientBirthdays,
   listPatientVisitsInRange,
 } from '../repositories/patients';
-import { exportDatabase, importDatabase, exportData } from '../export';
+import type { SavePatientInput } from '../repositories/patients';
+import { AUDIT_SECTIONS, deleteAudit, listAudits, saveAudit } from '../repositories/audits';
+import { exportDatabase, importDatabase, exportData, exportPersonList } from '../export';
 import { isUnlocked } from './auth';
 
 /**
@@ -262,6 +280,8 @@ export const registerDataHandlers = (): void => {
         topic: string;
         legalBasis?: string | null;
         note?: string | null;
+        intervalMonths?: number | null;
+        intervalSource?: IntervalSource | null;
       },
     ) => {
       ensureDbReady();
@@ -278,6 +298,8 @@ export const registerDataHandlers = (): void => {
         topic: string;
         legalBasis?: string | null;
         note?: string | null;
+        intervalMonths?: number | null;
+        intervalSource?: IntervalSource | null;
       },
     ) => {
       ensureDbReady();
@@ -312,6 +334,7 @@ export const registerDataHandlers = (): void => {
         completedAt?: string | null;
         conductedBy?: string | null;
         note?: string | null;
+        scheduleFollowUp?: boolean;
       },
     ) => {
       ensureDbReady();
@@ -447,6 +470,75 @@ export const registerDataHandlers = (): void => {
     }
   );
 
+  ipcMain.handle('dashboard:openInstructions', (_event, { limit }: { limit?: number }) => {
+    ensureDbReady();
+    return listOpenInstructions(limit);
+  });
+
+  ipcMain.handle('dashboard:definitionUsage', () => {
+    ensureDbReady();
+    return getDefinitionUsage();
+  });
+
+  // Backups into the configured folder
+  ipcMain.handle('backup:settings', () => {
+    ensureDbReady();
+    const settings = getBackupSettings();
+    return { ...settings, backups: listBackups(settings.folder) };
+  });
+
+  ipcMain.handle('backup:setSettings', (_event, input: Partial<BackupSettings>) => {
+    ensureDbReady();
+    const settings = setBackupSettings(input);
+    return { ...settings, backups: listBackups(settings.folder) };
+  });
+
+  ipcMain.handle('backup:chooseFolder', async () => {
+    ensureDbReady();
+    await chooseBackupFolder();
+    const settings = getBackupSettings();
+    return { ...settings, backups: listBackups(settings.folder) };
+  });
+
+  ipcMain.handle('backup:run', async () => {
+    ensureDbReady();
+    const result = await runBackup();
+    const settings = getBackupSettings();
+    return { ...result, settings: { ...settings, backups: listBackups(settings.folder) } };
+  });
+
+  ipcMain.handle('backup:restore', async (_event, { path: source }: { path: string }) => {
+    ensureDbReady();
+    const result = await restoreBackup(source);
+    const settings = getBackupSettings();
+    return { ...result, settings: { ...settings, backups: listBackups(settings.folder) } };
+  });
+
+  ipcMain.handle('settings:careSettings', () => {
+    ensureDbReady();
+    return {
+      visitIntervalDays: getVisitIntervalDays(),
+      instructionReminderDays: getInstructionReminderDays(),
+    };
+  });
+
+  ipcMain.handle(
+    'settings:setCareSettings',
+    (
+      _event,
+      input: { visitIntervalDays?: number; instructionReminderDays?: number },
+    ) => {
+      ensureDbReady();
+      if (input.visitIntervalDays != null) setVisitIntervalDays(input.visitIntervalDays);
+      if (input.instructionReminderDays != null)
+        setInstructionReminderDays(input.instructionReminderDays);
+      return {
+        visitIntervalDays: getVisitIntervalDays(),
+        instructionReminderDays: getInstructionReminderDays(),
+      };
+    },
+  );
+
   // DEV: Raw table data
   ipcMain.handle('dev:tables', () => {
     if (!isDbOpen()) return {};
@@ -478,14 +570,7 @@ export const registerDataHandlers = (): void => {
     'patients:save',
     (
       _event,
-      input: {
-        id?: number;
-        name: string;
-        birthDate?: string | null;
-        diagnosis?: string | null;
-        qprStatus?: QprRating | null;
-        note?: string | null;
-      },
+      input: SavePatientInput,
     ) => {
       ensureDbReady();
       return savePatient(input);
@@ -511,7 +596,7 @@ export const registerDataHandlers = (): void => {
         id?: number;
         patientId: number;
         visitDate: string;
-        qprRating: QprRating;
+        actionNeeded: boolean;
         comment?: string | null;
       },
     ) => {
@@ -520,15 +605,20 @@ export const registerDataHandlers = (): void => {
     },
   );
 
+  ipcMain.handle('visits:recent', (_event, { perPatient }: { perPatient?: number }) => {
+    ensureDbReady();
+    return listRecentVisits(perPatient);
+  });
+
   ipcMain.handle('visits:delete', (_event, { id, patientId }: { id: number; patientId: number }) => {
     ensureDbReady();
     return deleteVisit(id, patientId);
   });
 
   // Dashboard - Patient widgets
-  ipcMain.handle('dashboard:concerningRatings', (_event, { limit }: { limit?: number }) => {
+  ipcMain.handle('dashboard:actionNeeded', (_event, { limit }: { limit?: number }) => {
     ensureDbReady();
-    return getConcerningRatings(limit);
+    return getActionNeeded(limit);
   });
 
   ipcMain.handle('dashboard:patientStats', () => {
@@ -552,4 +642,41 @@ export const registerDataHandlers = (): void => {
       return listPatientVisitsInRange(startDate, endDate);
     },
   );
+
+  // MD-Prüfung
+  ipcMain.handle('audits:sections', () => AUDIT_SECTIONS);
+
+  ipcMain.handle('audits:exportPersonList', () => {
+    ensureDbReady();
+    return exportPersonList();
+  });
+
+  ipcMain.handle('audits:list', () => {
+    ensureDbReady();
+    return listAudits();
+  });
+
+  ipcMain.handle(
+    'audits:save',
+    (
+      _event,
+      input: {
+        id?: number;
+        auditDate: string;
+        inspector?: string | null;
+        kind?: 'regel' | 'anlass' | null;
+        findings?: string | null;
+        results: AuditResult[];
+        clientIds: number[];
+      },
+    ) => {
+      ensureDbReady();
+      return saveAudit(input);
+    },
+  );
+
+  ipcMain.handle('audits:delete', (_event, { id }: { id: number }) => {
+    ensureDbReady();
+    return deleteAudit(id);
+  });
 };

@@ -81,7 +81,6 @@ const YearView = ({ currentDate, eventsByDate, onMonthClick }: YearViewProps) =>
 
   return (
     <div className="calendar-year">
-      <div className="calendar-year-grid">
         {monthNames.map((name, month) => {
           const days = getMiniMonthDays(year, month);
           const eventCount = countMonthEvents(year, month, eventsByDate);
@@ -89,21 +88,21 @@ const YearView = ({ currentDate, eventsByDate, onMonthClick }: YearViewProps) =>
           return (
             <button
               key={month}
-              className="calendar-mini-month"
+              className="calendar-mini-month" type="button"
               onClick={() => onMonthClick(year, month)}
             >
-              <div className="calendar-mini-month-header">
+              <div className="calendar-week-day-header">
                 <span className="calendar-mini-month-name">{name}</span>
                 {eventCount > 0 && (
-                  <span className="calendar-mini-month-badge">{eventCount}</span>
+                  <span className="tag tag-neutral">{eventCount}</span>
                 )}
               </div>
-              <div className="calendar-mini-month-weekdays">
+              <div className="calendar-mini-grid">
                 {weekDaysShort.map((day, i) => (
                   <span key={i} className="calendar-mini-weekday">{day}</span>
                 ))}
               </div>
-              <div className="calendar-mini-month-days">
+              <div className="calendar-mini-grid">
                 {days.map((day, i) => (
                   <span
                     key={i}
@@ -122,7 +121,6 @@ const YearView = ({ currentDate, eventsByDate, onMonthClick }: YearViewProps) =>
             </button>
           );
         })}
-      </div>
     </div>
   );
 };

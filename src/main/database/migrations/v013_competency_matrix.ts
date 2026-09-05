@@ -107,10 +107,10 @@ export const v013_competency_matrix: Migration = {
     `,
     );
     defaultInstructionCatalog.forEach((item, index) => {
-      insertInstruction.run({
-        ...item,
-        sortOrder: index + 1,
-      });
+      // v015 adds the interval columns; on a fresh database it has not run yet,
+      // so only the columns this migration knows about are written here.
+      const { topic, legalBasis, note } = item;
+      insertInstruction.run({ topic, legalBasis, note, sortOrder: index + 1 });
     });
 
     db.prepare(

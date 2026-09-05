@@ -37,6 +37,14 @@ import { archiveAppData } from '../dataArchive';
 // Track unlock state
 let unlocked = false;
 
+/**
+ * Plain storage has no key, so "Sperren" there is a privacy cover over the
+ * window rather than encryption — it hides the data from someone walking past
+ * and is lifted by a button, not a password. Kept separate from `unlocked`
+ * because syncRuntimeState() otherwise reports plain storage as always open.
+ */
+let screenLocked = false;
+
 export const isUnlocked = (): boolean => unlocked;
 export const setUnlocked = (value: boolean): void => {
   unlocked = value;
@@ -72,11 +80,11 @@ const syncRuntimeState = (): AppState => {
   const storageMode = getConfigStorageMode(config);
   setStorageMode(storageMode);
   if (storageMode === 'plain') {
-    unlocked = true;
+    unlocked = !screenLocked;
     setEncryptionKey(null);
     return {
       configured: true,
-      unlocked: true,
+      unlocked: !screenLocked,
       storageMode,
     };
   }
@@ -179,6 +187,7 @@ export const registerAuthHandlers = (): void => {
     }
     if (getConfigStorageMode(config) === 'plain') {
       setStorageMode('plain');
+      screenLocked = false;
       unlocked = true;
       setEncryptionKey(null);
       if (!isDbOpen()) {
@@ -221,6 +230,83 @@ export const registerAuthHandlers = (): void => {
     openDatabase();
     return buildConfiguredState('encrypted', true);
   });
+
+  /**
+   * Sperren: re-encrypt, drop the key, and leave the config alone.
+   *
+   * persistEncryptedDb() rather than closeDb(): closing only releases the
+   * handle and would leave the decrypted working copy sitting on disk, which
+   * would make locking worse than not locking at all.
+   *
+   * Plain storage has no key to drop; there it only covers the window and is
+   * lifted again by a button. The lock screen says so, so nobody mistakes it
+   * for protection.
+   */
+  ipcMain.handle('auth:lock', (): AppState => {
+    const storageMode = getStorageMode();
+    if (storageMode === 'plain') {
+      screenLocked = true;
+      closeDb();
+      unlocked = false;
+      return buildConfiguredState(storageMode, false);
+    }
+    persistEncryptedDb();
+    setEncryptionKey(null);
+    unlocked = false;
+    return buildConfiguredState(storageMode, false);
+  });
+
+  /**
+   * Change the password without touching the database.
+   *
+   * The data key itself stays the same and is only re-wrapped with a key
+   * derived from the new password. That keeps the Recovery-Key valid — it *is*
+   * the data key — and leaves existing backups readable with the password they
+   * were written under.
+   */
+  ipcMain.handle(
+    'auth:changePassword',
+    (_event, { currentPassword, newPassword }: { currentPassword: string; newPassword: string }): AppState => {
+      const config = readConfig();
+      if (!config) {
+        throw new Error('Die App wurde noch nicht eingerichtet.');
+      }
+      if (getConfigStorageMode(config) === 'plain') {
+        throw new Error('Ohne Verschlüsselung gibt es kein Passwort zu ändern.');
+      }
+      if (!newPassword || newPassword.trim().length === 0) {
+        throw new Error('Bitte ein neues Passwort eingeben.');
+      }
+      if (!config.salt || !config.passwordHash) {
+        throw new Error('Die Verschlüsselungskonfiguration ist unvollständig.');
+      }
+      if (hashPassword(currentPassword, config.salt) !== config.passwordHash) {
+        throw new Error('Das aktuelle Passwort ist nicht korrekt.');
+      }
+
+      const keyBytes = getEncryptionKey();
+      if (!keyBytes) {
+        throw new Error('Bitte zuerst anmelden.');
+      }
+
+      const salt = crypto.randomBytes(16).toString('hex');
+      const encrypted = encryptBuffer(keyBytes, deriveKey(newPassword, salt));
+
+      writeConfig({
+        ...config,
+        storageMode: 'encrypted',
+        salt,
+        passwordHash: hashPassword(newPassword, salt),
+        encryptedKey: encrypted.content.toString('base64'),
+        keyIv: encrypted.iv.toString('base64'),
+        keyTag: encrypted.tag.toString('base64'),
+        keyFingerprint: fingerprintKey(keyBytes),
+        configVersion: 3,
+      });
+
+      return buildConfiguredState('encrypted', true);
+    },
+  );
 
   ipcMain.handle('auth:recoveryKey', (): { recoveryKey: string; fingerprint: string } => {
     const key = getEncryptionKey();

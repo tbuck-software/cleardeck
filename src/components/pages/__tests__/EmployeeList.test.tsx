@@ -18,11 +18,11 @@ const employees: EmployeeWithPeriod[] = [
   },
   {
     id: 2,
-    name: 'Bruno Stringwert',
+    name: 'Bruno Beispiel',
     qualification: 'Admin',
     startDate: '2024-01-01',
-    endDate: '',
-    fte: '0.5' as unknown as number,
+    endDate: '2025-06-30',
+    fte: 0.5,
     weeklyHours: 20,
     status: 'left',
   },
@@ -33,57 +33,90 @@ const qualifications: QualificationType[] = [
   { id: 2, name: 'Admin' },
 ];
 
+const noop = (): void => undefined;
+
+const renderList = (overrides: Partial<React.ComponentProps<typeof EmployeeList>> = {}): ReturnType<typeof render> =>
+  render(
+    <EmployeeList
+      year={2026}
+      years={[2024, 2025, 2026]}
+      search=""
+      statusFilter="all"
+      qualificationFilter="all"
+      qualifications={qualifications}
+      filteredEmployees={employees}
+      totalFte={1.3}
+      wideTable
+      onSearchChange={noop}
+      onStatusChange={noop}
+      onQualificationChange={noop}
+      onYearChange={noop}
+      onExport={noop}
+      onOpenReport={noop}
+      onCreate={noop}
+      onSelect={noop}
+      {...overrides}
+    />,
+  );
+
 describe('EmployeeList', () => {
-  it('löst Filter- und Toolbar-Aktionen aus', () => {
+  it('löst Such- und Filteraktionen aus', () => {
     const onSearchChange = vi.fn();
-    const onStatusChange = vi.fn();
     const onQualificationChange = vi.fn();
-    const onExport = vi.fn();
-    const onCreate = vi.fn();
-    const onSelect = vi.fn();
-    const onDelete = vi.fn();
+    renderList({ onSearchChange, onQualificationChange });
 
-    render(
-      <EmployeeList
-        search=""
-        statusFilter="all"
-        qualificationFilter="all"
-        qualifications={qualifications}
-        filteredEmployees={employees}
-        onSearchChange={onSearchChange}
-        onStatusChange={onStatusChange}
-        onQualificationChange={onQualificationChange}
-        onExport={onExport}
-        onCreate={onCreate}
-        onSelect={onSelect}
-        onDelete={onDelete}
-      />,
-    );
-
-    fireEvent.change(screen.getByPlaceholderText(/Suchen/), { target: { value: 'anna' } });
+    fireEvent.change(screen.getByPlaceholderText('Suchen'), { target: { value: 'anna' } });
     expect(onSearchChange).toHaveBeenCalledWith('anna');
 
-    const selects = screen.getAllByRole('combobox');
-    fireEvent.change(selects[0], { target: { value: 'active' } });
-    expect(onStatusChange).toHaveBeenCalledWith('active');
-
-    fireEvent.change(selects[1], { target: { value: 'Admin' } });
+    fireEvent.change(screen.getByLabelText('Qualifikation'), { target: { value: 'Admin' } });
     expect(onQualificationChange).toHaveBeenCalledWith('Admin');
+  });
 
-    fireEvent.click(screen.getByText('CSV'));
-    expect(onExport).toHaveBeenCalledWith('csv');
-
-    fireEvent.click(screen.getByText('Excel'));
-    expect(onExport).toHaveBeenCalledWith('xlsx');
-
-    fireEvent.click(screen.getByText('Neu anlegen'));
-    expect(onCreate).toHaveBeenCalled();
+  it('öffnet eine Zeile', () => {
+    const onSelect = vi.fn();
+    renderList({ onSelect });
 
     fireEvent.click(screen.getByText('Anna Beispiel'));
     expect(onSelect).toHaveBeenCalledWith(employees[0]);
+  });
 
-    expect(screen.getByText('30')).toBeInTheDocument();
-    expect(screen.getByText('20')).toBeInTheDocument();
-    expect(screen.getAllByText('0.50').length).toBeGreaterThan(0);
+  it('exportiert über das Menü', () => {
+    const onExport = vi.fn();
+    renderList({ onExport });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Weitere Aktionen' }));
+    fireEvent.click(screen.getByText('Als Excel exportieren'));
+    expect(onExport).toHaveBeenCalledWith('xlsx');
+  });
+
+  it('summiert Stunden und VZÄ in der Fußzeile', () => {
+    renderList();
+
+    expect(screen.getByText('Summe über 2 Personen')).toBeInTheDocument();
+    expect(screen.getByText('50')).toBeInTheDocument();
+    expect(screen.getByText('1,30')).toBeInTheDocument();
+  });
+
+  it('sortiert nach Klick auf eine Spaltenüberschrift', () => {
+    renderList();
+
+    // Die Liste startet nach Name aufsteigend.
+    const nameHeader = screen.getByText(/^Name/).closest('th') as HTMLElement;
+    expect(nameHeader).toHaveAttribute('aria-sort', 'ascending');
+
+    fireEvent.click(nameHeader);
+    expect(nameHeader).toHaveAttribute('aria-sort', 'descending');
+
+    const hoursHeader = screen.getByText(/^Std\./).closest('th') as HTMLElement;
+    fireEvent.click(hoursHeader);
+    expect(hoursHeader).toHaveAttribute('aria-sort', 'ascending');
+    expect(nameHeader).toHaveAttribute('aria-sort', 'none');
+  });
+
+  it('fällt in schmalen Fenstern auf eine Liste zurück', () => {
+    renderList({ wideTable: false });
+
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.getByText('2 Personen')).toBeInTheDocument();
   });
 });

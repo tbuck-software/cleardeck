@@ -1,12 +1,12 @@
 import React from 'react';
-import { faClipboardCheck } from '@fortawesome/free-solid-svg-icons';
+import Dialog from '../ui/Dialog';
+import CompetencyLevelPicker from '../ui/CompetencyLevelPicker';
 import type { CompetencyDefinition } from '../../shared/types';
 import type { EmployeeCompetencyModalState } from '../../types/ui';
-import ModalHeader from './ModalHeader';
-import CompetencyLevelPicker from '../ui/CompetencyLevelPicker';
 
 type EmployeeCompetencyModalProps = {
   state: EmployeeCompetencyModalState;
+  employeeName: string;
   availableDefinitions: CompetencyDefinition[];
   onChange: (next: Partial<EmployeeCompetencyModalState>) => void;
   onClose: () => void;
@@ -16,102 +16,92 @@ type EmployeeCompetencyModalProps = {
 
 const EmployeeCompetencyModal = ({
   state,
+  employeeName,
   availableDefinitions,
   onChange,
   onClose,
   onSave,
   onDelete,
 }: EmployeeCompetencyModalProps) => {
-  if (!state.open) return null;
   const isAssigned = Boolean(state.id);
-  const selectedValue = state.level ?? 0;
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <ModalHeader
-          icon={faClipboardCheck}
-          title={isAssigned ? state.competencyName : 'Kompetenz hinzufügen'}
-          onClose={onClose}
-        />
-        <div className="modal-body">
-          {!isAssigned && (
-            <label className="full-width">
-              Kompetenz
-              <select
-                value={state.competencyDefinitionId ?? ''}
-                onChange={(e) => {
-                  const selectedId = Number(e.target.value);
-                  const selectedDefinition = availableDefinitions.find(
-                    (definition) => definition.id === selectedId,
-                  );
-                  onChange({
-                    competencyDefinitionId: selectedId,
-                    competencyName: selectedDefinition?.name ?? '',
-                  });
-                }}
-              >
-                {availableDefinitions.map((definition) => (
-                  <option key={definition.id} value={definition.id}>
-                    {definition.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <label className="full-width">
-            Kompetenzstufe
-            <CompetencyLevelPicker
-              value={selectedValue}
-              onChange={(level) => onChange({ level })}
-            />
-          </label>
-          <div className="form-grid">
-            <label>
-              Freigegeben am
-              <input
-                type="date"
-                value={state.approvedAt}
-                onChange={(e) => onChange({ approvedAt: e.target.value })}
-              />
-            </label>
-            <label>
-              Freigegeben durch
-              <input
-                value={state.approvedBy}
-                onChange={(e) => onChange({ approvedBy: e.target.value })}
-                placeholder="z. B. Praxisanleitung"
-              />
-            </label>
-          </div>
-          <label className="full-width">
-            Notiz
-            <textarea
-              value={state.note}
-              onChange={(e) => onChange({ note: e.target.value })}
-              placeholder="Optional: Beobachtungen, Freigabehinweis, Besonderheiten"
-            />
-          </label>
+    <Dialog
+      open={state.open}
+      width={560}
+      title={isAssigned ? state.competencyName : 'Kompetenz hinzufügen'}
+      subtitle={`${employeeName} · Stufe und fachliche Freigabe`}
+      primaryLabel="Speichern"
+      onPrimary={onSave}
+      deleteLabel={isAssigned ? 'Entfernen' : undefined}
+      onDelete={isAssigned ? onDelete : undefined}
+      onClose={onClose}
+    >
+      {!isAssigned && (
+        <div className="field">
+          <label htmlFor="employee-competency">Kompetenz</label>
+          <select
+            id="employee-competency"
+            className="input"
+            value={state.competencyDefinitionId ?? ''}
+            onChange={(event) => {
+              const selectedId = Number(event.target.value);
+              const definition = availableDefinitions.find((entry) => entry.id === selectedId);
+              onChange({
+                competencyDefinitionId: selectedId,
+                competencyName: definition?.name ?? '',
+              });
+            }}
+          >
+            {availableDefinitions.map((definition) => (
+              <option key={definition.id} value={definition.id}>
+                {definition.code ? `${definition.code} · ` : ''}
+                {definition.name}
+              </option>
+            ))}
+          </select>
         </div>
-        <div className="modal-actions">
-          <div className="modal-actions-left">
-            {isAssigned && (
-              <button className="ghost-button danger" onClick={onDelete}>
-                Entfernen
-              </button>
-            )}
-          </div>
-          <div className="modal-actions-right">
-            <button className="ghost-button" onClick={onClose}>
-              Abbrechen
-            </button>
-            <button className="primary" onClick={onSave}>
-              Speichern
-            </button>
-          </div>
+      )}
+
+      <div className="field">
+        <label>Stufe</label>
+        <CompetencyLevelPicker value={state.level ?? 0} onChange={(level) => onChange({ level })} />
+      </div>
+
+      <div className="cd-field-grid">
+        <div className="field">
+          <label htmlFor="competency-approved-at">Freigegeben am</label>
+          <input
+            id="competency-approved-at"
+            className="input"
+            type="date"
+            value={state.approvedAt}
+            onChange={(event) => onChange({ approvedAt: event.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="competency-approved-by">Freigegeben durch</label>
+          <input
+            id="competency-approved-by"
+            className="input"
+            placeholder="Pflegedienstleitung"
+            value={state.approvedBy}
+            onChange={(event) => onChange({ approvedBy: event.target.value })}
+          />
         </div>
       </div>
-    </div>
+
+      <div className="field">
+        <label htmlFor="competency-entry-note">Notiz</label>
+        <textarea
+          id="competency-entry-note"
+          className="input"
+          style={{ minHeight: 70 }}
+          value={state.note}
+          onChange={(event) => onChange({ note: event.target.value })}
+        />
+      </div>
+    </Dialog>
   );
 };
 

@@ -1,10 +1,19 @@
 import fs from 'fs';
-import { ipcMain, dialog, BrowserWindow } from 'electron';
-import { readDiagnostics } from '../diagnostics';
+import { ipcMain, dialog, shell, BrowserWindow } from 'electron';
+import { clearDiagnostics, diagnosticsDir, readDiagnostics } from '../diagnostics';
 import { formatDiagnostics } from '../../shared/diagnostics';
 
 export const registerDiagnosticHandlers = (getWindow: () => BrowserWindow | null): void => {
   ipcMain.handle('diagnostics:read', () => readDiagnostics());
+
+  ipcMain.handle('diagnostics:openFolder', async (): Promise<boolean> => {
+    const folder = diagnosticsDir();
+    fs.mkdirSync(folder, { recursive: true });
+    const error = await shell.openPath(folder);
+    return error === '';
+  });
+
+  ipcMain.handle('diagnostics:clear', (): void => clearDiagnostics());
   ipcMain.handle('diagnostics:export', async (): Promise<boolean> => {
     const options = {
       title: 'Diagnose für Feedback speichern',

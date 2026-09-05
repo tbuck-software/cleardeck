@@ -1,36 +1,29 @@
-.update-control {
-  position: relative;
+/* Update error details — the one piece of the old update UI still in use. */
+
+.update-error-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   min-width: 0;
-  padding: 16px;
-  border: 1px solid #cbdaf6;
-  border-radius: 14px;
-  background: #f4f8ff;
-  color: #183761;
-  display: grid;
-  gap: 12px;
-  text-align: left;
 }
-.update-control-heading { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.update-control-icon { display: grid; place-items: center; flex: 0 0 34px; height: 34px; border-radius: 10px; background: #e0ebfe; color: #245fc2; font-size: 17px; }
-.update-control-title { display: grid; gap: 4px; flex: 1; min-width: 0; }
-.update-control-title strong { font-size: 13px; line-height: 1.4; }
-.update-control-title span { font-size: 12px; color: #536b89; overflow-wrap: anywhere; }
-.update-control-action { background: #255ec4; color: white; border: 0; border-radius: 8px; padding: 10px 12px; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
-.update-control-action:hover:not(:disabled) { background: #194caa; }
-.update-control-action:disabled { background: #e2eafb; color: #47648e; cursor: default; }
-.update-control-action:focus-visible, .update-notes-toggle:focus-visible, .update-notes:focus-visible { outline: 2px solid #2563eb; outline-offset: 3px; }
-.update-notes-toggle { background: transparent; border: 0; color: #536b89; padding: 6px; font-size: 19px; cursor: pointer; }
-.update-control-detail { margin: 0; font-size: 12px; line-height: 1.6; }
-.update-transfer { display: grid; gap: 7px; }
-.update-transfer progress { width: 100%; height: 6px; border: 0; border-radius: 6px; overflow: hidden; background: #dbe7fa; accent-color: #2563eb; }
-.update-transfer progress::-webkit-progress-bar { background: #dbe7fa; }
-.update-transfer progress::-webkit-progress-value { background: #2563eb; transition: width 250ms ease; }
-.update-transfer > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 5px; font-size: 11px; color: #536b89; }
-.update-notes { position: fixed; margin: 0; inset: auto; z-index: 100; width: min(380px, calc(100vw - 48px)); max-height: min(320px, 50vh); overflow-y: auto; overflow-wrap: anywhere; background: #fff; color: #24344e; border: 1px solid #dbe3ef; border-radius: 12px; box-shadow: 0 12px 36px #182d5126; padding: 18px; font-size: 13px; line-height: 1.6; }
-.update-notes-heading { margin: 0 0 10px; font-weight: 700; }
-.update-notes-content { white-space: pre-wrap; }
-.update-control-error { background: #fff8f6; border-color: #edc8c1; color: #8c3529; }
-.update-control-error .update-control-icon { color: #b74a37; background: #fbe3dc; }
-.update-control .update-error-details { min-width: 0; }
-.update-control-compact { margin: 0 0 12px; padding: 12px; }
-@media (prefers-reduced-motion: reduce) { .update-transfer progress::-webkit-progress-value { transition: none; } }
+
+.update-error-details textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: 12.5px/1.6 ui-monospace, Menlo, monospace;
+  overflow-wrap: anywhere;
+}
+
+.update-error-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--color-neutral-700);
+}

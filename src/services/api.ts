@@ -33,6 +33,9 @@ export const api = {
     register: (password: string) => call('register', baseApi.register, password),
     registerPlain: () => call('registerPlain', baseApi.registerPlain),
     login: (password: string) => call('login', baseApi.login, password),
+    lock: () => call('lock', baseApi.lock),
+    changePassword: (input: Parameters<Api['changePassword']>[0]) =>
+      call('changePassword', baseApi.changePassword, input),
     enableEncryption: (password: string) => call('enableEncryption', baseApi.enableEncryption, password),
     disableEncryption: () => call('disableEncryption', baseApi.disableEncryption),
   },
@@ -135,6 +138,8 @@ export const api = {
   diagnostics: {
     read: () => call('readDiagnostics', baseApi.readDiagnostics),
     export: () => call('exportDiagnostics', baseApi.exportDiagnostics),
+    openFolder: () => call('openDiagnosticsFolder', baseApi.openDiagnosticsFolder),
+    clear: () => call('clearDiagnostics', baseApi.clearDiagnostics),
   },
   updates: {
     check: (manual = false) => call('checkUpdates', baseApi.checkUpdates, manual),
@@ -156,13 +161,38 @@ export const api = {
       call('saveVisit', baseApi.saveVisit, input),
     deleteVisit: (id: number, patientId: number) =>
       call('deleteVisit', baseApi.deleteVisit, id, patientId),
-    getConcerningRatings: (limit?: number) =>
-      call('getConcerningRatings', baseApi.getConcerningRatings, limit),
+    listRecentVisits: (perPatient?: number) =>
+      call('listRecentVisits', baseApi.listRecentVisits, perPatient),
+    getActionNeeded: (limit?: number) =>
+      call('getActionNeeded', baseApi.getActionNeeded, limit),
     getPatientStats: () => call('getPatientStats', baseApi.getPatientStats),
     listBirthdays: (startDate: string, endDate: string) =>
       call('listPatientBirthdays', baseApi.listPatientBirthdays, startDate, endDate),
     listVisitsInRange: (startDate: string, endDate: string) =>
       call('listPatientVisitsInRange', baseApi.listPatientVisitsInRange, startDate, endDate),
+  },
+  definitions: {
+    usage: () => call('getDefinitionUsage', baseApi.getDefinitionUsage),
+  },
+  backup: {
+    get: () => call('getBackupSettings', baseApi.getBackupSettings),
+    set: (input: Parameters<Api['setBackupSettings']>[0]) =>
+      call('setBackupSettings', baseApi.setBackupSettings, input),
+    chooseFolder: () => call('chooseBackupFolder', baseApi.chooseBackupFolder),
+    run: () => call('runBackup', baseApi.runBackup),
+    restore: (path: string) => call('restoreBackup', baseApi.restoreBackup, path),
+  },
+  careSettings: {
+    get: () => call('getCareSettings', baseApi.getCareSettings),
+    set: (input: Parameters<Api['setCareSettings']>[0]) =>
+      call('setCareSettings', baseApi.setCareSettings, input),
+  },
+  audits: {
+    sections: () => call('listAuditSections', baseApi.listAuditSections),
+    exportPersonList: () => call('exportPersonList', baseApi.exportPersonList),
+    list: () => call('listAudits', baseApi.listAudits),
+    save: (input: Parameters<Api['saveAudit']>[0]) => call('saveAudit', baseApi.saveAudit, input),
+    delete: (id: number) => call('deleteAudit', baseApi.deleteAudit, id),
   },
 };
 

@@ -1,0 +1,761 @@
+/* Page-level composition shared by every screen in the redesign. */
+
+.cd-page {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.cd-dashboard {
+  gap: 40px;
+  max-width: 1240px;
+}
+
+.cd-detail {
+  gap: 28px;
+  max-width: 1240px;
+}
+
+.cd-narrow {
+  gap: 36px;
+  max-width: 640px;
+}
+
+.cd-medium {
+  gap: 36px;
+  max-width: 1100px;
+}
+
+.cd-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.cd-h1 {
+  margin: 4px 0 0;
+  font-size: 34px;
+}
+
+.cd-h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.cd-h3-note {
+  font: 400 14px var(--font-body);
+  color: var(--color-neutral-700);
+}
+
+.cd-eyebrow {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+}
+
+.cd-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.cd-muted {
+  color: var(--color-neutral-700);
+}
+
+.cd-muted-13 {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+}
+
+.cd-muted-14 {
+  font-size: 14px;
+  color: var(--color-neutral-700);
+}
+
+.cd-empty {
+  padding: 22px;
+  text-align: center;
+  color: var(--color-neutral-700);
+}
+
+.cd-arrow {
+  color: var(--color-neutral-600);
+  flex: none;
+}
+
+.cd-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.cd-dot-lg {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.cd-link {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--color-accent-700);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cd-link:hover {
+  color: var(--color-accent-800);
+}
+
+.cd-danger-link {
+  color: var(--bad-800);
+}
+
+/* — task checkbox — */
+
+.cd-check {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--color-neutral-400);
+  background: transparent;
+  color: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cd-check[data-done='true'] {
+  border-color: var(--color-accent-2-500);
+  background: var(--color-accent-2-500);
+  color: #fff;
+}
+
+/* — dashboard — */
+
+.cd-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 28px 32px;
+}
+
+.cd-kpi-value {
+  font: 400 40px/1 var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  letter-spacing: -0.02em;
+}
+
+.cd-two-col {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 40px 56px;
+}
+
+.cd-bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 6px;
+  gap: 12px;
+}
+
+.cd-bar-track {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.cd-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.cd-daychip {
+  flex: none;
+  width: 44px;
+  text-align: center;
+  font: 400 18px/1 var(--font-heading);
+  font-weight: var(--font-heading-weight);
+}
+
+.cd-daychip-mon {
+  font: 600 10px/1.4 var(--font-body);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-neutral-700);
+}
+
+/* — filter rows and tables — */
+
+.cd-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.cd-search {
+  position: relative;
+  flex: 1 1 200px;
+  max-width: 320px;
+}
+
+.cd-search svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-neutral-600);
+  pointer-events: none;
+}
+
+.cd-search .input {
+  padding-left: 38px;
+}
+
+.cd-select {
+  width: auto;
+  padding-right: 32px;
+}
+
+.cd-table-wrap {
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  padding: 4px 18px 8px;
+  overflow-x: auto;
+}
+
+.cd-table-wrap .ds-table th {
+  padding: 14px 8px;
+}
+
+.cd-table-wrap .ds-table td {
+  padding: 12px 8px;
+}
+
+.cd-actions {
+  display: flex;
+  gap: 8px;
+  position: relative;
+}
+
+/* — detail pages — */
+
+.cd-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 20px 28px;
+  max-width: 760px;
+}
+
+.cd-fact-value {
+  font: 400 28px/1 var(--font-heading);
+  font-weight: var(--font-heading-weight);
+  letter-spacing: -0.02em;
+}
+
+.cd-fact-label {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  margin-top: 6px;
+}
+
+.cd-detail-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.cd-detail-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.cd-timeline-row {
+  display: grid;
+  grid-template-columns: 110px 24px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.cd-timeline-date {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  padding-top: 4px;
+  text-align: right;
+}
+
+.cd-timeline-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: stretch;
+}
+
+.cd-timeline-rail span:first-child {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: none;
+  margin-top: 6px;
+}
+
+.cd-timeline-rail span:last-child {
+  flex: 1;
+  width: 2px;
+  background: var(--color-neutral-300);
+  margin-top: 4px;
+}
+
+.cd-level-dots {
+  display: flex;
+  gap: 5px;
+  flex: none;
+}
+
+.cd-level-dots span {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+}
+
+/* — dialog — */
+
+.cd-dialog-backdrop {
+  z-index: 40;
+  overflow-y: auto;
+  align-items: start;
+  padding: max(16px, min(6vh, 64px)) 16px;
+}
+
+.cd-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cd-dialog-sub {
+  margin: -6px 0 0;
+  font-size: 14px;
+  color: var(--color-neutral-700);
+}
+
+.cd-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.cd-field-wide {
+  grid-column: 1 / -1;
+}
+
+.cd-notice {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.cd-notice-ok {
+  background: var(--ok-100);
+  color: var(--ok-800);
+}
+
+.cd-notice-bad {
+  background: var(--bad-100);
+  color: var(--bad-800);
+}
+
+.cd-notice-accent {
+  background: var(--color-accent-100);
+  color: var(--color-accent-800);
+}
+
+/* — logs — */
+
+.cd-log-console {
+  background: var(--color-neutral-900);
+  color: var(--color-neutral-200);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  font: 12.5px/1.6 ui-monospace, Menlo, monospace;
+  max-height: 420px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.cd-log-line {
+  display: grid;
+  grid-template-columns: auto 44px 1fr;
+  gap: 0 12px;
+  padding: 2px 0;
+}
+
+.cd-log-time {
+  color: var(--color-neutral-500);
+  white-space: nowrap;
+}
+
+.cd-log-msg {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cd-log-src {
+  color: var(--color-neutral-400);
+}
+
+.cd-mono {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 13px;
+}
+
+/* — shortcuts — */
+
+.cd-shortcut-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-divider);
+  font-size: 14px;
+}
+
+.cd-kbd-key {
+  font: 600 12px/1 var(--font-body);
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-divider);
+  min-width: 26px;
+  text-align: center;
+}
+
+/* — calendar — */
+
+.cd-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.cd-weekday {
+  font: 600 11px var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+  padding: 0 8px 4px;
+}
+
+.cd-day-num {
+  align-self: flex-start;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cd-day-event {
+  font: 600 12px/1.3 var(--font-body);
+  padding: 4px 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cd-panel-foot {
+  padding: 12px 10px;
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  display: flex;
+  justify-content: space-between;
+}
+
+.cd-panel-foot strong {
+  color: var(--color-text);
+}
+
+/* The menu closes on any outside click; the scrim catches it. */
+.cd-menu-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+}
+
+.cd-back {
+  align-self: flex-start;
+  margin-left: -6px;
+}
+
+.cd-code {
+  flex: none;
+  font: 600 11px/1 var(--font-body);
+  letter-spacing: 0.06em;
+  color: var(--color-neutral-600);
+  width: 44px;
+}
+
+.cd-trend-bar {
+  width: 10px;
+  height: 22px;
+  border-radius: 5px;
+  display: inline-block;
+}
+
+.cd-fact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 16px 28px;
+  max-width: 900px;
+}
+
+.cd-drag {
+  color: var(--color-neutral-500);
+  cursor: grab;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.cd-item[data-dragging='true'] {
+  opacity: 0.5;
+}
+
+.cd-tag-row {
+  display: flex;
+  gap: 6px;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.cd-usage {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  flex: none;
+  min-width: 88px;
+  text-align: right;
+}
+
+.cd-group-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.cd-recovery-key {
+  font: 600 18px/1.6 ui-monospace, Menlo, monospace;
+  letter-spacing: 0.06em;
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 16px 18px;
+  text-align: center;
+  transition: filter 0.2s;
+  user-select: all;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.cd-linked-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: end;
+}
+
+/* Closes off the task panel. Separated by a rule and centred so it reads as
+   "the list ends here, there is more" rather than as one more task. */
+/* No rule: centred, semibold and in the accent colour is already distinct
+   from the left-aligned task rows above it. */
+.cd-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: calc(100% - 12px);
+  margin: 2px 6px;
+  padding: 13px 12px;
+  border: 0;
+  border-radius: calc(var(--radius-lg) - 6px);
+  background: transparent;
+  color: var(--color-accent-700);
+  font: 600 14px var(--font-body);
+  cursor: pointer;
+}
+
+.cd-more:hover {
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: var(--color-accent-800);
+}
+
+.cd-more:active {
+  background: color-mix(in srgb, var(--color-accent) 18%, transparent);
+}
+
+/* Typeahead: results appear only while searching, so the dialog stays the same
+   height whether there are four records or four hundred. */
+.cd-typeahead {
+  margin-top: 6px;
+  padding: 4px;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.cd-typeahead .cd-item {
+  padding: 8px 10px;
+}
+
+.cd-typeahead > .cd-muted-13 {
+  padding: 8px 10px;
+}
+
+/* The chosen few, each removable. */
+.cd-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.cd-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px 5px 12px;
+  border-radius: 999px;
+  background: var(--color-accent-100);
+  color: var(--color-accent-800);
+  font: 600 13px var(--font-body);
+}
+
+.cd-token button {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.cd-token button:hover {
+  background: color-mix(in srgb, var(--color-accent-800) 18%, transparent);
+}
+
+.cd-pw-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+}
+
+/* Choice cards: the border carries the selection, so the label stays readable. */
+.cd-choice {
+  border: 2px solid var(--color-divider);
+  background: transparent;
+  border-radius: var(--radius-md);
+  padding: 12px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.cd-choice[data-selected='true'] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-100);
+}
+
+.cd-choice-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+}
+
+/* — progress — */
+
+.cd-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.cd-progress-fill {
+  transition: width 0.3s ease;
+}
+
+/* Unknown total: a sliding sliver instead of a fill that would imply a share. */
+.cd-progress-pending {
+  width: 35%;
+  animation: cdProgressSlide 1.4s ease-in-out infinite;
+}
+
+.cd-progress-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-neutral-700);
+}
+
+@keyframes cdProgressSlide {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(285%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-progress-pending {
+    animation: none;
+    width: 100%;
+    opacity: 0.4;
+  }
+
+  .cd-progress-fill {
+    transition: none;
+  }
+}

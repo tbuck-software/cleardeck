@@ -6,7 +6,14 @@ const useConfirmations = () => {
 
   const confirmAction = useCallback(
     (message: string, action: () => Promise<void> | void, opts?: ConfirmActionOptions) => {
-      setConfirmState({ message, onConfirm: action, confirmLabel: opts?.confirmLabel, danger: opts?.danger });
+      setConfirmState({
+        message,
+        onConfirm: action,
+        confirmLabel: opts?.confirmLabel,
+        danger: opts?.danger,
+        title: opts?.title,
+        confirmPhrase: opts?.confirmPhrase,
+      });
     },
     [],
   );

@@ -159,7 +159,7 @@ const useCalendar = ({ handleError, hiddenEventTypes, enabled = true }: UseCalen
         employeeId: undefined,
         eventDate: item.visitDate,
         type: 'patient-visit' as const,
-        title: `QPR-Visite (${item.qprRating})`,
+        title: item.actionNeeded ? 'Pflegevisite · Handlungsbedarf' : 'Pflegevisite',
         details: item.comment,
         employeeName: item.patientName,
         patientId: item.patientId,

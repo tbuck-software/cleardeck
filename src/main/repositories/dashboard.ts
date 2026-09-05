@@ -11,6 +11,8 @@ import type {
   ExpiringTraining,
   BirthdayAnniversary,
   EmployeeDashboardStats,
+  OpenInstruction,
+  DefinitionUsage,
 } from '../../shared/types';
 
 import { getDb } from '../database/connection';
@@ -358,5 +360,56 @@ export const getEmployeeDashboardStats = (dueSoonDays = 30, limit = 5): Employee
       approvedRate: competencyTotal > 0 ? Math.round((competencyApproved / competencyTotal) * 100) : 0,
       topGapEmployees,
     },
+  };
+};
+
+/**
+ * Open Pflichtunterweisungen with the person attached — the dashboard task list
+ * names who has to act, which the aggregate counts in EmployeeDashboardStats
+ * deliberately do not.
+ */
+export const listOpenInstructions = (limit = 20): OpenInstruction[] => {
+  const db = getDb();
+  return db
+    .prepare(
+      `
+      SELECT
+        ei.id as id,
+        ei.employeeId as employeeId,
+        e.name as employeeName,
+        id_def.topic as topic,
+        id_def.legalBasis as legalBasis,
+        ei.dueDate as dueDate,
+        CAST(julianday(ei.dueDate) - julianday(date('now')) AS INTEGER) as daysUntilDue
+      FROM employee_instructions ei
+      INNER JOIN employees e ON e.id = ei.employeeId
+      INNER JOIN instruction_definitions id_def ON id_def.id = ei.instructionDefinitionId
+      WHERE ei.completedAt IS NULL AND ei.dueDate IS NOT NULL
+      ORDER BY ei.dueDate ASC
+      LIMIT ?
+    `,
+    )
+    .all(limit) as OpenInstruction[];
+};
+
+/**
+ * How often each catalogue entry is actually assigned. The Verwaltung lists
+ * show this so an entry is never deleted without seeing what it would take
+ * with it.
+ */
+export const getDefinitionUsage = (): DefinitionUsage => {
+  const db = getDb();
+  const tally = (sql: string): Record<number, number> => {
+    const rows = db.prepare(sql).all() as { id: number; count: number }[];
+    return Object.fromEntries(rows.map((row) => [row.id, row.count]));
+  };
+
+  return {
+    competencies: tally(
+      'SELECT competencyDefinitionId as id, COUNT(*) as count FROM employee_competencies GROUP BY competencyDefinitionId',
+    ),
+    instructions: tally(
+      'SELECT instructionDefinitionId as id, COUNT(*) as count FROM employee_instructions GROUP BY instructionDefinitionId',
+    ),
   };
 };

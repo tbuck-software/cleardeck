@@ -1,7 +1,13 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
-import type { PatientWithLatestVisit, PatientVisit, QprRating } from '../shared/types';
-import type { ConfirmActionOptions, PatientModalState, VisitModalState } from '../types/ui';
+import type { PatientWithLatestVisit, PatientVisit } from '../shared/types';
+import { teilgruppeOf } from '../utils/qpr';
+import type {
+  ConfirmActionOptions,
+  PatientModalState,
+  TeilgruppeFilter,
+  VisitModalState,
+} from '../types/ui';
 
 export const emptyPatientModal = (): PatientModalState => ({
   open: false,
@@ -9,15 +15,21 @@ export const emptyPatientModal = (): PatientModalState => ({
   name: '',
   birthDate: '',
   diagnosis: '',
-  qprStatus: '',
   note: '',
+  contact: '',
+  admissionDate: '',
+  cognitionImpaired: null,
+  mobilityImpaired: null,
+  hkpCode: null,
+  intensiveCare: null,
+  careLevel: null,
 });
 
 export const emptyVisitModal = (patientId = 0): VisitModalState => ({
   open: false,
   patientId,
   visitDate: new Date().toISOString().slice(0, 10),
-  qprRating: 'A',
+  actionNeeded: false,
   comment: '',
 });
 
@@ -45,7 +57,7 @@ const usePatients = ({
   const [visits, setVisits] = useState<PatientVisit[]>([]);
   const [patientModal, setPatientModal] = useState<PatientModalState>(emptyPatientModal());
   const [search, setSearch] = useState('');
-  const [ratingFilter, setRatingFilter] = useState<'all' | QprRating>('all');
+  const [groupFilter, setGroupFilter] = useState<TeilgruppeFilter>('all');
   const [visitModal, setVisitModal] = useState<VisitModalState>(emptyVisitModal());
 
   const refreshPatients = useCallback(async () => {
@@ -91,8 +103,14 @@ const usePatients = ({
         name: patientModal.name,
         birthDate: patientModal.birthDate || null,
         diagnosis: patientModal.diagnosis || null,
-        qprStatus: (patientModal.qprStatus as QprRating) || null,
         note: patientModal.note || null,
+        contact: patientModal.contact || null,
+        admissionDate: patientModal.admissionDate || null,
+        cognitionImpaired: patientModal.cognitionImpaired,
+        mobilityImpaired: patientModal.mobilityImpaired,
+        hkpCode: patientModal.hkpCode,
+        intensiveCare: patientModal.intensiveCare,
+        careLevel: patientModal.careLevel,
       });
       setPatients(updated);
       // Update selectedPatient if we edited the currently selected patient
@@ -154,11 +172,11 @@ const usePatients = ({
         id: visitModal.id,
         patientId: visitModal.patientId,
         visitDate: visitModal.visitDate,
-        qprRating: visitModal.qprRating,
+        actionNeeded: visitModal.actionNeeded,
         comment: visitModal.comment || null,
       });
       setVisits(updatedVisits);
-      // Refresh patients to update latestQprRating
+      // Refresh patients so the list picks up the new latest visit
       const updatedPatients = await api.patients.list();
       setPatients(updatedPatients);
       // Update selected patient if it exists (use ref to avoid dependency)
@@ -209,22 +227,19 @@ const usePatients = ({
       const matchesSearch =
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         (p.diagnosis?.toLowerCase().includes(search.toLowerCase()) ?? false);
-      const effectiveRating = p.latestQprRating ?? p.qprStatus;
-      const matchesRating = ratingFilter === 'all' ? true : effectiveRating === ratingFilter;
-      return matchesSearch && matchesRating;
+      // D is an additional mark, so it matches on the HKP code, not the group.
+      const matchesGroup =
+        groupFilter === 'all'
+          ? true
+          : groupFilter === 'D'
+            ? p.hkpCode != null
+            : teilgruppeOf(p.cognitionImpaired, p.mobilityImpaired) === groupFilter;
+      return matchesSearch && matchesGroup;
     });
-  }, [patients, search, ratingFilter]);
+  }, [patients, search, groupFilter]);
 
   const openCreatePatientModal = useCallback(() => {
-    setPatientModal({
-      open: true,
-      mode: 'create',
-      name: '',
-      birthDate: '',
-      diagnosis: '',
-      qprStatus: '',
-      note: '',
-    });
+    setPatientModal({ ...emptyPatientModal(), open: true, mode: 'create' });
   }, []);
 
   const openEditPatientModal = useCallback((patient: PatientWithLatestVisit) => {
@@ -235,8 +250,14 @@ const usePatients = ({
       name: patient.name,
       birthDate: patient.birthDate ?? '',
       diagnosis: patient.diagnosis ?? '',
-      qprStatus: patient.qprStatus ?? '',
       note: patient.note ?? '',
+      contact: patient.contact ?? '',
+      admissionDate: patient.admissionDate ?? '',
+      cognitionImpaired: patient.cognitionImpaired ?? null,
+      mobilityImpaired: patient.mobilityImpaired ?? null,
+      hkpCode: patient.hkpCode ?? null,
+      intensiveCare: patient.intensiveCare ?? null,
+      careLevel: patient.careLevel ?? null,
     });
   }, []);
 
@@ -252,7 +273,7 @@ const usePatients = ({
           id: visit.id,
           patientId,
           visitDate: visit.visitDate,
-          qprRating: visit.qprRating,
+          actionNeeded: visit.actionNeeded,
           comment: visit.comment ?? '',
         });
       } else {
@@ -260,7 +281,7 @@ const usePatients = ({
           open: true,
           patientId,
           visitDate: new Date().toISOString().slice(0, 10),
-          qprRating: 'A',
+          actionNeeded: false,
           comment: '',
         });
       }
@@ -310,7 +331,7 @@ const usePatients = ({
       visits,
       patientModal,
       search,
-      ratingFilter,
+      groupFilter,
       visitModal,
     },
     setters: {
@@ -319,7 +340,7 @@ const usePatients = ({
       setVisits,
       setPatientModal,
       setSearch,
-      setRatingFilter,
+      setGroupFilter,
       setVisitModal,
     },
     derived: {

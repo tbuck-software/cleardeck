@@ -1,301 +1,288 @@
 import React from 'react';
-import {
-  faBriefcase,
-  faChartPie,
-  faClipboardCheck,
-  faGraduationCap,
-  faListCheck,
-  faShieldHalved,
-  faTriangleExclamation,
-  faUsers,
-  faUserPlus,
-  faUserMinus,
-  faPercent,
-} from '@fortawesome/free-solid-svg-icons';
-import type {
-  EmployeeDashboardStats,
-  QualificationType,
-  YearDataset,
-  UnifiedEvent,
-  UnifiedEventType,
-} from '../../shared/types';
-import StatCard from '../ui/StatCard';
-import UpcomingEventsList from '../ui/UpcomingEventsList';
-import EventsFilterDropdown from '../ui/EventsFilterDropdown';
+import Segmented from '../ui/Segmented';
+import Icon from '../ui/Icon';
+import TaskRow from '../ui/TaskRow';
+import type { UnifiedEvent, YearDataset } from '../../shared/types';
+import type { DashboardTask, DataQualityCheck, TaskTarget } from '../../utils/dashboardTasks';
+
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+
+/** Bar colours follow the qualification order, most-qualified first. */
+const QUAL_COLORS = [
+  'var(--color-accent-2-500)',
+  'var(--color-accent-2-300)',
+  'var(--color-accent-500)',
+  'var(--color-neutral-400)',
+];
+
+export const greetingFor = (date: Date): string => {
+  const hour = date.getHours();
+  const weekend = date.getDay() === 0 || date.getDay() === 6;
+  if (hour < 5) return 'Hallo, Nachteule';
+  if (hour < 7) return 'Frühaufsteher, Respekt';
+  if (hour < 11) return 'Guten Morgen';
+  if (hour < 13) return 'Mahlzeit';
+  if (hour < 17) return weekend ? 'Wochenendschicht?' : 'Guten Tag';
+  if (hour < 20) return 'Schönen Abend';
+  if (hour < 23) return 'Noch am Schreibtisch?';
+  return 'Ab ins Bett — das läuft morgen nicht weg';
+};
+
+const fte2 = (value: number) => value.toFixed(2).replace('.', ',');
+
+/** Enough to act on without turning the dashboard into a list page. */
+const TASK_PREVIEW_COUNT = 5;
 
 type DashboardProps = {
   year: number;
+  years: number[];
   dataset: YearDataset | null;
   baseHours: number;
-  averageFte: number;
   totalFte: number;
   totalHeadcount: number;
-  qualifications: QualificationType[];
-  unifiedEvents: UnifiedEvent[];
-  hiddenEventTypes: UnifiedEventType[];
-  employeeDashboardStats: EmployeeDashboardStats | null;
-  onEventClick: (event: UnifiedEvent) => void;
-  onToggleEventFilter: (type: UnifiedEventType) => void;
-  onShowAllEvents: () => void;
-  onHideAllEvents: () => void;
+  actionNeededCount: number;
+  tasks: DashboardTask[];
+  doneTaskIds: string[];
+  quality: DataQualityCheck[];
+  upcoming: UnifiedEvent[];
+  onYearChange: (year: number) => void;
+  onToggleTask: (id: string) => void;
+  onOpenTarget: (target: TaskTarget) => void;
+  onOpenEvent: (event: UnifiedEvent) => void;
+  onOpenReport: () => void;
+  onGoCalendar: () => void;
+  onOpenTasks: () => void;
 };
 
 const Dashboard = ({
   year,
+  years,
   dataset,
-  averageFte,
+  baseHours,
   totalFte,
   totalHeadcount,
-  qualifications,
-  unifiedEvents,
-  hiddenEventTypes,
-  employeeDashboardStats,
-  onEventClick,
-  onToggleEventFilter,
-  onShowAllEvents,
-  onHideAllEvents,
+  actionNeededCount,
+  tasks,
+  doneTaskIds,
+  quality,
+  upcoming,
+  onYearChange,
+  onToggleTask,
+  onOpenTarget,
+  onOpenEvent,
+  onOpenReport,
+  onGoCalendar,
+  onOpenTasks,
 }: DashboardProps) => {
-  const fullTimeCount = dataset?.employees.filter((e) => e.fte >= 1).length ?? 0;
-  const fullTimePercent =
-    totalHeadcount > 0 ? Math.round((fullTimeCount / totalHeadcount) * 100) : 0;
-  const newHires =
-    dataset?.employees.filter((e) => e.startDate.startsWith(`${year}`)).length ?? 0;
-  const leavers =
-    dataset?.employees.filter((e) => e.endDate?.startsWith(`${year}`)).length ?? 0;
-  const instructionStats = employeeDashboardStats?.instructions;
-  const competencyStats = employeeDashboardStats?.competencies;
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const todayLabel = now.toLocaleDateString('de-DE', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const employees = dataset?.employees ?? [];
+  const withHours = employees.filter((employee) => employee.weeklyHours != null);
+  const newHires = employees.filter((employee) => employee.startDate?.startsWith(String(year))).length;
+  const leavers = employees.filter((employee) => employee.endDate?.startsWith(String(year))).length;
+  const fullTime = employees.filter((employee) => (employee.fte ?? 0) >= 1).length;
+  // The preview is a working queue: only open tasks, newest urgency first.
+  // Ticking one removes it and pulls the next in, which is the whole point at
+  // a few hundred open items.
+  const openTasks = tasks.filter((task) => !doneTaskIds.includes(task.id));
+  const openTaskCount = openTasks.length;
+  const preview = openTasks.slice(0, TASK_PREVIEW_COUNT);
+  const remaining = openTaskCount - preview.length;
+
+  const categories = dataset?.aggregation.categories ?? [];
+
+  const kpis = [
+    {
+      value: fte2(totalFte),
+      label: 'VZÄ gesamt',
+      sub: `Basis ${baseHours} Std./Woche`,
+      color: 'var(--color-accent-700)',
+    },
+    { value: String(totalHeadcount), label: 'Personen', sub: `im Jahr ${year} beschäftigt`, color: 'var(--color-text)' },
+    {
+      value: fte2(totalFte / Math.max(1, withHours.length)),
+      label: 'Ø VZÄ je Person',
+      sub: `${fullTime} in Vollzeit`,
+      color: 'var(--color-text)',
+    },
+    { value: String(newHires), label: 'Eintritte', sub: `im Jahr ${year}`, color: 'var(--color-accent-2-700)' },
+    { value: String(leavers), label: 'Austritte', sub: `im Jahr ${year}`, color: 'var(--color-text)' },
+    {
+      value: String(actionNeededCount),
+      label: 'Handlungsbedarf',
+      sub: 'Patient:innen · aus letzter Visite',
+      color: actionNeededCount > 0 ? 'var(--bad-800)' : 'var(--ok-800)',
+    },
+  ];
 
   return (
-    <div className="stack dashboard">
-      <div className="card dashboard-hero">
-        <div className="hero-content">
-          <p className="eyebrow">Übersicht {year}</p>
-          <h2>Willkommen zurück</h2>
-          <p className="subtitle">Kennzahlen und Qualifikationen im gewählten Jahr.</p>
+    <div className="cd-page cd-dashboard">
+      <header className="cd-page-header">
+        <div>
+          <div className="cd-eyebrow">{todayLabel}</div>
+          <h1 className="cd-h1">{greetingFor(now)}</h1>
         </div>
-        <div className="hero-decoration">
-          {/* Optional decoration or pattern */}
+        <Segmented
+          ariaLabel="Jahr"
+          options={years.map((value) => ({ value, label: String(value) }))}
+          value={year}
+          onChange={onYearChange}
+        />
+      </header>
+
+      <section>
+        <div className="cd-section-head">
+          <h3 className="cd-h3">Heute zu tun</h3>
+          <span className="cd-muted-13">
+            {openTaskCount} offen · automatisch aus Fristen, Visiten und Datenlücken
+          </span>
         </div>
+        <div className="cd-panel">
+          {openTasks.length === 0 && (
+            <div className="cd-empty">Nichts offen — alle Fristen und Stammdaten sind aktuell.</div>
+          )}
+          {preview.map((task) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              done={false}
+              onToggle={onToggleTask}
+              onOpen={onOpenTarget}
+            />
+          ))}
+          {remaining > 0 && (
+            <button type="button" className="cd-more" onClick={onOpenTasks}>
+              Alle {openTaskCount} Aufgaben anzeigen
+              <Icon name="chevronRight" size={15} />
+            </button>
+          )}
+        </div>
+      </section>
+
+      <section className="cd-kpis">
+        {kpis.map((kpi) => (
+          <div key={kpi.label}>
+            <div className="cd-kpi-value" style={{ color: kpi.color }}>
+              {kpi.value}
+            </div>
+            <div style={{ fontWeight: 600, marginTop: 8 }}>{kpi.label}</div>
+            <div className="cd-muted-13">{kpi.sub}</div>
+          </div>
+        ))}
+      </section>
+
+      <div className="cd-two-col">
+        <section>
+          <h3 className="cd-h3">
+            VZÄ je Qualifikation <span className="cd-h3-note">· {year}</span>
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {categories.map((category, index) => (
+              <div key={category.qualification}>
+                <div className="cd-bar-label">
+                  <span style={{ fontWeight: 600 }}>{category.qualification}</span>
+                  <span className="cd-muted">
+                    {category.headcount} Personen · <strong style={{ color: 'var(--color-text)' }}>{fte2(category.fte)}</strong> VZÄ
+                  </span>
+                </div>
+                <div className="cd-bar-track">
+                  <div
+                    className="cd-bar-fill"
+                    style={{
+                      background: QUAL_COLORS[index % QUAL_COLORS.length],
+                      width: `${totalFte ? Math.round((category.fte / totalFte) * 100) : 0}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+            {categories.length === 0 && <div className="cd-empty">Keine Beschäftigten im Jahr {year}.</div>}
+          </div>
+          <p className="cd-muted-13" style={{ margin: '14px 0 0' }}>
+            Basis {baseHours} Std./Woche.{' '}
+            <button type="button" className="cd-link" onClick={onOpenReport}>
+              Jahresnachweis {year - 1} erstellen →
+            </button>
+          </p>
+        </section>
+
+        <section>
+          <div className="cd-section-head">
+            <h3 className="cd-h3">Nächste 30 Tage</h3>
+            <button type="button" className="btn btn-ghost" onClick={onGoCalendar}>
+              Kalender
+            </button>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {upcoming.length === 0 && <div className="cd-empty">Keine Termine in den nächsten 30 Tagen.</div>}
+            {upcoming.map((event) => {
+              const days = Math.round(
+                (new Date(`${event.date}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000,
+              );
+              const soon = days <= 3;
+              return (
+                <button
+                  key={event.id}
+                  type="button"
+                  className="cd-item"
+                  style={{ padding: '10px 8px' }}
+                  onClick={() => onOpenEvent(event)}
+                >
+                  <div className="cd-daychip" style={{ color: soon ? 'var(--color-accent-700)' : 'var(--color-text)' }}>
+                    {event.date.slice(8, 10)}
+                    <div className="cd-daychip-mon">{MONTHS_SHORT[Number(event.date.slice(5, 7)) - 1]}</div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600 }}>{event.employeeName ?? event.patientName ?? event.title}</div>
+                    <div className="cd-muted-13">{event.title}</div>
+                  </div>
+                  <span
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600,
+                      flex: 'none',
+                      color: soon ? 'var(--color-accent-700)' : 'var(--color-text)',
+                    }}
+                  >
+                    {days === 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} T.`}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </section>
       </div>
 
-      <div className="dashboard-masonry">
-        {/* Spalte 1: Ereignisse + Qualifikationen */}
-        <div className="card">
-          <div className="form-header">
-            <div>
-              <p className="eyebrow">Termine</p>
-              <h3>Bevorstehende Ereignisse</h3>
-            </div>
-            <EventsFilterDropdown
-              hiddenEventTypes={hiddenEventTypes}
-              onToggleFilter={onToggleEventFilter}
-              onShowAll={onShowAllEvents}
-              onHideAll={onHideAllEvents}
-            />
-          </div>
-          <UpcomingEventsList
-            events={unifiedEvents}
-            hasActiveFilters={hiddenEventTypes.length > 0}
-            onEventClick={onEventClick}
-          />
+      <section>
+        <h3 className="cd-h3" style={{ marginBottom: 6 }}>
+          Datenqualität
+        </h3>
+        <p className="cd-muted-14" style={{ margin: '0 0 14px' }}>
+          Lücken, die den Jahresnachweis unvollständig machen würden.
+        </p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {quality.map((check) => (
+            <button
+              key={check.id}
+              type="button"
+              className="btn btn-secondary"
+              style={{ gap: 10 }}
+              disabled={!check.target}
+              onClick={() => check.target && onOpenTarget(check.target)}
+            >
+              <span className="cd-dot" style={{ background: check.dot }} />
+              {check.label}
+            </button>
+          ))}
         </div>
-
-        <div className="card">
-          <div className="form-header">
-            <div>
-              <p className="eyebrow">Qualifikationen</p>
-              <h3>VZÄ je Qualifikation</h3>
-            </div>
-          </div>
-          <div className="qual-grid">
-            {qualifications.length > 0 ? (
-              qualifications.map((q) => {
-                const cat = dataset?.aggregation.categories.find(
-                  (c) => c.qualification === q.name,
-                );
-                const fte = cat?.fte ?? 0;
-                const headcount = cat?.headcount ?? 0;
-                const percent = totalFte > 0 ? Math.min(100, (fte / totalFte) * 100) : 0;
-
-                return (
-                  <div className="qual-card" key={q.name}>
-                    <div className="qual-card-head">
-                      <div className="qual-icon">
-                        <div className="qual-dot" />
-                      </div>
-                      <div className="qual-info">
-                        <div className="qual-title">{q.name}</div>
-                        <div className="qual-meta">{headcount} Personen</div>
-                      </div>
-                      <div className="qual-fte">{fte.toFixed(2)}</div>
-                    </div>
-                    <div className="qual-progress-wrapper">
-                      <div className="qual-progress">
-                        <div className="qual-progress-bar" style={{ width: `${percent}%` }} />
-                      </div>
-                      <div className="qual-percent">{Math.round(percent)}%</div>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="empty">Keine Qualifikationen definiert.</div>
-            )}
-          </div>
-        </div>
-
-        {/* Spalte 2: Jahr im Blick + Abteilungen */}
-        <div className="card">
-          <div className="form-header">
-            <div>
-              <p className="eyebrow">Kennzahlen</p>
-              <h3>Jahr im Blick</h3>
-            </div>
-          </div>
-          <div className="grid stats-grid dashboard-stats">
-            <StatCard
-              label="Gesamt VZÄ"
-              value={`${totalFte.toFixed(2)}`}
-              sub="Summe aller Stellenanteile"
-              icon={faChartPie}
-            />
-            <StatCard
-              label="Team"
-              value={`${totalHeadcount}`}
-              sub="im gewählten Jahr"
-              icon={faUsers}
-            />
-            <StatCard
-              label="Ø VZÄ je Person"
-              value={averageFte.toFixed(2)}
-              sub="Durchschnittliche Auslastung"
-              icon={faBriefcase}
-            />
-            <StatCard
-              label="Qualifikationen"
-              value={`${dataset?.aggregation.categories.length ?? 0}`}
-              sub="mit VZÄ im Jahr"
-              icon={faGraduationCap}
-            />
-            <StatCard
-              label="Vollzeit-Quote"
-              value={`${fullTimePercent}%`}
-              sub={`${fullTimeCount} Vollzeit-Kräfte`}
-              icon={faPercent}
-            />
-            <StatCard
-              label="Neu im Jahr"
-              value={`${newHires}`}
-              sub="Neueintritte"
-              icon={faUserPlus}
-            />
-            <StatCard
-              label="Ausgeschieden"
-              value={`${leavers}`}
-              sub="Austritte im Jahr"
-              icon={faUserMinus}
-            />
-          </div>
-        </div>
-
-        <div className="card dashboard-focus-card dashboard-focus-card-alert">
-          <div className="form-header">
-            <div>
-              <p className="eyebrow">Compliance</p>
-              <h3>Einweisungen im Fokus</h3>
-              <p className="subtitle small">Aktive Mitarbeitende, offene Pflichten und kurzfristige Faelligkeiten.</p>
-            </div>
-          </div>
-          <div className="dashboard-focus-metrics">
-            <StatCard
-              label="Überfällig"
-              value={`${instructionStats?.overdue ?? 0}`}
-              sub="sofort handeln"
-              icon={faTriangleExclamation}
-            />
-            <StatCard
-              label="30 Tage"
-              value={`${instructionStats?.dueSoon ?? 0}`}
-              sub="bald fällig"
-              icon={faClipboardCheck}
-            />
-            <StatCard
-              label="Erledigt"
-              value={`${instructionStats?.completedRate ?? 0}%`}
-              sub={`${instructionStats?.totalAssigned ?? 0} zugewiesen`}
-              icon={faShieldHalved}
-            />
-          </div>
-          <div className="dashboard-focus-list">
-            <div className="dashboard-focus-list-head">
-              <span>Meiste offenen Einweisungen</span>
-              <span>{instructionStats?.topOpenEmployees.length ?? 0} Treffer</span>
-            </div>
-            {instructionStats && instructionStats.topOpenEmployees.length > 0 ? (
-              instructionStats.topOpenEmployees.map((entry) => (
-                <div className="dashboard-focus-row" key={`instruction-gap-${entry.employeeId}`}>
-                  <div>
-                    <strong>{entry.employeeName}</strong>
-                    <span>{entry.count} offen</span>
-                  </div>
-                  <span className="dashboard-focus-pill danger">{entry.count}</span>
-                </div>
-              ))
-            ) : (
-              <div className="empty compact-empty">Keine offenen Einweisungen im aktiven Team.</div>
-            )}
-          </div>
-        </div>
-
-        <div className="card dashboard-focus-card">
-          <div className="form-header">
-            <div>
-              <p className="eyebrow">Kompetenzstatus</p>
-              <h3>Freigaben und Lücken</h3>
-              <p className="subtitle small">Offene Kompetenzen und ausstehende Freigaben im aktuellen Team.</p>
-            </div>
-          </div>
-          <div className="dashboard-focus-metrics">
-            <StatCard
-              label="Offen"
-              value={`${competencyStats?.open ?? 0}`}
-              sub="ohne Stufe"
-              icon={faGraduationCap}
-            />
-            <StatCard
-              label="Freigaben"
-              value={`${competencyStats?.pendingApproval ?? 0}`}
-              sub="ausstehend"
-              icon={faListCheck}
-            />
-            <StatCard
-              label="Freigegeben"
-              value={`${competencyStats?.approvedRate ?? 0}%`}
-              sub={`${competencyStats?.totalAssigned ?? 0} zugewiesen`}
-              icon={faUsers}
-            />
-          </div>
-          <div className="dashboard-focus-list">
-            <div className="dashboard-focus-list-head">
-              <span>Größte Kompetenzlücken</span>
-              <span>{competencyStats?.topGapEmployees.length ?? 0} Treffer</span>
-            </div>
-            {competencyStats && competencyStats.topGapEmployees.length > 0 ? (
-              competencyStats.topGapEmployees.map((entry) => (
-                <div className="dashboard-focus-row" key={`competency-gap-${entry.employeeId}`}>
-                  <div>
-                    <strong>{entry.employeeName}</strong>
-                    <span>{entry.count} Themen mit Gap</span>
-                  </div>
-                  <span className="dashboard-focus-pill">{entry.count}</span>
-                </div>
-              ))
-            ) : (
-              <div className="empty compact-empty">Keine offenen Kompetenzlücken im aktiven Team.</div>
-            )}
-          </div>
-        </div>
-      </div>
+      </section>
     </div>
   );
 };

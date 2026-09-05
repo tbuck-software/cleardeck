@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
+import Icon from '../ui/Icon';
+import Segmented from '../ui/Segmented';
 import type { StorageMode } from '../../shared/types';
+import logoUrl from '../../assets/logo.png';
 
 type AuthScreenProps = {
   mode: 'setup' | 'login' | 'loading' | 'error';
@@ -10,24 +13,43 @@ type AuthScreenProps = {
   onResetApp?: () => void | Promise<void>;
   globalError?: string | null;
   footer?: React.ReactNode;
+  /** Storage mode of the existing installation; 'plain' locks without a password. */
+  configuredStorageMode?: StorageMode;
 };
 
-const AuthScreen = ({ mode, onSubmit, busy, message, onForgotPassword, onResetApp, globalError, footer }: AuthScreenProps) => {
+const AuthScreen = ({
+  mode,
+  onSubmit,
+  busy,
+  message,
+  onForgotPassword,
+  onResetApp,
+  globalError,
+  footer,
+  configuredStorageMode = 'encrypted',
+}: AuthScreenProps) => {
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
   const [storageMode, setStorageMode] = useState<StorageMode>('encrypted');
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (evt: React.FormEvent) => {
-    evt.preventDefault();
+  const isSetup = mode === 'setup';
+  // A plain installation has no password to ask for — the lock is only a cover.
+  const screenLockOnly = mode === 'login' && configuredStorageMode === 'plain';
+  const needsPassword = !screenLockOnly && (mode === 'login' || storageMode === 'encrypted');
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
-    if (mode === 'setup' && storageMode === 'encrypted' && password !== repeat) {
-      setError('Passwörter stimmen nicht überein.');
-      return;
-    }
-    if (mode === 'setup' && storageMode === 'encrypted' && !password.trim()) {
-      setError('Bitte ein Passwort eingeben.');
-      return;
+    if (isSetup && storageMode === 'encrypted') {
+      if (!password.trim()) {
+        setError('Bitte ein Passwort eingeben.');
+        return;
+      }
+      if (password !== repeat) {
+        setError('Passwörter stimmen nicht überein.');
+        return;
+      }
     }
     await onSubmit({ password, storageMode });
     setPassword('');
@@ -35,120 +57,148 @@ const AuthScreen = ({ mode, onSubmit, busy, message, onForgotPassword, onResetAp
   };
 
   const displayError = error ?? globalError ?? null;
-  const isSetup = mode === 'setup';
-  const isEncrypted = mode === 'login' || storageMode === 'encrypted';
 
   if (mode === 'loading' || mode === 'error') {
     return (
       <div className="auth-screen">
-        <div className="auth-panel auth-panel-startup">
-          <div className="auth-intro">
-            <h1>{mode === 'loading' ? 'Lokale Daten werden geprüft' : 'Lokale Daten nicht verfügbar'}</h1>
-            {mode === 'error' && <p className="auth-summary">Bitte die vorhandenen Dateien sichern und die Konfiguration prüfen lassen.</p>}
+        <div className="auth-panel">
+          <img src={logoUrl} alt="" className="auth-logo" />
+          <div>
+            <h1 className="auth-title">
+              {mode === 'loading' ? 'Lokale Daten werden geprüft' : 'Lokale Daten nicht verfügbar'}
+            </h1>
+            {mode === 'error' && (
+              <p className="cd-muted" style={{ margin: 0 }}>
+                Bitte die vorhandenen Dateien sichern und die Konfiguration prüfen lassen.
+              </p>
+            )}
           </div>
-          {mode === 'error' && <div className="error" role="alert">{globalError}</div>}
-          {footer}
+          {mode === 'error' && globalError && (
+            <div className="cd-notice cd-notice-bad" role="alert">
+              <Icon name="warning" />
+              <span>{globalError}</span>
+            </div>
+          )}
         </div>
+        {footer && <div className="auth-corner">{footer}</div>}
       </div>
     );
   }
 
   return (
-    <div className={`auth-screen auth-screen-${mode}`}>
-      <div className="auth-panel">
-        <div className="auth-intro">
-          <h1>{isSetup ? 'Ersteinrichtung' : 'Anmeldung'}</h1>
-          <p className="auth-summary">
-            {isSetup ? 'Alles bleibt auf diesem Gerät.' : 'Mit deinem lokalen Passwort entsperren.'}
+    <div className="auth-screen">
+      <form className="auth-panel" onSubmit={handleSubmit}>
+        <img src={logoUrl} alt="" className="auth-logo" />
+        <div>
+          <h1 className="auth-title">
+            {isSetup ? 'ClearDeck einrichten' : screenLockOnly ? 'Bildschirm verdeckt' : 'ClearDeck entsperren'}
+          </h1>
+          <p className="cd-muted" style={{ margin: 0 }}>
+            {isSetup
+              ? 'Alle Daten bleiben auf diesem Gerät. Passwort setzen, um die Datenbank zu verschlüsseln.'
+              : screenLockOnly
+                ? 'Weiterarbeiten, wo du aufgehört hast.'
+                : 'Alle Daten bleiben auf diesem Gerät. Passwort eingeben, um die verschlüsselte Datenbank zu öffnen.'}
           </p>
         </div>
-        <form onSubmit={handleSubmit} className="auth-form auth-form-panel">
-          {isSetup && (
-            <div className="auth-mode-switch" role="radiogroup" aria-label="Speichermodus">
-              <button
-                type="button"
-                role="radio"
-                aria-checked={storageMode === 'encrypted'}
-                className={`auth-mode-option ${storageMode === 'encrypted' ? 'active' : ''}`}
-                onClick={() => setStorageMode('encrypted')}
-              >
-                <span className="auth-mode-title">Verschlüsselt</span>
-                <span className="auth-mode-meta">Mit Passwort</span>
-              </button>
-              <button
-                type="button"
-                role="radio"
-                aria-checked={storageMode === 'plain'}
-                className={`auth-mode-option ${storageMode === 'plain' ? 'active' : ''}`}
-                onClick={() => setStorageMode('plain')}
-              >
-                <span className="auth-mode-title">Ohne Passwort</span>
-                <span className="auth-mode-meta">Direkt lokal</span>
-              </button>
-            </div>
-          )}
-          {isEncrypted && (
-            <div className="auth-field-grid">
-              <label>
-                Passwort
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  autoComplete={isSetup ? 'new-password' : 'current-password'}
-                />
-              </label>
-              {isSetup && storageMode === 'encrypted' && (
-                <label>
-                  Passwort wiederholen
-                  <input
-                    type="password"
-                    value={repeat}
-                    onChange={(e) => setRepeat(e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    autoComplete="new-password"
-                  />
-                </label>
-              )}
-            </div>
-          )}
-          {isSetup && storageMode === 'plain' && (
-            <div className="auth-mode-note auth-mode-warning" role="note" aria-live="polite">
-              <strong>Nicht empfohlen für Patientendaten.</strong>
-              <span>Kein Passwort. Kein Recovery Key.</span>
-            </div>
-          )}
-          {displayError && <div className="error">{displayError}</div>}
-          {message && <div className="info">{message}</div>}
-          <button type="submit" className="primary" disabled={busy}>
-            {busy
-              ? 'Bitte warten…'
-              : isSetup
-                ? storageMode === 'encrypted'
-                  ? 'Verschlüsselung aktivieren'
-                  : 'Ohne Passwort starten'
+
+        {isSetup && (
+          <Segmented
+            ariaLabel="Speichermodus"
+            options={[
+              { value: 'encrypted' as StorageMode, label: 'Verschlüsselt' },
+              { value: 'plain' as StorageMode, label: 'Ohne Passwort' },
+            ]}
+            value={storageMode}
+            onChange={setStorageMode}
+          />
+        )}
+
+        {needsPassword && (
+          <div className="field" style={{ width: '100%' }}>
+            <label htmlFor="auth-password">Passwort</label>
+            <input
+              id="auth-password"
+              className="input"
+              type="password"
+              style={{ minHeight: 44 }}
+              placeholder="••••••••"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+              autoComplete={isSetup ? 'new-password' : 'current-password'}
+            />
+          </div>
+        )}
+
+        {isSetup && storageMode === 'encrypted' && (
+          <div className="field" style={{ width: '100%' }}>
+            <label htmlFor="auth-repeat">Passwort wiederholen</label>
+            <input
+              id="auth-repeat"
+              className="input"
+              type="password"
+              style={{ minHeight: 44 }}
+              placeholder="••••••••"
+              value={repeat}
+              onChange={(event) => setRepeat(event.target.value)}
+              required
+              autoComplete="new-password"
+            />
+          </div>
+        )}
+
+        {isSetup && storageMode === 'plain' && (
+          <div className="cd-notice cd-notice-bad" role="note">
+            <Icon name="warning" />
+            <span>
+              <strong>Nicht empfohlen für Patientendaten.</strong> Kein Passwort, kein Recovery-Key.
+            </span>
+          </div>
+        )}
+
+        {displayError && (
+          <div className="cd-notice cd-notice-bad" role="alert">
+            <Icon name="warning" />
+            <span>{displayError}</span>
+          </div>
+        )}
+        {message && <p className="cd-muted-14" style={{ margin: 0 }}>{message}</p>}
+
+        <button type="submit" className="btn btn-primary" style={{ minHeight: 44, paddingInline: 22 }} disabled={busy}>
+          {busy
+            ? 'Bitte warten…'
+            : isSetup
+              ? storageMode === 'encrypted'
+                ? 'Verschlüsselung aktivieren'
+                : 'Ohne Passwort starten'
+              : screenLockOnly
+                ? 'Weiter'
                 : 'Entsperren'}
-          </button>
-          {!isSetup && (onForgotPassword || onResetApp) && (
-            <div className="auth-actions">
-              {onForgotPassword && (
-                <button className="ghost-button" type="button" onClick={onForgotPassword}>
-                  Recovery Key nutzen
-                </button>
-              )}
-              {onResetApp && (
-                <button className="ghost-button danger" type="button" onClick={() => void onResetApp()} disabled={busy}>
-                  Neu anlegen
-                </button>
-              )}
-            </div>
-          )}
-        </form>
-        {footer}
-      </div>
+        </button>
+
+        {!isSetup && !screenLockOnly && (onForgotPassword || onResetApp) && (
+          <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
+            {onForgotPassword && (
+              <button type="button" className="cd-link" onClick={onForgotPassword}>
+                Recovery-Key verwenden
+              </button>
+            )}
+            {onResetApp && (
+              <button
+                type="button"
+                className="cd-link cd-muted"
+                disabled={busy}
+                onClick={() => void onResetApp()}
+              >
+                Neu einrichten
+              </button>
+            )}
+          </div>
+        )}
+
+      </form>
+      {footer && <div className="auth-corner">{footer}</div>}
     </div>
   );
 };
