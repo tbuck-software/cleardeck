@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Neue Ansicht „Logs & Diagnose“ in den Einstellungen mit Zeitstempeln, Fehlerstufen und kopierbaren Ereignissen.
+- Bereinigte Diagnosedatei bei Bedarf lokal speichern und einer Feedback-Nachricht anhängen.
+
 - Updates gezielt herunterladen, mit Fortschrittsbalken und geschätzter Restzeit.
 - Heruntergeladene Updates per zweitem Klick installieren und ClearDeck neu starten.
 - Neuerungen direkt am Update-Symbol lesen, auch vor der Anmeldung.

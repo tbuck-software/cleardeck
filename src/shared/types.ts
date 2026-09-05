@@ -169,6 +169,17 @@ export type UpdateStatus = {
   | { state: 'error'; message: string; retry?: 'check' | 'download' | 'install' }
 );
 
+export interface DiagnosticEntry {
+  at: string;
+  level: 'info' | 'error';
+  source: 'App' | 'Updates';
+  message: string;
+}
+export interface DiagnosticSnapshot {
+  entries: DiagnosticEntry[];
+  storageError?: string;
+}
+
 export interface AppInfo {
   name: string;
   version: string;

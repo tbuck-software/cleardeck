@@ -132,6 +132,10 @@ export const api = {
     setHiddenEventTypes: (types: string[]) =>
       call('setHiddenEventTypes', baseApi.setHiddenEventTypes, types),
   },
+  diagnostics: {
+    read: () => call('readDiagnostics', baseApi.readDiagnostics),
+    export: () => call('exportDiagnostics', baseApi.exportDiagnostics),
+  },
   updates: {
     check: (manual = false) => call('checkUpdates', baseApi.checkUpdates, manual),
     download: () => call('downloadUpdate', baseApi.downloadUpdate),

@@ -34,6 +34,7 @@ import api from '../../services/api';
 import logoUrl from '../../assets/logo.png';
 import ModalHeader from '../modals/ModalHeader';
 import UpdateControl from '../ui/UpdateControl';
+import DiagnosticsPanel from '../ui/DiagnosticsPanel';
 
 type SettingsPageProps = {
   qualifications: QualificationType[];
@@ -81,6 +82,7 @@ type TabId =
   | 'instructions'
   | 'database'
   | 'danger'
+  | 'diagnostics'
   | 'info';
 
 type SettingsSectionProps = {
@@ -266,6 +268,7 @@ const SettingsPage = ({
     { id: 'instructions', label: 'Einweisungen', icon: faList, description: 'Unterweisungen zentral verwalten und sortieren.' },
     { id: 'database', label: 'Datenbank & Sicherheit', icon: faDatabase, description: 'Backups, Import und Zugriffsschutz.' },
     { id: 'danger', label: 'Gefahrenzone', icon: faExclamationTriangle, description: 'Irreversible Aktionen mit voller Absicht.' },
+    { id: 'diagnostics', label: 'Logs & Diagnose', icon: faList, description: 'App-Start und Update-Ereignisse nachlesen.' },
     { id: 'info', label: 'Info', icon: faInfoCircle, description: 'Version, Links und Systemumgebung.' },
   ];
 
@@ -644,6 +647,12 @@ const SettingsPage = ({
           </SettingsSection>
         )}
 
+        {activeTab === 'diagnostics' && (
+          <SettingsSection title="Logs & Diagnose" subtitle="Lokale Ereignisse mit Zeitpunkt und Fehlerstufe. Die letzten 250 Einträge bleiben gespeichert.">
+            <DiagnosticsPanel />
+          </SettingsSection>
+        )}
+
         {activeTab === 'info' && (
           <div className="card form-card">
             {appInfo ? (
@@ -693,6 +702,10 @@ const SettingsPage = ({
                         </span>
                         Torben kontaktieren
                       </a>
+                      <button type="button" className="about-link-button" onClick={() => setActiveTab('diagnostics')}>
+                        <span className="link-icon"><FontAwesomeIcon icon={faList} /></span>
+                        Diagnose für Feedback
+                      </button>
                       <a
                         href={appInfo.github}
                         target="_blank"

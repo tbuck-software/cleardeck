@@ -17,6 +17,7 @@
 
 import { app, BrowserWindow } from 'electron';
 
+import { recordAppStart } from './main/diagnostics';
 import { prepareDevelopmentScenario } from './main/devScenario';
 import { configureUserDataPath } from './main/appPaths';
 import { persistEncryptedDb } from './main/database/connection';
@@ -33,6 +34,7 @@ if (require('electron-squirrel-startup')) {
 }
 
 configureUserDataPath();
+recordAppStart();
 prepareDevelopmentScenario();
 
 // =============================================================================

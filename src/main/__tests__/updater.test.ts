@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('electron', () => ({ app: { isPackaged: true, getVersion: () => '1.7.2' } }));
 vi.mock('electron-updater', () => ({ autoUpdater: mocks.updater }));
+vi.mock('../diagnostics', () => ({ recordUpdateStatus: vi.fn() }));
 vi.mock('../updateSource', () => ({ getPackagedUpdateConfig: vi.fn(), resolveUpdateSource: () => ({ kind: 'packaged' }) }));
 const window = { isDestroyed: () => false, webContents: { send: mocks.send } } as unknown as BrowserWindow;
 const emit = (name: string, value?: unknown) => mocks.handlers.get(name)?.(value);

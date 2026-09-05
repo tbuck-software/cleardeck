@@ -8,6 +8,7 @@ import { app, BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { gt, lte, valid, rcompare } from 'semver';
 
+import { recordUpdateStatus } from './diagnostics';
 import type { UpdateStatus } from '../shared/types';
 import { getPackagedUpdateConfig, resolveUpdateSource } from './updateSource';
 
@@ -24,6 +25,7 @@ export const getUpdateStatus = (): UpdateStatus => currentStatus;
 
 export const sendUpdateStatus = (mainWindow: BrowserWindow | null, status: UpdateStatus): void => {
   currentStatus = status;
+  recordUpdateStatus(status);
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('updates:status', status);
   }
