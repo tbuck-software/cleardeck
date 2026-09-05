@@ -1,0 +1,24 @@
+name: Windows update smoke test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ['feat/fix-windows-updates']
+    paths:
+      - '.github/workflows/windows-update-smoke.yml'
+      - 'scripts/test-windows-update.ps1'
+
+permissions:
+  contents: read
+
+jobs:
+  installed-update:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test published 1.7.1 to 1.8.0 installers
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/test-windows-update.ps1
