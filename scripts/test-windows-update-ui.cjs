@@ -25,7 +25,14 @@ async function run() {
     await page.getByLabel('Passwort wiederholen', { exact: true }).fill(password);
     await page.getByRole('button', { name: 'Passwort setzen', exact: true }).click();
     await page.getByRole('button', { name: 'Schließen', exact: true }).click();
+    const revealSidebar = async () => {
+      if (!(await page.locator('.sidebar-content').isVisible())) {
+        await page.getByRole('button', { name: 'Menü umschalten', exact: true }).click();
+      }
+    };
+    await revealSidebar();
     await page.getByRole('button', { name: 'Einstellungen', exact: true }).click();
+    await revealSidebar();
     const install = page.locator('.sidebar').getByRole('button', { name: 'Installieren', exact: true });
     await install.waitFor({ state: 'visible', timeout: 180000 });
     const configBytes = fs.readFileSync(path.join(dataDir, 'config.json'));
