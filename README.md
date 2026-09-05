@@ -45,7 +45,10 @@ Der erste Start fragt nach einem Passwort (setzt gleichzeitig den lokalen App-Sc
 - Passwort wird nicht gespeichert; bei Verlust ist die DB nicht wiederherstellbar.
 
 ## Wichtige NPM-Skripte
-- `npm start` – Entwicklung mit Hot-Reload.
+- `make dev` / `npm start` – echte ClearDeck-Dev-App mit Live-Aktualisierung.
+- `make dev-updates` / `npm run dev:updates` – direkt zum Update-Beispiel mit separatem Testprofil.
+- Renderer und CSS aktualisieren sich beim Speichern. Für Main-Prozess-Änderungen im laufenden Terminal `rs` eingeben.
+- Start, Datenpfade und Trennung sind in [docs/development.md](docs/development.md) beschrieben.
 - `npm run make` – Paketieren (plattformabhaengig, erfordert System-Toolchain).
 - `npm run nuke:dev` – entfernt die Dev-Datenbank unter `dev-ClearDeck/data` nach Bestaetigung.
 - `npm run nuke:prod` – entfernt die Produktionsdatenbank unter `ClearDeck/data` nach Bestaetigung.

@@ -17,6 +17,7 @@
 
 import { app, BrowserWindow } from 'electron';
 
+import { prepareDevelopmentScenario } from './main/devScenario';
 import { configureUserDataPath } from './main/appPaths';
 import { persistEncryptedDb } from './main/database/connection';
 import { configureExternalLinkHandling } from './main/externalLinks';
@@ -32,6 +33,7 @@ if (require('electron-squirrel-startup')) {
 }
 
 configureUserDataPath();
+prepareDevelopmentScenario();
 
 // =============================================================================
 // WINDOW MANAGEMENT
@@ -43,6 +45,7 @@ const getMainWindow = (): BrowserWindow | null => mainWindow;
 
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
+    title: app.getName(),
     height: 900,
     width: 1400,
     minHeight: 720,
@@ -57,7 +60,11 @@ const createWindow = (): void => {
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
   if (!app.isPackaged) {
-    mainWindow.webContents.openDevTools();
+    mainWindow.on('page-title-updated', (event) => {
+      event.preventDefault();
+      mainWindow?.setTitle(app.getName());
+    });
+    if (process.env.CLEARDECK_DEVTOOLS === '1') mainWindow.webContents.openDevTools();
   }
 };
 

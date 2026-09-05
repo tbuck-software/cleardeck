@@ -1,6 +1,12 @@
 VERSION_CMD=node -p "require('./package.json').version"
 
-.PHONY: ensure-clean show-version build allow allow-out reseed-dev reseed-prod release release-patch release-minor release-major
+.PHONY: dev dev-updates ensure-clean show-version build allow allow-out reseed-dev reseed-prod release release-patch release-minor release-major
+
+dev:
+	@npm start
+
+dev-updates:
+	@npm run dev:updates
 
 # Fail fast if there are uncommitted changes
 ensure-clean:
