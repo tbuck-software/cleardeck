@@ -8,9 +8,7 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 import { WebpackPlugin } from '@electron-forge/plugin-webpack';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
-import { execSync } from 'child_process';
-import { existsSync } from 'fs';
-import * as path from 'path';
+import { signMacBundles } from './scripts/sign-mac-bundles';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
@@ -25,7 +23,7 @@ const config: ForgeConfig = {
     icon: './assets/icon',
     extraResource: ['./assets/app-update.yml'],
     osxSign: {
-      identity: '-', // ad-hoc signing to satisfy macOS Gatekeeper
+      identity: process.env.MAC_SIGN_IDENTITY || '-',
     },
   },
   rebuildConfig: {},
@@ -74,45 +72,10 @@ const config: ForgeConfig = {
   ],
   hooks: {
     postPackage: async (_forgeConfig, options) => {
-      if (options.platform !== 'darwin') {
-        return;
-      }
-
-      const packageAppName =
-        // forge <=7.3 exposes appName, newer exposes packageJSON
-        (options as any).appName ||
-        options.packageJSON?.productName ||
-        options.packageJSON?.name ||
-        undefined;
-
-      const appPaths =
-        options.packagePaths?.flatMap((packagePath) => {
-          if (packagePath.endsWith('.app')) {
-            return [packagePath];
-          }
-
-          const base =
-            packageAppName ||
-            path.basename(packagePath, path.extname(packagePath));
-
-          // electron-packager usually puts the .app inside the output directory
-          return [path.join(packagePath, `${base}.app`)];
-        }) ?? [];
-
-      if (appPaths.length === 0) {
-        return;
-      }
-
-      for (const appPath of appPaths) {
-        if (!existsSync(appPath)) {
-          continue;
-        }
-
-        // Deep ad-hoc sign the bundle so electron-updater can validate it
-        execSync(`codesign --force --deep --sign - "${appPath}"`, {
-          stdio: 'inherit',
-        });
-      }
+      signMacBundles(options, {
+        identity: process.env.MAC_SIGN_IDENTITY,
+        requireDeveloperId: process.env.CI === 'true',
+      });
     },
   },
 };
