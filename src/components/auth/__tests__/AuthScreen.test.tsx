@@ -5,6 +5,23 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import AuthScreen from '../AuthScreen';
 
 describe('AuthScreen', () => {
+  it.each(['loading', 'error'] as const)('hides setup and reset controls while startup is %s', (mode) => {
+    render(
+      <AuthScreen
+        mode={mode}
+        onSubmit={vi.fn()}
+        onResetApp={vi.fn()}
+        onForgotPassword={vi.fn()}
+        busy={false}
+        globalError={mode === 'error' ? 'config.json kann nicht gelesen werden' : undefined}
+      />,
+    );
+    expect(screen.queryByText('Ersteinrichtung')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Passwort')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Neu anlegen' })).not.toBeInTheDocument();
+    if (mode === 'error') expect(screen.getByRole('alert')).toHaveTextContent('config.json');
+  });
+
   it('erlaubt eine unverschlüsselte Ersteinrichtung ohne Passwort', async () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
 

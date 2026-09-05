@@ -242,6 +242,7 @@ const useAppLogic = () => {
       employeeCompetencies: employeeSlice.state.employeeCompetencies,
       employeeInstructions: employeeSlice.state.employeeInstructions,
       appReady: authSlice.appReady,
+      authLoading: authSlice.authLoading,
       page: employeeSlice.state.page,
       loading,
       toast,

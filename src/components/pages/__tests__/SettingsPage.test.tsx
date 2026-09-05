@@ -88,6 +88,14 @@ const createProps = (overrides: Partial<React.ComponentProps<typeof SettingsPage
 });
 
 describe('SettingsPage', () => {
+  it('puts a long update error into a selectable text box instead of the section subtitle', () => {
+    const message = 'Cannot find asset: ' + 'release metadata '.repeat(1000);
+    render(<SettingsPage {...createProps({ updateStatus: { state: 'error', message } })} />);
+    expect(screen.getByRole('textbox', { name: 'Update-Fehlerdetails' })).toHaveValue(message);
+    expect(screen.getByRole('button', { name: 'Fehler kopieren' })).toBeInTheDocument();
+    expect(screen.getByText('Das Update konnte nicht abgeschlossen werden. Die Fehlerdetails können unten kopiert werden.')).toBeInTheDocument();
+  });
+
   it('ermöglicht Neu-Anlage und Drag&Drop-Reihenfolge', () => {
     const props = createProps();
     render(<SettingsPage {...props} />);

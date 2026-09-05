@@ -1341,6 +1341,48 @@ button.detail-item.clickable:hover {
   grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.1fr);
 }
 
+.auth-panel-startup {
+  grid-template-columns: minmax(0, 1fr);
+  overflow-wrap: anywhere;
+}
+
+.auth-updates {
+  grid-column: 1 / -1;
+  border-top: 1px solid rgba(148, 163, 184, 0.28);
+  padding-top: 16px;
+  overflow-wrap: anywhere;
+}
+
+.update-error-details {
+  min-width: 0;
+  max-width: 100%;
+  margin-bottom: 16px;
+}
+
+.update-error-details textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 9rem;
+  min-height: 0;
+  max-height: 9rem;
+  overflow: auto;
+  resize: none;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  font-family: monospace;
+}
+
+.update-error-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+}
+
 .auth-intro {
   display: grid;
   align-content: start;

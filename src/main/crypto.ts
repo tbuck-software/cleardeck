@@ -4,6 +4,7 @@
 
 import crypto from 'crypto';
 import fs from 'fs';
+import path from 'path';
 import type { StorageMode } from '../shared/types';
 import { getConfigPath, getDataDir } from './appPaths';
 
@@ -124,26 +125,55 @@ export const decryptFile = (inputPath: string, outputPath: string, key: Buffer):
   fs.writeFileSync(outputPath, data);
 };
 
-/**
- * Check if the application is configured (has a config file)
- */
-export const isConfigured = (): boolean => fs.existsSync(getConfigPath());
+const hasExistingData = (): boolean => {
+  try {
+    return fs.readdirSync(getDataDir()).some((name) =>
+      name === 'employee.db' || name.startsWith('employee.db.') ||
+      name.startsWith('employee.db-') || name.startsWith('config.json.'),
+    );
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return false;
+    throw new Error(`Der Datenordner kann nicht gelesen werden: ${getDataDir()}`);
+  }
+};
 
 /**
  * Read the application config
  */
 export const readConfig = (): AppConfig | null => {
+  const configPath = getConfigPath();
+  let content: string;
   try {
-    const configPath = getConfigPath();
-    const content = fs.readFileSync(configPath, 'utf8');
+    content = fs.readFileSync(configPath, 'utf8');
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+      throw new Error(`Die Konfiguration kann nicht gelesen werden: ${configPath}`);
+    }
+    if (hasExistingData()) {
+      throw new Error(`Die config.json fehlt, aber lokale Daten sind vorhanden. Bitte den gesamten Datenordner sichern: ${getDataDir()}`);
+    }
+    return null;
+  }
+
+  try {
     const parsed = JSON.parse(content) as AppConfig;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) ||
+      (parsed.storageMode !== undefined && parsed.storageMode !== 'plain' && parsed.storageMode !== 'encrypted')) {
+      throw new Error('Invalid configuration');
+    }
+    if (getConfigStorageMode(parsed) === 'encrypted') {
+      const required = [parsed.salt, parsed.passwordHash, parsed.encryptedKey, parsed.keyIv, parsed.keyTag];
+      if (required.some((value) => typeof value !== 'string' || value.length === 0)) {
+        throw new Error('Incomplete encryption configuration');
+      }
+    }
     return {
       ...parsed,
       storageMode: getConfigStorageMode(parsed),
       configVersion: parsed.configVersion ?? 2,
     };
   } catch {
-    return null;
+    throw new Error(`Die config.json ist beschädigt oder unvollständig. Bitte den gesamten Datenordner sichern: ${path.dirname(configPath)}`);
   }
 };
 
@@ -153,7 +183,20 @@ export const readConfig = (): AppConfig | null => {
 export const writeConfig = (config: AppConfig): void => {
   const configPath = getConfigPath();
   ensureDataDir();
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+  // Write beside the destination so an interrupted write cannot truncate the current key.
+  const temporaryPath = `${configPath}.${crypto.randomBytes(8).toString('hex')}.tmp`;
+  try {
+    const fd = fs.openSync(temporaryPath, 'wx', 0o600);
+    try {
+      fs.writeFileSync(fd, JSON.stringify(config, null, 2));
+      fs.fsyncSync(fd);
+    } finally {
+      fs.closeSync(fd);
+    }
+    fs.renameSync(temporaryPath, configPath);
+  } finally {
+    fs.rmSync(temporaryPath, { force: true });
+  }
 };
 
 /**
