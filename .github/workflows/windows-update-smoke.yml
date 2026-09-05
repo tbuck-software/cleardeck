@@ -22,3 +22,30 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: ./scripts/test-windows-update.ps1
+
+  installed-ui-update:
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['1.7.1', '1.7.2']
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Exercise original installed app through its sidebar
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: ./scripts/test-windows-update-ui.ps1 -OldVersion '${{ matrix.version }}'
+      - name: Upload UI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-ui-update-${{ matrix.version }}
+          path: |
+            ${{ runner.temp }}/cleardeck-update-ui-result/*.png
+            ${{ runner.temp }}/cleardeck-update-ui-result/*.json
+          retention-days: 3
