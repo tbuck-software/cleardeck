@@ -1,66 +1,109 @@
 import React from 'react';
-import { faPen, faPlus } from '@fortawesome/free-solid-svg-icons';
+import Dialog from '../ui/Dialog';
+import Segmented from '../ui/Segmented';
+import { describeInterval } from '../../utils/instructionSchedule';
+import type { IntervalSource } from '../../shared/types';
 import type { InstructionModalState } from '../../types/ui';
-import ModalHeader from './ModalHeader';
+
+/** Only the values that actually occur; see docs/adr/0002. */
+const INTERVALS: { value: number | 0; label: string }[] = [
+  { value: 0, label: 'keines' },
+  { value: 6, label: '6 Monate' },
+  { value: 12, label: '12 Monate' },
+  { value: 24, label: '24 Monate' },
+  { value: 36, label: '36 Monate' },
+];
 
 type InstructionModalProps = {
   state: InstructionModalState;
   onChange: (next: Partial<InstructionModalState>) => void;
   onClose: () => void;
   onSave: () => void;
+  onDelete?: (id: number) => void;
 };
 
-const InstructionModal = ({ state, onChange, onClose, onSave }: InstructionModalProps) => {
-  if (!state.open) return null;
-
-  return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <ModalHeader
-          icon={state.id ? faPen : faPlus}
-          title={state.id ? 'Einweisung bearbeiten' : 'Neue Einweisung'}
-          onClose={onClose}
-        />
-        <div className="form-grid">
-          <label className="full-width">
-            Thema
-            <input
-              value={state.topic}
-              onChange={(e) => onChange({ topic: e.target.value })}
-              placeholder="z. B. Hygieneunterweisung"
-            />
-          </label>
-          <label className="full-width">
-            Gesetzliche Grundlage
-            <input
-              value={state.legalBasis}
-              onChange={(e) => onChange({ legalBasis: e.target.value })}
-              placeholder="z. B. ArbSchG § 12"
-            />
-          </label>
-          <label className="full-width">
-            Notiz
-            <textarea
-              value={state.note}
-              onChange={(e) => onChange({ note: e.target.value })}
-              placeholder="Optional: interne Hinweise oder Turnus"
-            />
-          </label>
-        </div>
-        <div className="modal-actions">
-          <div className="modal-actions-left" />
-          <div className="modal-actions-right">
-            <button className="ghost-button" onClick={onClose}>
-              Abbrechen
-            </button>
-            <button className="primary" onClick={onSave}>
-              Speichern
-            </button>
-          </div>
-        </div>
-      </div>
+const InstructionModal = ({ state, onChange, onClose, onSave, onDelete }: InstructionModalProps) => (
+  <Dialog
+    open={state.open}
+    width={480}
+    title={state.id ? 'Einweisung bearbeiten' : 'Neue Einweisung'}
+    subtitle="Änderungen gelten sofort für alle Zuordnungen."
+    primaryLabel="Speichern"
+    primaryDisabled={!state.topic.trim()}
+    onPrimary={onSave}
+    deleteLabel={state.id && onDelete ? 'Löschen' : undefined}
+    onDelete={state.id && onDelete ? () => onDelete(state.id as number) : undefined}
+    onClose={onClose}
+  >
+    <div className="field">
+      <label htmlFor="instruction-topic">Thema</label>
+      <input
+        id="instruction-topic"
+        className="input"
+        placeholder="z. B. Hygiene & Händedesinfektion"
+        value={state.topic}
+        onChange={(event) => onChange({ topic: event.target.value })}
+      />
     </div>
-  );
-};
+    <div className="field">
+      <label htmlFor="instruction-basis">Gesetzliche Grundlage</label>
+      <input
+        id="instruction-basis"
+        className="input"
+        placeholder="z. B. ArbSchG § 12"
+        value={state.legalBasis}
+        onChange={(event) => onChange({ legalBasis: event.target.value })}
+      />
+    </div>
+    <div className="field">
+      <label>Wiederholung</label>
+      <Segmented
+        fill
+        wrap
+        ariaLabel="Wiederholungsintervall"
+        options={INTERVALS}
+        value={state.intervalMonths ?? 0}
+        onChange={(months) => onChange({ intervalMonths: months === 0 ? null : months })}
+      />
+      <p className="cd-muted-13" style={{ margin: '8px 0 0' }}>
+        {state.intervalMonths == null
+          ? 'Ohne Intervall wird nichts automatisch fällig — richtig für anlassbezogene Einweisungen wie Medizinprodukte.'
+          : 'Beim Abschließen entsteht ein Folgeeintrag mit dem nächsten Termin.'}
+      </p>
+    </div>
+
+    {state.intervalMonths != null && (
+      <div className="field">
+        <label>Herkunft des Intervalls</label>
+        <Segmented
+          fill
+          ariaLabel="Herkunft des Intervalls"
+          options={[
+            { value: 'norm' as IntervalSource, label: 'Aus der Rechtsgrundlage' },
+            { value: 'betrieblich' as IntervalSource, label: 'Betriebliche Festlegung' },
+          ]}
+          value={state.intervalSource}
+          onChange={(intervalSource) => onChange({ intervalSource })}
+        />
+        <p className="cd-muted-13" style={{ margin: '8px 0 0' }}>
+          {describeInterval(state.intervalMonths, state.intervalSource)} — in einer Prüfung ist eine
+          betriebliche Festlegung zu begründen, eine Frist aus der Norm zu belegen.
+        </p>
+      </div>
+    )}
+
+    <div className="field">
+      <label htmlFor="instruction-note">Notiz</label>
+      <textarea
+        id="instruction-note"
+        className="input"
+        style={{ minHeight: 70 }}
+        placeholder="Wofür gilt das, was ist zu beachten?"
+        value={state.note}
+        onChange={(event) => onChange({ note: event.target.value })}
+      />
+    </div>
+  </Dialog>
+);
 
 export default InstructionModal;

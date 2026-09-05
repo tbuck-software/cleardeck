@@ -2,6 +2,25 @@
 
 ## [Unreleased]
 
+- Neu gestaltete Oberfläche: eigene Seitenleiste mit Übersicht, Team, Patient:innen, MD-Prüfung und Kalender, eigener Bereich für Verwaltung und Einstellungen.
+- „Heute zu tun“ auf der Übersicht sammelt offene Fristen, Visiten und Datenlücken automatisch und springt direkt zum betroffenen Datensatz.
+- Suche über Personen, Patient:innen, Seiten und Aktionen mit Strg+K.
+- QPR-Teilgruppen A–D werden aus Mobilität (Modul 1) und Kognition (Modul 2) abgeleitet statt bewertet; eine aufwändige HKP-Leistung ergänzt Teilgruppe D zusätzlich.
+- Pflegevisiten dokumentieren „Handlungsbedarf“ statt einer A–D-Note. Bisherige Visiten mit C oder D werden übernommen, die alten Buchstaben bleiben gespeichert.
+- Neue Seite „MD-Prüfung“ mit Vorbereitungs-Checks, Stichprobenzählung gegen die Sollzahlen und erfassten Prüfergebnissen je Qualitätsbereich.
+- Personenliste nach Anlage 7 als Excel exportieren.
+- Pflegevisiten-Intervall und Erinnerung an Einweisungen sind einstellbar.
+- Neue Seite „Tastenkürzel“; „Über ClearDeck“, „Sicherheit & Backup“ und „Logs & Diagnose“ als eigene Bereiche.
+- Kalender: Tagesansicht per Klick, Filter nach Terminart. Termine östlich von Greenwich landen nicht mehr auf dem Vortag.
+- App lässt sich über die Seitenleiste sperren; ohne Verschlüsselung verdeckt sie nur den Bildschirm und wird per Knopf wieder freigegeben.
+- Einweisungen haben ein eigenes Wiederholungsintervall statt einer pauschalen Jahresfrist. Beim Abschließen entsteht ein Folgeeintrag, der abgeschlossene bleibt als Nachweis stehen.
+- Bei Beschäftigten unter 18 wird das Intervall auf sechs Monate verkürzt (JArbSchG § 29 Abs. 2).
+- Korrigierte Rechtsgrundlagen im Einweisungskatalog: Hygiene folgt aus BioStoffV / TRBA 250 statt IfSG, Medizinprodukte aus der MPBetreibV statt MDR/MPDG. Medizinprodukte haben bewusst kein Zeitintervall.
+- Fünf fehlende Pflichtunterweisungen ergänzt: Gefahrstoffe, Ersthelfer-Fortbildung, Brandschutzhelfer, Hautschutz und die Belehrung nach IfSG § 43.
+- Backups in einen wählbaren Ordner, automatisch beim Schließen sowie täglich oder wöchentlich, mit einstellbarer Aufbewahrung. Wiederherstellen legt vorher ein Sicherheits-Backup an.
+- Passwort ändern, ohne dass Recovery-Key oder ältere Backups unbrauchbar werden.
+- Excel-Exporte werden wieder geschrieben; sie schlugen zuvor mit „cannot save file" fehl.
+
 - Neue Ansicht „Logs & Diagnose“ in den Einstellungen mit Zeitstempeln, Fehlerstufen und kopierbaren Ereignissen.
 - Bereinigte Diagnosedatei bei Bedarf lokal speichern und einer Feedback-Nachricht anhängen.
 

@@ -1,0 +1,430 @@
+/* Shell chrome: sidebar, main column, command palette, update popover, toasts. */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  flex: none;
+  width: 236px;
+  transition: width 0.2s;
+  padding: 22px 14px;
+  background: var(--color-side);
+  border-right: 1px solid var(--color-divider);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+}
+
+.app-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.app-sidebar[data-wide='false'] {
+  width: 76px;
+}
+
+.app-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 6px 18px;
+}
+
+.app-sidebar-logo {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  object-fit: contain;
+}
+
+.app-sidebar-title {
+  font: 700 21px/1 var(--font-body);
+  letter-spacing: -0.02em;
+}
+
+.app-sidebar-heading {
+  font: 700 20px/1 var(--font-body);
+  padding: 0 14px 14px;
+  letter-spacing: -0.02em;
+}
+
+.app-sidebar-back {
+  margin-bottom: 14px;
+}
+
+.app-sidebar-group {
+  font: 600 11px/1 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+  padding: 18px 14px 6px;
+}
+
+.app-sidebar-rule {
+  height: 1px;
+  background: var(--color-divider);
+  margin: 12px 10px;
+}
+
+.cd-nav-muted {
+  color: var(--color-neutral-700);
+}
+
+.cd-nav-search {
+  background: var(--color-neutral-300);
+  color: var(--color-neutral-800);
+  margin-bottom: 10px;
+}
+
+.cd-kbd {
+  font-size: 11px;
+  border: 1px solid var(--color-neutral-400);
+  border-radius: 6px;
+  padding: 1px 5px;
+}
+
+.cd-nav-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--color-accent-2-700);
+  color: #fff;
+  border-radius: 999px;
+  min-width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  padding: 28px clamp(20px, 4vw, 56px) 64px;
+}
+
+/* — update popover — */
+
+.update-popover-anchor {
+  position: relative;
+}
+
+.cd-nav-update {
+  background: var(--color-accent-100);
+  color: var(--color-accent-800);
+  margin-bottom: 6px;
+}
+
+.cd-nav-update-icon {
+  position: relative;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+}
+
+.cd-nav-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  border: 2px solid var(--color-side);
+}
+
+.cd-nav-update-flag {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.update-popover-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+}
+
+.update-popover {
+  position: absolute;
+  left: 250px;
+  bottom: 24px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 48px);
+  background: #fff;
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.update-popover-arrow {
+  position: absolute;
+  left: -7px;
+  bottom: 22px;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-left: 1px solid var(--color-divider);
+  border-bottom: 1px solid var(--color-divider);
+  transform: rotate(45deg);
+}
+
+/* Lock screen: anchored bottom right, opening upward. */
+.update-popover-corner {
+  left: auto;
+  right: clamp(16px, 4vw, 40px);
+  bottom: clamp(64px, 4vh + 46px, 84px);
+}
+
+.update-popover-corner .update-popover-arrow {
+  left: auto;
+  right: 28px;
+  bottom: -7px;
+  border-left: 0;
+  border-bottom: 0;
+  border-right: 1px solid var(--color-divider);
+  border-top: 0;
+  box-shadow: 1px 1px 0 0 var(--color-divider);
+}
+
+.update-popover-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.update-popover-title {
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.02em;
+}
+
+.update-popover-sub {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+}
+
+.update-popover-notes {
+  max-height: 320px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-right: 6px;
+  margin-right: -6px;
+}
+
+.update-notes-version {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--color-neutral-700);
+}
+
+.update-notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.update-notes-list ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.update-notes-kind {
+  font-size: 10px;
+  padding: 1px 7px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.update-notes-raw {
+  font-size: 14px;
+  color: var(--color-neutral-700);
+  white-space: pre-wrap;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.update-popover-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-top: 6px;
+  border-top: 1px solid var(--color-divider);
+}
+
+/* — command palette — */
+
+.palette-backdrop {
+  align-items: start;
+  padding-top: 12vh;
+  z-index: 50;
+}
+
+.palette {
+  width: min(600px, 100%);
+  padding: 8px;
+  gap: 0;
+}
+
+.palette-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  color: var(--color-neutral-600);
+}
+
+.palette-search input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 17px;
+  color: var(--color-text);
+  outline: none;
+}
+
+.palette-rule {
+  height: 1px;
+  background: var(--color-divider);
+  margin: 0 8px 6px;
+}
+
+.palette-empty {
+  padding: 18px 14px;
+  color: var(--color-neutral-700);
+  font-size: 14px;
+}
+
+.palette .cd-item {
+  padding: 10px 14px;
+}
+
+.palette .cd-item[data-active='true'] {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+}
+
+/* — toast — */
+
+.cd-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  background: var(--color-neutral-900);
+  color: var(--color-neutral-100);
+  padding: 12px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  box-shadow: var(--shadow-lg);
+  z-index: 60;
+  max-width: min(680px, calc(100vw - 32px));
+  text-align: center;
+}
+
+.cd-toast-error {
+  background: var(--bad-800);
+  color: #fff;
+}
+
+.cd-loading {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  padding: 10px 16px;
+  background: var(--color-neutral-900);
+  border-radius: 999px;
+  color: var(--color-neutral-100);
+  font-size: 13px;
+  z-index: 60;
+}
+
+/* — lock / setup screen — */
+
+.auth-screen {
+  position: relative;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.auth-panel {
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.auth-logo {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+}
+
+.auth-title {
+  margin: 0 0 6px;
+  font-size: 36px;
+}
+/* The update strip sits out of the way in the corner: on this screen the eye
+   belongs on the panel, not on a version number. */
+.auth-corner {
+  position: absolute;
+  right: clamp(16px, 4vw, 40px);
+  bottom: clamp(16px, 4vh, 32px);
+  max-width: min(420px, calc(100vw - 48px));
+}
+
+.auth-updates {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+/* Same pill as in the sidebar, but sized to its label out here. */
+.cd-nav-update-inline {
+  width: auto;
+  margin-bottom: 0;
+}
+
+.cd-nav-update-inline .cd-nav-dot {
+  border-color: var(--color-bg);
+}
+
+.cd-nav:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cd-nav:disabled:hover {
+  background: transparent;
+}

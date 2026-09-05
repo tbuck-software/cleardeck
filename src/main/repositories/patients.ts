@@ -1,19 +1,55 @@
 /**
  * Patient Repository
  *
- * Data access functions for patients and patient visits.
- * Implements QPR 2026 rating system (A-D scale).
+ * Stammdaten carry the MD sampling attributes (Modul 1/2, HKP code, AKI);
+ * Pflegevisiten carry actionNeeded. The Teilgruppe itself is never stored —
+ * it is derived, so it cannot drift out of sync with the assessment fields.
  */
 
 import type {
+  HkpCode,
+  IntensiveCare,
   Patient,
   PatientVisit,
   PatientWithLatestVisit,
-  PatientConcerningRating,
+  PatientActionNeeded,
   PatientStats,
-  QprRating,
 } from '../../shared/types';
+import { teilgruppeOf } from '../../utils/qpr';
 import { getDb } from '../database/connection';
+
+const PATIENT_COLUMNS = `
+  p.id,
+  p.name,
+  p.birthDate,
+  p.diagnosis,
+  p.note,
+  p.createdAt,
+  p.contact,
+  p.admissionDate,
+  p.cognitionImpaired,
+  p.mobilityImpaired,
+  p.hkpCode,
+  p.intensiveCare,
+  p.careLevel
+`;
+
+type PatientRow = Omit<Patient, 'cognitionImpaired' | 'mobilityImpaired'> & {
+  cognitionImpaired: number | null;
+  mobilityImpaired: number | null;
+};
+
+const toBool = (value: number | null | undefined): boolean | null =>
+  value == null ? null : value === 1;
+
+const fromBool = (value: boolean | null | undefined): number | null =>
+  value == null ? null : value ? 1 : 0;
+
+const mapPatient = (row: PatientRow): Patient => ({
+  ...(row as Omit<PatientRow, 'cognitionImpaired' | 'mobilityImpaired'>),
+  cognitionImpaired: toBool(row.cognitionImpaired),
+  mobilityImpaired: toBool(row.mobilityImpaired),
+});
 
 /**
  * List all patients with their latest visit info
@@ -24,22 +60,20 @@ export const listPatients = (): PatientWithLatestVisit[] => {
     .prepare(
       `
       SELECT
-        p.id,
-        p.name,
-        p.birthDate,
-        p.diagnosis,
-        p.qprStatus,
-        p.note,
-        p.createdAt,
+        ${PATIENT_COLUMNS},
         (SELECT visitDate FROM patient_visits WHERE patientId = p.id ORDER BY visitDate DESC LIMIT 1) as latestVisitDate,
-        (SELECT qprRating FROM patient_visits WHERE patientId = p.id ORDER BY visitDate DESC LIMIT 1) as latestQprRating,
+        (SELECT actionNeeded FROM patient_visits WHERE patientId = p.id ORDER BY visitDate DESC LIMIT 1) as latestActionNeeded,
         (SELECT COUNT(*) FROM patient_visits WHERE patientId = p.id) as visitCount
       FROM patients p
       ORDER BY p.name ASC
     `,
     )
-    .all() as PatientWithLatestVisit[];
-  return rows;
+    .all() as (PatientRow & { latestActionNeeded: number | null; latestVisitDate: string | null; visitCount: number })[];
+
+  return rows.map((row) => ({
+    ...mapPatient(row),
+    latestActionNeeded: toBool(row.latestActionNeeded),
+  }));
 };
 
 /**
@@ -47,52 +81,67 @@ export const listPatients = (): PatientWithLatestVisit[] => {
  */
 export const getPatient = (id: number): Patient | null => {
   const db = getDb();
-  const row = db.prepare('SELECT * FROM patients WHERE id = ?').get(id) as Patient | undefined;
-  return row ?? null;
+  const row = db
+    .prepare(`SELECT ${PATIENT_COLUMNS} FROM patients p WHERE p.id = ?`)
+    .get(id) as PatientRow | undefined;
+  return row ? mapPatient(row) : null;
+};
+
+export type SavePatientInput = {
+  id?: number;
+  name: string;
+  birthDate?: string | null;
+  diagnosis?: string | null;
+  note?: string | null;
+  contact?: string | null;
+  admissionDate?: string | null;
+  cognitionImpaired?: boolean | null;
+  mobilityImpaired?: boolean | null;
+  hkpCode?: HkpCode | null;
+  intensiveCare?: IntensiveCare | null;
+  careLevel?: number | null;
 };
 
 /**
  * Save (create or update) a patient
  */
-export const savePatient = (input: {
-  id?: number;
-  name: string;
-  birthDate?: string | null;
-  diagnosis?: string | null;
-  qprStatus?: QprRating | null;
-  note?: string | null;
-}): PatientWithLatestVisit[] => {
+export const savePatient = (input: SavePatientInput): PatientWithLatestVisit[] => {
   const db = getDb();
+
+  const params = {
+    name: input.name,
+    birthDate: input.birthDate ?? null,
+    diagnosis: input.diagnosis ?? null,
+    note: input.note ?? null,
+    contact: input.contact ?? null,
+    admissionDate: input.admissionDate ?? null,
+    cognitionImpaired: fromBool(input.cognitionImpaired),
+    mobilityImpaired: fromBool(input.mobilityImpaired),
+    hkpCode: input.hkpCode ?? null,
+    intensiveCare: input.intensiveCare ?? null,
+    careLevel: input.careLevel ?? null,
+  };
 
   if (input.id) {
     db.prepare(
       `
       UPDATE patients
-      SET name = @name, birthDate = @birthDate, diagnosis = @diagnosis,
-          qprStatus = @qprStatus, note = @note
+      SET name = @name, birthDate = @birthDate, diagnosis = @diagnosis, note = @note,
+          contact = @contact, admissionDate = @admissionDate,
+          cognitionImpaired = @cognitionImpaired, mobilityImpaired = @mobilityImpaired,
+          hkpCode = @hkpCode, intensiveCare = @intensiveCare, careLevel = @careLevel
       WHERE id = @id
     `,
-    ).run({
-      id: input.id,
-      name: input.name,
-      birthDate: input.birthDate ?? null,
-      diagnosis: input.diagnosis ?? null,
-      qprStatus: input.qprStatus ?? null,
-      note: input.note ?? null,
-    });
+    ).run({ ...params, id: input.id });
   } else {
     db.prepare(
       `
-      INSERT INTO patients (name, birthDate, diagnosis, qprStatus, note)
-      VALUES (@name, @birthDate, @diagnosis, @qprStatus, @note)
+      INSERT INTO patients (name, birthDate, diagnosis, note, contact, admissionDate,
+                            cognitionImpaired, mobilityImpaired, hkpCode, intensiveCare, careLevel)
+      VALUES (@name, @birthDate, @diagnosis, @note, @contact, @admissionDate,
+              @cognitionImpaired, @mobilityImpaired, @hkpCode, @intensiveCare, @careLevel)
     `,
-    ).run({
-      name: input.name,
-      birthDate: input.birthDate ?? null,
-      diagnosis: input.diagnosis ?? null,
-      qprStatus: input.qprStatus ?? null,
-      note: input.note ?? null,
-    });
+    ).run(params);
   }
 
   return listPatients();
@@ -107,20 +156,29 @@ export const deletePatient = (id: number): PatientWithLatestVisit[] => {
   return listPatients();
 };
 
+type VisitRow = Omit<PatientVisit, 'actionNeeded'> & { actionNeeded: number };
+
+const mapVisit = (row: VisitRow): PatientVisit => ({
+  ...row,
+  actionNeeded: row.actionNeeded === 1,
+});
+
 /**
  * List all visits for a patient
  */
 export const listVisits = (patientId: number): PatientVisit[] => {
   const db = getDb();
-  return db
+  const rows = db
     .prepare(
       `
-      SELECT * FROM patient_visits
+      SELECT id, patientId, visitDate, actionNeeded, comment, createdAt
+      FROM patient_visits
       WHERE patientId = ?
       ORDER BY visitDate DESC
     `,
     )
-    .all(patientId) as PatientVisit[];
+    .all(patientId) as VisitRow[];
+  return rows.map(mapVisit);
 };
 
 /**
@@ -130,7 +188,7 @@ export const saveVisit = (input: {
   id?: number;
   patientId: number;
   visitDate: string;
-  qprRating: QprRating;
+  actionNeeded: boolean;
   comment?: string | null;
 }): PatientVisit[] => {
   const db = getDb();
@@ -139,32 +197,26 @@ export const saveVisit = (input: {
     db.prepare(
       `
       UPDATE patient_visits
-      SET visitDate = @visitDate, qprRating = @qprRating, comment = @comment
+      SET visitDate = @visitDate, actionNeeded = @actionNeeded, comment = @comment
       WHERE id = @id
     `,
     ).run({
       id: input.id,
       visitDate: input.visitDate,
-      qprRating: input.qprRating,
+      actionNeeded: input.actionNeeded ? 1 : 0,
       comment: input.comment ?? null,
     });
   } else {
     db.prepare(
       `
-      INSERT INTO patient_visits (patientId, visitDate, qprRating, comment)
-      VALUES (@patientId, @visitDate, @qprRating, @comment)
+      INSERT INTO patient_visits (patientId, visitDate, actionNeeded, comment)
+      VALUES (@patientId, @visitDate, @actionNeeded, @comment)
     `,
     ).run({
       patientId: input.patientId,
       visitDate: input.visitDate,
-      qprRating: input.qprRating,
+      actionNeeded: input.actionNeeded ? 1 : 0,
       comment: input.comment ?? null,
-    });
-
-    // Update patient's qprStatus to match latest visit
-    db.prepare(`UPDATE patients SET qprStatus = @qprRating WHERE id = @patientId`).run({
-      qprRating: input.qprRating,
-      patientId: input.patientId,
     });
   }
 
@@ -181,9 +233,40 @@ export const deleteVisit = (id: number, patientId: number): PatientVisit[] => {
 };
 
 /**
- * Get patients with concerning ratings (C or D) - for dashboard
+ * The last few visits of every patient, oldest first per patient — feeds the
+ * trend bars in the list without a query per row.
  */
-export const getConcerningRatings = (limit = 10): PatientConcerningRating[] => {
+export const listRecentVisits = (perPatient = 4): Record<number, PatientVisit[]> => {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `
+      SELECT id, patientId, visitDate, actionNeeded, comment, createdAt
+      FROM (
+        SELECT
+          v.*,
+          ROW_NUMBER() OVER (PARTITION BY v.patientId ORDER BY v.visitDate DESC) AS rn
+        FROM patient_visits v
+      )
+      WHERE rn <= ?
+      ORDER BY patientId ASC, visitDate ASC
+    `,
+    )
+    .all(perPatient) as VisitRow[];
+
+  const grouped: Record<number, PatientVisit[]> = {};
+  rows.forEach((row) => {
+    const visit = mapVisit(row);
+    (grouped[visit.patientId] ??= []).push(visit);
+  });
+  return grouped;
+};
+
+/**
+ * Patients whose most recent visit recorded a follow-up — for the dashboard.
+ * Only the latest visit counts: an older flag was answered by the visit after it.
+ */
+export const getActionNeeded = (limit = 10): PatientActionNeeded[] => {
   const db = getDb();
   return db
     .prepare(
@@ -193,21 +276,19 @@ export const getConcerningRatings = (limit = 10): PatientConcerningRating[] => {
         p.name as patientName,
         v.id as visitId,
         v.visitDate,
-        v.qprRating,
         v.comment
-      FROM patient_visits v
-      INNER JOIN patients p ON v.patientId = p.id
-      WHERE v.qprRating IN ('C', 'D')
-      ORDER BY v.visitDate DESC, v.qprRating DESC
+      FROM patients p
+      INNER JOIN patient_visits v ON v.id = (
+        SELECT id FROM patient_visits WHERE patientId = p.id ORDER BY visitDate DESC LIMIT 1
+      )
+      WHERE v.actionNeeded = 1
+      ORDER BY v.visitDate DESC
       LIMIT ?
     `,
     )
-    .all(limit) as PatientConcerningRating[];
+    .all(limit) as PatientActionNeeded[];
 };
 
-/**
- * Get patient statistics - for dashboard
- */
 /**
  * Get upcoming patient birthdays within a date range
  */
@@ -254,9 +335,9 @@ export const listPatientBirthdays = (
 export const listPatientVisitsInRange = (
   startDate: string,
   endDate: string,
-): { visitId: number; patientId: number; patientName: string; visitDate: string; qprRating: QprRating; comment: string | null }[] => {
+): { visitId: number; patientId: number; patientName: string; visitDate: string; actionNeeded: boolean; comment: string | null }[] => {
   const db = getDb();
-  return db
+  const rows = db
     .prepare(
       `
       SELECT
@@ -264,7 +345,7 @@ export const listPatientVisitsInRange = (
         v.patientId,
         p.name as patientName,
         v.visitDate,
-        v.qprRating,
+        v.actionNeeded,
         v.comment
       FROM patient_visits v
       INNER JOIN patients p ON v.patientId = p.id
@@ -273,7 +354,9 @@ export const listPatientVisitsInRange = (
       ORDER BY v.visitDate ASC
     `,
     )
-    .all(startDate, endDate) as { visitId: number; patientId: number; patientName: string; visitDate: string; qprRating: QprRating; comment: string | null }[];
+    .all(startDate, endDate) as { visitId: number; patientId: number; patientName: string; visitDate: string; actionNeeded: number; comment: string | null }[];
+
+  return rows.map((row) => ({ ...row, actionNeeded: row.actionNeeded === 1 }));
 };
 
 export const getPatientStats = (): PatientStats => {
@@ -281,24 +364,26 @@ export const getPatientStats = (): PatientStats => {
 
   const totalRow = db.prepare('SELECT COUNT(*) as count FROM patients').get() as { count: number };
 
-  const ratingRows = db
-    .prepare(
-      `
-      SELECT qprStatus, COUNT(*) as count
-      FROM patients
-      GROUP BY qprStatus
-    `,
-    )
-    .all() as { qprStatus: QprRating | null; count: number }[];
+  const assessmentRows = db
+    .prepare('SELECT cognitionImpaired, mobilityImpaired FROM patients')
+    .all() as { cognitionImpaired: number | null; mobilityImpaired: number | null }[];
 
-  const byRating = { A: 0, B: 0, C: 0, D: 0, unrated: 0 };
-  ratingRows.forEach((row) => {
-    if (row.qprStatus) {
-      byRating[row.qprStatus] = row.count;
-    } else {
-      byRating.unrated = row.count;
-    }
+  const byGroup = { A: 0, B: 0, C: 0, none: 0, unrated: 0 };
+  assessmentRows.forEach((row) => {
+    const group = teilgruppeOf(toBool(row.cognitionImpaired), toBool(row.mobilityImpaired));
+    if (group == null) byGroup.unrated += 1;
+    else byGroup[group] += 1;
   });
+
+  const hkpRow = db
+    .prepare('SELECT COUNT(*) as count FROM patients WHERE hkpCode IS NOT NULL')
+    .get() as { count: number };
+  const intensiveRow = db
+    .prepare('SELECT COUNT(*) as count FROM patients WHERE intensiveCare IS NOT NULL')
+    .get() as { count: number };
+  const contactRow = db
+    .prepare("SELECT COUNT(*) as count FROM patients WHERE contact IS NULL OR TRIM(contact) = ''")
+    .get() as { count: number };
 
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -312,20 +397,26 @@ export const getPatientStats = (): PatientStats => {
     )
     .get(thirtyDaysAgo.toISOString().slice(0, 10)) as { count: number };
 
-  const concerningRow = db
+  const actionRow = db
     .prepare(
       `
-      SELECT COUNT(DISTINCT patientId) as count
-      FROM patient_visits
-      WHERE qprRating IN ('C', 'D')
+      SELECT COUNT(*) as count
+      FROM patients p
+      INNER JOIN patient_visits v ON v.id = (
+        SELECT id FROM patient_visits WHERE patientId = p.id ORDER BY visitDate DESC LIMIT 1
+      )
+      WHERE v.actionNeeded = 1
     `,
     )
     .get() as { count: number };
 
   return {
     totalPatients: totalRow.count,
-    byRating,
+    byGroup,
+    hkpCount: hkpRow.count,
+    intensiveCareCount: intensiveRow.count,
     recentVisits: recentRow.count,
-    concerningCount: concerningRow.count,
+    actionNeededCount: actionRow.count,
+    missingContactCount: contactRow.count,
   };
 };

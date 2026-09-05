@@ -5,6 +5,7 @@ import type {
   PatientBirthdayEvent,
   PatientVisitEvent,
   EmployeeDashboardStats,
+  OpenInstruction,
 } from '../shared/types';
 
 type UseDashboardWidgetsProps = {
@@ -17,6 +18,7 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
   const [patientBirthdays, setPatientBirthdays] = useState<PatientBirthdayEvent[]>([]);
   const [patientVisits, setPatientVisits] = useState<PatientVisitEvent[]>([]);
   const [employeeDashboardStats, setEmployeeDashboardStats] = useState<EmployeeDashboardStats | null>(null);
+  const [openInstructions, setOpenInstructions] = useState<OpenInstruction[]>([]);
   const [loading, setLoading] = useState(false);
 
   const loadExpiringTrainings = useCallback(
@@ -91,6 +93,18 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
     [handleError]
   );
 
+  const loadOpenInstructions = useCallback(
+    async (limit = 20) => {
+      try {
+        const data = await window.api.listOpenInstructions(limit);
+        setOpenInstructions(data);
+      } catch (err) {
+        handleError(err);
+      }
+    },
+    [handleError]
+  );
+
   const loadAll = useCallback(
     async () => {
       setLoading(true);
@@ -101,6 +115,7 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
           loadPatientBirthdays(),
           loadPatientVisits(),
           loadEmployeeDashboardStats(),
+          loadOpenInstructions(),
         ]);
       } finally {
         setLoading(false);
@@ -112,6 +127,7 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
       loadPatientBirthdays,
       loadPatientVisits,
       loadEmployeeDashboardStats,
+      loadOpenInstructions,
     ]
   );
 
@@ -122,6 +138,7 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
       loadPatientBirthdays,
       loadPatientVisits,
       loadEmployeeDashboardStats,
+      loadOpenInstructions,
       loadAll,
     }),
     [
@@ -130,6 +147,7 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
       loadPatientBirthdays,
       loadPatientVisits,
       loadEmployeeDashboardStats,
+      loadOpenInstructions,
       loadAll,
     ],
   );
@@ -141,6 +159,7 @@ const useDashboardWidgets = ({ handleError }: UseDashboardWidgetsProps) => {
       patientBirthdays,
       patientVisits,
       employeeDashboardStats,
+      openInstructions,
       loading,
     },
     actions,

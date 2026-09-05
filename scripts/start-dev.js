@@ -7,9 +7,12 @@ const updates = process.argv.includes('--updates');
 const runtime = prepareDevRuntime(root);
 const env = { ...process.env };
 if (runtime) env.ELECTRON_OVERRIDE_DIST_PATH = runtime;
+// Ohne Update-Server gaebe es in der Entwicklung nie ein Banner zu sehen, also
+// wird es immer simuliert. Nur --updates wechselt zusaetzlich auf ein eigenes
+// Datenprofil, damit Update-Tests die eigenen Entwicklungsdaten nicht anfassen.
+env.MOCK_UPDATE_BANNER = '1';
 if (updates) {
   env.CLEARDECK_DEV_SCENARIO = 'updates';
-  env.MOCK_UPDATE_BANNER = '1';
 }
 const cli = path.join(path.dirname(require.resolve('@electron-forge/cli/package.json')), 'dist/electron-forge.js');
 console.log(`ClearDeck Dev · ${updates ? 'Update-Beispiel mit eigenem Testprofil' : 'eigenes Entwicklungsprofil'}`);

@@ -19,6 +19,9 @@ import {
 } from './database/connection';
 import { encryptBuffer, decryptBuffer } from './crypto';
 import { getYearDataset } from './repositories/employees';
+import { listPatients } from './repositories/patients';
+import { teilgruppeOf } from '../utils/qpr';
+import { buildPersonListWorkbook, writeWorkbook } from './workbook';
 
 /**
  * Export the database (encrypted or plain)
@@ -42,16 +45,24 @@ export const exportDatabase = async (
     return { saved: false };
   }
 
-  const db = getDb();
-  db.backup(filePath);
+  try {
+    // SQLite's online backup is asynchronous: without awaiting it, the file is
+    // read back — and for the encrypted mode overwritten — while still being
+    // written, which silently produces a truncated export.
+    await getDb().backup(filePath);
 
-  if (mode === 'encrypted') {
-    const key = getEncryptionKey();
-    if (!key) throw new Error('Kein Schlüssel');
-    const data = fs.readFileSync(filePath);
-    const payload = encryptBuffer(data, key);
-    const combined = Buffer.concat([payload.iv, payload.tag, payload.content]);
-    fs.writeFileSync(filePath, combined);
+    if (mode === 'encrypted') {
+      const key = getEncryptionKey();
+      if (!key) throw new Error('Kein Schlüssel vorhanden. Bitte zuerst anmelden.');
+      const payload = encryptBuffer(fs.readFileSync(filePath), key);
+      fs.writeFileSync(filePath, Buffer.concat([payload.iv, payload.tag, payload.content]));
+    }
+  } catch (err) {
+    // A half-written export is worse than none: it looks like a usable backup.
+    fs.rmSync(filePath, { force: true });
+    const message = err instanceof Error ? err.message : 'Der Export ist fehlgeschlagen.';
+    dialog.showErrorBox('Export fehlgeschlagen', message);
+    return { saved: false, error: message };
   }
 
   return { saved: true, filePath };
@@ -139,7 +150,7 @@ export const exportData = async (
       const csvContent = XLSX.utils.sheet_to_csv(ws, { FS: ';' });
       fs.writeFileSync(target, csvContent, 'utf8');
     } else {
-      XLSX.writeFile(wb, target);
+      writeWorkbook(wb, target);
     }
   };
 
@@ -168,4 +179,50 @@ export const exportData = async (
   }
 
   return { saved: true, filePath };
+};
+
+/**
+ * Personenliste nach Anlage 7 (QPR ambulant).
+ *
+ * Alphabetical, all people receiving §§ 36/39 SGB XI or §§ 37/37c SGB V
+ * services: name, Bevollmächtigte/Betreuung with phone, Teilgruppe A/B/C,
+ * aufwändige HKP with its code, AKI/pHKP. Handed to the MD at the start of
+ * the inspection, so blanks here are the gaps worth seeing before then.
+ */
+export const exportPersonList = async (): Promise<{
+  saved: boolean;
+  filePath?: string;
+  error?: string;
+  total?: number;
+  withoutGroup?: number;
+}> => {
+  const patients = listPatients();
+  const { canceled, filePath } = await dialog.showSaveDialog({
+    title: 'Personenliste (Anlage 7) exportieren',
+    defaultPath: `Personenliste-Anlage-7-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    filters: [{ name: 'XLSX', extensions: ['xlsx'] }],
+  });
+
+  if (canceled || !filePath) {
+    return { saved: false };
+  }
+
+  const workbook = buildPersonListWorkbook(patients);
+
+  try {
+    writeWorkbook(workbook, filePath);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Export fehlgeschlagen.';
+    dialog.showErrorBox('Export fehlgeschlagen', message);
+    return { saved: false, error: message };
+  }
+
+  return {
+    saved: true,
+    filePath,
+    total: patients.length,
+    withoutGroup: patients.filter(
+      (patient) => teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired) == null,
+    ).length,
+  };
 };

@@ -282,7 +282,7 @@ const useAppLogic = () => {
       patientVisits: patientSlice.state.visits,
       patientModal: patientSlice.state.patientModal,
       patientSearch: patientSlice.state.search,
-      patientRatingFilter: patientSlice.state.ratingFilter,
+      patientGroupFilter: patientSlice.state.groupFilter,
       patientVisitModal: patientSlice.state.visitModal,
       patientDashboard: patientDashboardSlice.state,
     },
@@ -313,7 +313,7 @@ const useAppLogic = () => {
       setPatientModal: patientSlice.setters.setPatientModal,
       setSelectedPatient: patientSlice.setters.setSelectedPatient,
       setPatientSearch: patientSlice.setters.setSearch,
-      setPatientRatingFilter: patientSlice.setters.setRatingFilter,
+      setPatientGroupFilter: patientSlice.setters.setGroupFilter,
       setPatientVisitModal: patientSlice.setters.setVisitModal,
     },
     derived: {
@@ -331,6 +331,7 @@ const useAppLogic = () => {
     actions: {
       goTo: employeeSlice.actions.goTo,
       handleLogin: authSlice.handleLogin,
+      handleLock: authSlice.handleLock,
       handleSave: employeeSlice.actions.handleSave,
       handleExport: employeeSlice.actions.handleExport,
       handleSelect: handleSelectWithHistory,
@@ -388,6 +389,8 @@ const useAppLogic = () => {
       showAllEventTypes: upcomingEventsSlice.actions.showAllEventTypes,
       hideAllEventTypes: upcomingEventsSlice.actions.hideAllEventTypes,
       calendarActions: calendarSlice.actions,
+      setToastMessage: showToast,
+      handleError,
       // Patient actions
       handleSelectPatient: patientSlice.actions.handleSelectPatient,
       handleSavePatient: patientSlice.actions.handleSavePatient,

@@ -111,7 +111,7 @@ const useSettingsDb = ({
 
   const handleDropDatabase = useCallback(() => {
     confirmAction(
-      'Datenbank endgültig löschen? Dies entfernt alle Einträge, behält aber das Passwort.',
+      'Alle lokalen Daten werden unwiderruflich entfernt. Das Passwort bleibt erhalten.',
       async () => {
         try {
           await api.db.delete();
@@ -123,7 +123,12 @@ const useSettingsDb = ({
           setTimeout(() => onToast(null), 3000);
         }
       },
-      { confirmLabel: 'Löschen', danger: true },
+      {
+        title: 'Datenbank löschen?',
+        confirmLabel: 'Endgültig löschen',
+        danger: true,
+        confirmPhrase: 'LÖSCHEN',
+      },
     );
   }, [confirmAction, onAfterDrop, onError, onToast]);
 
@@ -141,7 +146,12 @@ const useSettingsDb = ({
           setTimeout(() => onToast(null), 3000);
         }
       },
-      { confirmLabel: 'Zurücksetzen', danger: true },
+      {
+        title: 'App zurücksetzen?',
+        confirmLabel: 'Endgültig zurücksetzen',
+        danger: true,
+        confirmPhrase: 'ZURÜCKSETZEN',
+      },
     );
   }, [confirmAction, onAfterReset, onError, onToast]);
 

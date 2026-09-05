@@ -117,6 +117,17 @@ const format = (record: Record): DiagnosticEntry => ({
   message: `${record.event === 'start' ? 'App gestartet.' : record.event === 'error' ? errors[record.code!] : stateMessages[record.state!]}${record.version ? ` Version ${record.version}.` : ''}${record.progress === undefined ? '' : ` ${record.progress} %.`}`,
 });
 
+/** Folder holding diagnostics.json — offered as "Log-Ordner öffnen". */
+export const diagnosticsDir = (): string => path.dirname(filePath());
+
+export const clearDiagnostics = (): void => {
+  try {
+    fs.rmSync(filePath(), { force: true });
+  } catch {
+    // Nothing to clear is the same outcome as a successful clear.
+  }
+};
+
 export const readDiagnostics = (): DiagnosticSnapshot => {
   const entries = readRecords().reverse().map(format);
   return { entries, storageError };

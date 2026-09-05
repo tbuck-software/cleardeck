@@ -1,8 +1,11 @@
 import type {
+  AuditResultValue,
   EmploymentPeriod,
   EmployeeEvent,
   EmployeeEventType,
-  QprRating,
+  HkpCode,
+  IntensiveCare,
+  IntervalSource,
   RecoveryInfo,
   StorageMode,
 } from '../shared/types';
@@ -19,7 +22,22 @@ export type Page =
   | 'patients'
   | 'patient-view'
   | 'patient-new'
-  | 'patient-edit';
+  | 'patient-edit'
+  | 'audit'
+  | 'tasks'
+  | 'quals'
+  | 'comps'
+  | 'instrs'
+  | 'security'
+  | 'about'
+  | 'logs'
+  | 'shortcuts';
+
+/** Pages that live behind the Einstellungen sidebar rather than the main nav. */
+export const SETTINGS_PAGES: Page[] = ['settings', 'security', 'about', 'logs', 'shortcuts'];
+
+/** Filter for the Patient:innen list — 'D' means "has an aufwändige HKP code". */
+export type TeilgruppeFilter = 'all' | 'A' | 'B' | 'C' | 'D';
 
 export type CalendarView = 'month' | 'week' | 'year';
 
@@ -72,6 +90,9 @@ export type InstructionModalState = {
   topic: string;
   legalBasis: string;
   note: string;
+  /** Empty means "no fixed interval" — see docs/adr/0002. */
+  intervalMonths: number | null;
+  intervalSource: IntervalSource;
 };
 
 export type InstructionModalPayload = Pick<
@@ -104,6 +125,9 @@ export type RecoveryKeyModalState = {
 export type ConfirmActionOptions = {
   confirmLabel?: string;
   danger?: boolean;
+  title?: string;
+  /** Word the user must retype before the action arms. For irreversible ones. */
+  confirmPhrase?: string;
 };
 
 export type ConfirmState = {
@@ -111,6 +135,8 @@ export type ConfirmState = {
   onConfirm: () => Promise<void> | void;
   confirmLabel?: string;
   danger?: boolean;
+  title?: string;
+  confirmPhrase?: string;
 } | null;
 
 export type EditModalState = {
@@ -164,6 +190,8 @@ export type EmployeeInstructionModalState = {
   completedAt: string;
   conductedBy: string;
   note: string;
+  /** Only offered when the definition carries an interval. */
+  scheduleFollowUp: boolean;
 };
 
 export type SuggestedCompetencyModalState = {
@@ -175,15 +203,6 @@ export type PeriodToDeleteState = { periodId: number; label: string } | null;
 
 // Patient-related UI types
 
-export type PatientFormState = {
-  id?: number;
-  name: string;
-  birthDate: string;
-  diagnosis: string;
-  qprStatus: QprRating | '';
-  note: string;
-};
-
 export type PatientModalState = {
   open: boolean;
   mode: 'create' | 'edit';
@@ -191,8 +210,15 @@ export type PatientModalState = {
   name: string;
   birthDate: string;
   diagnosis: string;
-  qprStatus: QprRating | '';
   note: string;
+  contact: string;
+  admissionDate: string;
+  /** null = not yet taken from the Pflegegrad-Gutachten. */
+  cognitionImpaired: boolean | null;
+  mobilityImpaired: boolean | null;
+  hkpCode: HkpCode | null;
+  intensiveCare: IntensiveCare | null;
+  careLevel: number | null;
 };
 
 export type VisitModalState = {
@@ -200,6 +226,18 @@ export type VisitModalState = {
   id?: number;
   patientId: number;
   visitDate: string;
-  qprRating: QprRating;
+  actionNeeded: boolean;
   comment: string;
+};
+
+export type AuditModalState = {
+  open: boolean;
+  mode: 'create' | 'edit' | 'view';
+  id?: number;
+  auditDate: string;
+  inspector: string;
+  kind: 'regel' | 'anlass';
+  findings: string;
+  results: Record<string, AuditResultValue>;
+  clientIds: number[];
 };

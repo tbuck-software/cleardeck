@@ -1,58 +1,50 @@
 import React from 'react';
-import { faPen, faPlus } from '@fortawesome/free-solid-svg-icons';
+import Dialog from '../ui/Dialog';
 import type { QualificationModalState } from '../../types/ui';
-import ModalHeader from './ModalHeader';
 
 type QualificationModalProps = {
   state: QualificationModalState;
   onChange: (next: Partial<QualificationModalState>) => void;
   onClose: () => void;
   onSave: () => void;
+  onDelete?: (id: number) => void;
 };
 
-const QualificationModal = ({ state, onChange, onClose, onSave }: QualificationModalProps) => {
-  if (!state.open) return null;
-
-  return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <ModalHeader
-          icon={state.id ? faPen : faPlus}
-          title={state.id ? 'Qualifikation bearbeiten' : 'Neue Qualifikation'}
-          onClose={onClose}
-        />
-        <div className="form-grid">
-          <label className="full-width">
-            Bezeichnung
-            <input
-              value={state.value}
-              onChange={(e) => onChange({ value: e.target.value })}
-              placeholder="z. B. 3-jährig examiniert"
-            />
-          </label>
-          <label className="full-width">
-            Notiz
-            <textarea
-              value={state.note}
-              onChange={(e) => onChange({ note: e.target.value })}
-              placeholder="Optional: Besonderheiten, Zertifizierungen, Einsatzbereiche"
-            />
-          </label>
-        </div>
-        <div className="modal-actions">
-          <div className="modal-actions-left" />
-          <div className="modal-actions-right">
-            <button className="ghost-button" onClick={onClose}>
-              Abbrechen
-            </button>
-            <button className="primary" onClick={onSave}>
-              Speichern
-            </button>
-          </div>
-        </div>
-      </div>
+const QualificationModal = ({ state, onChange, onClose, onSave, onDelete }: QualificationModalProps) => (
+  <Dialog
+    open={state.open}
+    width={480}
+    title={state.id ? 'Qualifikation bearbeiten' : 'Neue Qualifikation'}
+    subtitle="Änderungen gelten sofort für alle Zuordnungen."
+    primaryLabel="Speichern"
+    primaryDisabled={!state.value.trim()}
+    onPrimary={onSave}
+    deleteLabel={state.id && onDelete ? 'Löschen' : undefined}
+    onDelete={state.id && onDelete ? () => onDelete(state.id as number) : undefined}
+    onClose={onClose}
+  >
+    <div className="field">
+      <label htmlFor="qualification-name">Bezeichnung</label>
+      <input
+        id="qualification-name"
+        className="input"
+        placeholder="z. B. 3-jährig examiniert"
+        value={state.value}
+        onChange={(event) => onChange({ value: event.target.value })}
+      />
     </div>
-  );
-};
+    <div className="field">
+      <label htmlFor="qualification-note">Notiz</label>
+      <textarea
+        id="qualification-note"
+        className="input"
+        style={{ minHeight: 70 }}
+        placeholder="Wofür gilt das, was ist zu beachten?"
+        value={state.note}
+        onChange={(event) => onChange({ note: event.target.value })}
+      />
+    </div>
+  </Dialog>
+);
 
 export default QualificationModal;

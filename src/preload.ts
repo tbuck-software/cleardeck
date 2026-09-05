@@ -11,6 +11,7 @@ import type {
   EmployeeEventType,
   EmployeeInstruction,
   InstructionDefinition,
+  IntervalSource,
   UpdateStatus,
   DiagnosticSnapshot,
   RecoveryInfo,
@@ -18,14 +19,22 @@ import type {
   ExpiringTraining,
   BirthdayAnniversary,
   EmployeeDashboardStats,
+  OpenInstruction,
+  CareSettings,
+  BackupState,
+  DefinitionUsage,
   Patient,
   PatientVisit,
   PatientWithLatestVisit,
-  PatientConcerningRating,
+  PatientActionNeeded,
   PatientStats,
   PatientBirthdayEvent,
   PatientVisitEvent,
-  QprRating,
+  HkpCode,
+  IntensiveCare,
+  AuditResult,
+  AuditSectionDefinition,
+  AuditWithDetails,
   StorageMode,
 } from './shared/types';
 
@@ -38,6 +47,8 @@ export type Api = {
   register: (password: string) => Promise<AppState>;
   registerPlain: () => Promise<AppState>;
   login: (password: string) => Promise<AppState>;
+  lock: () => Promise<AppState>;
+  changePassword: (input: { currentPassword: string; newPassword: string }) => Promise<AppState>;
   enableEncryption: (password: string) => Promise<AppState>;
   disableEncryption: () => Promise<AppState>;
   getRecoveryKey: () => Promise<RecoveryInfo>;
@@ -123,12 +134,16 @@ export type Api = {
     topic: string;
     legalBasis?: string | null;
     note?: string | null;
+    intervalMonths?: number | null;
+    intervalSource?: IntervalSource | null;
   }) => Promise<InstructionDefinition[]>;
   updateInstructionDefinition: (input: {
     id: number;
     topic: string;
     legalBasis?: string | null;
     note?: string | null;
+    intervalMonths?: number | null;
+    intervalSource?: IntervalSource | null;
   }) => Promise<InstructionDefinition[]>;
   deleteInstructionDefinition: (id: number) => Promise<InstructionDefinition[]>;
   reorderInstructionDefinitions: (ids: number[]) => Promise<InstructionDefinition[]>;
@@ -141,6 +156,7 @@ export type Api = {
     completedAt?: string | null;
     conductedBy?: string | null;
     note?: string | null;
+    scheduleFollowUp?: boolean;
   }) => Promise<EmployeeInstruction[]>;
   deleteEmployeeInstruction: (employeeId: number, instructionDefinitionId: number) => Promise<EmployeeInstruction[]>;
   exportDatabase: (mode: 'encrypted' | 'plain') => Promise<{ saved: boolean; filePath?: string; error?: string }>;
@@ -156,6 +172,8 @@ export type Api = {
   getHiddenEventTypes: () => Promise<string[]>;
   setHiddenEventTypes: (types: string[]) => Promise<string[]>;
   readDiagnostics: () => Promise<DiagnosticSnapshot>;
+  openDiagnosticsFolder: () => Promise<boolean>;
+  clearDiagnostics: () => Promise<void>;
   exportDiagnostics: () => Promise<boolean>;
   checkUpdates: (manual?: boolean) => Promise<boolean>;
   downloadUpdate: () => Promise<boolean>;
@@ -166,6 +184,15 @@ export type Api = {
   getExpiringTrainings: (withinDays?: number, limit?: number) => Promise<ExpiringTraining[]>;
   getBirthdaysAndAnniversaries: (withinDays?: number, limit?: number) => Promise<BirthdayAnniversary[]>;
   getEmployeeDashboardStats: (dueSoonDays?: number, limit?: number) => Promise<EmployeeDashboardStats>;
+  listOpenInstructions: (limit?: number) => Promise<OpenInstruction[]>;
+  getDefinitionUsage: () => Promise<DefinitionUsage>;
+  getBackupSettings: () => Promise<BackupState>;
+  setBackupSettings: (input: Partial<BackupState>) => Promise<BackupState>;
+  chooseBackupFolder: () => Promise<BackupState>;
+  runBackup: () => Promise<{ saved: boolean; file?: string; error?: string; settings: BackupState }>;
+  restoreBackup: (path: string) => Promise<{ saved: boolean; file?: string; error?: string; settings: BackupState }>;
+  getCareSettings: () => Promise<CareSettings>;
+  setCareSettings: (input: Partial<CareSettings>) => Promise<CareSettings>;
 
   // Patients
   listPatients: () => Promise<PatientWithLatestVisit[]>;
@@ -175,8 +202,14 @@ export type Api = {
     name: string;
     birthDate?: string | null;
     diagnosis?: string | null;
-    qprStatus?: QprRating | null;
     note?: string | null;
+    contact?: string | null;
+    admissionDate?: string | null;
+    cognitionImpaired?: boolean | null;
+    mobilityImpaired?: boolean | null;
+    hkpCode?: HkpCode | null;
+    intensiveCare?: IntensiveCare | null;
+    careLevel?: number | null;
   }) => Promise<PatientWithLatestVisit[]>;
   deletePatient: (id: number) => Promise<PatientWithLatestVisit[]>;
 
@@ -186,18 +219,40 @@ export type Api = {
     id?: number;
     patientId: number;
     visitDate: string;
-    qprRating: QprRating;
+    actionNeeded: boolean;
     comment?: string | null;
   }) => Promise<PatientVisit[]>;
   deleteVisit: (id: number, patientId: number) => Promise<PatientVisit[]>;
+  listRecentVisits: (perPatient?: number) => Promise<Record<number, PatientVisit[]>>;
 
   // Dashboard - Patient widgets
-  getConcerningRatings: (limit?: number) => Promise<PatientConcerningRating[]>;
+  getActionNeeded: (limit?: number) => Promise<PatientActionNeeded[]>;
   getPatientStats: () => Promise<PatientStats>;
 
   // Patient events for calendar/upcoming
   listPatientBirthdays: (startDate: string, endDate: string) => Promise<PatientBirthdayEvent[]>;
   listPatientVisitsInRange: (startDate: string, endDate: string) => Promise<PatientVisitEvent[]>;
+
+  // MD-Prüfung
+  listAuditSections: () => Promise<AuditSectionDefinition[]>;
+  exportPersonList: () => Promise<{
+    saved: boolean;
+    filePath?: string;
+    error?: string;
+    total?: number;
+    withoutGroup?: number;
+  }>;
+  listAudits: () => Promise<AuditWithDetails[]>;
+  saveAudit: (input: {
+    id?: number;
+    auditDate: string;
+    inspector?: string | null;
+    kind?: 'regel' | 'anlass' | null;
+    findings?: string | null;
+    results: AuditResult[];
+    clientIds: number[];
+  }) => Promise<AuditWithDetails[]>;
+  deleteAudit: (id: number) => Promise<AuditWithDetails[]>;
 };
 
 const api: Api = {
@@ -207,6 +262,8 @@ const api: Api = {
   register: (password) => ipcRenderer.invoke('auth:register', password),
   registerPlain: () => ipcRenderer.invoke('auth:registerPlain'),
   login: (password) => ipcRenderer.invoke('auth:login', password),
+  lock: () => ipcRenderer.invoke('auth:lock'),
+  changePassword: (input) => ipcRenderer.invoke('auth:changePassword', input),
   enableEncryption: (password) => ipcRenderer.invoke('auth:enableEncryption', password),
   disableEncryption: () => ipcRenderer.invoke('auth:disableEncryption'),
   getRecoveryKey: () => ipcRenderer.invoke('auth:recoveryKey'),
@@ -257,6 +314,8 @@ const api: Api = {
   getHiddenEventTypes: () => ipcRenderer.invoke('settings:getHiddenEventTypes'),
   setHiddenEventTypes: (types) => ipcRenderer.invoke('settings:setHiddenEventTypes', { types }),
   readDiagnostics: () => ipcRenderer.invoke('diagnostics:read'),
+  openDiagnosticsFolder: () => ipcRenderer.invoke('diagnostics:openFolder'),
+  clearDiagnostics: () => ipcRenderer.invoke('diagnostics:clear'),
   exportDiagnostics: () => ipcRenderer.invoke('diagnostics:export'),
   checkUpdates: (manual = false) => ipcRenderer.invoke('updates:check', manual),
   downloadUpdate: () => ipcRenderer.invoke('updates:download'),
@@ -274,6 +333,15 @@ const api: Api = {
     ipcRenderer.invoke('dashboard:birthdaysAnniversaries', { withinDays, limit }),
   getEmployeeDashboardStats: (dueSoonDays, limit) =>
     ipcRenderer.invoke('dashboard:employeeStats', { dueSoonDays, limit }),
+  listOpenInstructions: (limit) => ipcRenderer.invoke('dashboard:openInstructions', { limit }),
+  getDefinitionUsage: () => ipcRenderer.invoke('dashboard:definitionUsage'),
+  getBackupSettings: () => ipcRenderer.invoke('backup:settings'),
+  setBackupSettings: (input) => ipcRenderer.invoke('backup:setSettings', input),
+  chooseBackupFolder: () => ipcRenderer.invoke('backup:chooseFolder'),
+  runBackup: () => ipcRenderer.invoke('backup:run'),
+  restoreBackup: (path) => ipcRenderer.invoke('backup:restore', { path }),
+  getCareSettings: () => ipcRenderer.invoke('settings:careSettings'),
+  setCareSettings: (input) => ipcRenderer.invoke('settings:setCareSettings', input),
 
   // Patients
   listPatients: () => ipcRenderer.invoke('patients:list'),
@@ -285,9 +353,10 @@ const api: Api = {
   listVisits: (patientId) => ipcRenderer.invoke('visits:list', { patientId }),
   saveVisit: (input) => ipcRenderer.invoke('visits:save', input),
   deleteVisit: (id, patientId) => ipcRenderer.invoke('visits:delete', { id, patientId }),
+  listRecentVisits: (perPatient) => ipcRenderer.invoke('visits:recent', { perPatient }),
 
   // Dashboard - Patient widgets
-  getConcerningRatings: (limit) => ipcRenderer.invoke('dashboard:concerningRatings', { limit }),
+  getActionNeeded: (limit) => ipcRenderer.invoke('dashboard:actionNeeded', { limit }),
   getPatientStats: () => ipcRenderer.invoke('dashboard:patientStats'),
 
   // Patient events for calendar/upcoming
@@ -295,6 +364,13 @@ const api: Api = {
     ipcRenderer.invoke('patients:listBirthdays', { startDate, endDate }),
   listPatientVisitsInRange: (startDate, endDate) =>
     ipcRenderer.invoke('patients:listVisitsInRange', { startDate, endDate }),
+
+  // MD-Prüfung
+  listAuditSections: () => ipcRenderer.invoke('audits:sections'),
+  exportPersonList: () => ipcRenderer.invoke('audits:exportPersonList'),
+  listAudits: () => ipcRenderer.invoke('audits:list'),
+  saveAudit: (input) => ipcRenderer.invoke('audits:save', input),
+  deleteAudit: (id) => ipcRenderer.invoke('audits:delete', { id }),
 };
 
 contextBridge.exposeInMainWorld('api', api);

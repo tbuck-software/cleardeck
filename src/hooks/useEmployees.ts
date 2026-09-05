@@ -64,6 +64,8 @@ const emptyInstructionModal = (): InstructionModalState => ({
   topic: '',
   legalBasis: '',
   note: '',
+  intervalMonths: null,
+  intervalSource: 'betrieblich',
 });
 
 const emptyEmployeeInstructionModal = (): EmployeeInstructionModalState => ({
@@ -73,7 +75,7 @@ const emptyEmployeeInstructionModal = (): EmployeeInstructionModalState => ({
   dueDate: '',
   completedAt: '',
   conductedBy: '',
-  note: '',
+  note: '', scheduleFollowUp: false,
 });
 
 const emptySuggestedCompetencyModal = (): SuggestedCompetencyModalState => ({
@@ -108,6 +110,15 @@ const pageTitle: Record<Page, string> = {
   'patient-view': 'Patient:in Details',
   'patient-new': 'Patient:in anlegen',
   'patient-edit': 'Patient:in bearbeiten',
+  audit: 'MD-Prüfung',
+  tasks: 'Heute zu tun',
+  quals: 'Qualifikationen',
+  comps: 'Kompetenzen',
+  instrs: 'Einweisungen',
+  security: 'Sicherheit & Backup',
+  about: 'Über ClearDeck',
+  logs: 'Logs & Diagnose',
+  shortcuts: 'Tastenkürzel',
 };
 
 const useEmployees = ({
@@ -745,6 +756,7 @@ const useEmployees = ({
       completedAt: entry.completedAt ?? '',
       conductedBy: entry.conductedBy ?? '',
       note: entry.note ?? '',
+        scheduleFollowUp: true,
     });
   }, []);
 
@@ -770,6 +782,7 @@ const useEmployees = ({
       completedAt: '',
       conductedBy: '',
       note: '',
+        scheduleFollowUp: true,
     });
   }, [employeeInstructions, instructionDefinitions, setToast]);
 
@@ -784,6 +797,7 @@ const useEmployees = ({
         completedAt: employeeInstructionModal.completedAt || null,
         conductedBy: employeeInstructionModal.conductedBy || null,
         note: employeeInstructionModal.note || null,
+        scheduleFollowUp: employeeInstructionModal.scheduleFollowUp,
       });
       setEmployeeInstructions(list);
       setEmployeeInstructionModal(emptyEmployeeInstructionModal());
@@ -1035,6 +1049,15 @@ const useEmployees = ({
     'patient-view': '',
     'patient-new': 'Neue:n Patient:in anlegen.',
     'patient-edit': 'Patient:in bearbeiten.',
+    audit: 'Qualitätsprüfung nach QPR ambulant.',
+    tasks: 'Offene Fristen, Visiten und Datenlücken.',
+    quals: 'Kategorien für den Jahresnachweis.',
+    comps: 'Fachthemen der Kompetenzmatrix.',
+    instrs: 'Pflichtunterweisungen mit Rechtsgrundlage.',
+    security: 'Verschlüsselung, Backup und Wiederherstellung.',
+    about: 'Version, Lizenz und Kontakt.',
+    logs: 'Diagnose für Support-Anfragen.',
+    shortcuts: 'Tastenkürzel der App.',
   };
 
   return {

@@ -1,144 +1,99 @@
 import React from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faArrowRightToBracket,
-  faArrowRightFromBracket,
-  faStethoscope,
-  faKitMedical,
-  faCalendarDay,
-  faCakeCandles,
-  faAward,
-  faCertificate,
-  faClipboardList,
-} from '@fortawesome/free-solid-svg-icons';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import type { UpcomingEvent, UnifiedEventType } from '../../../shared/types';
+import { dateKey, styleOfEvent } from '../../../utils/eventStyle';
+import type { UpcomingEvent } from '../../../shared/types';
 
 type MonthViewProps = {
   currentDate: Date;
   eventsByDate: Record<string, UpcomingEvent[]>;
   onEventClick: (event: UpcomingEvent) => void;
+  onDayClick: (date: string) => void;
 };
 
-const typeIcons: Record<UnifiedEventType, IconDefinition> = {
-  join: faArrowRightToBracket,
-  leave: faArrowRightFromBracket,
-  'name-change': faArrowRightToBracket,
-  'note-change': faArrowRightToBracket,
-  'fte-change': faArrowRightToBracket,
-  'weekly-hours-change': faArrowRightToBracket,
-  'care-visit': faStethoscope,
-  'emergency-training': faKitMedical,
-  custom: faCalendarDay,
-  birthday: faCakeCandles,
-  anniversary: faAward,
-  'certificate-expiry': faCertificate,
-  'patient-birthday': faCakeCandles,
-  'patient-visit': faClipboardList,
+const WEEKDAYS = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
+
+/** Full weeks, Monday-first, covering the whole month. */
+const monthGrid = (date: Date): Date[] => {
+  const first = new Date(date.getFullYear(), date.getMonth(), 1);
+  const offset = (first.getDay() + 6) % 7;
+  const start = new Date(first);
+  start.setDate(1 - offset);
+
+  const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const cells = Math.ceil((offset + daysInMonth) / 7) * 7;
+
+  return Array.from({ length: cells }, (_, index) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    return day;
+  });
 };
 
-const weekDays = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-
-/**
- * Generate all days to display in the month grid
- */
-const getMonthDays = (date: Date): Date[] => {
-  const year = date.getFullYear();
-  const month = date.getMonth();
-
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-
-  // Get Monday of the first week
-  const firstDayOfWeek = firstDay.getDay();
-  const mondayOffset = firstDayOfWeek === 0 ? -6 : 1 - firstDayOfWeek;
-  const gridStart = new Date(firstDay);
-  gridStart.setDate(firstDay.getDate() + mondayOffset);
-
-  // Get Sunday of the last week
-  const lastDayOfWeek = lastDay.getDay();
-  const sundayOffset = lastDayOfWeek === 0 ? 0 : 7 - lastDayOfWeek;
-  const gridEnd = new Date(lastDay);
-  gridEnd.setDate(lastDay.getDate() + sundayOffset);
-
-  const days: Date[] = [];
-  const current = new Date(gridStart);
-
-  while (current <= gridEnd) {
-    days.push(new Date(current));
-    current.setDate(current.getDate() + 1);
-  }
-
-  return days;
-};
-
-const formatDateKey = (date: Date): string => {
-  return date.toISOString().slice(0, 10);
-};
-
-const isToday = (date: Date): boolean => {
-  const today = new Date();
-  return (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
-  );
-};
-
-const MonthView = ({ currentDate, eventsByDate, onEventClick }: MonthViewProps) => {
-  const days = getMonthDays(currentDate);
-  const currentMonth = currentDate.getMonth();
+const MonthView = ({ currentDate, eventsByDate, onEventClick, onDayClick }: MonthViewProps) => {
+  const days = monthGrid(currentDate);
+  const month = currentDate.getMonth();
+  const today = dateKey(new Date());
 
   return (
-    <div className="calendar-month">
-      <div className="calendar-weekdays">
-        {weekDays.map((day) => (
-          <div key={day} className="calendar-weekday">
-            {day}
-          </div>
-        ))}
-      </div>
+    <div className="cd-calendar-grid">
+      {WEEKDAYS.map((day) => (
+        <div key={day} className="cd-weekday">
+          {day}
+        </div>
+      ))}
 
-      <div className="calendar-days">
-        {days.map((day) => {
-          const dateKey = formatDateKey(day);
-          const dayEvents = eventsByDate[dateKey] || [];
-          const isOtherMonth = day.getMonth() !== currentMonth;
-          const isTodayDate = isToday(day);
-
-          return (
-            <div
-              key={dateKey}
-              className={`calendar-day ${isOtherMonth ? 'other-month' : ''} ${isTodayDate ? 'today' : ''}`}
+      {days.map((day) => {
+        const key = dateKey(day);
+        const events = eventsByDate[key] ?? [];
+        const isToday = key === today;
+        return (
+          <div
+            key={key}
+            className="cd-day cd-row"
+            style={{ opacity: day.getMonth() === month ? 1 : 0.45 }}
+            role="button"
+            tabIndex={0}
+            aria-label={`${day.getDate()}. — ${events.length} Termine`}
+            onClick={() => onDayClick(key)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onDayClick(key);
+              }
+            }}
+          >
+            <span
+              className="cd-day-num"
+              style={{
+                background: isToday ? 'var(--color-accent)' : 'transparent',
+                color: isToday ? '#fff' : 'inherit',
+              }}
             >
-              <div className="calendar-day-header">
-                <span className={`calendar-day-number ${isTodayDate ? 'today-badge' : ''}`}>
-                  {day.getDate()}
-                </span>
-              </div>
-              <div className="calendar-day-events">
-                {dayEvents.slice(0, 3).map((event) => {
-                  const displayName = event.patientName ?? event.employeeName;
-                  return (
-                    <button
-                      key={event.id}
-                      className={`calendar-event event-${event.type}`}
-                      onClick={() => onEventClick(event)}
-                      title={`${event.title} - ${displayName}`}
-                    >
-                      <FontAwesomeIcon icon={typeIcons[event.type]} className="calendar-event-icon" />
-                      <span className="calendar-event-name">{displayName}</span>
-                    </button>
-                  );
-                })}
-                {dayEvents.length > 3 && (
-                  <div className="calendar-day-more">+{dayEvents.length - 3} weitere</div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              {day.getDate()}
+            </span>
+            {events.slice(0, 3).map((event) => {
+              const style = styleOfEvent(event.type);
+              const who = event.patientName ?? event.employeeName ?? '';
+              return (
+                <button
+                  key={event.id}
+                  type="button"
+                  className="cd-day-event"
+                  style={{ background: style.bg, color: style.fg }}
+                  title={`${who} — ${event.title}`}
+                  onClick={(clickEvent) => {
+                    clickEvent.stopPropagation();
+                    onEventClick(event);
+                  }}
+                >
+                  {who ? `${who.split(' ')[0]} · ` : ''}
+                  {event.title}
+                </button>
+              );
+            })}
+            {events.length > 3 && <div className="cd-day-more">+{events.length - 3} weitere</div>}
+          </div>
+        );
+      })}
     </div>
   );
 };

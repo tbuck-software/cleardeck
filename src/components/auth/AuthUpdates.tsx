@@ -1,5 +1,6 @@
+import React from 'react';
+import UpdatePopover from '../ui/UpdatePopover';
 import type { UpdateStatus } from '../../shared/types';
-import UpdateControl from '../ui/UpdateControl';
 
 type AuthUpdatesProps = {
   status: UpdateStatus;
@@ -9,10 +10,21 @@ type AuthUpdatesProps = {
   onInstall: () => Promise<void>;
 };
 
+/**
+ * The lock screen's corner. Same popover as in the app, opening upward — so an
+ * update reads the same before and after unlocking.
+ */
 const AuthUpdates = ({ status, version, onCheck, onDownload, onInstall }: AuthUpdatesProps) => (
   <div className="auth-updates">
-    {version && <p>ClearDeck {version}</p>}
-    <UpdateControl status={status} onCheck={onCheck} onDownload={onDownload} onInstall={onInstall} />
+    {version && <span className="cd-muted-13">ClearDeck {version}</span>}
+    <UpdatePopover
+      status={status}
+      placement="corner"
+      currentVersion={version}
+      onCheck={onCheck}
+      onDownload={onDownload}
+      onInstall={onInstall}
+    />
   </div>
 );
 

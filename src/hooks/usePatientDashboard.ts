@@ -1,20 +1,20 @@
 import { useCallback, useMemo, useState } from 'react';
-import type { PatientConcerningRating, PatientStats } from '../shared/types';
+import type { PatientActionNeeded, PatientStats } from '../shared/types';
 
 type UsePatientDashboardProps = {
   handleError: (err: unknown) => void;
 };
 
 const usePatientDashboard = ({ handleError }: UsePatientDashboardProps) => {
-  const [concerningRatings, setConcerningRatings] = useState<PatientConcerningRating[]>([]);
+  const [actionNeeded, setActionNeeded] = useState<PatientActionNeeded[]>([]);
   const [patientStats, setPatientStats] = useState<PatientStats | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const loadConcerningRatings = useCallback(
+  const loadActionNeeded = useCallback(
     async (limit = 10) => {
       try {
-        const data = await window.api.getConcerningRatings(limit);
-        setConcerningRatings(data);
+        const data = await window.api.getActionNeeded(limit);
+        setActionNeeded(data);
       } catch (err) {
         handleError(err);
       }
@@ -34,24 +34,24 @@ const usePatientDashboard = ({ handleError }: UsePatientDashboardProps) => {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      await Promise.all([loadConcerningRatings(), loadPatientStats()]);
+      await Promise.all([loadActionNeeded(), loadPatientStats()]);
     } finally {
       setLoading(false);
     }
-  }, [loadConcerningRatings, loadPatientStats]);
+  }, [loadActionNeeded, loadPatientStats]);
 
   const actions = useMemo(
     () => ({
-      loadConcerningRatings,
+      loadActionNeeded,
       loadPatientStats,
       loadAll,
     }),
-    [loadConcerningRatings, loadPatientStats, loadAll],
+    [loadActionNeeded, loadPatientStats, loadAll],
   );
 
   return {
     state: {
-      concerningRatings,
+      actionNeeded,
       patientStats,
       loading,
     },

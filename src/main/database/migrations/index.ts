@@ -19,6 +19,9 @@ import { v009_employee_fields } from './v009_employee_fields';
 import { v010_patients } from './v010_patients';
 import { v012_employee_competencies } from './v012_employee_competencies';
 import { v013_competency_matrix } from './v013_competency_matrix';
+import { v014_qpr_stichprobe } from './v014_qpr_stichprobe';
+import { v015_instruction_intervals } from './v015_instruction_intervals';
+import { v016_missing_instructions } from './v016_missing_instructions';
 
 export type Migration = {
   version: number;
@@ -43,6 +46,9 @@ export const migrations: Migration[] = [
   v010_patients,
   v012_employee_competencies,
   v013_competency_matrix,
+  v014_qpr_stichprobe,
+  v015_instruction_intervals,
+  v016_missing_instructions,
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations[migrations.length - 1]?.version ?? 0;
@@ -178,6 +184,31 @@ export const runMigrations = (db: DatabaseType): void => {
     const v013 = migrations.find((m) => m.version === 13);
     if (v013) {
       v013.up(db);
+    }
+  }
+
+  const patientColumns = db.prepare("PRAGMA table_info('patients')").all() as Array<{ name: string }>;
+  const visitColumns = db.prepare("PRAGMA table_info('patient_visits')").all() as Array<{ name: string }>;
+  const hasAudits = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='audits'")
+    .get();
+  const instructionColumns = db
+    .prepare("PRAGMA table_info('instruction_definitions')")
+    .all() as Array<{ name: string }>;
+  if (!instructionColumns.some((column) => column.name === 'intervalMonths')) {
+    console.log('Repairing: instruction interval columns missing, running v015 migration...');
+    migrations.find((m) => m.version === 15)?.up(db);
+  }
+
+  const needsV014Repair =
+    !hasAudits ||
+    !patientColumns.some((column) => column.name === 'cognitionImpaired') ||
+    !visitColumns.some((column) => column.name === 'actionNeeded');
+  if (needsV014Repair) {
+    console.log('Repairing: QPR Teilgruppe columns/audit tables missing, running v014 migration...');
+    const v014 = migrations.find((m) => m.version === 14);
+    if (v014) {
+      v014.up(db);
     }
   }
 };

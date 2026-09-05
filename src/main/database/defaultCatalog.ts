@@ -67,15 +67,21 @@ export const defaultCompetencyCatalog = [
   { code: 'BPf 30', name: 'Demenzbegleitung / Validation', category: 'SGB V', relevance: 'Alle', note: '' },
 ] as const;
 
+/**
+ * Intervals are only set where a norm gives one; see docs/adr/0002 and the
+ * research it cites. `intervalMonths: null` means "no fixed interval" and must
+ * not be filled in with a plausible-looking number.
+ */
 export const defaultInstructionCatalog = [
-  { topic: 'Erstunterweisung Arbeitsschutz', legalBasis: 'ArbSchG § 12', note: '' },
-  { topic: 'Brandschutzunterweisung', legalBasis: 'ArbStättV', note: '' },
-  { topic: 'Hygieneunterweisung (jährlich)', legalBasis: 'IfSG / KRINKO', note: '' },
+  { topic: 'Erstunterweisung Arbeitsschutz', legalBasis: 'ArbSchG § 12 / DGUV V1 § 4', note: '', intervalMonths: 12, intervalSource: 'norm' },
+  { topic: 'Brandschutzunterweisung', legalBasis: 'ArbStättV § 6 / ASR A2.2', note: '', intervalMonths: 12, intervalSource: 'norm' },
+  { topic: 'Hygieneunterweisung (jährlich)', legalBasis: 'BioStoffV § 14 / TRBA 250', note: '', intervalMonths: 12, intervalSource: 'norm' },
   { topic: 'MRSA - Standard Umgang & Schutz', legalBasis: 'VA-HYG-003', note: '' },
   { topic: 'Datenschutz-Grundunterweisung', legalBasis: 'DSGVO / BDSG', note: '' },
   { topic: 'Schweigepflicht (§ 203 StGB)', legalBasis: '§ 203 StGB', note: '' },
   { topic: 'Reanimationstraining (BLS/AED)', legalBasis: 'interne Richtlinie', note: '' },
-  { topic: 'Einweisung Medizinprodukte (MPG)', legalBasis: 'MDR / MPDG', note: '' },
+  // Kein Zeitintervall: die MPBetreibV kennt nur produktbezogene Ausloeser.
+  { topic: 'Einweisung Medizinprodukte (MPG)', legalBasis: 'MPBetreibV § 4 / § 11', note: '' },
   { topic: 'Notfallmanagement / FAST-Erkennung', legalBasis: 'interne Richtlinie', note: '' },
   { topic: 'Kinästhetik Grundkurs (optional)', legalBasis: 'interne Richtlinie', note: '' },
   { topic: 'Bobath-Grundprinzipien (optional)', legalBasis: 'interne Richtlinie', note: '' },
@@ -83,9 +89,46 @@ export const defaultInstructionCatalog = [
   { topic: 'Expertenstandard Sturz', legalBasis: 'DNQP', note: '' },
   { topic: 'Expertenstandard Schmerz', legalBasis: 'DNQP', note: '' },
   { topic: 'Umgang mit Betäubungsmitteln (BTM)', legalBasis: 'BtMG', note: '' },
-  { topic: 'Abfallentsorgung nach LAGA', legalBasis: 'KrWG / LAGA', note: '' },
+  { topic: 'Abfallentsorgung nach LAGA', legalBasis: 'KrWG / LAGA', note: '', intervalMonths: 12, intervalSource: 'norm' },
   { topic: 'Tourenplanung & Dienstplanung', legalBasis: 'interne Richtlinie', note: '' },
   { topic: 'SIS-Dokumentation (Strukturmodell)', legalBasis: 'PSG II / BMG', note: '' },
   { topic: 'Pflegegradmanagement & Begutachtung', legalBasis: 'SGB XI § 18', note: '' },
   { topic: 'Abrechnungssystem SGB XI / LK', legalBasis: 'SGB XI', note: '' },
+
+  // Ergaenzt nach der Recherche vom 05.09.2026 (docs/research/unterweisungs-
+  // intervalle-ambulante-pflege.md): Pflichten mit belegtem Intervall, die im
+  // ursprünglichen Katalog fehlten.
+  {
+    topic: 'Unterweisung Gefahrstoffe (Desinfektion & Reinigung)',
+    legalBasis: 'GefStoffV § 14 Abs. 2',
+    note: 'Tätigkeiten mit Desinfektions- und Reinigungsmitteln unterliegen der Gefahrstoffverordnung.',
+    intervalMonths: 12,
+    intervalSource: 'norm',
+  },
+  {
+    topic: 'Ersthelfer-Fortbildung',
+    legalBasis: 'DGUV V1 § 26 Abs. 3',
+    note: 'Wer eine abgeschlossene Ausbildung in einem Gesundheitsberuf hat, gilt bei regelmäßiger Erste-Hilfe-Praxis als fortgebildet (§ 26 Abs. 3 S. 3).',
+    intervalMonths: 24,
+    intervalSource: 'norm',
+  },
+  {
+    topic: 'Brandschutzhelfer-Ausbildung',
+    legalBasis: 'ASR A2.2 Abschn. 7.3',
+    note: 'Keine Pflichtfrist. Empfohlen werden 2 bis 5 Jahre; verbindlich ist die eigene Gefährdungsbeurteilung.',
+  },
+  {
+    topic: 'Hautschutzunterweisung',
+    legalBasis: 'TRBA 250 Abschn. 4.1.3 Abs. 3',
+    note: 'Zusätzlich vor der Verwendung neuer Präparate.',
+    intervalMonths: 12,
+    intervalSource: 'norm',
+  },
+  {
+    topic: 'Belehrung nach IfSG § 43',
+    legalBasis: 'IfSG § 43 Abs. 4',
+    note: 'Nur bei eigener Küche oder Gemeinschaftsverpflegung. Der private hauswirtschaftliche Bereich ist nach § 42 Abs. 1 S. 3 ausgenommen.',
+    intervalMonths: 24,
+    intervalSource: 'norm',
+  },
 ] as const;

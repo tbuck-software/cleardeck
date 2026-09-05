@@ -108,8 +108,9 @@ export const unifyEvents = (
       patientName: item.patientName,
       type: 'patient-visit',
       date: item.visitDate,
-      title: `QPR-Visite (${item.qprRating})`,
+      title: item.actionNeeded ? 'Pflegevisite · Handlungsbedarf' : 'Pflegevisite',
       subtitle: item.comment ?? undefined,
+      urgency: item.actionNeeded ? 'warning' : 'normal',
     });
   }
 

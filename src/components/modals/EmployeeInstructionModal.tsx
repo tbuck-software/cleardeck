@@ -1,11 +1,17 @@
 import React from 'react';
-import { faClipboardCheck } from '@fortawesome/free-solid-svg-icons';
+import Dialog from '../ui/Dialog';
+import { describeInterval, nextDueDate } from '../../utils/instructionSchedule';
+import { formatDateDE } from '../../utils/dateFormat';
 import type { InstructionDefinition } from '../../shared/types';
 import type { EmployeeInstructionModalState } from '../../types/ui';
-import ModalHeader from './ModalHeader';
 
 type EmployeeInstructionModalProps = {
   state: EmployeeInstructionModalState;
+  employeeName: string;
+  /** For the under-18 shortening from JArbSchG § 29 Abs. 2. */
+  employeeBirthDate?: string | null;
+  /** The assigned definition, so its interval can be shown and applied. */
+  definition?: InstructionDefinition;
   availableDefinitions: InstructionDefinition[];
   onChange: (next: Partial<EmployeeInstructionModalState>) => void;
   onClose: () => void;
@@ -15,102 +21,132 @@ type EmployeeInstructionModalProps = {
 
 const EmployeeInstructionModal = ({
   state,
+  employeeName,
+  employeeBirthDate,
+  definition,
   availableDefinitions,
   onChange,
   onClose,
   onSave,
   onDelete,
 }: EmployeeInstructionModalProps) => {
-  if (!state.open) return null;
   const isAssigned = Boolean(state.id);
+  const interval = definition?.intervalMonths ?? null;
+  const followUpDate =
+    state.completedAt && interval != null
+      ? nextDueDate(interval, employeeBirthDate, state.completedAt)
+      : null;
+  const shortened =
+    followUpDate != null && nextDueDate(interval, null, state.completedAt) !== followUpDate;
 
   return (
-    <div className="modal-backdrop">
-      <div className="modal">
-        <ModalHeader
-          icon={faClipboardCheck}
-          title={isAssigned ? state.instructionName : 'Einweisung hinzufügen'}
-          onClose={onClose}
-        />
-        <div className="modal-body">
-          {!isAssigned && (
-            <label className="full-width">
-              Einweisung
-              <select
-                value={state.instructionDefinitionId ?? ''}
-                onChange={(e) => {
-                  const selectedId = Number(e.target.value);
-                  const selectedDefinition = availableDefinitions.find(
-                    (definition) => definition.id === selectedId,
-                  );
-                  onChange({
-                    instructionDefinitionId: selectedId,
-                    instructionName: selectedDefinition?.topic ?? '',
-                  });
-                }}
-              >
-                {availableDefinitions.map((definition) => (
-                  <option key={definition.id} value={definition.id}>
-                    {definition.topic}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-          <div className="form-grid">
-            <label>
-              Fällig bis
-              <input
-                type="date"
-                value={state.dueDate}
-                onChange={(e) => onChange({ dueDate: e.target.value })}
-              />
-            </label>
-            <label>
-              Durchgeführt am
-              <input
-                type="date"
-                value={state.completedAt}
-                onChange={(e) => onChange({ completedAt: e.target.value })}
-              />
-            </label>
-          </div>
-          <label className="full-width">
-            Durchgeführt durch
-            <input
-              value={state.conductedBy}
-              onChange={(e) => onChange({ conductedBy: e.target.value })}
-              placeholder="z. B. Praxisanleitung oder PDL"
-            />
-          </label>
-          <label className="full-width">
-            Notiz
-            <textarea
-              value={state.note}
-              onChange={(e) => onChange({ note: e.target.value })}
-              placeholder="Optional: Besonderheiten oder Nachweis"
-            />
-          </label>
+    <Dialog
+      open={state.open}
+      width={520}
+      title={isAssigned ? state.instructionName : 'Einweisung hinzufügen'}
+      subtitle={`${employeeName} · Pflichtunterweisung`}
+      primaryLabel="Speichern"
+      onPrimary={onSave}
+      deleteLabel={isAssigned ? 'Entfernen' : undefined}
+      onDelete={isAssigned ? onDelete : undefined}
+      onClose={onClose}
+    >
+      {!isAssigned && (
+        <div className="field">
+          <label htmlFor="employee-instruction">Einweisung</label>
+          <select
+            id="employee-instruction"
+            className="input"
+            value={state.instructionDefinitionId ?? ''}
+            onChange={(event) => {
+              const selectedId = Number(event.target.value);
+              const definition = availableDefinitions.find((entry) => entry.id === selectedId);
+              onChange({
+                instructionDefinitionId: selectedId,
+                instructionName: definition?.topic ?? '',
+              });
+            }}
+          >
+            {availableDefinitions.map((definition) => (
+              <option key={definition.id} value={definition.id}>
+                {definition.topic}
+              </option>
+            ))}
+          </select>
         </div>
-        <div className="modal-actions">
-          <div className="modal-actions-left">
-            {isAssigned && (
-              <button className="ghost-button danger" onClick={onDelete}>
-                Entfernen
-              </button>
-            )}
-          </div>
-          <div className="modal-actions-right">
-            <button className="ghost-button" onClick={onClose}>
-              Abbrechen
-            </button>
-            <button className="primary" onClick={onSave}>
-              Speichern
-            </button>
-          </div>
+      )}
+
+      <div className="cd-field-grid">
+        <div className="field">
+          <label htmlFor="instruction-due">Fällig bis</label>
+          <input
+            id="instruction-due"
+            className="input"
+            type="date"
+            value={state.dueDate}
+            onChange={(event) => onChange({ dueDate: event.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="instruction-completed">Durchgeführt am</label>
+          <input
+            id="instruction-completed"
+            className="input"
+            type="date"
+            value={state.completedAt}
+            onChange={(event) => onChange({ completedAt: event.target.value })}
+          />
         </div>
       </div>
-    </div>
+
+      <div className="field">
+        <label htmlFor="instruction-by">Durchgeführt durch</label>
+        <input
+          id="instruction-by"
+          className="input"
+          placeholder="Name"
+          value={state.conductedBy}
+          onChange={(event) => onChange({ conductedBy: event.target.value })}
+        />
+      </div>
+
+      {interval != null ? (
+        <>
+          <label className="radio">
+            <input
+              type="checkbox"
+              checked={state.scheduleFollowUp}
+              onChange={(event) => onChange({ scheduleFollowUp: event.target.checked })}
+            />
+            <span className="dot" style={{ borderRadius: 5 }} />
+            <span>
+              Nach Abschluss wieder fällig <span className="cd-muted">— {describeInterval(interval)}</span>
+            </span>
+          </label>
+          {state.scheduleFollowUp && followUpDate && (
+            <p className="cd-muted-13" style={{ margin: 0 }}>
+              Nächster Termin: {formatDateDE(followUpDate)}
+              {shortened && ' — verkürzt, weil die Person noch nicht 18 ist (JArbSchG § 29 Abs. 2)'}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="cd-muted-13" style={{ margin: 0 }}>
+          Für diese Einweisung ist kein Intervall hinterlegt — sie wird nicht automatisch wieder fällig.
+        </p>
+      )}
+
+      <div className="field">
+        <label htmlFor="instruction-entry-note">Notiz</label>
+        <textarea
+          id="instruction-entry-note"
+          className="input"
+          style={{ minHeight: 70 }}
+          value={state.note}
+          onChange={(event) => onChange({ note: event.target.value })}
+        />
+      </div>
+    </Dialog>
   );
 };
 

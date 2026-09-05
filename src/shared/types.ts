@@ -36,12 +36,18 @@ export interface EmployeeCompetency {
   sortOrder?: number | null;
 }
 
+/** Where a repetition interval comes from — see docs/adr/0002. */
+export type IntervalSource = 'norm' | 'betrieblich';
+
 export interface InstructionDefinition {
   id?: number;
   topic: string;
   legalBasis?: string | null;
   note?: string | null;
   sortOrder?: number | null;
+  /** null means "no fixed interval" — a valid state, never a missing value. */
+  intervalMonths?: number | null;
+  intervalSource?: IntervalSource | null;
 }
 
 export interface EmployeeInstruction {
@@ -50,6 +56,8 @@ export interface EmployeeInstruction {
   instructionDefinitionId: number;
   instructionName: string;
   legalBasis?: string | null;
+  intervalMonths?: number | null;
+  intervalSource?: IntervalSource | null;
   dueDate?: string | null;
   completedAt?: string | null;
   conductedBy?: string | null;
@@ -240,6 +248,47 @@ export interface EmployeeDashboardStats {
   };
 }
 
+export interface OpenInstruction {
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  topic: string;
+  legalBasis?: string | null;
+  dueDate: string;
+  /** Negative once the due date has passed. */
+  daysUntilDue: number;
+}
+
+/** Assignment counts per catalogue entry, keyed by definition id. */
+export interface DefinitionUsage {
+  competencies: Record<number, number>;
+  instructions: Record<number, number>;
+}
+
+export type AutoBackupMode = 'off' | 'close' | 'daily' | 'weekly';
+
+export interface BackupFileInfo {
+  file: string;
+  path: string;
+  size: number;
+  modifiedAt: string;
+}
+
+/** Backup configuration plus what is currently in the folder. */
+export interface BackupState {
+  folder: string | null;
+  auto: AutoBackupMode;
+  keep: number;
+  lastBackupAt: string | null;
+  backups: BackupFileInfo[];
+}
+
+/** Cadence settings that shape due dates across the app. */
+export interface CareSettings {
+  visitIntervalDays: number;
+  instructionReminderDays: number;
+}
+
 export interface UnifiedEvent {
   id: string;
   employeeId?: number;
@@ -253,55 +302,82 @@ export interface UnifiedEvent {
   urgency?: 'normal' | 'warning' | 'urgent';
 }
 
-// Patient types (QPR 2026)
+// Patient types (QPR ambulant, Teil 1a, gültig ab 01.07.2026)
+//
+// Three separate things used to share the letters A–D. They are kept apart here:
+//   Teilgruppe    — which MD sampling group a person falls in (below)
+//   Pflegevisite  — internal QM; carries actionNeeded, never a letter
+//   Prüfergebnis  — the MD's per-quality-aspect result (see AuditResultValue)
+// See docs/adr/0001-qpr-stichprobe-pflegevisite-und-pruefergebnisse.md.
 
-export type QprRating = 'A' | 'B' | 'C' | 'D';
+/** MD sampling group from the Pflegegrad assessment. `none` = no impairment. */
+export type Teilgruppe = 'A' | 'B' | 'C' | 'none';
+
+/** The four HKP codes that alone justify Teilgruppe D (QPR Kap. 8 Abs. 3). */
+export type HkpCode = '6' | '8' | '29' | '31a';
+
+/** Außerklinische Intensivpflege / psychiatrische HKP, incl. Erstverordnung. */
+export type IntensiveCare = 'AKI' | 'AKI-B' | 'pHKP' | 'pHKP-EV';
 
 export interface Patient {
   id?: number;
   name: string;
   birthDate?: string | null;
   diagnosis?: string | null;
-  qprStatus?: QprRating | null;
   note?: string | null;
   createdAt?: string;
+  /** Name (Bezug) · Telefon — required on the Anlage 7 person list. */
+  contact?: string | null;
+  admissionDate?: string | null;
+  /** Modul 2 ≥ 6 points, or own assessment. null = assessment data missing. */
+  cognitionImpaired?: boolean | null;
+  /** Modul 1 ≥ 4 points, or own assessment. null = assessment data missing. */
+  mobilityImpaired?: boolean | null;
+  hkpCode?: HkpCode | null;
+  intensiveCare?: IntensiveCare | null;
+  careLevel?: number | null;
 }
 
 export interface PatientVisit {
   id?: number;
   patientId: number;
   visitDate: string;
-  qprRating: QprRating;
+  /** Follow-up required — surfaces in "Heute zu tun" until the next visit. */
+  actionNeeded: boolean;
   comment?: string | null;
   createdAt?: string;
 }
 
 export interface PatientWithLatestVisit extends Patient {
   latestVisitDate?: string | null;
-  latestQprRating?: QprRating | null;
+  latestActionNeeded?: boolean | null;
   visitCount?: number;
 }
 
-export interface PatientConcerningRating {
+export interface PatientActionNeeded {
   patientId: number;
   patientName: string;
   visitId: number;
   visitDate: string;
-  qprRating: QprRating;
   comment?: string | null;
 }
 
 export interface PatientStats {
   totalPatients: number;
-  byRating: {
+  /** Headcount per sampling group; `unrated` lacks assessment data entirely. */
+  byGroup: {
     A: number;
     B: number;
     C: number;
-    D: number;
+    none: number;
     unrated: number;
   };
+  /** Teilgruppe D is an additional mark, so it is counted separately. */
+  hkpCount: number;
+  intensiveCareCount: number;
   recentVisits: number;
-  concerningCount: number;
+  actionNeededCount: number;
+  missingContactCount: number;
 }
 
 export interface PatientBirthdayEvent {
@@ -317,6 +393,40 @@ export interface PatientVisitEvent {
   patientId: number;
   patientName: string;
   visitDate: string;
-  qprRating: QprRating;
+  actionNeeded: boolean;
   comment: string | null;
+}
+
+// MD audit (Qualitätsprüfung) types
+
+/** QB 1–3 scale. QB 4 is descriptive, QB 5 and Abrechnung are pass/fail. */
+export type AuditResultValue = 'A' | 'B' | 'C' | 'D' | 'text' | 'ok' | 'no';
+
+export type AuditSectionScale = 'abcd' | 'text' | 'yesno';
+
+export interface AuditSectionDefinition {
+  key: string;
+  name: string;
+  scale: AuditSectionScale;
+}
+
+export interface AuditResult {
+  sectionKey: string;
+  result: AuditResultValue;
+  note?: string | null;
+}
+
+export interface Audit {
+  id?: number;
+  auditDate: string;
+  inspector?: string | null;
+  /** Regelprüfung is announced two working days ahead (§ 114a SGB XI). */
+  kind?: 'regel' | 'anlass' | null;
+  findings?: string | null;
+  createdAt?: string;
+}
+
+export interface AuditWithDetails extends Audit {
+  results: AuditResult[];
+  clientIds: number[];
 }
