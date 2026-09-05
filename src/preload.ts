@@ -12,6 +12,7 @@ import type {
   EmployeeInstruction,
   InstructionDefinition,
   UpdateStatus,
+  DiagnosticSnapshot,
   RecoveryInfo,
   UpcomingEvent,
   ExpiringTraining,
@@ -154,6 +155,8 @@ export type Api = {
   getStorageMode: () => Promise<StorageMode>;
   getHiddenEventTypes: () => Promise<string[]>;
   setHiddenEventTypes: (types: string[]) => Promise<string[]>;
+  readDiagnostics: () => Promise<DiagnosticSnapshot>;
+  exportDiagnostics: () => Promise<boolean>;
   checkUpdates: (manual?: boolean) => Promise<boolean>;
   downloadUpdate: () => Promise<boolean>;
   installUpdate: () => Promise<boolean>;
@@ -253,6 +256,8 @@ const api: Api = {
   getStorageMode: () => ipcRenderer.invoke('app:state').then((state: AppState) => state.storageMode),
   getHiddenEventTypes: () => ipcRenderer.invoke('settings:getHiddenEventTypes'),
   setHiddenEventTypes: (types) => ipcRenderer.invoke('settings:setHiddenEventTypes', { types }),
+  readDiagnostics: () => ipcRenderer.invoke('diagnostics:read'),
+  exportDiagnostics: () => ipcRenderer.invoke('diagnostics:export'),
   checkUpdates: (manual = false) => ipcRenderer.invoke('updates:check', manual),
   downloadUpdate: () => ipcRenderer.invoke('updates:download'),
   installUpdate: () => ipcRenderer.invoke('updates:install'),
