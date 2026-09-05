@@ -223,6 +223,57 @@ export const saveEmployeeInstruction = (input: {
   return listEmployeeInstructions(input.employeeId);
 };
 
+/** Ids of people who already hold an open entry for this topic. */
+export const listEmployeesWithOpenInstruction = (instructionDefinitionId: number): number[] => {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      'SELECT DISTINCT employeeId FROM employee_instructions WHERE instructionDefinitionId = ? AND completedAt IS NULL',
+    )
+    .all(instructionDefinitionId) as Array<{ employeeId: number }>;
+  return rows.map((row) => row.employeeId);
+};
+
+/**
+ * Assign one instruction to many people at once.
+ *
+ * Adding a topic to the catalogue is cheap, assigning it to everyone by hand is
+ * not — five new mandatory instructions across a small service are well over a
+ * hundred dialogs, which is how a complete catalogue turns into a list nobody
+ * follows.
+ *
+ * People who already hold an open entry for the topic are skipped rather than
+ * given a second one; a completed entry does not block a new assignment, since
+ * that is exactly the follow-up case.
+ */
+export const assignInstructionToEmployees = (input: {
+  instructionDefinitionId: number;
+  employeeIds: number[];
+  dueDate?: string | null;
+}): number => {
+  const db = getDb();
+  const dueDate = input.dueDate || null;
+
+  const openEntry = db.prepare(
+    'SELECT id FROM employee_instructions WHERE employeeId = ? AND instructionDefinitionId = ? AND completedAt IS NULL',
+  );
+  const insert = db.prepare(
+    'INSERT INTO employee_instructions (employeeId, instructionDefinitionId, dueDate) VALUES (?, ?, ?)',
+  );
+
+  let assigned = 0;
+  const write = db.transaction(() => {
+    input.employeeIds.forEach((employeeId) => {
+      if (openEntry.get(employeeId, input.instructionDefinitionId)) return;
+      insert.run(employeeId, input.instructionDefinitionId, dueDate);
+      assigned += 1;
+    });
+  });
+  write();
+
+  return assigned;
+};
+
 export const deleteEmployeeInstruction = (
   employeeId: number,
   instructionDefinitionId: number,

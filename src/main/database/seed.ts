@@ -55,10 +55,16 @@ type PatientSeed = {
   birthDate?: string | null;
   diagnosis?: string | null;
   note?: string | null;
-  initialStatus?: 'A' | 'B' | 'C' | 'D' | null;
+  contact?: string | null;
+  admissionDate?: string | null;
+  cognitionImpaired?: boolean | null;
+  mobilityImpaired?: boolean | null;
+  hkpCode?: string | null;
+  intensiveCare?: string | null;
+  careLevel?: number | null;
   visits: Array<{
     visitDate: string;
-    qprRating: 'A' | 'B' | 'C' | 'D';
+    actionNeeded: boolean;
     comment?: string | null;
   }>;
 };
@@ -644,30 +650,53 @@ export const seedDatabase = (db: DatabaseType): void => {
     'Tumorerkrankung in palliativer Versorgung',
   ];
 
+  /**
+   * Demo data has to exercise the sample, not just fill a list, so the spread
+   * is deliberate: every Teilgruppe is populated well past its target (A/B/C
+   * need 2, D needs 3), and one patient in nine is left without assessment
+   * values so the data-gap tasks on the dashboard have something real to show.
+   */
+  const ASSESSMENT = [
+    { cognition: true, mobility: true }, // A
+    { cognition: false, mobility: true }, // B
+    { cognition: true, mobility: false }, // C
+    { cognition: false, mobility: false }, // ohne Beeinträchtigung
+  ];
+  const HKP = ['6', '8', '29', '31a'];
+  const INTENSIVE = ['AKI', 'AKI-B', 'pHKP', 'pHKP-EV'];
+
   const patients: PatientSeed[] = patientNames.map((name, index) => {
+    // Every ninth person has no Modul 1/2 values — a gap the app must surface.
+    const assessed = index % 9 !== 4;
+    const assessment = ASSESSMENT[index % ASSESSMENT.length];
+
+    // D is an additional mark: it can land on any group, including "ohne".
+    const hkpCode = index % 11 === 3 ? HKP[(index / 11) | 0] ?? '31a' : null;
+    // Intensive care is rare and only ever alongside an HKP service.
+    const intensiveCare = hkpCode && index % 22 === 3 ? INTENSIVE[(index / 22) | 0] ?? 'AKI' : null;
+
+    const admissionDate = shiftDays(baseDate, -(30 + index * 17));
+
     const visitCount = index % 7 === 0 ? 0 : (index % 4) + 1;
     const visits = Array.from({ length: visitCount }, (_item, visitIndex) => {
       const offset = -120 + index * 4 + visitIndex * 24;
-      const rating = (['A', 'B', 'C', 'D'] as const)[(index + visitIndex) % 4];
+      // Roughly a third of visits leave something open, so both the follow-up
+      // list and the calm case are represented.
+      const actionNeeded = (index + visitIndex) % 3 === 0;
       return {
         visitDate: shiftDays(baseDate, offset),
-        qprRating: rating,
-        comment:
-          rating === 'A'
-            ? 'Versorgung stabil und nachvollziehbar dokumentiert.'
-            : rating === 'B'
-              ? 'Leichte Auffaelligkeiten ohne akutes Risiko.'
-              : rating === 'C'
-                ? 'Defizite bei Transfer oder Dokumentation mit Risiko negativer Folgen.'
-                : 'Akuter Handlungsbedarf, Fall wurde mit PDL besprochen.',
+        actionNeeded,
+        comment: actionNeeded
+          ? 'Defizite bei Transfer oder Dokumentation, Fall mit PDL besprochen.'
+          : 'Versorgung stabil und nachvollziehbar dokumentiert.',
       };
     });
 
     if (index % 5 === 2) {
       visits.push({
         visitDate: shiftDays(baseDate, 6 + (index % 3) * 4),
-        qprRating: (['A', 'B', 'C'] as const)[index % 3],
-        comment: 'Geplante QPR-Verlaufsvisite.',
+        actionNeeded: false,
+        comment: 'Geplante Verlaufsvisite.',
       });
     }
 
@@ -678,7 +707,16 @@ export const seedDatabase = (db: DatabaseType): void => {
       birthDate: index % 6 === 0 ? null : withYear(baseDate, 1942 + index, (index % 11) * 3 - 12),
       diagnosis: diagnoses[index % diagnoses.length],
       note: index % 4 === 0 ? 'Regelmaessige Rueckmeldung an Angehoerige.' : null,
-      initialStatus: index % 7 === 0 ? null : (['A', 'B', 'C', 'D'] as const)[index % 4],
+      contact:
+        index % 3 === 0
+          ? null
+          : `${patientLastNames[index % patientLastNames.length]} (Angehoerige) - 0170 ${1000000 + index * 7331}`,
+      admissionDate,
+      cognitionImpaired: assessed ? assessment.cognition : null,
+      mobilityImpaired: assessed ? assessment.mobility : null,
+      hkpCode,
+      intensiveCare,
+      careLevel: index % 8 === 5 ? null : ((index % 4) + 2),
       visits,
     };
   });
@@ -783,14 +821,18 @@ export const seedDatabase = (db: DatabaseType): void => {
     );
     const insertPatient = db.prepare(
       `
-      INSERT INTO patients (name, birthDate, diagnosis, qprStatus, note)
-      VALUES (@name, @birthDate, @diagnosis, @qprStatus, @note)
+      INSERT INTO patients
+        (name, birthDate, diagnosis, note, contact, admissionDate,
+         cognitionImpaired, mobilityImpaired, hkpCode, intensiveCare, careLevel)
+      VALUES
+        (@name, @birthDate, @diagnosis, @note, @contact, @admissionDate,
+         @cognitionImpaired, @mobilityImpaired, @hkpCode, @intensiveCare, @careLevel)
     `,
     );
     const insertVisit = db.prepare(
       `
-      INSERT INTO patient_visits (patientId, visitDate, qprRating, comment)
-      VALUES (@patientId, @visitDate, @qprRating, @comment)
+      INSERT INTO patient_visits (patientId, visitDate, actionNeeded, comment)
+      VALUES (@patientId, @visitDate, @actionNeeded, @comment)
     `,
     );
 
@@ -864,33 +906,25 @@ export const seedDatabase = (db: DatabaseType): void => {
         name: patient.name,
         birthDate: patient.birthDate ?? null,
         diagnosis: patient.diagnosis ?? null,
-        qprStatus: patient.initialStatus ?? null,
         note: patient.note ?? null,
+        contact: patient.contact ?? null,
+        admissionDate: patient.admissionDate ?? null,
+        cognitionImpaired: patient.cognitionImpaired == null ? null : patient.cognitionImpaired ? 1 : 0,
+        mobilityImpaired: patient.mobilityImpaired == null ? null : patient.mobilityImpaired ? 1 : 0,
+        hkpCode: patient.hkpCode ?? null,
+        intensiveCare: patient.intensiveCare ?? null,
+        careLevel: patient.careLevel ?? null,
       }).lastInsertRowid as number;
 
       patient.visits.forEach((visit) => {
         insertVisit.run({
           patientId,
           visitDate: visit.visitDate,
-          qprRating: visit.qprRating,
+          actionNeeded: visit.actionNeeded ? 1 : 0,
           comment: visit.comment ?? null,
         });
       });
     });
-
-    db.exec(`
-      UPDATE patients
-      SET qprStatus = (
-        SELECT v.qprRating
-        FROM patient_visits v
-        WHERE v.patientId = patients.id
-        ORDER BY date(v.visitDate) DESC, v.id DESC
-        LIMIT 1
-      )
-      WHERE EXISTS (
-        SELECT 1 FROM patient_visits v WHERE v.patientId = patients.id
-      );
-    `);
 
     const competencyDefinitions = db
       .prepare('SELECT id, code, name FROM competency_definitions')

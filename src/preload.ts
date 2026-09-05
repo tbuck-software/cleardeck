@@ -159,6 +159,13 @@ export type Api = {
     scheduleFollowUp?: boolean;
   }) => Promise<EmployeeInstruction[]>;
   deleteEmployeeInstruction: (employeeId: number, instructionDefinitionId: number) => Promise<EmployeeInstruction[]>;
+  employeesWithOpenInstruction: (instructionDefinitionId: number) => Promise<number[]>;
+  /** Resolves with the number actually assigned; people with an open entry are skipped. */
+  assignInstructionToEmployees: (input: {
+    instructionDefinitionId: number;
+    employeeIds: number[];
+    dueDate?: string | null;
+  }) => Promise<number>;
   exportDatabase: (mode: 'encrypted' | 'plain') => Promise<{ saved: boolean; filePath?: string; error?: string }>;
   importDatabase: (
     mode: 'encrypted' | 'plain',
@@ -303,6 +310,9 @@ const api: Api = {
   saveEmployeeInstruction: (input) => ipcRenderer.invoke('instructions:saveEmployee', input),
   deleteEmployeeInstruction: (employeeId, instructionDefinitionId) =>
     ipcRenderer.invoke('instructions:deleteEmployee', { employeeId, instructionDefinitionId }),
+  employeesWithOpenInstruction: (instructionDefinitionId) =>
+    ipcRenderer.invoke('instructions:employeesWithOpen', { instructionDefinitionId }),
+  assignInstructionToEmployees: (input) => ipcRenderer.invoke('instructions:assignToEmployees', input),
   exportDatabase: (mode) => ipcRenderer.invoke('db:export', { mode }),
   importDatabase: (mode) => ipcRenderer.invoke('db:import', { mode }),
   deletePeriod: (periodId, year) => ipcRenderer.invoke('period:delete', { periodId, year }),
