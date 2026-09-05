@@ -48,6 +48,8 @@ import {
   listInstructionDefinitions,
   reorderInstructionDefinitions,
   saveEmployeeInstruction,
+  assignInstructionToEmployees,
+  listEmployeesWithOpenInstruction,
   updateInstructionDefinition,
 } from '../repositories/instructions';
 import {
@@ -339,6 +341,29 @@ export const registerDataHandlers = (): void => {
     ) => {
       ensureDbReady();
       return saveEmployeeInstruction(input);
+    },
+  );
+
+  ipcMain.handle(
+    'instructions:employeesWithOpen',
+    (_event, { instructionDefinitionId }: { instructionDefinitionId: number }) => {
+      ensureDbReady();
+      return listEmployeesWithOpenInstruction(instructionDefinitionId);
+    },
+  );
+
+  ipcMain.handle(
+    'instructions:assignToEmployees',
+    (
+      _event,
+      input: {
+        instructionDefinitionId: number;
+        employeeIds: number[];
+        dueDate?: string | null;
+      },
+    ) => {
+      ensureDbReady();
+      return assignInstructionToEmployees(input);
     },
   );
 

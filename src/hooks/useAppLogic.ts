@@ -353,6 +353,7 @@ const useAppLogic = () => {
       handleAddRecommendedCompetencies: employeeSlice.actions.handleAddRecommendedCompetencies,
       handleSaveEmployeeCompetency: employeeSlice.actions.handleSaveEmployeeCompetency,
       handleDeleteEmployeeCompetency: employeeSlice.actions.handleDeleteEmployeeCompetency,
+      loadEmployeeInstructions: employeeSlice.actions.loadEmployeeInstructions,
       openEmployeeInstructionModal: employeeSlice.actions.openEmployeeInstructionModal,
       openNewEmployeeInstructionModal: employeeSlice.actions.openNewEmployeeInstructionModal,
       handleSaveEmployeeInstruction: employeeSlice.actions.handleSaveEmployeeInstruction,

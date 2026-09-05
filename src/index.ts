@@ -51,9 +51,12 @@ const createWindow = (): void => {
     title: app.getName(),
     height: 900,
     width: 1400,
-    minHeight: 720,
-    minWidth: 1200,
-    backgroundColor: '#0d1117',
+    // Below 1100 the sidebar collapses to icons, below 960 wide tables stack
+    // (see useViewport). A 1200 minimum locked both breakpoints out entirely
+    // and did not fit a 1366x768 laptop once dock and title bar are counted.
+    minHeight: 560,
+    minWidth: 820,
+    backgroundColor: '#f3f5f8',
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
     },

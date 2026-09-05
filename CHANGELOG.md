@@ -20,6 +20,10 @@
 - Backups in einen wählbaren Ordner, automatisch beim Schließen sowie täglich oder wöchentlich, mit einstellbarer Aufbewahrung. Wiederherstellen legt vorher ein Sicherheits-Backup an.
 - Passwort ändern, ohne dass Recovery-Key oder ältere Backups unbrauchbar werden.
 - Excel-Exporte werden wieder geschrieben; sie schlugen zuvor mit „cannot save file" fehl.
+- Einweisungen lassen sich aus der Verwaltung heraus mehreren Personen auf einmal zuordnen, mit gemeinsamem Fälligkeitsdatum.
+- Das Fenster lässt sich deutlich kleiner ziehen (ab 820 × 560). Die schmale Darstellung — Seitenleiste als Symbole, gestapelte Zeilen statt Tabelle — war bisher durch die Mindestgröße gar nicht erreichbar.
+- Gesperrte Knöpfe sagen jetzt, warum: „Alle Kompetenzen des Katalogs sind zugeordnet.“ statt eines toten Knopfes.
+- Demodaten decken alle Teilgruppen, aufwändige HKP-Leistungen und bewusste Datenlücken ab.
 
 - Neue Ansicht „Logs & Diagnose“ in den Einstellungen mit Zeitstempeln, Fehlerstufen und kopierbaren Ereignissen.
 - Bereinigte Diagnosedatei bei Bedarf lokal speichern und einer Feedback-Nachricht anhängen.

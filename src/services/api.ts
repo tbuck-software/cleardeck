@@ -112,6 +112,10 @@ export const api = {
         employeeId,
         instructionDefinitionId,
       ),
+    employeesWithOpen: (instructionDefinitionId: number) =>
+      call('employeesWithOpenInstruction', baseApi.employeesWithOpenInstruction, instructionDefinitionId),
+    assignToEmployees: (input: Parameters<Api['assignInstructionToEmployees']>[0]) =>
+      call('assignInstructionToEmployees', baseApi.assignInstructionToEmployees, input),
   },
   data: {
     export: (year: number, format: ExportFormat) => call('exportData', baseApi.exportData, year, format),

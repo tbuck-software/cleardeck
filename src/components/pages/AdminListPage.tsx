@@ -18,6 +18,9 @@ type AdminListPageProps = {
   onEdit: (id: number) => void;
   /** Moves the item to a new index; the caller persists the new sort order. */
   onReorder: (id: number, targetIndex: number) => void;
+  /** Optional per-row bulk action, e.g. assigning an instruction to many people. */
+  assignLabel?: string;
+  onAssign?: (id: number) => void;
 };
 
 const AdminListPage = ({
@@ -28,6 +31,8 @@ const AdminListPage = ({
   onCreate,
   onEdit,
   onReorder,
+  assignLabel,
+  onAssign,
 }: AdminListPageProps) => {
   const [draggingId, setDraggingId] = useState<number | null>(null);
 
@@ -89,6 +94,19 @@ const AdminListPage = ({
               ))}
             </div>
             <span className="cd-usage">{item.usage}</span>
+            {onAssign && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ flex: 'none' }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onAssign(item.id);
+                }}
+              >
+                {assignLabel ?? 'Zuordnen'}
+              </button>
+            )}
             <span className="cd-arrow">→</span>
           </div>
         ))}

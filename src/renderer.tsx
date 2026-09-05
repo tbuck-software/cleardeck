@@ -30,6 +30,10 @@ import RecoveryResetModal from './components/modals/RecoveryResetModal';
 import QualificationModal from './components/modals/QualificationModal';
 import CompetencyModal from './components/modals/CompetencyModal';
 import InstructionModal from './components/modals/InstructionModal';
+import AssignInstructionModal, {
+  emptyAssignInstructionModal,
+  type AssignInstructionModalState,
+} from './components/modals/AssignInstructionModal';
 import EmployeeCompetencyModal from './components/modals/EmployeeCompetencyModal';
 import EmployeeInstructionModal from './components/modals/EmployeeInstructionModal';
 import RecommendedCompetenciesModal from './components/modals/RecommendedCompetenciesModal';
@@ -184,6 +188,7 @@ const App = () => {
       handleAddRecommendedCompetencies,
       handleSaveEmployeeCompetency,
       handleDeleteEmployeeCompetency,
+      loadEmployeeInstructions,
       openEmployeeInstructionModal,
       openNewEmployeeInstructionModal,
       handleSaveEmployeeInstruction,
@@ -738,6 +743,39 @@ const App = () => {
     }
   };
 
+  const [assignInstructionModal, setAssignInstructionModal] = useState<AssignInstructionModalState>(
+    emptyAssignInstructionModal(),
+  );
+  const [assignAlreadyOpenIds, setAssignAlreadyOpenIds] = useState<number[]>([]);
+
+  const openAssignInstructionModal = async (definitionId: number) => {
+    try {
+      setAssignAlreadyOpenIds(await api.instructions.employeesWithOpen(definitionId));
+      setAssignInstructionModal({ ...emptyAssignInstructionModal(), open: true, definitionId });
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
+  const saveAssignInstruction = async () => {
+    const definitionId = assignInstructionModal.definitionId;
+    if (definitionId == null) return;
+    try {
+      const assigned = await api.instructions.assignToEmployees({
+        instructionDefinitionId: definitionId,
+        employeeIds: assignInstructionModal.selectedEmployeeIds,
+        dueDate: assignInstructionModal.dueDate || null,
+      });
+      setAssignInstructionModal(emptyAssignInstructionModal());
+      if (selectedEmployee?.id) await loadEmployeeInstructions(selectedEmployee.id);
+      setToastMessage(
+        assigned === 1 ? 'Einer Person zugeordnet.' : `${assigned} Personen zugeordnet.`,
+      );
+    } catch (err) {
+      handleError(err);
+    }
+  };
+
   const saveAudit = async () => {
     try {
       const results = auditSections.map((section) => ({
@@ -1142,6 +1180,8 @@ const App = () => {
                   });
               }
             }}
+            assignLabel="Zuordnen"
+            onAssign={page === 'instrs' ? openAssignInstructionModal : undefined}
             onReorder={(id, targetIndex) => {
               if (page === 'quals')
                 reorderTo(admin.items.map((item) => item.id), id, targetIndex, reorderQualification);
@@ -1265,6 +1305,18 @@ const App = () => {
         onSave={handleSaveCompetencyModal}
         onDelete={confirmDeleteCompetencyDefinition}
       />
+      <AssignInstructionModal
+        state={assignInstructionModal}
+        definition={instructionDefinitions.find(
+          (entry) => entry.id === assignInstructionModal.definitionId,
+        )}
+        employees={dataset?.employees ?? []}
+        alreadyOpenIds={assignAlreadyOpenIds}
+        onChange={(next) => setAssignInstructionModal((prev) => ({ ...prev, ...next }))}
+        onClose={() => setAssignInstructionModal(emptyAssignInstructionModal())}
+        onSave={saveAssignInstruction}
+      />
+
       <InstructionModal
         state={instructionModal}
         onChange={(next) => setInstructionModal((prev) => ({ ...prev, ...next }))}
