@@ -14,6 +14,7 @@ import * as path from 'path';
 
 import { mainConfig } from './webpack.main.config';
 import { rendererConfig } from './webpack.renderer.config';
+import { productName, version } from './package.json';
 
 const shouldUseFuses = process.env.SKIP_FUSES !== '1';
 
@@ -29,7 +30,7 @@ const config: ForgeConfig = {
   },
   rebuildConfig: {},
   makers: [
-    new MakerSquirrel({}),
+    new MakerSquirrel({ setupExe: `${productName}-${version}-Setup.exe` }),
     new MakerZIP({}, ['darwin', 'win32']),
     new MakerDMG({}),
     new MakerRpm({}),

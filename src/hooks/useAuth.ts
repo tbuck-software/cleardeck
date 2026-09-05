@@ -38,6 +38,7 @@ const useAuth = ({
   setInstructionDefinitions,
   hydrateBaseHours,
 }: UseAuthParams) => {
+  const [authLoading, setAuthLoading] = useState(true);
   const [appReady, setAppReady] = useState<AppState>({
     configured: false,
     unlocked: false,
@@ -58,9 +59,22 @@ const useAuth = ({
   );
 
   const bootstrap = useCallback(async () => {
+    let state: AppState;
     try {
-      const state = await api.auth.getState();
-      setAppReady(state);
+      state = await api.auth.getState();
+    } catch (err) {
+      setAppReady({
+        configured: false,
+        unlocked: false,
+        storageMode: 'encrypted',
+        startupError: err instanceof Error ? err.message : 'Der lokale Datenstatus kann nicht gelesen werden.',
+      });
+      setAuthLoading(false);
+      return;
+    }
+    setAppReady(state);
+    setAuthLoading(false);
+    try {
       if (state.unlocked) {
         try {
           const hours = await api.settings.getBaseHours();
@@ -166,7 +180,7 @@ const useAuth = ({
     [handleError, openRecoveryKey, refreshDataset, setLoading, year],
   );
 
-  return { appReady, handleLogin, hydrateQualifications, setAppReady };
+  return { appReady, authLoading, handleLogin, hydrateQualifications, setAppReady };
 };
 
 export default useAuth;

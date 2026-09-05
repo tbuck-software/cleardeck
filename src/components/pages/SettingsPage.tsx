@@ -33,6 +33,7 @@ import type {
 import api from '../../services/api';
 import logoUrl from '../../assets/logo.png';
 import ModalHeader from '../modals/ModalHeader';
+import UpdateErrorDetails from '../ui/UpdateErrorDetails';
 
 type SettingsPageProps = {
   qualifications: QualificationType[];
@@ -243,7 +244,7 @@ const SettingsPage = ({
       return `Keine neueren Updates gefunden. Installiert ist ${currentVersion}.`;
     }
     if (updateStatus.state === 'error') {
-      return `Update-Fehler: ${updateStatus.message}`;
+      return 'Das Update konnte nicht abgeschlossen werden. Die Fehlerdetails können unten kopiert werden.';
     }
     return `Installiert ist ${currentVersion}. Updates werden beim Start, stuendlich und bei Fokus geprueft.`;
   })();
@@ -317,6 +318,7 @@ const SettingsPage = ({
               title="Software Updates"
               subtitle={updateCopy}
             >
+              {updateStatus.state === 'error' && <UpdateErrorDetails key={updateStatus.message} message={updateStatus.message} />}
               <div className="settings-action-band">
                 <button
                   className="ghost-button"

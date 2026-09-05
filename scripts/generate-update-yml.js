@@ -36,8 +36,8 @@ function getFileSize(filePath) {
  */
 function isCurrentVersion(filePath, version) {
   const fileName = path.basename(filePath);
-  // Match version patterns like: 1.4.4, -1.4.4-, -1.4.4.zip, etc.
-  return fileName.includes(version) || fileName.includes(`-${version}-`) || fileName.includes(`-${version}.`);
+  const escaped = version.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`(?:^|[-_])${escaped}(?=[-_. ]|$)`).test(fileName);
 }
 
 /**
@@ -77,16 +77,9 @@ function findArtifacts(makeDir, version) {
         if (ext === '.zip' && filePath.includes('darwin')) {
           artifacts.mac.push(filePath);
         }
-        // Windows artifacts
-        else if (ext === '.zip' && filePath.includes('win32')) {
-          artifacts.win.push(filePath);
-        }
-        // Windows exe (fallback if no ZIP)
+        // electron-updater downloads an installer on Windows. ZIP and NuGet
+        // remain release assets but must not participate in its file resolution.
         else if (ext === '.exe') {
-          artifacts.win.push(filePath);
-        }
-        // Windows nupkg (for Squirrel updates)
-        else if (ext === '.nupkg') {
           artifacts.win.push(filePath);
         }
         // Linux artifacts
@@ -106,6 +99,12 @@ function findArtifacts(makeDir, version) {
  */
 function generateYml(files, version) {
   if (files.length === 0) return null;
+
+  for (const file of files) {
+    if (!/^[A-Za-z0-9._-]+$/.test(path.basename(file))) {
+      throw new Error(`Unsafe release filename: ${path.basename(file)}. Use only letters, digits, dots, underscores and hyphens before generating update metadata.`);
+    }
+  }
 
   // Use first file as primary
   const primaryFile = files[0];

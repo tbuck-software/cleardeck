@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import type { StorageMode } from '../../shared/types';
 
 type AuthScreenProps = {
-  mode: 'setup' | 'login';
+  mode: 'setup' | 'login' | 'loading' | 'error';
   onSubmit: (payload: { password: string; storageMode: StorageMode }) => Promise<void>;
   busy: boolean;
   message?: string | null;
   onForgotPassword?: () => void;
   onResetApp?: () => void | Promise<void>;
   globalError?: string | null;
+  footer?: React.ReactNode;
 };
 
-const AuthScreen = ({ mode, onSubmit, busy, message, onForgotPassword, onResetApp, globalError }: AuthScreenProps) => {
+const AuthScreen = ({ mode, onSubmit, busy, message, onForgotPassword, onResetApp, globalError, footer }: AuthScreenProps) => {
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
   const [storageMode, setStorageMode] = useState<StorageMode>('encrypted');
@@ -36,6 +37,21 @@ const AuthScreen = ({ mode, onSubmit, busy, message, onForgotPassword, onResetAp
   const displayError = error ?? globalError ?? null;
   const isSetup = mode === 'setup';
   const isEncrypted = mode === 'login' || storageMode === 'encrypted';
+
+  if (mode === 'loading' || mode === 'error') {
+    return (
+      <div className="auth-screen">
+        <div className="auth-panel auth-panel-startup">
+          <div className="auth-intro">
+            <h1>{mode === 'loading' ? 'Lokale Daten werden geprüft' : 'Lokale Daten nicht verfügbar'}</h1>
+            {mode === 'error' && <p className="auth-summary">Bitte die vorhandenen Dateien sichern und die Konfiguration prüfen lassen.</p>}
+          </div>
+          {mode === 'error' && <div className="error" role="alert">{globalError}</div>}
+          {footer}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`auth-screen auth-screen-${mode}`}>
@@ -131,6 +147,7 @@ const AuthScreen = ({ mode, onSubmit, busy, message, onForgotPassword, onResetAp
             </div>
           )}
         </form>
+        {footer}
       </div>
     </div>
   );

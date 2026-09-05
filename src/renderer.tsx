@@ -4,6 +4,7 @@ import { faPlus, faTrash, faLink, faLinkSlash, faPen, faArrowLeft } from '@forta
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import AuthScreen from './components/auth/AuthScreen';
+import AuthUpdates from './components/auth/AuthUpdates';
 import Sidebar from './components/layout/Sidebar';
 import YearSelector from './components/ui/YearSelector';
 import Dashboard from './components/pages/Dashboard';
@@ -58,6 +59,7 @@ const App = () => {
       employeeCompetencies,
       employeeInstructions,
       appReady,
+      authLoading,
       page,
       loading,
       toast,
@@ -475,17 +477,18 @@ const App = () => {
     }
   };
 
-  if (!appReady.configured || !appReady.unlocked) {
+  if (authLoading || appReady.startupError || !appReady.configured || !appReady.unlocked) {
     const authMode: 'setup' | 'login' = appReady.configured ? 'login' : 'setup';
     return (
       <>
         <AuthScreen
-          mode={authMode}
+          mode={authLoading ? 'loading' : appReady.startupError ? 'error' : authMode}
           onSubmit={(payload) => handleLogin(payload, authMode)}
           busy={loading}
           onForgotPassword={appReady.configured ? startRecoveryReset : undefined}
           onResetApp={appReady.configured ? handleFullReset : undefined}
-          globalError={error}
+          globalError={appReady.startupError ?? error}
+          footer={<AuthUpdates status={updateStatus} version={appInfo?.version} onCheck={handleCheckUpdates} onInstall={handleInstallUpdate} />}
         />
         <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
         <RecoveryKeyModal

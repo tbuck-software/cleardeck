@@ -16,7 +16,6 @@ import {
   parseRecoveryKey,
   encryptBuffer,
   decryptBuffer,
-  isConfigured,
   readConfig,
   writeConfig,
   getConfigStorageMode,
@@ -50,7 +49,19 @@ const getDefaultAppState = (): AppState => ({
 });
 
 const syncRuntimeState = (): AppState => {
-  const config = readConfig();
+  let config: AppConfig | null;
+  try {
+    config = readConfig();
+  } catch (err) {
+    // Keep the window and updater available, but never offer setup for unreadable data.
+    unlocked = false;
+    setEncryptionKey(null);
+    setStorageMode('encrypted');
+    return {
+      ...getDefaultAppState(),
+      startupError: err instanceof Error ? err.message : 'Die lokale Konfiguration kann nicht gelesen werden.',
+    };
+  }
   if (!config) {
     unlocked = false;
     setEncryptionKey(null);
@@ -112,7 +123,7 @@ export const registerAuthHandlers = (): void => {
   });
 
   ipcMain.handle('auth:register', (_event, password: string): AppState => {
-    if (isConfigured()) {
+    if (readConfig()) {
       throw new Error('Die App ist bereits eingerichtet. Bitte melde dich an.');
     }
     ensureDataDir();
@@ -145,7 +156,7 @@ export const registerAuthHandlers = (): void => {
   });
 
   ipcMain.handle('auth:registerPlain', (): AppState => {
-    if (isConfigured()) {
+    if (readConfig()) {
       throw new Error('Die App ist bereits eingerichtet. Bitte melde dich an.');
     }
     ensureDataDir();
