@@ -398,7 +398,10 @@
   color: var(--color-neutral-200);
   border-radius: var(--radius-lg);
   padding: 16px 18px;
-  font: 12.5px/1.6 ui-monospace, Menlo, monospace;
+  font:
+    12.5px/1.6 ui-monospace,
+    Menlo,
+    monospace;
   max-height: 420px;
   overflow: auto;
   display: flex;
@@ -577,7 +580,10 @@
 }
 
 .cd-recovery-key {
-  font: 600 18px/1.6 ui-monospace, Menlo, monospace;
+  font:
+    600 18px/1.6 ui-monospace,
+    Menlo,
+    monospace;
   letter-spacing: 0.06em;
   background: var(--color-surface);
   border-radius: var(--radius-md);
@@ -758,4 +764,59 @@
   .cd-progress-fill {
     transition: none;
   }
+}
+
+/* Additional fields use the same labels and controls as the existing forms. */
+.cd-form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--color-neutral-700);
+}
+.cd-checkbox {
+  min-height: 24px;
+  align-self: start;
+  color: var(--color-text);
+}
+.cd-checkbox .dot {
+  border-radius: 4px;
+}
+
+.cd-checkbox-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+.cd-help {
+  margin: 4px 0 12px;
+}
+.cd-help > summary {
+  cursor: pointer;
+  width: fit-content;
+  border-radius: var(--radius-sm);
+}
+.cd-help-content {
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.cd-history-table {
+  overflow-x: auto;
+}
+.cd-history-table td {
+  overflow-wrap: anywhere;
+}
+.cd-import-table {
+  overflow: auto;
+  max-height: 55vh;
+}
+.cd-import-table .ds-table {
+  min-width: 920px;
+}
+.cd-import-table td > .input,
+.cd-import-table td > div {
+  margin-top: 5px;
+}
+.cd-import-table .input {
+  min-width: 125px;
 }

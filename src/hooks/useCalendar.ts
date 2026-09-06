@@ -1,6 +1,12 @@
+import { localDate } from '../utils/calendarDate';
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
-import type { UpcomingEvent, UnifiedEventType, PatientBirthdayEvent, PatientVisitEvent } from '../shared/types';
+import type {
+  UpcomingEvent,
+  UnifiedEventType,
+  PatientBirthdayEvent,
+  PatientVisitEvent,
+} from '../shared/types';
 import type { CalendarView } from '../types/ui';
 
 type UseCalendarParams = {
@@ -34,8 +40,8 @@ const getDateRange = (date: Date, view: CalendarView): { startDate: string; endD
     sunday.setDate(monday.getDate() + 6);
 
     return {
-      startDate: monday.toISOString().slice(0, 10),
-      endDate: sunday.toISOString().slice(0, 10),
+      startDate: localDate(monday),
+      endDate: localDate(sunday),
     };
   }
 
@@ -56,8 +62,8 @@ const getDateRange = (date: Date, view: CalendarView): { startDate: string; endD
   gridEnd.setDate(lastDay.getDate() + sundayOffset);
 
   return {
-    startDate: gridStart.toISOString().slice(0, 10),
-    endDate: gridEnd.toISOString().slice(0, 10),
+    startDate: localDate(gridStart),
+    endDate: localDate(gridEnd),
   };
 };
 
@@ -66,8 +72,18 @@ const getDateRange = (date: Date, view: CalendarView): { startDate: string; endD
  */
 export const formatPeriodLabel = (date: Date, view: CalendarView): string => {
   const monthNames = [
-    'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni',
-    'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'
+    'Januar',
+    'Februar',
+    'März',
+    'April',
+    'Mai',
+    'Juni',
+    'Juli',
+    'August',
+    'September',
+    'Oktober',
+    'November',
+    'Dezember',
   ];
 
   if (view === 'year') {
@@ -84,7 +100,11 @@ export const formatPeriodLabel = (date: Date, view: CalendarView): string => {
     tempDate.setHours(0, 0, 0, 0);
     tempDate.setDate(tempDate.getDate() + 3 - ((tempDate.getDay() + 6) % 7));
     const week1 = new Date(tempDate.getFullYear(), 0, 4);
-    const weekNum = 1 + Math.round(((tempDate.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7);
+    const weekNum =
+      1 +
+      Math.round(
+        ((tempDate.getTime() - week1.getTime()) / 86400000 - 3 + ((week1.getDay() + 6) % 7)) / 7,
+      );
 
     const startDay = start.getDate();
     const endDay = end.getDate();
@@ -132,39 +152,48 @@ const useCalendar = ({ handleError, hiddenEventTypes, enabled = true }: UseCalen
       ]);
 
       // Transform patient birthdays to calendar events
-      const birthdayEvents: UpcomingEvent[] = patientBirthdays.map((item: PatientBirthdayEvent): UpcomingEvent => {
-        let details: string | undefined;
-        if (item.hasKnownYear) {
-          const birthYear = parseInt(item.birthDate.slice(0, 4), 10);
-          const eventYear = new Date(item.date).getFullYear();
-          const age = eventYear - birthYear;
-          details = `${age}. Geburtstag`;
-        }
-        return {
-          id: 0,
+      const birthdayEvents: UpcomingEvent[] = patientBirthdays.map(
+        (item: PatientBirthdayEvent): UpcomingEvent => {
+          let details: string | undefined;
+          if (item.hasKnownYear) {
+            const birthYear = parseInt(item.birthDate.slice(0, 4), 10);
+            const eventYear = Number(item.date.slice(0, 4));
+            const age = eventYear - birthYear;
+            details = `${age}. Geburtstag`;
+          }
+          return {
+            id: 0,
+            employeeId: undefined,
+            eventDate: item.date,
+            type: 'patient-birthday' as const,
+            title: 'Geburtstag',
+            details,
+            employeeName: item.patientName,
+            patientId: item.patientId,
+            patientName: item.patientName,
+          };
+        },
+      );
+
+      // Transform patient visits to calendar events
+      const visitEvents: UpcomingEvent[] = patientVisits.map(
+        (item: PatientVisitEvent): UpcomingEvent => ({
+          id: item.visitId,
           employeeId: undefined,
-          eventDate: item.date,
-          type: 'patient-birthday' as const,
-          title: 'Geburtstag',
-          details,
+          eventDate: item.visitDate,
+          type: 'patient-visit' as const,
+          title:
+            item.status === 'planned'
+              ? 'Pflegevisite · geplant'
+              : item.actionNeeded
+                ? 'Pflegevisite · Handlungsbedarf'
+                : 'Pflegevisite · durchgeführt',
+          details: item.comment,
           employeeName: item.patientName,
           patientId: item.patientId,
           patientName: item.patientName,
-        };
-      });
-
-      // Transform patient visits to calendar events
-      const visitEvents: UpcomingEvent[] = patientVisits.map((item: PatientVisitEvent): UpcomingEvent => ({
-        id: item.visitId,
-        employeeId: undefined,
-        eventDate: item.visitDate,
-        type: 'patient-visit' as const,
-        title: item.actionNeeded ? 'Pflegevisite · Handlungsbedarf' : 'Pflegevisite',
-        details: item.comment,
-        employeeName: item.patientName,
-        patientId: item.patientId,
-        patientName: item.patientName,
-      }));
+        }),
+      );
 
       setEvents([...employeeEvents, ...birthdayEvents, ...visitEvents]);
     } catch (err) {
@@ -189,6 +218,7 @@ const useCalendar = ({ handleError, hiddenEventTypes, enabled = true }: UseCalen
       } else if (view === 'week') {
         next.setDate(prev.getDate() + 7);
       } else {
+        next.setDate(1);
         next.setMonth(prev.getMonth() + 1);
       }
       return next;
@@ -203,6 +233,7 @@ const useCalendar = ({ handleError, hiddenEventTypes, enabled = true }: UseCalen
       } else if (view === 'week') {
         next.setDate(prev.getDate() - 7);
       } else {
+        next.setDate(1);
         next.setMonth(prev.getMonth() - 1);
       }
       return next;
@@ -220,9 +251,7 @@ const useCalendar = ({ handleError, hiddenEventTypes, enabled = true }: UseCalen
   }, []);
 
   // Filter events based on hidden types
-  const filteredEvents = events.filter(
-    (event) => !hiddenEventTypes.includes(event.type),
-  );
+  const filteredEvents = events.filter((event) => !hiddenEventTypes.includes(event.type));
 
   // Group events by date for easy lookup
   const eventsByDate = filteredEvents.reduce<Record<string, UpcomingEvent[]>>((acc, event) => {

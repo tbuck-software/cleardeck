@@ -46,8 +46,9 @@ const TasksPage = ({ tasks, doneTaskIds, onToggleTask, onOpenTarget }: TasksPage
             Heute zu tun
           </h1>
           <p className="cd-muted" style={{ margin: '4px 0 0' }}>
-            {openCount} offen · automatisch aus Fristen, Visiten und Datenlücken. Erledigt-Haken gelten für diese
-            Sitzung — was bleibt, verschwindet erst, wenn der Datensatz gepflegt ist.
+            {openCount} offen · automatisch aus Fristen, Visiten und Datenlücken. Haken stellen
+            Aufgaben für diese Sitzung zurück — was bleibt, verschwindet erst, wenn der Datensatz
+            gepflegt ist.
           </p>
         </div>
       </header>
@@ -64,8 +65,12 @@ const TasksPage = ({ tasks, doneTaskIds, onToggleTask, onOpenTarget }: TasksPage
           onChange={setCategory}
         />
         {doneCount > 0 && (
-          <button type="button" className="btn btn-secondary" onClick={() => setShowDone((value) => !value)}>
-            {showDone ? 'Erledigte ausblenden' : `${doneCount} erledigte anzeigen`}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => setShowDone((value) => !value)}
+          >
+            {showDone ? 'Zurückgestellte ausblenden' : `${doneCount} zurückgestellte anzeigen`}
           </button>
         )}
       </div>
@@ -74,7 +79,7 @@ const TasksPage = ({ tasks, doneTaskIds, onToggleTask, onOpenTarget }: TasksPage
         {visible.length === 0 && (
           <div className="cd-empty">
             {openCount === 0
-              ? 'Nichts offen — alle Fristen und Stammdaten sind aktuell.'
+              ? 'Keine weiteren Aufgaben in dieser Ansicht. Zurückgestellte Aufgaben und nicht erfasste Nachweise sind damit nicht fachlich erledigt.'
               : 'Keine Aufgaben in dieser Kategorie.'}
           </div>
         )}

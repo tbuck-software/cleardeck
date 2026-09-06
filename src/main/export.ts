@@ -1,3 +1,4 @@
+import { localDate } from '../utils/calendarDate';
 /**
  * Export & Import Functions
  *
@@ -9,19 +10,19 @@ import fs from 'fs';
 import path from 'path';
 import * as XLSX from 'xlsx';
 
-import {
-  getDb,
-  openDatabase,
-  closeDb,
-  backupDatabase,
-  getDataDir,
-  getEncryptionKey,
-} from './database/connection';
-import { encryptBuffer, decryptBuffer } from './crypto';
+import { getDb, getEncryptionKey } from './database/connection';
+import { encodeBackup } from './backupFormat';
+import { writeAtomic } from './atomicFile';
+import { restoreBackup } from './backup';
 import { getYearDataset } from './repositories/employees';
 import { listPatients } from './repositories/patients';
-import { teilgruppeOf } from '../utils/qpr';
-import { buildPersonListWorkbook, writeWorkbook } from './workbook';
+import {
+  teilgruppeOf,
+  isActivePatient,
+  needsAssessment,
+  representativeMissing,
+} from '../utils/qpr';
+import { buildPersonListWorkbook, buildEmployeeWorkbook, writeWorkbook } from './workbook';
 
 /**
  * Export the database (encrypted or plain)
@@ -46,20 +47,15 @@ export const exportDatabase = async (
   }
 
   try {
-    // SQLite's online backup is asynchronous: without awaiting it, the file is
-    // read back — and for the encrypted mode overwritten — while still being
-    // written, which silently produces a truncated export.
-    await getDb().backup(filePath);
-
-    if (mode === 'encrypted') {
-      const key = getEncryptionKey();
-      if (!key) throw new Error('Kein Schlüssel vorhanden. Bitte zuerst anmelden.');
-      const payload = encryptBuffer(fs.readFileSync(filePath), key);
-      fs.writeFileSync(filePath, Buffer.concat([payload.iv, payload.tag, payload.content]));
-    }
+    const key = mode === 'encrypted' ? getEncryptionKey() : null;
+    if (mode === 'encrypted' && !key)
+      throw new Error('Für einen verschlüsselten Export zuerst die Verschlüsselung aktivieren.');
+    writeAtomic(
+      filePath,
+      mode === 'plain' ? getDb().serialize() : encodeBackup(getDb().serialize(), key),
+    );
   } catch (err) {
     // A half-written export is worse than none: it looks like a usable backup.
-    fs.rmSync(filePath, { force: true });
     const message = err instanceof Error ? err.message : 'Der Export ist fehlgeschlagen.';
     dialog.showErrorBox('Export fehlgeschlagen', message);
     return { saved: false, error: message };
@@ -72,43 +68,17 @@ export const exportDatabase = async (
  * Import a database (encrypted or plain)
  */
 export const importDatabase = async (
-  mode: 'encrypted' | 'plain',
-): Promise<{ imported: boolean; error?: string }> => {
+  _mode: 'encrypted' | 'plain',
+  recoveryKey?: string,
+): Promise<{ imported: boolean; error?: string; backupPath?: string }> => {
   const { canceled, filePaths } = await dialog.showOpenDialog({
-    title: mode === 'encrypted' ? 'Verschlüsselte Datenbank importieren' : 'Datenbank importieren',
-    filters: [
-      mode === 'encrypted'
-        ? { name: 'Verschlüsselte Datenbank', extensions: ['enc'] }
-        : { name: 'SQLite Datenbank', extensions: ['db'] },
-    ],
+    title: 'ClearDeck-Sicherung wählen',
+    filters: [{ name: 'ClearDeck / SQLite', extensions: ['cdb', 'enc', 'db'] }],
     properties: ['openFile'],
   });
-  if (canceled || filePaths.length === 0) {
-    return { imported: false };
-  }
-
-  const sourceFile = filePaths[0];
-  backupDatabase();
-  closeDb();
-
-  const targetPath = path.join(getDataDir(), 'employee.db');
-
-  if (mode === 'encrypted') {
-    const key = getEncryptionKey();
-    if (!key) throw new Error('Kein Schlüssel');
-    const payload = fs.readFileSync(sourceFile);
-    if (payload.length < 28) throw new Error('Datei ist ungültig');
-    const iv = payload.subarray(0, 12);
-    const tag = payload.subarray(12, 28);
-    const content = payload.subarray(28);
-    const data = decryptBuffer({ iv, tag, content }, key);
-    fs.writeFileSync(targetPath, data);
-  } else {
-    fs.copyFileSync(sourceFile, targetPath);
-  }
-
-  openDatabase();
-  return { imported: true };
+  if (canceled || !filePaths.length) return { imported: false };
+  const result = await restoreBackup(filePaths[0], recoveryKey);
+  return { imported: result.saved, error: result.error, backupPath: result.safetyPath };
 };
 
 /**
@@ -117,8 +87,9 @@ export const importDatabase = async (
 export const exportData = async (
   year: number,
   format: 'csv' | 'xlsx',
+  mode: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory' = 'year',
 ): Promise<{ saved: boolean; filePath?: string; error?: string }> => {
-  const dataset = getYearDataset(year);
+  const dataset = getYearDataset(year, mode);
   const ext = format === 'csv' ? 'csv' : 'xlsx';
   const { canceled, filePath } = await dialog.showSaveDialog({
     title: `Daten als ${ext.toUpperCase()} exportieren`,
@@ -130,20 +101,8 @@ export const exportData = async (
     return { saved: false };
   }
 
-  const rows = dataset.employees.map((emp) => ({
-    Name: emp.name,
-    Qualifikation: emp.qualification,
-    VZÄ: emp.fte,
-    Wochenstunden: emp.weeklyHours ?? '',
-    'Start-Datum': emp.startDate,
-    'End-Datum': emp.endDate ?? '',
-    Status: emp.status,
-    Notiz: emp.note ?? '',
-  }));
-
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb, ws, 'Team');
+  const wb = buildEmployeeWorkbook(dataset, year);
+  const ws = wb.Sheets.Team;
 
   const writeToPath = (target: string) => {
     if (format === 'csv') {
@@ -196,10 +155,29 @@ export const exportPersonList = async (): Promise<{
   total?: number;
   withoutGroup?: number;
 }> => {
-  const patients = listPatients();
+  const active = listPatients().filter((p) => isActivePatient(p));
+  const unknown = active.filter((p) => !p.serviceScope || p.serviceScope === 'unknown');
+  if (unknown.length)
+    return {
+      saved: false,
+      error: `Leistungsumfang für ${unknown.length} aktive Personen ungeklärt. Bitte vor dem Anlage-7-Export in den Stammdaten bestätigen.`,
+    };
+  const patients = active.filter((p) => p.serviceScope === 'eligible');
+  const incomplete = patients.filter(
+    (p) =>
+      needsAssessment(p) ||
+      representativeMissing(p) ||
+      (p.intensiveCare?.startsWith('AKI') && !p.akiSetting) ||
+      (p.phkpFirst && !p.phkpStartDate),
+  );
+  if (incomplete.length)
+    return {
+      saved: false,
+      error: `Angaben für ${incomplete.length} Personen unvollständig: Einstufungsquelle/-datum, Vertretung oder AKI/pHKP prüfen.`,
+    };
   const { canceled, filePath } = await dialog.showSaveDialog({
     title: 'Personenliste (Anlage 7) exportieren',
-    defaultPath: `Personenliste-Anlage-7-${new Date().toISOString().slice(0, 10)}.xlsx`,
+    defaultPath: `Personenliste-Anlage-7-${localDate()}.xlsx`,
     filters: [{ name: 'XLSX', extensions: ['xlsx'] }],
   });
 

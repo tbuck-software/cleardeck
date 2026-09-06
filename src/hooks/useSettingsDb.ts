@@ -84,14 +84,14 @@ const useSettingsDb = ({
   );
 
   const handleDbImport = useCallback(
-    (mode: 'encrypted' | 'plain') => {
+    (mode: 'encrypted' | 'plain', recoveryKey?: string) => {
       confirmAction(
         'Import ersetzt die aktuelle Datenbank. Es wird vorher ein Backup erstellt. Fortfahren?',
         async () => {
           try {
-            const result = await api.db.import(mode);
+            const result = await api.db.import(mode, recoveryKey);
             if (result.imported) {
-              await refreshDataset(year);
+              window.location.reload();
               const info = result.backupPath
                 ? `Import erfolgreich. Backup unter: ${result.backupPath}`
                 : 'Import erfolgreich.';
@@ -225,24 +225,34 @@ const useSettingsDb = ({
     setUpdateStatus((previous) => ({
       version: previous.version,
       releaseNotes: previous.releaseNotes,
-      state: 'error', retry,
+      state: 'error',
+      retry,
       message: error instanceof Error ? error.message : String(error),
     }));
   }, []);
 
   const handleCheckUpdates = useCallback(async () => {
-    try { await api.updates.check(true); }
-    catch (error) { showUpdateError(error, 'check'); }
+    try {
+      await api.updates.check(true);
+    } catch (error) {
+      showUpdateError(error, 'check');
+    }
   }, [showUpdateError]);
 
   const handleDownloadUpdate = useCallback(async () => {
-    try { await api.updates.download(); }
-    catch (error) { showUpdateError(error, 'download'); }
+    try {
+      await api.updates.download();
+    } catch (error) {
+      showUpdateError(error, 'download');
+    }
   }, [showUpdateError]);
 
   const handleInstallUpdate = useCallback(async () => {
-    try { await api.updates.install(); }
-    catch (error) { showUpdateError(error, 'install'); }
+    try {
+      await api.updates.install();
+    } catch (error) {
+      showUpdateError(error, 'install');
+    }
   }, [showUpdateError]);
 
   useEffect(() => {
@@ -263,9 +273,12 @@ const useSettingsDb = ({
     };
 
     runCheck();
-    const interval = window.setInterval(() => {
-      runCheck();
-    }, 60 * 60 * 1000);
+    const interval = window.setInterval(
+      () => {
+        runCheck();
+      },
+      60 * 60 * 1000,
+    );
 
     const handleFocus = () => runCheck();
     window.addEventListener('focus', handleFocus);
@@ -287,9 +300,12 @@ const useSettingsDb = ({
   }, [hydrateBaseHours, onError]);
 
   useEffect(() => {
-    api.app.getInfo().then(setAppInfo).catch(() => {
-      // Ignore errors loading app info
-    });
+    api.app
+      .getInfo()
+      .then(setAppInfo)
+      .catch(() => {
+        // Ignore errors loading app info
+      });
     api.auth
       .getState()
       .then((state) => {

@@ -71,7 +71,7 @@ describe('TasksPage', () => {
     expect(screen.queryByText('Erika — Handlungsbedarf')).not.toBeInTheDocument();
     expect(screen.getByText(/3 offen/)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('1 erledigte anzeigen'));
+    fireEvent.click(screen.getByText('1 zurückgestellte anzeigen'));
     expect(screen.getByText('Erika — Handlungsbedarf')).toBeInTheDocument();
   });
 
@@ -94,7 +94,9 @@ describe('TasksPage', () => {
     renderPage({ tasks: [] });
 
     expect(
-      screen.getByText('Nichts offen — alle Fristen und Stammdaten sind aktuell.'),
+      screen.getByText(
+        'Keine weiteren Aufgaben in dieser Ansicht. Zurückgestellte Aufgaben und nicht erfasste Nachweise sind damit nicht fachlich erledigt.',
+      ),
     ).toBeInTheDocument();
   });
 });

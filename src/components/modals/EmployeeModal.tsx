@@ -1,3 +1,5 @@
+import Checkbox from '../ui/Checkbox';
+import FieldHelp from '../ui/FieldHelp';
 import React from 'react';
 import Dialog from '../ui/Dialog';
 import Icon from '../ui/Icon';
@@ -41,11 +43,6 @@ const EmployeeModal = ({
       open={state.open}
       width={560}
       title={isCreate ? 'Person anlegen' : 'Person bearbeiten'}
-      subtitle={
-        isCreate
-          ? 'Eintritt und Qualifikation eröffnen die erste Beschäftigungsperiode.'
-          : 'Stammdaten ändern — Historie und Perioden bleiben erhalten.'
-      }
       primaryLabel={isCreate ? 'Anlegen' : 'Speichern'}
       primaryDisabled={!state.name.trim()}
       onPrimary={onSave}
@@ -106,8 +103,9 @@ const EmployeeModal = ({
         )}
 
         <div className="field">
-          <label>Geburtsdatum</label>
+          <label htmlFor="employee-birthdate">Geburtsdatum</label>
           <BirthDateInput
+            id="employee-birthdate"
             value={state.birthDate}
             onChange={(birthDate) => onStateChange({ birthDate })}
           />
@@ -159,13 +157,51 @@ const EmployeeModal = ({
         </div>
       </div>
 
+      <FieldHelp title="Wie werden VZÄ berechnet?">
+        Betriebliche VZÄ-Regel: ab 36 Wochenstunden 1,0; darunter Anteil am eingestellten
+        Bezugswert. {fteHelp}
+      </FieldHelp>
+      <label className="cd-form-label">
+        Personalbeleg
+        <input
+          className="input"
+          value={state.sourceRef ?? ''}
+          placeholder="Vertrag oder Dokumentverweis"
+          onChange={(event) => onStateChange({ sourceRef: event.target.value })}
+        />
+      </label>
+      {!isCreate && (
+        <div className="cd-field-grid">
+          <div className="field">
+            <label htmlFor="hours-effective">Stunden / VZÄ gültig ab</label>
+            <input
+              id="hours-effective"
+              className="input"
+              type="date"
+              min={form.startDate}
+              max={form.endDate || undefined}
+              value={state.hoursEffectiveFrom ?? ''}
+              onChange={(event) => onStateChange({ hoursEffectiveFrom: event.target.value })}
+            />
+          </div>
+          <Checkbox
+            checked={state.hoursVerified ?? false}
+            onChange={(event) => onStateChange({ hoursVerified: event.target.checked })}
+          >
+            Ab diesem Datum anhand der Belege geprüft
+          </Checkbox>
+          <FieldHelp title="Was gilt für frühere Zeiträume?">
+            Frühere Stände bleiben erhalten. Übernommene Altwerte sind ungeprüft; das Bestätigen
+            eines heutigen Wertes bestätigt keine früheren Zeiträume.
+          </FieldHelp>
+        </div>
+      )}
       <div className="field">
         <label htmlFor="employee-note">Notiz</label>
         <textarea
           id="employee-note"
           className="input"
           style={{ minHeight: 70 }}
-          placeholder="Fortbildungen, Besonderheiten, Ansprechpartner"
           value={state.note}
           onChange={(event) => onStateChange({ note: event.target.value })}
         />

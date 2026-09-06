@@ -11,6 +11,9 @@ const patient: PatientWithLatestVisit = {
   diagnosis: 'Herzinsuffizienz NYHA III',
   birthDate: '1936-01-25',
   careLevel: 4,
+  serviceScope: 'eligible',
+  assessmentSource: 'report',
+  assessmentDate: '2026-01-01',
   cognitionImpaired: true,
   mobilityImpaired: true,
   hkpCode: '31a',
@@ -21,12 +24,20 @@ const patient: PatientWithLatestVisit = {
 };
 
 const visits: PatientVisit[] = [
-  { id: 1, patientId: 1, visitDate: '2026-06-30', actionNeeded: true, comment: 'Dekubitus Sakrum Grad 2' },
+  {
+    id: 1,
+    patientId: 1,
+    visitDate: '2026-06-30',
+    actionNeeded: true,
+    comment: 'Dekubitus Sakrum Grad 2',
+  },
 ];
 
 const noop = (): void => undefined;
 
-const renderDetail = (overrides: Partial<React.ComponentProps<typeof PatientDetail>> = {}): ReturnType<typeof render> =>
+const renderDetail = (
+  overrides: Partial<React.ComponentProps<typeof PatientDetail>> = {},
+): ReturnType<typeof render> =>
   render(
     <PatientDetail
       patient={patient}
@@ -51,7 +62,9 @@ describe('PatientDetail', () => {
     renderDetail();
 
     expect(screen.getByText('PG 4')).toBeInTheDocument();
-    expect(screen.getByText('Ziffer 31a · Wundversorgung chronische, schwer heilende Wunde')).toBeInTheDocument();
+    expect(
+      screen.getByText('31a Wundversorgung chronische, schwer heilende Wunde'),
+    ).toBeInTheDocument();
     expect(screen.getAllByText('eingeschränkt').length).toBe(2);
   });
 

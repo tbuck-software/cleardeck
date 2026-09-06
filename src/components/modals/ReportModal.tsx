@@ -1,3 +1,4 @@
+import FieldHelp from '../ui/FieldHelp';
 import React from 'react';
 import Dialog from '../ui/Dialog';
 import Segmented from '../ui/Segmented';
@@ -7,10 +8,13 @@ const fte2 = (value: number) => value.toFixed(2).replace('.', ',');
 
 type ReportModalProps = {
   open: boolean;
+  loading?: boolean;
   year: number;
   years: number[];
   baseHours: number;
   dataset: YearDataset | null;
+  mode?: 'stichtag' | 'year-average';
+  onModeChange?: (mode: 'stichtag' | 'year-average') => void;
   onYearChange: (year: number) => void;
   onExport: () => void;
   onFixMissingHours: () => void;
@@ -19,11 +23,14 @@ type ReportModalProps = {
 
 const ReportModal = ({
   open,
+  loading = false,
   year,
   years,
   baseHours,
   dataset,
   onYearChange,
+  mode = 'stichtag',
+  onModeChange,
   onExport,
   onFixMissingHours,
   onClose,
@@ -31,7 +38,9 @@ const ReportModal = ({
   const employees = dataset?.employees ?? [];
   const categories = dataset?.aggregation.categories ?? [];
   const missingHours = employees.filter((employee) => employee.weeklyHours == null);
-  const missingEnd = employees.filter((employee) => employee.status === 'left' && !employee.endDate);
+  const missingEnd = employees.filter(
+    (employee) => employee.status === 'left' && !employee.endDate,
+  );
 
   const checks = [
     {
@@ -45,14 +54,14 @@ const ReportModal = ({
     {
       id: 'hours',
       label: missingHours.length
-        ? `${missingHours.length} Person${missingHours.length === 1 ? '' : 'en'} ohne Wochenstunden — fehlt in der VZÄ-Summe`
+        ? `${missingHours.length} Person${missingHours.length === 1 ? '' : 'en'} ohne Wochenstunden; Stellenanteil und Beleg prüfen`
         : 'Alle Personen haben Wochenstunden',
       dot: missingHours.length ? 'var(--bad-800)' : 'var(--ok-800)',
       fix: missingHours.length ? onFixMissingHours : undefined,
     },
     {
       id: 'base',
-      label: `Stichtag 31.12. · Basis ${baseHours} h`,
+      label: `${mode === 'stichtag' ? 'Stichtag 31.12.' : 'Taggewichteter Jahresdurchschnitt'} · Bezugswert ${dataset?.baseHours ?? baseHours} h`,
       dot: 'var(--ok-800)',
       fix: undefined,
     },
@@ -63,11 +72,46 @@ const ReportModal = ({
       open={open}
       width={600}
       title="Jahresnachweis"
-      subtitle="Nachweis für den Krankenkassenverband — Personen und VZÄ je Qualifikation."
       primaryLabel="Als Excel exportieren"
       onPrimary={onExport}
+      primaryDisabled={loading || !dataset}
       onClose={onClose}
     >
+      <FieldHelp title="Berechnung und Verwendung">
+        {mode === 'stichtag'
+          ? `Bestand zum 31.12.${year}.`
+          : `Jahresdurchschnitt ${year}: Stellenanteil × inklusive Beschäftigungstage / Kalendertage des Jahres.`}{' '}
+        Ob dieser Nachweis dem benötigten Vertragsformular entspricht, ist betrieblich zu prüfen.
+      </FieldHelp>
+      {(dataset?.unverifiedHoursCount ?? 0) > 0 && (
+        <p role="alert">
+          Vorläufig: {dataset?.unverifiedHoursCount} Stellenanteile noch ungeprüft.
+        </p>
+      )}
+      {loading && <p>Berichtsjahr wird geladen …</p>}
+      {onModeChange && (
+        <Segmented
+          ariaLabel="Auswertungsart"
+          options={[
+            { value: 'stichtag' as const, label: 'Stichtag 31.12.' },
+            { value: 'year-average' as const, label: 'Taggewichteter Jahresdurchschnitt' },
+          ]}
+          value={mode}
+          onChange={onModeChange}
+        />
+      )}
+      {mode === 'year-average' && (
+        <FieldHelp title="Wie werden Wechsel berücksichtigt?">
+          Stunden- und Qualifikationswechsel teilen den Zeitraum. Personen zählen je Qualifikation
+          einmal; bei einem Wechsel kann dieselbe Person in mehreren Kategorien vorkommen. Die
+          Gesamtzahl zählt jede Person einmal.
+        </FieldHelp>
+      )}
+      {employees.some((e) => e.hoursMissing) && (
+        <p role="alert">
+          Stellenanteile fehlen. Diese Zeitabschnitte sind in der Summe nicht enthalten.
+        </p>
+      )}
       <Segmented
         ariaLabel="Jahr"
         style={{ alignSelf: 'flex-start' }}
@@ -125,12 +169,20 @@ const ReportModal = ({
             >
               <span className="cd-dot-lg" style={{ background: check.dot }} />
               <span style={{ flex: 1, textAlign: 'left' }}>{check.label}</span>
-              <span style={{ fontSize: 13, color: 'var(--color-accent-700)', fontWeight: 600 }}>Beheben →</span>
+              <span style={{ fontSize: 13, color: 'var(--color-accent-700)', fontWeight: 600 }}>
+                Beheben →
+              </span>
             </button>
           ) : (
             <div
               key={check.id}
-              style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '8px 10px', fontSize: 14 }}
+              style={{
+                display: 'flex',
+                gap: 14,
+                alignItems: 'center',
+                padding: '8px 10px',
+                fontSize: 14,
+              }}
             >
               <span className="cd-dot-lg" style={{ background: check.dot }} />
               <span style={{ flex: 1 }}>{check.label}</span>

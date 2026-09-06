@@ -14,6 +14,10 @@ Der GitHub-Release-Text verwendet aus derselben Datei nur die Notizen der veröf
 
 ## Grenzen der Prüfung
 
+Die Datenbank wird nach einem Update beim ersten Öffnen automatisch weitergeführt. Aus den Original-Tags 1.7.1 und 1.8.0 erzeugte Profile wurden einschließlich bisherigem Passwort, Historie, automatischer Migrationssicherung, Fehlerabbruch und erneutem Öffnen geprüft. Ein manueller Export, Import oder ein manuelles Backup ist dafür keine Voraussetzung. Die [Upgrade-Matrix und der Designabgleich vom 06.09.2026](reviews/2026-09-06-upgrade-171-180-und-design.md) dokumentieren Methode und Ergebnisse.
+
+Der untersuchte Arbeitsstand trägt noch Paketversion 1.8.0 und ist nicht veröffentlicht. Ein späteres Update für bereits installierte 1.8.0-Clients muss eine höhere Versionsnummer erhalten. Die erfolgreichen Datenbanktests sind kein Nachweis eines neuen signierten Installers.
+
 Die Regressionstests prüfen die Ereignisse des Updaters, die explizite Download-/Installationsfolge, doppelte Klicks, Fehler und Wiederholungen, Restzeitberechnung und die kumulative Versionsauswahl. Die Anzeige wurde zusätzlich in einer Browser-Vorschau mit simulierten Zuständen bedient. Das ersetzt keinen nativen Installationstest für jede Betriebssystemversion.
 
 Der native Updateversuch der installierten Mac-Version 1.7.2 am 5. September 2026 ist inzwischen durch das macOS-Systemprotokoll bestätigt: Der Download endete, danach wurde die Ressourcensignatur mit OSStatus -67056 abgelehnt. Befund und Grenzen der Reparatur stehen in `mac-update-repair.md`. Die Windows-Metadatenreparatur und erfolgreichen nativen UI-Tests stehen in `windows-update-repair.md`.

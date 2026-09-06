@@ -9,6 +9,9 @@ const patients: PatientWithLatestVisit[] = [
   {
     id: 1,
     name: 'Erika Mustermann',
+    serviceScope: 'eligible',
+    assessmentSource: 'report',
+    assessmentDate: '2026-01-01',
     cognitionImpaired: true,
     mobilityImpaired: false,
     contact: 'Tochter · 0171',
@@ -17,6 +20,9 @@ const patients: PatientWithLatestVisit[] = [
   {
     id: 2,
     name: 'Kurt Ziegler',
+    serviceScope: 'eligible',
+    assessmentSource: 'report',
+    assessmentDate: '2026-01-01',
     cognitionImpaired: null,
     mobilityImpaired: null,
     contact: null,
@@ -29,6 +35,8 @@ const audits: AuditWithDetails[] = [
   {
     id: 1,
     auditDate: '2025-11-12',
+    confirmed: true,
+    reportRef: 'Testbericht.pdf',
     inspector: 'MD Nord · Fr. Kessler',
     kind: 'regel',
     results: [
@@ -42,7 +50,9 @@ const audits: AuditWithDetails[] = [
 
 const noop = (): void => undefined;
 
-const renderPage = (overrides: Partial<React.ComponentProps<typeof AuditPage>> = {}): ReturnType<typeof render> =>
+const renderPage = (
+  overrides: Partial<React.ComponentProps<typeof AuditPage>> = {},
+): ReturnType<typeof render> =>
   render(
     <AuditPage
       patients={patients}
@@ -61,7 +71,9 @@ describe('AuditPage', () => {
   it('nennt fehlende Gutachten-Daten mit Namen', () => {
     renderPage();
 
-    const check = screen.getByText('1 Klient:in ohne Gutachten-Daten').closest('button') as HTMLElement;
+    const check = screen
+      .getByText('1 Klient:in ohne Gutachten-Daten')
+      .closest('button') as HTMLElement;
     expect(check).toHaveTextContent('Kurt Ziegler');
   });
 
@@ -84,17 +96,25 @@ describe('AuditPage', () => {
   });
 
   it('kürzt lange Namenslisten', () => {
-    const many = Array.from({ length: 11 }, (_, index): PatientWithLatestVisit => ({
-      id: 100 + index,
-      name: `Person ${String(index + 1).padStart(2, '0')}`,
-      cognitionImpaired: null,
-      mobilityImpaired: null,
-      contact: 'Angehörige · 0171',
-      latestVisitDate: '2026-08-20',
-    }));
+    const many = Array.from(
+      { length: 11 },
+      (_, index): PatientWithLatestVisit => ({
+        id: 100 + index,
+        name: `Person ${String(index + 1).padStart(2, '0')}`,
+        serviceScope: 'eligible',
+        assessmentSource: 'report',
+        assessmentDate: '2026-01-01',
+        cognitionImpaired: null,
+        mobilityImpaired: null,
+        contact: 'Angehörige · 0171',
+        latestVisitDate: '2026-08-20',
+      }),
+    );
     renderPage({ patients: many });
 
-    const check = screen.getByText('11 Klient:innen ohne Gutachten-Daten').closest('button') as HTMLElement;
+    const check = screen
+      .getByText('11 Klient:innen ohne Gutachten-Daten')
+      .closest('button') as HTMLElement;
     expect(check).toHaveTextContent('Person 01, Person 02, Person 03, Person 04 und 7 weitere');
     expect(check).not.toHaveTextContent('Person 05');
   });
@@ -102,16 +122,22 @@ describe('AuditPage', () => {
   it('listet wenige Namen vollständig auf', () => {
     renderPage();
 
-    const check = screen.getByText('1 Klient:in ohne Gutachten-Daten').closest('button') as HTMLElement;
-    expect(check).toHaveTextContent('Kurt Ziegler —');
+    const check = screen
+      .getByText('1 Klient:in ohne Gutachten-Daten')
+      .closest('button') as HTMLElement;
+    expect(check).toHaveTextContent('Kurt Ziegler');
     expect(check).not.toHaveTextContent('weitere');
   });
 
-  it('zeigt das schwächste QB-1–3-Ergebnis als Gesamtnote', () => {
+  it('zeigt das schwächste QB-1–3-Ergebnis als ausdrücklich interne Zusammenfassung', () => {
     renderPage();
 
     expect(screen.getByText('12.11.2025')).toBeInTheDocument();
-    expect(screen.getByText(/QB 1–3 bis C · 1 Kriterium nicht erfüllt · 1 Klient:innen/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Interne Zusammenfassung, höchste erfasste Defizitstufe C · 1 Kriterium nicht erfüllt · 1 Klient:innen/,
+      ),
+    ).toBeInTheDocument();
   });
 
   it('exportiert die Personenliste', () => {
@@ -126,6 +152,6 @@ describe('AuditPage', () => {
     renderPage({ audits: [] });
 
     expect(screen.getByText(/Noch keine Prüfung erfasst/)).toBeInTheDocument();
-    expect(screen.getByText(/noch keine Prüfung erfasst/)).toBeInTheDocument();
+    expect(screen.getByText(/noch keine bestätigte Prüfung/)).toBeInTheDocument();
   });
 });

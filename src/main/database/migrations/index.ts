@@ -21,6 +21,11 @@ import { v012_employee_competencies } from './v012_employee_competencies';
 import { v013_competency_matrix } from './v013_competency_matrix';
 import { v014_qpr_stichprobe } from './v014_qpr_stichprobe';
 import { v015_instruction_intervals } from './v015_instruction_intervals';
+import { v021_catalog_actions } from './v021_catalog_actions';
+import { v020_employment_provenance } from './v020_employment_provenance';
+import { v019_patient_scope_audit } from './v019_patient_scope_audit';
+import { v018_instruction_evidence } from './v018_instruction_evidence';
+import { v017_employment_terms } from './v017_employment_terms';
 import { v016_missing_instructions } from './v016_missing_instructions';
 
 export type Migration = {
@@ -49,6 +54,11 @@ export const migrations: Migration[] = [
   v014_qpr_stichprobe,
   v015_instruction_intervals,
   v016_missing_instructions,
+  v017_employment_terms,
+  v018_instruction_evidence,
+  v019_patient_scope_audit,
+  v020_employment_provenance,
+  v021_catalog_actions,
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations[migrations.length - 1]?.version ?? 0;
@@ -58,9 +68,9 @@ export const CURRENT_SCHEMA_VERSION = migrations[migrations.length - 1]?.version
  */
 const getSchemaVersion = (db: DatabaseType): number => {
   try {
-    const row = db
-      .prepare("SELECT value FROM settings WHERE key = 'schema_version'")
-      .get() as { value?: string } | undefined;
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'schema_version'").get() as
+      | { value?: string }
+      | undefined;
     return row?.value ? Number(row.value) : 0;
   } catch {
     return 0; // settings table doesn't exist yet
@@ -187,8 +197,12 @@ export const runMigrations = (db: DatabaseType): void => {
     }
   }
 
-  const patientColumns = db.prepare("PRAGMA table_info('patients')").all() as Array<{ name: string }>;
-  const visitColumns = db.prepare("PRAGMA table_info('patient_visits')").all() as Array<{ name: string }>;
+  const patientColumns = db.prepare("PRAGMA table_info('patients')").all() as Array<{
+    name: string;
+  }>;
+  const visitColumns = db.prepare("PRAGMA table_info('patient_visits')").all() as Array<{
+    name: string;
+  }>;
   const hasAudits = db
     .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='audits'")
     .get();
@@ -205,7 +219,9 @@ export const runMigrations = (db: DatabaseType): void => {
     !patientColumns.some((column) => column.name === 'cognitionImpaired') ||
     !visitColumns.some((column) => column.name === 'actionNeeded');
   if (needsV014Repair) {
-    console.log('Repairing: QPR Teilgruppe columns/audit tables missing, running v014 migration...');
+    console.log(
+      'Repairing: QPR Teilgruppe columns/audit tables missing, running v014 migration...',
+    );
     const v014 = migrations.find((m) => m.version === 14);
     if (v014) {
       v014.up(db);

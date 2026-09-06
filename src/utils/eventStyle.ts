@@ -7,7 +7,13 @@ import type { UnifiedEventType } from '../shared/types';
 
 export type EventGroup = 'birthday' | 'patient-birthday' | 'visit' | 'instruction' | 'hr';
 
-export const EVENT_GROUPS: { key: EventGroup; label: string; dot: string; bg: string; fg: string }[] = [
+export const EVENT_GROUPS: {
+  key: EventGroup;
+  label: string;
+  dot: string;
+  bg: string;
+  fg: string;
+}[] = [
   {
     key: 'birthday',
     label: 'Geburtstage',
@@ -54,6 +60,7 @@ export const groupOfEvent = (type: UnifiedEventType | string): EventGroup => {
     case 'patient-visit':
     case 'care-visit':
       return 'visit';
+    case 'instruction-due':
     case 'certificate-expiry':
     case 'emergency-training':
       return 'instruction';

@@ -14,6 +14,9 @@ const patients: Patient[] = [
     name: 'Werner Fuchs',
     birthDate: '1936-01-25',
     contact: 'Betreuer Hr. Lange · 0431 998877',
+    serviceScope: 'eligible',
+    assessmentSource: 'report',
+    assessmentDate: '2026-01-01',
     cognitionImpaired: true,
     mobilityImpaired: true,
     hkpCode: '31a',
@@ -25,6 +28,9 @@ const patients: Patient[] = [
     name: 'Erika Mustermann',
     birthDate: '1941-03-02',
     contact: null,
+    serviceScope: 'eligible',
+    assessmentSource: 'report',
+    assessmentDate: '2026-01-01',
     cognitionImpaired: true,
     mobilityImpaired: false,
     hkpCode: null,
@@ -36,6 +42,9 @@ const patients: Patient[] = [
     name: 'Kurt Ziegler',
     birthDate: null,
     contact: null,
+    serviceScope: 'eligible',
+    assessmentSource: 'report',
+    assessmentDate: '2026-01-01',
     cognitionImpaired: null,
     mobilityImpaired: null,
     hkpCode: '8',
@@ -61,18 +70,18 @@ describe('buildPersonListRows', () => {
 
     expect(werner.Teilgruppe).toBe('A');
     expect(werner['Aufwändige HKP (Ziffer)']).toBe('31a');
-    expect(werner['Aufwändige HKP (Leistung)']).toBe('Wundversorgung chronische, schwer heilende Wunde');
+    expect(Object.keys(werner)).toHaveLength(5);
 
     // Ohne Gutachten-Daten bleibt die Teilgruppe leer statt geraten.
     expect(kurt.Teilgruppe).toBe('');
-    expect(kurt['AKI / pHKP']).toBe('AKI mit Beatmung');
+    expect(kurt['AKI / pHKP']).toBe('AKI B (EV/MV fehlt)');
   });
 
   it('lässt fehlende Angaben leer, statt sie zu erfinden', () => {
     const [erika] = buildPersonListRows(patients);
 
     expect(erika['Bevollmächtigte / Betreuung (mit Telefon)']).toBe('');
-    expect(buildPersonListRows(patients)[1].Pflegegrad).toBe('');
+    expect(Object.keys(erika)).not.toContain('Geburtsdatum');
   });
 });
 

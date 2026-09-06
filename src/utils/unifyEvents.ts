@@ -83,7 +83,7 @@ export const unifyEvents = (
     let subtitle: string | undefined;
     if (item.hasKnownYear) {
       const birthYear = parseInt(item.birthDate.slice(0, 4), 10);
-      const eventYear = new Date(item.date).getFullYear();
+      const eventYear = Number(item.date.slice(0, 4));
       const age = eventYear - birthYear;
       subtitle = `${age}. Geburtstag`;
     }
@@ -108,7 +108,12 @@ export const unifyEvents = (
       patientName: item.patientName,
       type: 'patient-visit',
       date: item.visitDate,
-      title: item.actionNeeded ? 'Pflegevisite · Handlungsbedarf' : 'Pflegevisite',
+      title:
+        item.status === 'planned'
+          ? 'Pflegevisite · geplant'
+          : item.actionNeeded
+            ? 'Pflegevisite · Handlungsbedarf'
+            : 'Pflegevisite · durchgeführt',
       subtitle: item.comment ?? undefined,
       urgency: item.actionNeeded ? 'warning' : 'normal',
     });

@@ -9,11 +9,13 @@ import path from 'path';
 import Database from 'better-sqlite3';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import type { StorageMode } from '../../shared/types';
-import { getDataDir, getEncryptedDbPath, getWorkingDbPath } from '../appPaths';
+import { getConfigPath, getDataDir, getEncryptedDbPath, getWorkingDbPath } from '../appPaths';
 
-import { runMigrations } from './migrations';
-import { seedDatabase } from './seed';
-import { encryptFile, decryptFile } from '../crypto';
+import { runMigrations, CURRENT_SCHEMA_VERSION } from './migrations';
+import { randomUUID } from 'crypto';
+import { writeAtomic } from '../atomicFile';
+import { decodeBackup, encodeBackup } from '../backupFormat';
+import { encryptBuffer } from '../crypto';
 
 // Database state
 let db: DatabaseType | null = null;
@@ -81,60 +83,187 @@ export const ensureDataDir = (): void => {
 };
 
 /**
- * Ensure the working database file exists (decrypting from encrypted if needed)
+ * Encode a snapshot in the legacy-compatible encrypted database format.
  */
-const ensureWorkingDb = (): void => {
-  const workingDbPath = getWorkingDbPath();
-  const encryptedDbPath = getEncryptedDbPath();
+const encryptSnapshot = (bytes: Buffer): Buffer => {
+  if (!encryptionKey) throw new Error('Datenbank ist gesperrt.');
+  const { iv, tag, content } = encryptBuffer(bytes, encryptionKey);
+  return Buffer.concat([iv, tag, content]);
+};
+
+/** Persist without closing: every successful data IPC writes an encrypted snapshot. */
+export const flushDatabase = (): void => {
+  if (!db || storageMode !== 'encrypted') return;
+  writeAtomic(getEncryptedDbPath(), encryptSnapshot(db.serialize()));
+};
+
+export const restoreMemorySnapshot = (bytes: Buffer): void => {
+  if (storageMode !== 'encrypted') return;
+  const candidate = new Database(bytes);
+  candidate.pragma('foreign_keys = ON');
+  closeDb();
+  db = candidate;
+};
+
+export const openDatabase = (options: { create?: boolean } = {}): void => {
+  if (db) return;
   ensureDataDir();
-  if (fs.existsSync(workingDbPath)) {
-    return;
-  }
-
-  if (fs.existsSync(encryptedDbPath) && storageMode === 'encrypted' && encryptionKey) {
-    decryptFile(encryptedDbPath, workingDbPath, encryptionKey);
-  } else if (fs.existsSync(encryptedDbPath) && storageMode === 'plain') {
+  const working = getWorkingDbPath();
+  const encrypted = getEncryptedDbPath();
+  if (storageMode === 'encrypted' && !encryptionKey) throw new Error('Datenbank ist gesperrt.');
+  if (storageMode === 'plain' && !fs.existsSync(working) && fs.existsSync(encrypted)) {
     throw new Error(
-      'Konfiguration ist auf unverschlüsselte Daten gestellt, aber es wurde nur eine verschlüsselte Datenbank gefunden.',
+      'Nur eine verschlüsselte Datenbank vorhanden. Bitte mit dem ursprünglichen Schlüssel öffnen.',
     );
-  } else if (!fs.existsSync(workingDbPath)) {
-    fs.writeFileSync(workingDbPath, '');
   }
-};
-
-/**
- * Open the database connection and run migrations
- * @throws Error if encryption key is not set
- */
-export const openDatabase = (): void => {
-  const workingDbPath = getWorkingDbPath();
-  if (storageMode === 'encrypted' && !encryptionKey) {
-    throw new Error('Datenbank ist gesperrt.');
+  let bytes: Buffer | undefined;
+  if (fs.existsSync(working)) {
+    const source = new Database(working, { readonly: true, fileMustExist: true });
+    try {
+      bytes = source.serialize();
+    } finally {
+      source.close();
+    }
+  } else if (fs.existsSync(encrypted))
+    bytes = decodeBackup(fs.readFileSync(encrypted), encryptionKey);
+  if (!bytes && fs.existsSync(getConfigPath()) && !options.create) {
+    throw new Error(
+      'Die vorhandene Konfiguration hat keine lesbare Datenbank. Es wurde kein neuer Bestand angelegt.',
+    );
   }
-  ensureWorkingDb();
-  db = new Database(workingDbPath);
-  runMigrations(db);
-  seedDatabase(db);
-};
-
-/**
- * Close database and encrypt to disk
- */
-export const persistEncryptedDb = (): void => {
-  const workingDbPath = getWorkingDbPath();
-  const encryptedDbPath = getEncryptedDbPath();
-  if (db) {
-    db.close();
+  const candidate = new Database(bytes?.length ? bytes : ':memory:');
+  try {
+    const hasSettings = candidate
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='settings'")
+      .get();
+    const version = hasSettings
+      ? Number(
+          (
+            candidate.prepare("SELECT value FROM settings WHERE key='schema_version'").get() as
+              | { value?: string }
+              | undefined
+          )?.value ?? 0,
+        )
+      : 0;
+    if (version > CURRENT_SCHEMA_VERSION)
+      throw new Error('Diese Datenbank benötigt eine neuere App-Version.');
+    if (bytes?.length) {
+      if (candidate.pragma('quick_check', { simple: true }) !== 'ok')
+        throw new Error('Die vorhandene Datenbank ist beschädigt.');
+      if (
+        !hasSettings ||
+        !candidate
+          .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='employees'")
+          .get()
+      )
+        throw new Error('Die vorhandene Datei ist keine ClearDeck-Datenbank.');
+      if (version < CURRENT_SCHEMA_VERSION) {
+        writeAtomic(
+          path.join(getDataDir(), 'backups', `before-migration-${randomUUID()}.cdb`),
+          encodeBackup(bytes, encryptionKey),
+        );
+      }
+    }
+    // Both storage modes migrate a separate in-memory candidate. A failed
+    // migration cannot leave the user's original database half converted.
+    runMigrations(candidate);
+    if ((candidate.pragma('foreign_key_check') as unknown[]).length)
+      throw new Error('Die Datenbank enthält ungültige Verknüpfungen.');
+    const migrated = candidate.serialize();
+    if (storageMode === 'encrypted') {
+      writeAtomic(encrypted, encryptSnapshot(migrated));
+      db = candidate;
+      for (const suffix of ['', '-wal', '-shm', '-journal'])
+        fs.rmSync(`${working}${suffix}`, { force: true });
+    } else {
+      // A legacy WAL can contain newer data than its main file. Materialize
+      // that unchanged state before replacing the file, never delete the WAL.
+      if (fs.existsSync(`${working}-wal`)) {
+        const source = new Database(working);
+        try {
+          source.pragma('wal_checkpoint(TRUNCATE)');
+        } finally {
+          source.close();
+        }
+      }
+      writeAtomic(working, migrated);
+      db = new Database(working);
+      db.pragma('foreign_keys = ON');
+      candidate.close();
+    }
+  } catch (error) {
+    if (candidate.open) candidate.close();
     db = null;
+    const detail = error instanceof Error ? error.message : 'Unbekannter Fehler';
+    throw new Error(`Datenbank konnte nicht geöffnet oder aktualisiert werden. ${detail}`);
   }
-  if (storageMode === 'plain') {
+};
+
+/** Validate a complete import in isolation. Never changes the live connection. */
+export const validateDatabase = (bytes: Buffer): Buffer => {
+  const candidate = new Database(bytes);
+  try {
+    if (candidate.pragma('quick_check', { simple: true }) !== 'ok')
+      throw new Error('SQLite-Integritätsprüfung fehlgeschlagen.');
+    for (const table of ['employees', 'employment_periods', 'settings']) {
+      if (
+        !candidate
+          .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
+          .get(table)
+      ) {
+        throw new Error('Die Datei ist keine ClearDeck-Datenbank.');
+      }
+    }
+    const version = candidate
+      .prepare("SELECT value FROM settings WHERE key='schema_version'")
+      .get() as { value?: string } | undefined;
+    if (Number(version?.value ?? 0) > CURRENT_SCHEMA_VERSION)
+      throw new Error('Diese Sicherung benötigt eine neuere App-Version.');
+    runMigrations(candidate);
+    if ((candidate.pragma('foreign_key_check') as unknown[]).length)
+      throw new Error('Die Sicherung enthält ungültige Datenverknüpfungen.');
+    return candidate.serialize();
+  } finally {
+    candidate.close();
+  }
+};
+
+/** Input has already been validated; preserve the live state if installation fails. */
+export const replaceDatabase = (bytes: Buffer): void => {
+  const previous = getDb().serialize();
+  const candidate = new Database(bytes);
+  candidate.pragma('foreign_keys = ON');
+  if (storageMode === 'encrypted') {
+    try {
+      writeAtomic(getEncryptedDbPath(), encryptSnapshot(bytes));
+    } catch (error) {
+      candidate.close();
+      throw error;
+    }
+    closeDb();
+    db = candidate;
+    fs.rmSync(getWorkingDbPath(), { force: true });
     return;
   }
-  if (!encryptionKey) return;
-  if (fs.existsSync(workingDbPath)) {
-    encryptFile(workingDbPath, encryptedDbPath, encryptionKey);
-    fs.rmSync(workingDbPath, { force: true });
+  candidate.close();
+  closeDb();
+  let installed = false;
+  try {
+    writeAtomic(getWorkingDbPath(), bytes);
+    installed = true;
+    db = new Database(getWorkingDbPath());
+    db.pragma('foreign_keys = ON');
+  } catch (error) {
+    if (installed) writeAtomic(getWorkingDbPath(), previous);
+    db = new Database(getWorkingDbPath());
+    db.pragma('foreign_keys = ON');
+    throw error;
   }
+};
+
+export const persistEncryptedDb = (): void => {
+  flushDatabase();
+  closeDb();
 };
 
 /**
@@ -184,19 +313,10 @@ export const deleteDatabase = (): void => {
  */
 export const backupDatabase = (): string => {
   const dataDir = getDataDir();
-  const encryptedDbPath = getEncryptedDbPath();
-  const workingDbPath = getWorkingDbPath();
   ensureDataDir();
-  ensureWorkingDb();
   const backupsDir = path.join(dataDir, 'backups');
-  if (!fs.existsSync(backupsDir)) {
-    fs.mkdirSync(backupsDir, { recursive: true });
-  }
-  const source = fs.existsSync(encryptedDbPath) ? encryptedDbPath : workingDbPath;
-  const ext = path.extname(source) || '.db';
-  const filename = `employee-backup-${Date.now()}${ext}`;
-  const target = path.join(backupsDir, filename);
-  fs.copyFileSync(source, target);
+  const target = path.join(backupsDir, `safety-${randomUUID()}.cdb`);
+  writeAtomic(target, encodeBackup(getDb().serialize(), getEncryptionKey()));
   return target;
 };
 

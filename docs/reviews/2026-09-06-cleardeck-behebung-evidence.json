@@ -1,0 +1,49 @@
+{
+  "date": "2026-09-06",
+  "baselineCommit": "d36919fa9055c315d36dea7e402b968f32c097af",
+  "report": "2026-09-06-cleardeck-behebung.md",
+  "automated": {
+    "testFiles": 52,
+    "testsPassed": 288,
+    "testsFailed": 0,
+    "typescript": "passed",
+    "eslint": "passed without warnings",
+    "rendererAndPreloadBuild": "passed",
+    "gitDiffCheck": "passed",
+    "documentationLinks": "passed"
+  },
+  "runtime": {
+    "platform": "macOS",
+    "electron": "39.2.4",
+    "database": "native better-sqlite3",
+    "data": "synthetic isolated profile only",
+    "fileDialogs": "test process returned predetermined temporary paths; OS dialog interaction not tested",
+    "checks": [
+      "Fresh installation contains no employees or patients",
+      "Styled date field stores 1940-02-29; height and radius match employment date fields",
+      "Dated change from 36 hours / 1 FTE to 18 hours / 0.5 FTE preserves original history",
+      "2024 report contains 182 days at 1 FTE and 184 days at 0.5 FTE; December snapshot contains 0.5 FTE",
+      "Completed instruction with evidence creates a separate next-year reminder",
+      "Patient with mobility impairment and HKP 6 plus 29 preserves group B and both HKP codes",
+      "No representative does not create a missing-contact task",
+      "Future planned visit preserves earlier completed visit and unresolved action with owner and deadline",
+      "Empty audit saves as unconfirmed draft with no results and no A grade",
+      "Historical spreadsheet intake proposes 0.5 unweighted FTE from 18 hours rather than source weighted value 0.25",
+      "Historical imported person appears in all-ever directory with unverified hours",
+      "Excel annual report includes summary and dated individual segments with source reference",
+      "Latest native Anlage 7 export contains five columns and HKP value 6, 29",
+      "Encrypted to plain to encrypted conversion preserves two employees",
+      "Old-key backup is rejected with current key and restored with original recovery key",
+      "Encrypted session has no plaintext working SQLite database",
+      "Lock/login and full process restart preserve records",
+      "Form and QPR help are collapsed by default and summary controls accept keyboard focus"
+    ]
+  },
+  "notClaimed": [
+    "Production data migration verification",
+    "Windows installer verification",
+    "Deployment or release publication",
+    "Automatic specialist-contract QPR sampling",
+    "Contract-specific authorization or recipient form compliance"
+  ]
+}

@@ -16,7 +16,8 @@
     "nuke:dev": "node scripts/nuke-db.js dev",
     "nuke:prod": "node scripts/nuke-db.js prod",
     "nuke:all": "node scripts/nuke-db.js all",
-    "dev:updates": "node scripts/start-dev.js --updates"
+    "dev:updates": "node scripts/start-dev.js --updates",
+    "demo": "node scripts/start-demo.cjs"
   },
   "keywords": [],
   "author": {

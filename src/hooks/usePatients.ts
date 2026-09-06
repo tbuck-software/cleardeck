@@ -1,7 +1,8 @@
+import { localDate } from '../utils/calendarDate';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
 import type { PatientWithLatestVisit, PatientVisit } from '../shared/types';
-import { teilgruppeOf } from '../utils/qpr';
+import { isActivePatient, needsAssessment, hasTeilgruppeD, teilgruppeOf } from '../utils/qpr';
 import type {
   ConfirmActionOptions,
   PatientModalState,
@@ -28,7 +29,7 @@ export const emptyPatientModal = (): PatientModalState => ({
 export const emptyVisitModal = (patientId = 0): VisitModalState => ({
   open: false,
   patientId,
-  visitDate: new Date().toISOString().slice(0, 10),
+  visitDate: localDate(),
   actionNeeded: false,
   comment: '',
 });
@@ -44,12 +45,7 @@ type UsePatientsParams = {
   ) => void;
 };
 
-const usePatients = ({
-  handleError,
-  setLoading,
-  setToast,
-  confirmAction,
-}: UsePatientsParams) => {
+const usePatients = ({ handleError, setLoading, setToast, confirmAction }: UsePatientsParams) => {
   const [patients, setPatients] = useState<PatientWithLatestVisit[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<PatientWithLatestVisit | null>(null);
   const selectedPatientRef = useRef(selectedPatient);
@@ -99,6 +95,7 @@ const usePatients = ({
     setLoading(true);
     try {
       const updated = await api.patients.save({
+        ...patientModal,
         id: patientModal.id,
         name: patientModal.name,
         birthDate: patientModal.birthDate || null,
@@ -138,7 +135,7 @@ const usePatients = ({
         setPatients(updated);
         setSelectedPatient(null);
         setPatientModal(emptyPatientModal());
-        setToast('Patient:in geloescht.');
+        setToast('Versorgung beendet; Historie bleibt erhalten.');
       } catch (err) {
         handleError(err);
       } finally {
@@ -153,10 +150,10 @@ const usePatients = ({
     (id?: number) => {
       if (!id) return;
       confirmAction(
-        'Patient:in und alle Visiten wirklich loeschen?',
+        'Versorgung beenden und aus der aktiven Personenliste nehmen? Die Historie bleibt erhalten.',
         () => handleDeletePatient(id),
         {
-          confirmLabel: 'Loeschen',
+          confirmLabel: 'Versorgung beenden',
           danger: true,
         },
       );
@@ -174,6 +171,10 @@ const usePatients = ({
         visitDate: visitModal.visitDate,
         actionNeeded: visitModal.actionNeeded,
         comment: visitModal.comment || null,
+        resolvedAt: visitModal.resolvedAt ?? null,
+        status: visitModal.status,
+        assignedTo: visitModal.assignedTo,
+        actionDueDate: visitModal.actionDueDate,
       });
       setVisits(updatedVisits);
       // Refresh patients so the list picks up the new latest visit
@@ -228,12 +229,15 @@ const usePatients = ({
         p.name.toLowerCase().includes(search.toLowerCase()) ||
         (p.diagnosis?.toLowerCase().includes(search.toLowerCase()) ?? false);
       // D is an additional mark, so it matches on the HKP code, not the group.
+      if (groupFilter === 'archived') return matchesSearch && !isActivePatient(p);
+      if (!isActivePatient(p)) return false;
       const matchesGroup =
         groupFilter === 'all'
           ? true
           : groupFilter === 'D'
-            ? p.hkpCode != null
-            : teilgruppeOf(p.cognitionImpaired, p.mobilityImpaired) === groupFilter;
+            ? hasTeilgruppeD(p)
+            : !needsAssessment(p) &&
+              teilgruppeOf(p.cognitionImpaired, p.mobilityImpaired) === groupFilter;
       return matchesSearch && matchesGroup;
     });
   }, [patients, search, groupFilter]);
@@ -244,6 +248,7 @@ const usePatients = ({
 
   const openEditPatientModal = useCallback((patient: PatientWithLatestVisit) => {
     setPatientModal({
+      ...patient,
       open: true,
       mode: 'edit',
       id: patient.id,
@@ -265,29 +270,30 @@ const usePatients = ({
     setPatientModal(emptyPatientModal());
   }, []);
 
-  const openVisitModal = useCallback(
-    (patientId: number, visit?: PatientVisit) => {
-      if (visit) {
-        setVisitModal({
-          open: true,
-          id: visit.id,
-          patientId,
-          visitDate: visit.visitDate,
-          actionNeeded: visit.actionNeeded,
-          comment: visit.comment ?? '',
-        });
-      } else {
-        setVisitModal({
-          open: true,
-          patientId,
-          visitDate: new Date().toISOString().slice(0, 10),
-          actionNeeded: false,
-          comment: '',
-        });
-      }
-    },
-    [],
-  );
+  const openVisitModal = useCallback((patientId: number, visit?: PatientVisit) => {
+    if (visit) {
+      setVisitModal({
+        open: true,
+        id: visit.id,
+        patientId,
+        visitDate: visit.visitDate,
+        actionNeeded: visit.actionNeeded,
+        comment: visit.comment ?? '',
+        resolvedAt: visit.resolvedAt ?? null,
+        status: visit.status,
+        assignedTo: visit.assignedTo,
+        actionDueDate: visit.actionDueDate,
+      });
+    } else {
+      setVisitModal({
+        open: true,
+        patientId,
+        visitDate: localDate(),
+        actionNeeded: false,
+        comment: '',
+      });
+    }
+  }, []);
 
   const closeVisitModal = useCallback(() => {
     setVisitModal(emptyVisitModal());

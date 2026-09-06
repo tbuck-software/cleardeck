@@ -1,3 +1,4 @@
+import { localDate } from '../utils/calendarDate';
 import { useCallback, useMemo, useState } from 'react';
 import api from '../services/api';
 import type {
@@ -36,7 +37,9 @@ type UseEventsPeriodsParams = {
   form: FormState;
   selectedEmployee: EmployeeWithPeriod | null;
   setSelectedEmployee: (emp: EmployeeWithPeriod | null) => void;
-  setDataset: (updater: YearDataset | null | ((prev: YearDataset | null) => YearDataset | null)) => void;
+  setDataset: (
+    updater: YearDataset | null | ((prev: YearDataset | null) => YearDataset | null),
+  ) => void;
   handleError: (err: unknown) => void;
   setLoading: (val: boolean) => void;
   setToast: (msg: string | null, timeout?: number) => void;
@@ -58,7 +61,7 @@ const initialAddPeriodForm = (year: number, qualification: string): AddPeriodFor
 const initialEventModal = (): EventModalState => ({
   open: false,
   id: undefined,
-  eventDate: new Date().toISOString().slice(0, 10),
+  eventDate: localDate(),
   type: 'period',
   title: '',
   details: '',
@@ -112,7 +115,9 @@ const useEventsPeriods = ({
 
   const openNewPeriodModal = useCallback(() => {
     if (!selectedEmployee) return;
-    setAddPeriodForm(initialAddPeriodForm(year, qualifications[0]?.name ?? selectedEmployee.qualification));
+    setAddPeriodForm(
+      initialAddPeriodForm(year, qualifications[0]?.name ?? selectedEmployee.qualification),
+    );
     setEventModal({ ...initialEventModal(), open: true });
   }, [qualifications, selectedEmployee, year]);
 
@@ -155,10 +160,13 @@ const useEventsPeriods = ({
         name: selectedEmployee.name,
         qualification: addPeriodForm.qualification,
         note: selectedEmployee.note ?? '',
-        weeklyHours: form.weeklyHours ?? selectedEmployee.weeklyHours ?? null,
+        weeklyHours: selectedEmployee.weeklyHours ?? null,
         startDate: addPeriodForm.startDate,
         endDate: addPeriodForm.endDate || null,
-        fte: form.fte ?? selectedEmployee.fte ?? 1,
+        fte: selectedEmployee.fte,
+        birthDate: selectedEmployee.birthDate,
+        updateHours: false,
+        hoursVerified: false,
         periodId: addPeriodForm.periodId,
         year,
         periodNote: addPeriodForm.note ?? null,
@@ -166,12 +174,14 @@ const useEventsPeriods = ({
       const updated = await api.employees.save(payload);
       setDataset(updated);
       await loadHistory(selectedEmployee.id ?? 0);
-      setToast(addPeriodForm.periodId ? 'Periode aktualisiert.' : 'Qualifikation/Periode hinzugefügt.');
+      setEventModal((prev) => ({ ...prev, open: false }));
+      setToast(
+        addPeriodForm.periodId ? 'Periode aktualisiert.' : 'Qualifikation/Periode hinzugefügt.',
+      );
     } catch (err) {
       handleError(err);
     } finally {
       setLoading(false);
-      setEventModal((prev) => ({ ...prev, open: false }));
       setTimeout(() => setToast(null), 2000);
     }
   }, [
@@ -209,7 +219,16 @@ const useEventsPeriods = ({
       setEventModal((prev) => ({ ...prev, open: false }));
       setTimeout(() => setToast(null), 2000);
     }
-  }, [handleError, loadHistory, periodToDelete, selectedEmployee, setDataset, setLoading, setToast, year]);
+  }, [
+    handleError,
+    loadHistory,
+    periodToDelete,
+    selectedEmployee,
+    setDataset,
+    setLoading,
+    setToast,
+    year,
+  ]);
 
   const handleSaveEvent = useCallback(async () => {
     if (!selectedEmployee) return;
@@ -244,7 +263,6 @@ const useEventsPeriods = ({
       handleError(err);
     } finally {
       setLoading(false);
-      setEventModal((prev) => ({ ...prev, open: false }));
       setTimeout(() => setToast(null), 2000);
     }
   }, [

@@ -3,7 +3,7 @@
  *
  * Rules and their sources: docs/adr/0002 and the research it cites. The two
  * that shape this module: an interval belongs to the instruction, not the app,
- * and JArbSchG § 29 Abs. 2 shortens *every* interval for someone under 18.
+ * and JArbSchG § 29 only shortens hazard instructions in its scope.
  */
 
 /** Where a stored interval comes from — a norm, or the service's own choice. */
@@ -38,8 +38,16 @@ export const effectiveIntervalMonths = (
   intervalMonths: number | null | undefined,
   birthDate: string | null | undefined,
   completedAt: string,
+  minorHazardInstruction = false,
 ): number | null => {
-  if (intervalMonths == null) return null;
+  if (intervalMonths == null)
+    return minorHazardInstruction &&
+      birthDate &&
+      !birthDate.startsWith('0000') &&
+      isUnderEighteenOn(birthDate, completedAt)
+      ? 6
+      : null;
+  if (!minorHazardInstruction) return intervalMonths;
   if (!birthDate || birthDate.startsWith('0000')) return intervalMonths;
   if (!isUnderEighteenOn(birthDate, completedAt)) return intervalMonths;
 
@@ -54,8 +62,14 @@ export const nextDueDate = (
   intervalMonths: number | null | undefined,
   birthDate: string | null | undefined,
   completedAt: string,
+  minorHazardInstruction = false,
 ): string | null => {
-  const months = effectiveIntervalMonths(intervalMonths, birthDate, completedAt);
+  const months = effectiveIntervalMonths(
+    intervalMonths,
+    birthDate,
+    completedAt,
+    minorHazardInstruction,
+  );
   return months == null ? null : addMonths(completedAt, months);
 };
 
@@ -72,5 +86,7 @@ export const describeInterval = (
         : intervalMonths === 6
           ? 'halbjährlich'
           : `alle ${intervalMonths} Monate`;
-  return source === 'norm' ? `${label} · aus der Rechtsgrundlage` : `${label} · betriebliche Festlegung`;
+  return source === 'norm'
+    ? `${label} · aus der Rechtsgrundlage`
+    : `${label} · betriebliche Festlegung`;
 };

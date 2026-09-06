@@ -16,6 +16,7 @@ const RESULT_TAG: Record<string, string> = {
   ok: 'tag-ok',
   no: 'tag-bad',
   text: 'tag-neutral',
+  unrecorded: 'tag-neutral',
 };
 
 const RESULT_LABEL: Record<string, string> = {
@@ -26,9 +27,10 @@ const RESULT_LABEL: Record<string, string> = {
   ok: 'erfüllt',
   no: 'nicht erfüllt / Auffälligkeiten',
   text: 'beschreibend',
+  unrecorded: 'Nicht erfasst',
 };
 
-const RESULT_MARK: Record<string, string> = { ok: '✓', no: '✗', text: '—' };
+const RESULT_MARK: Record<string, string> = { unrecorded: '?', ok: '✓', no: '✗', text: '—' };
 
 /** The MD draws up to nine; beyond that the rest is one click away. */
 const CLIENTS_SHOWN = 9;
@@ -68,10 +70,14 @@ const AuditViewModal = ({
       cancelLabel="Schließen"
       onClose={onClose}
     >
+      <p>
+        {audit.confirmed ? 'Geprüfte interne Zusammenfassung' : 'Entwurf / unbestätigter Altstand'}.
+        Einzelbefunde je Aspekt und Person: {audit.reportRef || 'Originalbericht nicht hinterlegt'}.
+      </p>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {sections.map((section) => {
           const row = audit.results.find((entry) => entry.sectionKey === section.key);
-          const result = row?.result ?? 'text';
+          const result = row?.result ?? 'unrecorded';
           return (
             <div
               key={section.key}
@@ -85,7 +91,13 @@ const AuditViewModal = ({
             >
               <span
                 className={`tag ${RESULT_TAG[result]}`}
-                style={{ flex: 'none', fontWeight: 700, width: 34, justifyContent: 'center', marginTop: 1 }}
+                style={{
+                  flex: 'none',
+                  fontWeight: 700,
+                  width: 34,
+                  justifyContent: 'center',
+                  marginTop: 1,
+                }}
               >
                 {RESULT_MARK[result] ?? result}
               </span>
@@ -96,7 +108,7 @@ const AuditViewModal = ({
                     · {RESULT_LABEL[result]}
                   </span>
                 </div>
-                <div className="cd-muted-13">{row?.note || 'Ohne Befund'}</div>
+                <div className="cd-muted-13">{row?.note || 'Keine gesonderte Notiz erfasst'}</div>
               </div>
             </div>
           );
@@ -105,7 +117,14 @@ const AuditViewModal = ({
 
       {audit.findings && (
         <div>
-          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-neutral-700)', marginBottom: 6 }}>
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--color-neutral-700)',
+              marginBottom: 6,
+            }}
+          >
             Feststellungen / Maßnahmen
           </div>
           <p style={{ margin: 0, fontSize: 14, whiteSpace: 'pre-wrap' }}>{audit.findings}</p>
@@ -113,7 +132,14 @@ const AuditViewModal = ({
       )}
 
       <div>
-        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--color-neutral-700)', marginBottom: 8 }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--color-neutral-700)',
+            marginBottom: 8,
+          }}
+        >
           Geprüfte Klient:innen
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

@@ -8,19 +8,19 @@
 
 import { dialog } from 'electron';
 import fs from 'fs';
-import os from 'os';
+import { randomUUID } from 'crypto';
 import path from 'path';
 
-import { decryptFile, encryptFile } from './crypto';
-import { getEncryptedDbPath, getWorkingDbPath } from './appPaths';
+import { parseRecoveryKey } from './crypto';
+import { encodeBackup, decodeBackup } from './backupFormat';
+import { writeAtomic } from './atomicFile';
 import {
-  closeDb,
-  getDb,
-  getEncryptionKey,
-  getStorageMode,
-  isDbOpen,
-  openDatabase,
+  backupDatabase,
+  validateDatabase,
+  replaceDatabase,
+  flushDatabase,
 } from './database/connection';
+import { getDb, getEncryptionKey, getStorageMode, isDbOpen } from './database/connection';
 import {
   getBackupSettings,
   setBackupSettings,
@@ -41,6 +41,7 @@ export interface BackupResult {
   saved: boolean;
   file?: string;
   error?: string;
+  safetyPath?: string;
 }
 
 const stamp = (date: Date): string =>
@@ -91,29 +92,30 @@ export const runBackup = async (): Promise<BackupResult> => {
     return { saved: false, error: 'Die Datenbank ist nicht geöffnet.' };
   }
 
-  const temporary = path.join(os.tmpdir(), `cleardeck-backup-${Date.now()}.db`);
-  const target = path.join(settings.folder, `cleardeck-${stamp(new Date())}${BACKUP_EXTENSION}`);
+  const target = path.join(
+    settings.folder,
+    `cleardeck-${stamp(new Date())}-${randomUUID()}${BACKUP_EXTENSION}`,
+  );
 
   try {
     fs.mkdirSync(settings.folder, { recursive: true });
-    await getDb().backup(temporary);
-
-    const key = getEncryptionKey();
-    if (getStorageMode() === 'encrypted' && key) {
-      encryptFile(temporary, target, key);
-    } else {
-      fs.copyFileSync(temporary, target);
-    }
-
+    writeAtomic(
+      target,
+      encodeBackup(
+        getDb().serialize(),
+        getStorageMode() === 'encrypted' ? getEncryptionKey() : null,
+      ),
+    );
     prune(settings.folder, settings.keep);
-    setBackupSettings({ lastBackupAt: new Date().toISOString() });
+    setBackupSettings({ lastBackupAt: new Date().toISOString(), lastBackupError: null });
+    flushDatabase();
     return { saved: true, file: path.basename(target) };
   } catch (err) {
     const message =
       err instanceof Error ? err.message : 'Das Backup konnte nicht geschrieben werden.';
+    setBackupSettings({ lastBackupError: message });
+    flushDatabase();
     return { saved: false, error: message };
-  } finally {
-    fs.rmSync(temporary, { force: true });
   }
 };
 
@@ -161,46 +163,25 @@ export const runAutoBackupIfDue = async (): Promise<void> => {
  * and a password change re-wraps that same key — so every backup this
  * installation wrote opens with the current session, no password prompt needed.
  */
-export const restoreBackup = async (source: string): Promise<BackupResult> => {
-  if (!fs.existsSync(source)) {
-    return { saved: false, error: 'Die gewählte Sicherung ist nicht mehr vorhanden.' };
-  }
-
-  const safety = await runBackup();
-  if (!safety.saved) {
-    return { saved: false, error: `Sicherheits-Backup fehlgeschlagen: ${safety.error ?? 'unbekannt'}` };
-  }
-
-  const key = getEncryptionKey();
-  const encrypted = getStorageMode() === 'encrypted';
-  if (encrypted && !key) {
-    return { saved: false, error: 'Bitte zuerst anmelden.' };
-  }
-
+export const restoreBackup = async (
+  source: string,
+  recoveryKey?: string,
+): Promise<BackupResult> => {
   try {
-    closeDb();
-    const working = getWorkingDbPath();
-    fs.rmSync(working, { force: true });
-    fs.rmSync(getEncryptedDbPath(), { force: true });
-
-    if (encrypted && key) {
-      decryptFile(source, working, key);
-    } else {
-      fs.copyFileSync(source, working);
-    }
-
-    openDatabase();
-    return { saved: true, file: path.basename(source) };
-  } catch (err) {
-    // The working copy is gone at this point; reopening rebuilds an empty one
-    // rather than leaving the app without a database at all.
-    try {
-      openDatabase();
-    } catch {
-      // Surfaced through the error below.
-    }
-    const message =
-      err instanceof Error ? err.message : 'Die Sicherung konnte nicht wiederhergestellt werden.';
-    return { saved: false, error: message };
+    // Read and validate before even creating the safety copy: no retention rule
+    // or same-name write can change the source under this operation.
+    const key = recoveryKey?.trim() ? parseRecoveryKey(recoveryKey) : getEncryptionKey();
+    const prepared = validateDatabase(decodeBackup(fs.readFileSync(source), key));
+    const safetyPath = backupDatabase();
+    replaceDatabase(prepared);
+    return { saved: true, file: path.basename(source), safetyPath };
+  } catch (error) {
+    return {
+      saved: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Wiederherstellung fehlgeschlagen. Der Bestand bleibt erhalten.',
+    };
   }
 };

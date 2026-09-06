@@ -1,8 +1,6 @@
-import type {
-  CompetencyDefinition,
-  EmployeeCompetency,
-} from '../../shared/types';
+import type { CompetencyDefinition, EmployeeCompetency } from '../../shared/types';
 
+import { requireDate, localDate } from '../../utils/calendarDate';
 import { getDb } from '../database/connection';
 
 const normalizeDefinitionRows = (rows: any[]): CompetencyDefinition[] =>
@@ -105,6 +103,13 @@ export const reorderCompetencyDefinitions = (orderedIds: number[]): CompetencyDe
 
 export const deleteCompetencyDefinition = (id: number): CompetencyDefinition[] => {
   const db = getDb();
+  if (
+    db
+      .prepare('SELECT 1 FROM employee_competencies WHERE competencyDefinitionId=? LIMIT 1')
+      .get(id) ||
+    db.prepare('SELECT 1 FROM competency_history WHERE competencyDefinitionId=? LIMIT 1').get(id)
+  )
+    throw new Error('Zugeordnete Kompetenz mit Historie kann nicht gelöscht werden.');
   db.prepare('DELETE FROM competency_definitions WHERE id = ?').run(id);
   return listCompetencyDefinitions();
 };
@@ -124,7 +129,7 @@ export const listEmployeeCompetencies = (employeeId: number): EmployeeCompetency
         cd.relevance,
         cd.note as definitionNote,
         cd.sortOrder,
-        ec.level,
+        ec.level, ec.stageScheme,
         ec.approvedAt,
         ec.approvedBy,
         ec.note
@@ -146,6 +151,12 @@ export const listEmployeeCompetencies = (employeeId: number): EmployeeCompetency
     category: row.category ?? 'Allgemein',
     relevance: row.relevance ?? 'Alle',
     level: row.level ?? null,
+    stageScheme: row.stageScheme,
+    stageHistory: db
+      .prepare(
+        'SELECT stageScheme,changedAt,level,approvedAt,approvedBy,note FROM competency_history WHERE employeeId=? AND competencyDefinitionId=? ORDER BY changedAt DESC,id DESC',
+      )
+      .all(employeeId, row.competencyDefinitionId) as EmployeeCompetency['stageHistory'],
     approvedAt: row.approvedAt ?? null,
     approvedBy: row.approvedBy ?? null,
     note: row.note ?? null,
@@ -155,6 +166,7 @@ export const listEmployeeCompetencies = (employeeId: number): EmployeeCompetency
 };
 
 export const saveEmployeeCompetency = (input: {
+  stageScheme?: 'legacy' | 'practice-v1';
   id?: number;
   employeeId: number;
   competencyDefinitionId: number;
@@ -169,38 +181,72 @@ export const saveEmployeeCompetency = (input: {
   const normalizedApprovedBy = input.approvedBy?.trim() ? input.approvedBy.trim() : null;
   const normalizedLevel = input.level ?? null;
 
-  db.prepare(
-    `
-    INSERT INTO employee_competencies (
-      employeeId,
-      competencyDefinitionId,
-      level,
-      approvedAt,
-      approvedBy,
-      note
+  const old = db
+    .prepare('SELECT * FROM employee_competencies WHERE employeeId=? AND competencyDefinitionId=?')
+    .get(input.employeeId, input.competencyDefinitionId) as
+    | (EmployeeCompetency & { stageScheme: string })
+    | undefined;
+  const stageScheme = input.stageScheme ?? old?.stageScheme ?? 'practice-v1';
+  if (
+    !['legacy', 'practice-v1'].includes(stageScheme) ||
+    (normalizedLevel != null &&
+      (!Number.isInteger(normalizedLevel) ||
+        normalizedLevel < 0 ||
+        normalizedLevel > (stageScheme === 'legacy' ? 5 : 6)))
+  )
+    throw new Error('Ungültige Einarbeitungsstufe.');
+  if (normalizedApprovedAt) {
+    requireDate(normalizedApprovedAt);
+    if (normalizedApprovedAt > localDate()) throw new Error('Bestätigung liegt in der Zukunft.');
+  }
+  if (
+    stageScheme === 'practice-v1' &&
+    normalizedLevel === 6 &&
+    (!normalizedApprovedAt || !normalizedApprovedBy)
+  )
+    throw new Error('Abschluss braucht Bestätigungsdatum und verantwortliche Person.');
+  db.transaction(() => {
+    const snapshot = db.prepare(
+      'INSERT INTO competency_history (employeeId,competencyDefinitionId,level,approvedAt,approvedBy,note,stageScheme) VALUES (?,?,?,?,?,?,?)',
+    );
+    if (
+      old &&
+      !db
+        .prepare('SELECT 1 FROM competency_history WHERE employeeId=? AND competencyDefinitionId=?')
+        .get(input.employeeId, input.competencyDefinitionId)
     )
-    VALUES (
-      @employeeId,
-      @competencyDefinitionId,
-      @level,
-      @approvedAt,
-      @approvedBy,
-      @note
-    )
-    ON CONFLICT(employeeId, competencyDefinitionId) DO UPDATE SET
-      level = excluded.level,
-      approvedAt = excluded.approvedAt,
-      approvedBy = excluded.approvedBy,
-      note = excluded.note
-  `,
-  ).run({
-    employeeId: input.employeeId,
-    competencyDefinitionId: input.competencyDefinitionId,
-    level: normalizedLevel,
-    approvedAt: normalizedApprovedAt,
-    approvedBy: normalizedApprovedBy,
-    note: normalizedNote,
-  });
+      snapshot.run(
+        input.employeeId,
+        input.competencyDefinitionId,
+        old.level ?? null,
+        old.approvedAt ?? null,
+        old.approvedBy ?? null,
+        old.note ?? null,
+        old.stageScheme,
+      );
+    db.prepare(
+      `INSERT INTO employee_competencies (employeeId,competencyDefinitionId,level,approvedAt,approvedBy,note,stageScheme)
+      VALUES (@employeeId,@competencyDefinitionId,@level,@approvedAt,@approvedBy,@note,@stageScheme)
+      ON CONFLICT(employeeId,competencyDefinitionId) DO UPDATE SET level=excluded.level,approvedAt=excluded.approvedAt,approvedBy=excluded.approvedBy,note=excluded.note,stageScheme=excluded.stageScheme`,
+    ).run({
+      employeeId: input.employeeId,
+      competencyDefinitionId: input.competencyDefinitionId,
+      level: normalizedLevel,
+      approvedAt: normalizedApprovedAt,
+      approvedBy: normalizedApprovedBy,
+      note: normalizedNote,
+      stageScheme,
+    });
+    snapshot.run(
+      input.employeeId,
+      input.competencyDefinitionId,
+      normalizedLevel,
+      normalizedApprovedAt,
+      normalizedApprovedBy,
+      normalizedNote,
+      stageScheme,
+    );
+  })();
 
   return listEmployeeCompetencies(input.employeeId);
 };
@@ -210,6 +256,17 @@ export const deleteEmployeeCompetency = (
   competencyDefinitionId: number,
 ): EmployeeCompetency[] => {
   const db = getDb();
+  const existing = db
+    .prepare(
+      'SELECT level,approvedAt FROM employee_competencies WHERE employeeId=? AND competencyDefinitionId=?',
+    )
+    .get(employeeId, competencyDefinitionId) as
+    | { level: number | null; approvedAt: string | null }
+    | undefined;
+  if (existing?.approvedAt || existing?.level)
+    throw new Error(
+      'Begonnene Einarbeitung bleibt als Historie erhalten. Den Stand bei Bedarf mit Begründung korrigieren.',
+    );
   db.prepare(
     'DELETE FROM employee_competencies WHERE employeeId = ? AND competencyDefinitionId = ?',
   ).run(employeeId, competencyDefinitionId);

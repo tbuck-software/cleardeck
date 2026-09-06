@@ -1,0 +1,401 @@
+{
+  "reviewedCommit": "d36919fa9055c315d36dea7e402b968f32c097af",
+  "date": "2026-09-06",
+  "scope": "Synthetic data only; no production profile touched",
+  "repositoryCases": [
+    {
+      "name": "VZÄ Vergangenheit nach Stundenänderung",
+      "observed": {
+        "before": 1,
+        "after2024": 0.5
+      }
+    },
+    {
+      "name": "Austrittsereignis und Jahreszuordnung",
+      "observed": {
+        "year2025": [
+          {
+            "id": 1,
+            "name": "Testperson Review",
+            "qualification": "Pflegefachkraft",
+            "weeklyHours": 38,
+            "createdAt": "2026-09-05 22:59:51",
+            "birthDate": "2009-01-01",
+            "startDate": "2024-01-01",
+            "endDate": "2024-06-30",
+            "fte": 1,
+            "status": "active",
+            "periodId": 1,
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "Wiedereintritt verändert Altperiode",
+      "observed": {
+        "year2024": [
+          {
+            "id": 1,
+            "name": "Testperson Review",
+            "qualification": "Pflegefachkraft",
+            "weeklyHours": 38,
+            "createdAt": "2026-09-05 22:59:51",
+            "birthDate": "2009-01-01",
+            "startDate": "2026-03-01",
+            "endDate": null,
+            "fte": 1,
+            "status": "active",
+            "periodId": 1,
+            "note": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "Neue Periode ohne birthDate löscht Geburtsdatum",
+      "observed": null
+    },
+    {
+      "name": "Stichtag trotz Austritt im Sommer",
+      "observed": {
+        "totalHeadcount": 1,
+        "totalFte": 1,
+        "categories": [
+          {
+            "qualification": "Pflegefachkraft",
+            "headcount": 1,
+            "fte": 1
+          }
+        ]
+      }
+    },
+    {
+      "name": "36 bei Vollzeitbasis 40",
+      "observed": 1
+    },
+    {
+      "name": "1-jährig examiniert als Nur PFK empfohlen",
+      "observed": {
+        "tags": [
+          "Nur PFK",
+          "Nur PHK"
+        ],
+        "matches": true
+      }
+    },
+    {
+      "name": "Definition ohne Intervall-Payload speichert null",
+      "observed": {
+        "id": 1,
+        "topic": "Erstunterweisung Arbeitsschutz",
+        "legalBasis": "ArbSchG § 12 / DGUV V1 § 4",
+        "note": "Notiz korrigiert",
+        "sortOrder": 1,
+        "intervalMonths": null,
+        "intervalSource": null
+      }
+    },
+    {
+      "name": "Eintrag entfernen löscht Historie und Folgeeintrag",
+      "observed": {
+        "before": 2,
+        "after": 0
+      }
+    },
+    {
+      "name": "Zukünftige Visite verdrängt Handlungsbedarf",
+      "observed": {
+        "actions": [],
+        "latest": {
+          "id": 1,
+          "name": "Review Patient",
+          "birthDate": null,
+          "diagnosis": null,
+          "note": null,
+          "createdAt": "2026-09-05 22:59:51",
+          "contact": null,
+          "admissionDate": null,
+          "cognitionImpaired": null,
+          "mobilityImpaired": null,
+          "hkpCode": null,
+          "intensiveCare": null,
+          "careLevel": null,
+          "latestVisitDate": "2027-01-01",
+          "latestActionNeeded": false,
+          "visitCount": 2
+        }
+      }
+    },
+    {
+      "name": "Fehlendes Aufnahmedatum verschiebt Erstvisite täglich",
+      "observed": {
+        "first": {
+          "dueDate": "2026-09-20",
+          "daysUntilDue": 14,
+          "overdue": false,
+          "first": true,
+          "label": "in 14 Tagen"
+        },
+        "later": {
+          "dueDate": "2026-10-20",
+          "daysUntilDue": 14,
+          "overdue": false,
+          "first": true,
+          "label": "in 14 Tagen"
+        }
+      }
+    },
+    {
+      "name": "Patientengeburtstag in Berlin um einen Tag versetzt",
+      "observed": [
+        {
+          "patientId": 1,
+          "patientName": "Review Birthday",
+          "birthDate": "1980-09-10",
+          "date": "2026-09-09",
+          "hasKnownYear": true
+        }
+      ]
+    },
+    {
+      "name": "Ungültige Periode wird gespeichert",
+      "observed": [
+        {
+          "id": 1,
+          "name": "Testperson Review",
+          "qualification": "Pflegefachkraft",
+          "weeklyHours": 38,
+          "createdAt": "2026-09-05 22:59:51",
+          "birthDate": "2009-01-01",
+          "startDate": "2026-09-10",
+          "endDate": "2026-09-01",
+          "fte": 1,
+          "status": "left",
+          "periodId": 1,
+          "note": null
+        }
+      ]
+    },
+    {
+      "name": "Negative VZÄ werden gespeichert",
+      "observed": {
+        "totalHeadcount": 1,
+        "totalFte": -0.5,
+        "categories": [
+          {
+            "qualification": "Pflegefachkraft",
+            "headcount": 1,
+            "fte": -0.5
+          }
+        ]
+      }
+    }
+  ],
+  "backupCases": [
+    {
+      "case": "Same minute restore overwrites source",
+      "result": {
+        "saved": true,
+        "file": "cleardeck-2026-09-06_0105.cdb"
+      },
+      "live": "CHANGED_AFTER_BACKUP"
+    },
+    {
+      "case": "Selected oldest backup pruned before restore with UI keep=5",
+      "result": {
+        "saved": false,
+        "error": "ENOENT: no such file or directory, copyfile '/tmp/cleardeck-backup-repro-CreQCF/backups/old-0.cdb' -> '/tmp/cleardeck-backup-repro-CreQCF/live.db'"
+      },
+      "live": "EMPTY_REBUILT",
+      "selectedExists": false
+    },
+    {
+      "case": "Invalid encrypted backup removes current working and encrypted copies",
+      "result": {
+        "saved": false,
+        "error": "Verschlüsseltes Datenpaket ist ungültig."
+      },
+      "live": "EMPTY_REBUILT",
+      "encryptedExists": false
+    }
+  ],
+  "backupTestBoundary": "Real backup.ts and crypto.ts with actual temporary filesystem; database lifecycle mocked. Empty rebuild is stub output, production seeding independently confirmed by source and fresh-profile UI.",
+  "uiStoredState": {
+    "baseHours": 38,
+    "audits": [
+      {
+        "id": 1,
+        "auditDate": "2026-09-05",
+        "inspector": null,
+        "kind": "regel",
+        "findings": null,
+        "createdAt": "2026-09-05 23:07:44",
+        "results": [
+          {
+            "sectionKey": "qb1",
+            "result": "A",
+            "note": null
+          },
+          {
+            "sectionKey": "qb2",
+            "result": "A",
+            "note": null
+          },
+          {
+            "sectionKey": "qb3",
+            "result": "A",
+            "note": null
+          },
+          {
+            "sectionKey": "qb4",
+            "result": "text",
+            "note": null
+          },
+          {
+            "sectionKey": "qb5",
+            "result": "ok",
+            "note": null
+          },
+          {
+            "sectionKey": "billing",
+            "result": "ok",
+            "note": null
+          }
+        ],
+        "clientIds": []
+      }
+    ],
+    "instruction": {
+      "id": 1,
+      "topic": "Erstunterweisung Arbeitsschutz",
+      "legalBasis": "ArbSchG § 12 / DGUV V1 § 4",
+      "note": null,
+      "sortOrder": 1,
+      "intervalMonths": null,
+      "intervalSource": null
+    }
+  },
+  "uiObservations": [
+    {
+      "case": "Fresh setup without import",
+      "observed": "72 patients and 25 employees in 2026; sample data automatically seeded."
+    },
+    {
+      "case": "Save annual Arbeitsschutz definition unchanged",
+      "observed": "Reopening shows no interval; stored intervalMonths and intervalSource are null."
+    },
+    {
+      "case": "Save new MD audit without entering data",
+      "observed": "A in QB1-QB3, ok in QB5 and billing, no clients, no findings."
+    },
+    {
+      "case": "Open Jahresnachweis 2025 from 2026 dashboard",
+      "observed": "Label Gesamt 2025 but values 25 people and 18.20 FTE from 2026; source confirms export uses year=2026."
+    },
+    {
+      "case": "Local date just after midnight Europe/Berlin",
+      "observed": "Header 06.09.2026 but event 05.09.2026 described as heute."
+    },
+    {
+      "case": "Persisted full-time base versus displayed",
+      "observed": "API returns 38, dashboard and report display 36 immediately after setup."
+    }
+  ],
+  "baselineChecks": {
+    "vitest": "46 files, 253 tests passed",
+    "typescript": "npx tsc --noEmit passed"
+  },
+  "runtimeCoverage": [
+    "Setup",
+    "Dashboard",
+    "Team list",
+    "Patient list",
+    "MD preparation",
+    "Audit creation",
+    "Instruction catalogue and editing",
+    "Calendar month",
+    "General settings",
+    "Annual report"
+  ],
+  "uiYearDatasetComparison": {
+    "year2024": {
+      "totalHeadcount": 16,
+      "totalFte": 13.2,
+      "categories": [
+        {
+          "qualification": "3-jährig examiniert",
+          "headcount": 11,
+          "fte": 9.84
+        },
+        {
+          "qualification": "1-jährig examiniert",
+          "headcount": 2,
+          "fte": 1.55
+        },
+        {
+          "qualification": "Pflegekraft/-helfer",
+          "headcount": 2,
+          "fte": 1.13
+        },
+        {
+          "qualification": "Sonstige",
+          "headcount": 1,
+          "fte": 0.68
+        }
+      ]
+    },
+    "year2025": {
+      "totalHeadcount": 23,
+      "totalFte": 17.41,
+      "categories": [
+        {
+          "qualification": "3-jährig examiniert",
+          "headcount": 12,
+          "fte": 10.63
+        },
+        {
+          "qualification": "Pflegekraft/-helfer",
+          "headcount": 7,
+          "fte": 3.97
+        },
+        {
+          "qualification": "1-jährig examiniert",
+          "headcount": 3,
+          "fte": 2.26
+        },
+        {
+          "qualification": "Sonstige",
+          "headcount": 1,
+          "fte": 0.55
+        }
+      ]
+    },
+    "year2026": {
+      "totalHeadcount": 25,
+      "totalFte": 18.2,
+      "categories": [
+        {
+          "qualification": "3-jährig examiniert",
+          "headcount": 12,
+          "fte": 10.63
+        },
+        {
+          "qualification": "Pflegekraft/-helfer",
+          "headcount": 9,
+          "fte": 4.76
+        },
+        {
+          "qualification": "1-jährig examiniert",
+          "headcount": 3,
+          "fte": 2.26
+        },
+        {
+          "qualification": "Sonstige",
+          "headcount": 1,
+          "fte": 0.55
+        }
+      ]
+    }
+  }
+}

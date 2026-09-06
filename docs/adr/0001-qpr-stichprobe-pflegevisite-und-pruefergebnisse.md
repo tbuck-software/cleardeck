@@ -17,7 +17,7 @@ Die Buchstaben A–D an der Patient:in bezeichnen die **Teilgruppe der MD-Stichp
 - **C** Kognition beeinträchtigt, Mobilität nicht – Sollzahl 2
 - **D** aufwändige HKP-Leistung – Sollzahl 3
 
-Gesamt 9 Personen. Unterbesetzte Teilgruppen werden **nicht** aufgefüllt; die Unterschreitung wird im Prüfbericht begründet.
+Gesamt 9 Personen für die allgemeine ambulante Pflege nach Kapitel 8.1. Für Dienste mit AKI-/pHKP-Verträgen gelten die eigenen Auswahlregeln aus Kapitel 8.2 beziehungsweise 8.3. Unterbesetzte Teilgruppen werden **nicht** aufgefüllt; die Unterschreitung wird im Prüfbericht begründet.
 
 Konsequenzen in der App: Teilgruppen werden neutral (Blautöne) dargestellt, nie als Ampel. Das ursprünglich geplante Modell „A–D = Bewertung aus der Pflegevisite" wurde verworfen.
 
@@ -74,9 +74,22 @@ Konsequenz: Es gibt kein offizielles Gesamtergebnis. Die App zeigt in der Prüfu
 
 ## 8. Ankündigung
 
-Regelprüfungen werden **zwei Arbeitstage** vorher angekündigt (§ 114a Abs. 1 S. 2 SGB XI, aktuelle Fassung; die QPR-Originalfassung nannte noch einen Tag unter Vorbehalt). Anlassprüfungen unangemeldet. Die Personenliste wird nach Ankündigung erstellt – sie muss daher jederzeit exportierbar sein.
+Regelprüfungen werden **grundsätzlich zwei Arbeitstage** vorher angekündigt. Anlassprüfungen **sollen unangemeldet** erfolgen. Das steht inzwischen ausdrücklich in Kapitel 4 Absatz 2, Seite 15 der [QPR-Fassung vom 30.07.2026](https://md-bund.de/fileadmin/dokumente/Publikationen/SPV/PV_Qualitaetspruefung/QPR_Teil1a_ambulante_Pflegedienste_2026_07_30.pdf#page=15). Die Originalfassung vom 19.05.2025 nannte noch einen Tag unter Vorbehalt. Die Personenliste wird nach Ankündigung erstellt und muss daher jederzeit exportierbar sein.
 
-## Offene Punkte
+## Fortschreibung vom 06.09.2026
+
+Die nachfolgenden offenen Punkte und Modellhinweise dokumentieren den eingebrachten Stand. Für die Umsetzung wurden folgende Fragen inzwischen entschieden:
+
+- Mehrere HKP-Ziffern werden gleichzeitig gespeichert. Unbekannte Merkmale bleiben unbekannt; sie bedeuten keine bestätigte Unbeeinträchtigung.
+- Quelle, Datum und Begründung gehören zur Einstufung. Ein veraltetes Gutachten führt zu einem Prüfhinweis. Eine eigene Einschätzung muss der Dienst ausdrücklich erfassen.
+- Die Personenliste berücksichtigt Versorgungsstatus und Leistungsumfang. Sie enthält die fünf fachlichen Spalten der Anlage 7. AKI-EV/MV und pHKP-Erstverordnung mit Beginn werden ausdrücklich erfasst. Ein fehlender Pflegegrad oder ein fehlendes Geburtsdatum verhindert diesen Export nicht.
+- Die MD-Seite zeigt Merkmalsbestände für die allgemeine Pflege. Sie führt keine Zufallsziehung und keine besondere Auswahl für AKI-/pHKP-Verträge durch.
+- Prüfergebnisse werden als interne Zusammenfassung mit Referenz zum vollständigen Originalbericht erfasst. Ein noch nicht abgeglichener Eintrag ist ein Entwurf; leere Ergebnisse ergeben kein A. Der vollständige Prüfbogen mit Einzelbefunden bleibt im Originalbericht zugänglich, statt in der App unvollständig nachgebildet zu werden.
+- Geplante Pflegevisiten zählen erst nach bestätigter Durchführung. Offene Maßnahmen erhalten Zuständigkeit, Termin und eine ausdrückliche Erledigung. Neue Visiten schließen ältere Maßnahmen nicht automatisch.
+
+Ein besonderes Pflegevisitenintervall pro Teilgruppe bleibt eine mögliche betriebliche Entscheidung. Es wird nicht als QPR-Vorgabe ergänzt. Der geprüfte Implementierungsstand steht im [Behebungsbericht](../reviews/2026-09-06-cleardeck-behebung.md).
+
+## Offene Punkte des eingebrachten Stands
 
 - Gutachtendatum je Patient:in speichern; Warnung bei > 12 Monaten und Umschalten auf „eigene Einschätzung" mit Begründung.
 - AKI: Einfach-/Mehrfachversorgung (EV/MV) als eigenes Feld, falls AKI tatsächlich erbracht wird.

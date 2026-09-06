@@ -1,3 +1,4 @@
+import { requireBirthDate } from '../../utils/calendarDate';
 /**
  * Employee Repository
  *
@@ -9,27 +10,22 @@ import type {
   Employee,
   EmploymentPeriod,
   EmployeeWithPeriod,
-  EmployeeEventType,
   YearDataset,
 } from '../../shared/types';
 
 import { getDb } from '../database/connection';
 import { buildEmployeeChangeEvents } from '../employeeHistory';
 import { saveEvent } from './events';
+import { daysBetween } from '../../utils/qpr';
+import { localDate, requireDate, shiftDays } from '../../utils/calendarDate';
 
 /**
  * Compute employee status for a given year
  */
-const computeStatus = (endDate: string | null, year: number): 'active' | 'left' => {
-  const yearStart = new Date(`${year}-01-01T00:00:00`);
-  const yearEnd = new Date(`${year}-12-31T23:59:59`);
-  const end = endDate ? new Date(`${endDate}T23:59:59`) : null;
-
-  if (end && end >= yearStart && end <= yearEnd) {
-    return 'left';
-  }
-  return 'active';
-};
+const computeStatus = (endDate: string | null, year: number): 'active' | 'left' =>
+  endDate && endDate <= (year < new Date().getFullYear() ? `${year}-12-31` : localDate())
+    ? 'left'
+    : 'active';
 
 /**
  * Build aggregation data from employee list
@@ -59,107 +55,159 @@ const buildAggregation = (employees: EmployeeWithPeriod[]): Aggregation => {
 /**
  * Get all employees with their current period for a given year
  */
-export const getYearDataset = (year: number): YearDataset => {
+export const getYearDataset = (
+  year: number,
+  mode: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory' = 'year',
+): YearDataset => {
+  if (!Number.isInteger(year) || year < 1900 || year > 2200)
+    throw new Error('Ungültiges Berichtsjahr.');
   const db = getDb();
-  const startIso = `${year}-01-01`;
-  const endIso = `${year}-12-31`;
-
-  const baseHoursRow = db
-    .prepare("SELECT value FROM settings WHERE key = 'baseHours'")
-    .get() as { value?: string } | undefined;
-  const fullTimeHours = baseHoursRow?.value ? Number(baseHoursRow.value) || 36 : 36;
-
-  const eventRows = db
-    .prepare(
-      `
-      SELECT employeeId, type, eventDate
-      FROM employee_events
-      WHERE type IN ('join', 'leave')
-    `,
-    )
-    .all() as { employeeId: number; type: EmployeeEventType; eventDate: string }[];
-
-  const joinEvents = new Map<number, string>();
-  const leaveEvents = new Map<number, string>();
-  eventRows.forEach((row) => {
-    if (row.type === 'join') {
-      const existing = joinEvents.get(row.employeeId);
-      if (!existing || existing < row.eventDate) {
-        joinEvents.set(row.employeeId, row.eventDate);
-      }
+  const startIso = mode === 'directory' ? '1900-01-01' : `${year}-01-01`;
+  const endIso =
+    mode === 'directory' ? '2200-12-31' : mode === 'current' ? localDate() : `${year}-12-31`;
+  const earliest = (
+    db.prepare('SELECT MIN(startDate) as startDate FROM employment_periods').get() as {
+      startDate: string | null;
     }
-    if (row.type === 'leave') {
-      const existing = leaveEvents.get(row.employeeId);
-      if (!existing || existing < row.eventDate) {
-        leaveEvents.set(row.employeeId, row.eventDate);
-      }
-    }
-  });
-
+  ).startDate;
+  const firstYear = Math.max(
+    1900,
+    Math.min(new Date().getFullYear() - 2, Number(earliest?.slice(0, 4)) || year),
+  );
+  const availableYears = Array.from(
+    { length: new Date().getFullYear() - firstYear + 1 },
+    (_, i) => firstYear + i,
+  );
+  const base = db.prepare("SELECT value FROM settings WHERE key='baseHours'").get() as
+    | { value?: string }
+    | undefined;
   const rows = db
     .prepare(
-      `
-      SELECT e.id as employeeId,
-             e.name,
-             e.note,
-             e.weeklyHours,
-             e.fte,
-             e.createdAt,
-             e.birthDate,
-             p.id as periodId,
-             p.startDate,
-             p.endDate,
-             p.qualification as qualification,
-             p.note as periodNote
-      FROM employees e
-      INNER JOIN employment_periods p ON p.employeeId = e.id
-      WHERE date(p.startDate) <= date(@endIso)
-        AND (p.endDate IS NULL OR date(p.endDate) >= date(@startIso))
-      ORDER BY e.id ASC, p.startDate DESC;
-    `,
+      `SELECT e.id AS employeeId,e.name,e.note,e.createdAt,e.birthDate,
+    p.id AS periodId,p.startDate,p.endDate,p.qualification,p.note AS periodNote
+    FROM employees e JOIN employment_periods p ON p.employeeId=e.id
+    WHERE p.startDate<=? AND (p.endDate IS NULL OR p.endDate>=?) ORDER BY p.startDate DESC,p.id DESC`,
     )
-    .all({ startIso, endIso }) as (Employee &
-    EmploymentPeriod & {
-      employeeId: number;
-      periodId: number;
-      periodNote?: string | null;
-      createdAt?: string;
-      fte: number;
-      birthDate?: string | null;
-    })[];
-
-  const latest = new Map<number, EmployeeWithPeriod>();
-  rows.forEach((row) => {
-    const current = latest.get(row.employeeId);
-    if (!current || new Date(row.startDate) > new Date(current.startDate)) {
-      const joinDate = joinEvents.get(row.employeeId);
-      const leaveDate = leaveEvents.get(row.employeeId);
-      const effectiveStart = joinDate && joinDate > row.startDate ? joinDate : row.startDate;
-      const effectiveEnd =
-        leaveDate && (!row.endDate || leaveDate < row.endDate) ? leaveDate : row.endDate ?? null;
-
-      latest.set(row.employeeId, {
-        id: row.employeeId,
-        name: row.name,
-        qualification: row.qualification,
-        weeklyHours: row.weeklyHours ?? null,
-        createdAt: row.createdAt,
-        birthDate: row.birthDate ?? null,
-        startDate: effectiveStart,
-        endDate: effectiveEnd ?? null,
-        fte: row.fte,
-        status: computeStatus(effectiveEnd ?? null, year),
-        periodId: row.periodId,
-        note: row.periodNote ?? row.note ?? null,
-      });
+    .all(
+      endIso,
+      mode === 'stichtag' || mode === 'current' ? endIso : startIso,
+    ) as (EmployeeWithPeriod & { employeeId: number; periodNote: string | null })[];
+  if (mode === 'year-average') {
+    const employees: EmployeeWithPeriod[] = [];
+    const yearDays = daysBetween(startIso, endIso) + 1;
+    for (const row of rows) {
+      const start = row.startDate > startIso ? row.startDate : startIso;
+      const end = row.endDate && row.endDate < endIso ? row.endDate : endIso;
+      const terms = db
+        .prepare(
+          'SELECT weeklyHours,fte,verified,effectiveFrom,sourceRef FROM employment_terms WHERE periodId=? AND effectiveFrom<=? ORDER BY effectiveFrom',
+        )
+        .all(row.periodId, end) as {
+        weeklyHours: number | null;
+        fte: number;
+        verified: number;
+        effectiveFrom: string;
+        sourceRef: string | null;
+      }[];
+      const boundaries = [
+        start,
+        ...terms.map((t) => t.effectiveFrom).filter((date) => date > start && date <= end),
+      ];
+      for (let i = 0; i < boundaries.length; i++) {
+        const segmentStart = boundaries[i],
+          segmentEnd = i + 1 < boundaries.length ? shiftDays(boundaries[i + 1], -1) : end;
+        const term = [...terms].reverse().find((t) => t.effectiveFrom <= segmentStart);
+        const days = daysBetween(segmentStart, segmentEnd) + 1;
+        employees.push({
+          id: row.employeeId,
+          periodId: row.periodId,
+          name: row.name,
+          qualification: row.qualification,
+          startDate: segmentStart,
+          endDate: segmentEnd,
+          birthDate: row.birthDate,
+          note: row.periodNote ?? row.note,
+          sourceRef: term?.sourceRef ?? null,
+          weeklyHours: term?.weeklyHours ?? null,
+          fte: ((term?.fte ?? 0) * days) / yearDays,
+          unweightedFte: term?.fte ?? null,
+          hoursVerified: term?.verified === 1,
+          hoursMissing: !term,
+          reportDays: days,
+          hoursEffectiveFrom: term?.effectiveFrom,
+          status: computeStatus(row.endDate ?? null, year),
+        });
+      }
     }
-  });
-
-  const employees = Array.from(latest.values()).sort((a, b) => a.name.localeCompare(b.name, 'de'));
+    const aggregation = buildAggregation(employees);
+    aggregation.totalHeadcount = new Set(employees.map((e) => e.id)).size;
+    aggregation.categories.forEach((c) => {
+      c.headcount = new Set(
+        employees.filter((e) => e.qualification === c.qualification).map((e) => e.id),
+      ).size;
+    });
+    return {
+      employees,
+      aggregation,
+      availableYears,
+      baseHours: Number(base?.value) || 36,
+      reportMode: mode,
+      referenceDate: endIso,
+      unverifiedHoursCount: employees.filter((e) => !e.hoursVerified).length,
+    };
+  }
+  const seen = new Set<number>();
+  const employees: EmployeeWithPeriod[] = [];
+  for (const row of rows) {
+    if (seen.has(row.employeeId)) continue;
+    seen.add(row.employeeId);
+    const reference = row.endDate && row.endDate < endIso ? row.endDate : endIso;
+    const terms = db
+      .prepare(
+        'SELECT weeklyHours,fte,verified,effectiveFrom,sourceRef FROM employment_terms WHERE periodId=? AND effectiveFrom<=? ORDER BY effectiveFrom DESC LIMIT 1',
+      )
+      .get(row.periodId, reference) as
+      | {
+          weeklyHours: number | null;
+          fte: number;
+          verified: number;
+          effectiveFrom: string;
+          sourceRef: string | null;
+        }
+      | undefined;
+    employees.push({
+      id: row.employeeId,
+      periodId: row.periodId,
+      name: row.name,
+      qualification: row.qualification,
+      startDate: row.startDate,
+      endDate: row.endDate,
+      birthDate: row.birthDate,
+      note: row.periodNote ?? row.note,
+      weeklyHours: terms?.weeklyHours ?? null,
+      fte: terms?.fte ?? 0,
+      sourceRef: terms?.sourceRef ?? null,
+      hoursHistory: db
+        .prepare(
+          `SELECT h.effectiveFrom,h.weeklyHours,h.fte,h.verified,h.sourceRef,h.changedAt FROM employment_term_history h JOIN employment_periods p ON p.id=h.periodId WHERE p.employeeId=? ORDER BY h.effectiveFrom DESC,h.id DESC`,
+        )
+        .all(row.employeeId) as EmployeeWithPeriod['hoursHistory'],
+      hoursVerified: terms?.verified === 1,
+      hoursMissing: !terms,
+      hoursEffectiveFrom: terms?.effectiveFrom,
+      status: computeStatus(row.endDate ?? null, year),
+      createdAt: row.createdAt,
+    });
+  }
+  employees.sort((a, b) => a.name.localeCompare(b.name, 'de'));
   return {
     employees,
+    availableYears,
     aggregation: buildAggregation(employees),
-    baseHours: fullTimeHours,
+    baseHours: Number(base?.value) || 36,
+    reportMode: mode,
+    referenceDate: endIso,
+    unverifiedHoursCount: employees.filter((e) => !e.hoursVerified).length,
   };
 };
 
@@ -197,112 +245,159 @@ export const saveEmployee = (input: {
   year: number;
   qualification: string;
   birthDate?: string | null;
+  sourceRef?: string | null;
+  hoursEffectiveFrom?: string;
+  hoursVerified?: boolean;
+  updateHours?: boolean;
 }): YearDataset => {
   const db = getDb();
 
-  const employeePayload = {
-    name: input.name,
-    note: input.note ?? null,
-    weeklyHours: input.weeklyHours ?? null,
-    fte: input.fte,
-    birthDate: input.birthDate ?? null,
-  };
-
-  const periodPayload = {
-    startDate: input.startDate,
-    endDate: input.endDate ?? null,
-    qualification: input.qualification,
-    note: input.periodNote ?? null,
-  };
-
-  if (input.id) {
-    const previousEmployee = db
-      .prepare('SELECT fte, weeklyHours FROM employees WHERE id = ?')
-      .get(input.id) as { fte?: number | null; weeklyHours?: number | null } | undefined;
-
-    db.prepare(
-      `UPDATE employees
-       SET name = @name,
-           note = @note,
-           weeklyHours = @weeklyHours,
-           fte = @fte,
-           birthDate = @birthDate
-       WHERE id = @id`,
-    ).run({ ...employeePayload, id: input.id });
-
-    if (input.periodId) {
-      // Only update period note if explicitly provided (not undefined)
-      if (input.periodNote !== undefined) {
-        db.prepare(
-          `UPDATE employment_periods
-           SET startDate = @startDate, endDate = @endDate, qualification = @qualification, note = @note
-           WHERE id = @periodId`,
-        ).run({ ...periodPayload, periodId: input.periodId });
-      } else {
-        db.prepare(
-          `UPDATE employment_periods
-           SET startDate = @startDate, endDate = @endDate, qualification = @qualification
-           WHERE id = @periodId`,
-        ).run({ ...periodPayload, periodId: input.periodId });
-      }
-    } else {
-      db.prepare(
-        `INSERT INTO employment_periods (employeeId, startDate, endDate, qualification, note)
-         VALUES (@employeeId, @startDate, @endDate, @qualification, @note)`,
-      ).run({ ...periodPayload, employeeId: input.id });
-    }
-
-    const eventDate = new Date().toISOString().slice(0, 10);
-    const changeEvents = buildEmployeeChangeEvents({
-      previous: previousEmployee ?? {},
-      next: {
-        fte: employeePayload.fte,
-        weeklyHours: employeePayload.weeklyHours,
-      },
-      eventDate,
-    });
-
-    changeEvents.forEach((changeEvent) => {
-      saveEvent({
-        employeeId: input.id as number,
-        ...changeEvent,
-      });
-    });
-  } else {
-    const empResult = db
-      .prepare(
-        `INSERT INTO employees (
-           name,
-           note,
-           weeklyHours,
-           fte,
-           birthDate
-         )
-         VALUES (
-           @name,
-           @note,
-           @weeklyHours,
-           @fte,
-           @birthDate
-         )`,
-      )
-      .run(employeePayload);
-    const newId = empResult.lastInsertRowid as number;
-
-    db.prepare(
-      `INSERT INTO employment_periods (employeeId, startDate, endDate, qualification, note)
-       VALUES (@employeeId, @startDate, @endDate, @qualification, @note)`,
-    ).run({ ...periodPayload, employeeId: newId });
-
-    // Create join event for new employee
-    saveEvent({
-      employeeId: newId,
-      eventDate: input.startDate,
-      type: 'join',
-      title: 'Eintritt',
-    });
+  requireDate(input.startDate, 'Beginn');
+  requireBirthDate(input.birthDate);
+  if (input.endDate) {
+    requireDate(input.endDate, 'Ende');
+    if (input.endDate < input.startDate) throw new Error('Das Ende liegt vor dem Beginn.');
   }
-
+  if (!input.name.trim() || !input.qualification.trim())
+    throw new Error('Name und Qualifikation sind erforderlich.');
+  if (!Number.isFinite(input.fte) || input.fte < 0 || input.fte > 1)
+    throw new Error('VZÄ müssen zwischen 0 und 1 liegen.');
+  if (
+    input.weeklyHours != null &&
+    (!Number.isFinite(input.weeklyHours) || input.weeklyHours < 0 || input.weeklyHours > 168)
+  )
+    throw new Error('Ungültige Wochenstunden.');
+  db.transaction(() => {
+    let employeeId = input.id;
+    let periodId = input.periodId;
+    const previous = employeeId
+      ? (db.prepare('SELECT * FROM employees WHERE id=?').get(employeeId) as Employee | undefined)
+      : undefined;
+    if (employeeId && !previous) throw new Error('Person nicht gefunden.');
+    const birthDate =
+      input.birthDate === undefined ? (previous?.birthDate ?? null) : input.birthDate;
+    if (employeeId) {
+      db.prepare('UPDATE employees SET name=?,note=?,birthDate=? WHERE id=?').run(
+        input.name.trim(),
+        input.note ?? null,
+        birthDate,
+        employeeId,
+      );
+    } else {
+      employeeId = Number(
+        db
+          .prepare('INSERT INTO employees(name,note,birthDate,fte,weeklyHours) VALUES (?,?,?,?,?)')
+          .run(
+            input.name.trim(),
+            input.note ?? null,
+            birthDate,
+            input.fte,
+            input.weeklyHours ?? null,
+          ).lastInsertRowid,
+      );
+    }
+    if (
+      periodId &&
+      !db
+        .prepare('SELECT id FROM employment_periods WHERE id=? AND employeeId=?')
+        .get(periodId, employeeId)
+    )
+      throw new Error('Beschäftigungsperiode nicht gefunden.');
+    const overlap = db
+      .prepare(
+        "SELECT id FROM employment_periods WHERE employeeId=? AND id<>? AND startDate<=? AND COALESCE(endDate,'9999-12-31')>=?",
+      )
+      .get(employeeId, periodId ?? -1, input.endDate || '9999-12-31', input.startDate);
+    if (overlap)
+      throw new Error(
+        'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren.',
+      );
+    if (periodId) {
+      db.prepare(
+        'UPDATE employment_periods SET startDate=?,endDate=?,qualification=? WHERE id=?',
+      ).run(input.startDate, input.endDate || null, input.qualification, periodId);
+      if (input.periodNote !== undefined)
+        db.prepare('UPDATE employment_periods SET note=? WHERE id=?').run(
+          input.periodNote,
+          periodId,
+        );
+    } else {
+      periodId = Number(
+        db
+          .prepare(
+            'INSERT INTO employment_periods(employeeId,startDate,endDate,qualification,note) VALUES (?,?,?,?,?)',
+          )
+          .run(
+            employeeId,
+            input.startDate,
+            input.endDate || null,
+            input.qualification,
+            input.periodNote ?? null,
+          ).lastInsertRowid,
+      );
+    }
+    const existing = db
+      .prepare(
+        'SELECT fte,weeklyHours,verified,effectiveFrom,sourceRef FROM employment_terms WHERE periodId=? ORDER BY effectiveFrom DESC LIMIT 1',
+      )
+      .get(periodId) as
+      | {
+          fte: number;
+          weeklyHours: number | null;
+          verified: number;
+          effectiveFrom: string;
+          sourceRef: string | null;
+        }
+      | undefined;
+    const changed =
+      !existing ||
+      existing.fte !== input.fte ||
+      existing.weeklyHours !== (input.weeklyHours ?? null);
+    const confirming =
+      input.hoursVerified === true &&
+      (existing?.verified !== 1 ||
+        (input.hoursEffectiveFrom && input.hoursEffectiveFrom !== existing?.effectiveFrom) ||
+        input.sourceRef !== existing?.sourceRef);
+    if (!existing || (input.updateHours !== false && (changed || confirming))) {
+      const effective = input.hoursEffectiveFrom || (existing ? localDate() : input.startDate);
+      requireDate(effective, 'Stunden gültig ab');
+      if (effective < input.startDate || (input.endDate && effective > input.endDate))
+        throw new Error('Stundenänderung muss innerhalb der Beschäftigungsperiode liegen.');
+      const sourceRef = input.sourceRef?.trim() || null;
+      const values = [
+        periodId,
+        effective,
+        input.weeklyHours ?? null,
+        input.fte,
+        input.hoursVerified === false ? 0 : 1,
+        sourceRef,
+      ];
+      db.prepare(
+        'INSERT INTO employment_terms(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) VALUES (?,?,?,?,?,?) ON CONFLICT(periodId,effectiveFrom) DO UPDATE SET weeklyHours=excluded.weeklyHours,fte=excluded.fte,verified=excluded.verified,sourceRef=excluded.sourceRef',
+      ).run(...values);
+      db.prepare(
+        'INSERT INTO employment_term_history(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) VALUES (?,?,?,?,?,?)',
+      ).run(...values);
+      if (existing)
+        buildEmployeeChangeEvents({
+          previous: existing,
+          next: { fte: input.fte, weeklyHours: input.weeklyHours },
+          eventDate: effective,
+        }).forEach((event) => saveEvent({ employeeId, ...event }));
+    }
+    // Retain legacy columns as a current-value cache; reports only use terms.
+    const current = db
+      .prepare(
+        'SELECT t.fte,t.weeklyHours FROM employment_terms t JOIN employment_periods p ON p.id=t.periodId WHERE p.employeeId=? AND t.effectiveFrom<=? ORDER BY t.effectiveFrom DESC LIMIT 1',
+      )
+      .get(employeeId, localDate()) as { fte: number; weeklyHours: number | null } | undefined;
+    if (current)
+      db.prepare('UPDATE employees SET fte=?,weeklyHours=? WHERE id=?').run(
+        current.fte,
+        current.weeklyHours,
+        employeeId,
+      );
+  })();
   return getYearDataset(input.year);
 };
 

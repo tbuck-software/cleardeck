@@ -5,7 +5,9 @@ import { formatDateDE } from '../../utils/dateFormat';
 import type { BackupFileInfo } from '../../shared/types';
 
 const formatSize = (bytes: number): string =>
-  bytes >= 1_048_576 ? `${(bytes / 1_048_576).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  bytes >= 1_048_576
+    ? `${(bytes / 1_048_576).toFixed(1).replace('.', ',')} MB`
+    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
 const formatMoment = (iso: string): string => {
   const date = new Date(iso);
@@ -15,6 +17,7 @@ const formatMoment = (iso: string): string => {
 
 type ExportModalProps = {
   open: boolean;
+  encryptedAvailable?: boolean;
   onExport: (mode: 'encrypted' | 'plain') => void;
   onClose: () => void;
 };
@@ -23,12 +26,17 @@ type ExportModalProps = {
  * Download a copy. The plaintext option is the dangerous one, so it has to be
  * chosen deliberately and says what it costs.
  */
-export const BackupExportModal = ({ open, onExport, onClose }: ExportModalProps) => {
+export const BackupExportModal = ({
+  open,
+  onExport,
+  onClose,
+  encryptedAvailable = true,
+}: ExportModalProps) => {
   const [mode, setMode] = useState<'encrypted' | 'plain'>('encrypted');
 
   useEffect(() => {
-    if (open) setMode('encrypted');
-  }, [open]);
+    if (open) setMode(encryptedAvailable ? 'encrypted' : 'plain');
+  }, [open, encryptedAvailable]);
 
   const options: { value: 'encrypted' | 'plain'; title: string; desc: string }[] = [
     {
@@ -58,6 +66,7 @@ export const BackupExportModal = ({ open, onExport, onClose }: ExportModalProps)
         {options.map((option) => (
           <button
             key={option.value}
+            disabled={option.value === 'encrypted' && !encryptedAvailable}
             type="button"
             className="cd-choice"
             aria-pressed={mode === option.value}
@@ -76,7 +85,8 @@ export const BackupExportModal = ({ open, onExport, onClose }: ExportModalProps)
         <div className="cd-notice cd-notice-bad" role="alert">
           <Icon name="warning" />
           <span>
-            Die Datei enthält Patientendaten im Klartext. Nicht per Mail versenden, nach Gebrauch löschen.
+            Die Datei enthält Patientendaten im Klartext. Nicht per Mail versenden, nach Gebrauch
+            löschen.
           </span>
         </div>
       )}
@@ -89,8 +99,8 @@ type RestoreModalProps = {
   busy: boolean;
   backups: BackupFileInfo[];
   folder: string | null;
-  onRestore: (path: string) => void;
-  onPickFile: () => void;
+  onRestore: (path: string, recoveryKey?: string) => void;
+  onPickFile: (recoveryKey?: string) => void;
   onClose: () => void;
 };
 
@@ -107,6 +117,10 @@ export const BackupRestoreModal = ({
   onPickFile,
   onClose,
 }: RestoreModalProps) => {
+  const [recoveryKey, setRecoveryKey] = useState('');
+  useEffect(() => {
+    if (!open) setRecoveryKey('');
+  }, [open]);
   const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
@@ -122,7 +136,7 @@ export const BackupRestoreModal = ({
       primaryLabel={busy ? 'Wird wiederhergestellt …' : 'Wiederherstellen'}
       primaryDanger
       primaryDisabled={!selected || busy}
-      onPrimary={() => selected && onRestore(selected)}
+      onPrimary={() => selected && onRestore(selected, recoveryKey)}
       onClose={onClose}
     >
       {backups.length === 0 ? (
@@ -132,7 +146,15 @@ export const BackupRestoreModal = ({
             : 'Es ist kein Backup-Ordner eingestellt.'}
         </p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 260, overflowY: 'auto' }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+            maxHeight: 260,
+            overflowY: 'auto',
+          }}
+        >
           {backups.map((backup) => (
             <button
               key={backup.path}
@@ -153,17 +175,35 @@ export const BackupRestoreModal = ({
         </div>
       )}
 
+      <div className="field">
+        <label htmlFor="backup-recovery">
+          Recovery-Key der Sicherung, falls von einer anderen Installation
+        </label>
+        <input
+          id="backup-recovery"
+          className="input"
+          type="password"
+          autoComplete="off"
+          value={recoveryKey}
+          onChange={(event) => setRecoveryKey(event.target.value)}
+        />
+        <p className="cd-muted-13">
+          Dateiformat wird erkannt. Bei einem neuen Gerät den alten Recovery-Key verwenden. Der
+          importierte Bestand wird mit den Einstellungen dieses Geräts gespeichert.
+        </p>
+      </div>
       <div className="cd-notice cd-notice-bad">
         <Icon name="warning" />
         <span>
-          Der aktuelle Bestand wird ersetzt. Vorher wird automatisch ein Sicherheits-Backup angelegt.
+          Der aktuelle Bestand wird ersetzt. Vorher wird automatisch ein Sicherheits-Backup
+          angelegt.
         </span>
       </div>
 
       <p className="cd-muted-13" style={{ margin: 0 }}>
-        Sicherungen aus dieser Installation öffnen ohne Passwort — sie sind mit deinem Datenschlüssel
-        versiegelt, den auch ein Passwortwechsel nicht ändert.{' '}
-        <button type="button" className="cd-link" onClick={onPickFile}>
+        Sicherungen aus dieser Installation öffnen ohne Passwort — sie sind mit deinem
+        Datenschlüssel versiegelt, den auch ein Passwortwechsel nicht ändert.{' '}
+        <button type="button" className="cd-link" onClick={() => onPickFile(recoveryKey)}>
           Stattdessen Datei wählen…
         </button>
       </p>

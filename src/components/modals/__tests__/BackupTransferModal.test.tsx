@@ -8,8 +8,18 @@ import type { BackupFileInfo } from '../../../shared/types';
 const noop = (): void => undefined;
 
 const backups: BackupFileInfo[] = [
-  { file: 'cleardeck-2026-09-05_0814.cdb', path: '/nas/a.cdb', size: 2_516_582, modifiedAt: '2026-09-05T08:14:00.000Z' },
-  { file: 'cleardeck-2026-09-02_0814.cdb', path: '/nas/b.cdb', size: 2_400_000, modifiedAt: '2026-09-02T08:14:00.000Z' },
+  {
+    file: 'cleardeck-2026-09-05_0814.cdb',
+    path: '/nas/a.cdb',
+    size: 2_516_582,
+    modifiedAt: '2026-09-05T08:14:00.000Z',
+  },
+  {
+    file: 'cleardeck-2026-09-02_0814.cdb',
+    path: '/nas/b.cdb',
+    size: 2_400_000,
+    modifiedAt: '2026-09-02T08:14:00.000Z',
+  },
 ];
 
 describe('BackupExportModal', () => {
@@ -50,12 +60,20 @@ describe('BackupRestoreModal', () => {
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Wiederherstellen' }));
-    expect(onRestore).toHaveBeenCalledWith('/nas/a.cdb');
+    expect(onRestore).toHaveBeenCalledWith('/nas/a.cdb', '');
   });
 
   it('zeigt Zeitpunkt und Größe je Sicherung', () => {
     render(
-      <BackupRestoreModal open busy={false} backups={backups} folder="/nas" onRestore={noop} onPickFile={noop} onClose={noop} />,
+      <BackupRestoreModal
+        open
+        busy={false}
+        backups={backups}
+        folder="/nas"
+        onRestore={noop}
+        onPickFile={noop}
+        onClose={noop}
+      />,
     );
 
     expect(screen.getByText(/05\.09\.2026, \d{2}:\d{2} · 2,4 MB/)).toBeInTheDocument();
@@ -63,7 +81,15 @@ describe('BackupRestoreModal', () => {
 
   it('warnt vor dem Ersetzen des Bestands', () => {
     render(
-      <BackupRestoreModal open busy={false} backups={backups} folder="/nas" onRestore={noop} onPickFile={noop} onClose={noop} />,
+      <BackupRestoreModal
+        open
+        busy={false}
+        backups={backups}
+        folder="/nas"
+        onRestore={noop}
+        onPickFile={noop}
+        onClose={noop}
+      />,
     );
 
     expect(screen.getByText(/Der aktuelle Bestand wird ersetzt/)).toBeInTheDocument();
@@ -71,7 +97,15 @@ describe('BackupRestoreModal', () => {
 
   it('sperrt ohne Sicherungen und erklärt warum', () => {
     render(
-      <BackupRestoreModal open busy={false} backups={[]} folder={null} onRestore={noop} onPickFile={noop} onClose={noop} />,
+      <BackupRestoreModal
+        open
+        busy={false}
+        backups={[]}
+        folder={null}
+        onRestore={noop}
+        onPickFile={noop}
+        onClose={noop}
+      />,
     );
 
     expect(screen.getByText('Es ist kein Backup-Ordner eingestellt.')).toBeInTheDocument();
@@ -80,7 +114,15 @@ describe('BackupRestoreModal', () => {
 
   it('sperrt während der Wiederherstellung', () => {
     render(
-      <BackupRestoreModal open busy backups={backups} folder="/nas" onRestore={noop} onPickFile={noop} onClose={noop} />,
+      <BackupRestoreModal
+        open
+        busy
+        backups={backups}
+        folder="/nas"
+        onRestore={noop}
+        onPickFile={noop}
+        onClose={noop}
+      />,
     );
 
     expect(screen.getByRole('button', { name: 'Wird wiederhergestellt …' })).toBeDisabled();

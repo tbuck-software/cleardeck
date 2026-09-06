@@ -3,7 +3,11 @@
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import EmployeeDetail from '../EmployeeDetail';
-import type { EmployeeCompetency, EmployeeInstruction, EmployeeWithPeriod } from '../../../shared/types';
+import type {
+  EmployeeCompetency,
+  EmployeeInstruction,
+  EmployeeWithPeriod,
+} from '../../../shared/types';
 
 const employee: EmployeeWithPeriod = {
   id: 1,
@@ -50,7 +54,9 @@ const instructions: EmployeeInstruction[] = [
 
 const noop = (): void => undefined;
 
-const renderDetail = (overrides: Partial<React.ComponentProps<typeof EmployeeDetail>> = {}): ReturnType<typeof render> =>
+const renderDetail = (
+  overrides: Partial<React.ComponentProps<typeof EmployeeDetail>> = {},
+): ReturnType<typeof render> =>
   render(
     <EmployeeDetail
       employee={employee}
@@ -82,16 +88,16 @@ describe('EmployeeDetail', () => {
     expect(screen.getByRole('heading', { name: 'Anna Beispiel' })).toBeInTheDocument();
     expect(screen.getByText('30 h')).toBeInTheDocument();
     expect(screen.getByText('0,80')).toBeInTheDocument();
-    // Eine Kompetenz ohne Stufe plus eine offene Einweisung.
+    // Zwei noch nicht abgeschlossene Kompetenzen plus eine offene Einweisung.
     const openLabel = screen.getByText('offene Pflichten');
-    expect(openLabel.previousElementSibling).toHaveTextContent('2');
+    expect(openLabel.previousElementSibling).toHaveTextContent('3');
   });
 
   it('zeigt die Kompetenzmatrix mit Stufe', () => {
     renderDetail();
 
     expect(screen.getByText('Subkutane Injektion')).toBeInTheDocument();
-    expect(screen.getByText('5 · Kann anleiten')).toBeInTheDocument();
+    expect(screen.getByText('5 · Stufe 5')).toBeInTheDocument();
     expect(screen.getByText('Offen')).toBeInTheDocument();
   });
 

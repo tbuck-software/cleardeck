@@ -5,4 +5,5 @@ export const statusLabels: Record<EmployeeWithPeriod['status'], string> = {
   left: 'ausgeschieden',
 };
 
-export const fteHelp = 'VZÄ (Vollzeitäquivalent) auf Basis der konfigurierten Vollzeitstunden (Standard 36).';
+export const fteHelp =
+  'Betriebliche VZÄ-Regel: ab 36 Wochenstunden 1,0; darunter Anteil am Bezugswert (Standard 36), höchstens 1,0. Historische erfasste Werte bleiben erhalten.';

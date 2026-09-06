@@ -32,7 +32,12 @@ const tasks: DashboardTask[] = [
 ];
 
 const quality: DataQualityCheck[] = [
-  { id: 'hours', label: '1 Person ohne Wochenstunden', dot: 'var(--bad-800)', target: { kind: 'employee', id: 9 } },
+  {
+    id: 'hours',
+    label: '1 Person ohne Wochenstunden',
+    dot: 'var(--bad-800)',
+    target: { kind: 'employee', id: 9 },
+  },
 ];
 
 const upcoming: UnifiedEvent[] = [
@@ -48,7 +53,9 @@ const upcoming: UnifiedEvent[] = [
 
 const noop = (): void => undefined;
 
-const renderDashboard = (overrides: Partial<React.ComponentProps<typeof Dashboard>> = {}): ReturnType<typeof render> =>
+const renderDashboard = (
+  overrides: Partial<React.ComponentProps<typeof Dashboard>> = {},
+): ReturnType<typeof render> =>
   render(
     <Dashboard
       year={2026}
@@ -96,9 +103,13 @@ describe('Dashboard', () => {
     renderDashboard({ doneTaskIds: ['patient-action-1'] });
 
     expect(screen.getByText(/0 offen/)).toBeInTheDocument();
-    expect(screen.queryByText('Erika Mustermann — Handlungsbedarf aus Visite')).not.toBeInTheDocument();
     expect(
-      screen.getByText('Nichts offen — alle Fristen und Stammdaten sind aktuell.'),
+      screen.queryByText('Erika Mustermann — Handlungsbedarf aus Visite'),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Keine weiteren Aufgaben in dieser Ansicht. Zurückgestellte Aufgaben und nicht erfasste Nachweise sind damit nicht fachlich erledigt.',
+      ),
     ).toBeInTheDocument();
   });
 
@@ -156,7 +167,9 @@ describe('Dashboard', () => {
     expect(screen.getByText('Keine Beschäftigten im Jahr 2026.')).toBeInTheDocument();
     expect(screen.getByText('Keine Termine in den nächsten 30 Tagen.')).toBeInTheDocument();
     expect(
-      screen.getByText('Nichts offen — alle Fristen und Stammdaten sind aktuell.'),
+      screen.getByText(
+        'Keine weiteren Aufgaben in dieser Ansicht. Zurückgestellte Aufgaben und nicht erfasste Nachweise sind damit nicht fachlich erledigt.',
+      ),
     ).toBeInTheDocument();
   });
 
