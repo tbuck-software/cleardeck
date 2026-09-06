@@ -1,4 +1,8 @@
-import type { CompetencyDefinition, EmployeeCompetency } from '../../shared/types';
+import type {
+  BulkCompetencyChange,
+  CompetencyDefinition,
+  EmployeeCompetency,
+} from '../../shared/types';
 
 import { requireDate, localDate } from '../../utils/calendarDate';
 import { getDb } from '../database/connection';
@@ -165,7 +169,7 @@ export const listEmployeeCompetencies = (employeeId: number): EmployeeCompetency
   }));
 };
 
-export const saveEmployeeCompetency = (input: {
+const writeEmployeeCompetency = (input: {
   stageScheme?: 'legacy' | 'practice-v1';
   id?: number;
   employeeId: number;
@@ -174,11 +178,11 @@ export const saveEmployeeCompetency = (input: {
   approvedAt?: string | null;
   approvedBy?: string | null;
   note?: string | null;
-}): EmployeeCompetency[] => {
+}): void => {
   const db = getDb();
-  const normalizedNote = input.note?.trim() ? input.note.trim() : null;
+  const normalizedNote = input.note ?? null;
   const normalizedApprovedAt = input.approvedAt ?? null;
-  const normalizedApprovedBy = input.approvedBy?.trim() ? input.approvedBy.trim() : null;
+  const normalizedApprovedBy = input.approvedBy ?? null;
   const normalizedLevel = input.level ?? null;
 
   const old = db
@@ -247,7 +251,65 @@ export const saveEmployeeCompetency = (input: {
       stageScheme,
     );
   })();
+};
 
+export const saveEmployeeCompetency = (
+  input: Parameters<typeof writeEmployeeCompetency>[0],
+): EmployeeCompetency[] => {
+  writeEmployeeCompetency({
+    ...input,
+    note: input.note?.trim() || null,
+    approvedBy: input.approvedBy?.trim() || null,
+  });
+  return listEmployeeCompetencies(input.employeeId);
+};
+
+export const bulkChangeCompetencies = (input: BulkCompetencyChange): EmployeeCompetency[] => {
+  const db = getDb();
+  if (!Number.isInteger(input.employeeId) || !Array.isArray(input.changes) || !input.changes.length)
+    throw new Error('Bitte Kompetenzen auswählen.');
+  const ids = new Set(input.changes.map((change) => change.competencyDefinitionId));
+  if (ids.size !== input.changes.length) throw new Error('Kompetenzen wurden mehrfach ausgewählt.');
+  db.transaction(() => {
+    const assigned = listEmployeeCompetencies(input.employeeId);
+    for (const change of input.changes) {
+      if (!Number.isInteger(change.competencyDefinitionId) || !Number.isInteger(change.level))
+        throw new Error('Ungültige Kompetenz oder Stufe.');
+      const old = assigned.find(
+        (entry) => entry.competencyDefinitionId === change.competencyDefinitionId,
+      );
+      if (!old)
+        throw new Error('Eine ausgewählte Kompetenz ist dieser Person nicht mehr zugeordnet.');
+      if (old.stageScheme !== change.stageScheme)
+        throw new Error(
+          `${old.competencyName}: Das Stufenmodell hat sich geändert. Bitte die Auswahl neu öffnen.`,
+        );
+      const completion = change.stageScheme === 'practice-v1' && change.level === 6;
+      if (completion && (!input.completion?.approvedAt || !input.completion.approvedBy.trim()))
+        throw new Error('Abschluss braucht Bestätigungsdatum und verantwortliche Person.');
+      const approvedAt = completion ? input.completion!.approvedAt : old.approvedAt;
+      const approvedBy = completion ? input.completion!.approvedBy.trim() : old.approvedBy;
+      if (
+        old.level === change.level &&
+        old.approvedAt === approvedAt &&
+        old.approvedBy === approvedBy
+      )
+        continue;
+      try {
+        writeEmployeeCompetency({
+          ...old,
+          ...change,
+          employeeId: input.employeeId,
+          approvedAt,
+          approvedBy,
+        });
+      } catch (error) {
+        throw new Error(
+          `${old.competencyName}: ${error instanceof Error ? error.message : 'Speichern fehlgeschlagen.'}`,
+        );
+      }
+    }
+  })();
   return listEmployeeCompetencies(input.employeeId);
 };
 

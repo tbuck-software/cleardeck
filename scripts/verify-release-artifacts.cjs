@@ -91,7 +91,7 @@ async function verifyFeeds(root, version, macVersion) {
     });
     if (info.version !== expected) throw Error('Wrong version selected by actual private provider');
     const resolved = PrivateGitHubProvider.prototype.resolveFiles.call({}, info);
-    for (const installed of ['1.7.1', '1.8.0'])
+    for (const installed of ['1.7.1', '1.8.0', '2.0.0'])
       checks.push({
         channel,
         installed,

@@ -41,7 +41,7 @@ export type TeilgruppeFilter = 'archived' | 'all' | 'A' | 'B' | 'C' | 'D';
 
 export type CalendarView = 'month' | 'week' | 'year';
 
-export type EventModalType = EmployeeEventType | 'period';
+export type EventModalType = EmployeeEventType | 'period' | 'working-time';
 
 export type TimelineItem =
   | { kind: 'period'; date: string; record: EmploymentPeriod }
@@ -143,7 +143,7 @@ export type ConfirmState = {
 export type EditModalState = {
   sourceRef?: string | null;
   hoursEffectiveFrom?: string;
-  hoursVerified?: boolean;
+  initialHoursEffectiveFrom?: string;
   open: boolean;
   mode: 'edit' | 'create';
   name: string;

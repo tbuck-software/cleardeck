@@ -35,17 +35,6 @@ const selectedEmployee: EmployeeWithPeriod = {
   createdAt: '2023-12-15',
 };
 
-const form = {
-  name: '',
-  qualification: 'Pflegekraft',
-  note: '',
-  startDate: '2024-01-01',
-  endDate: '',
-  fte: 1,
-  weeklyHours: null as number | null,
-  linked: true,
-};
-
 describe('useEventsPeriods timeline', () => {
   it('sortiert Timeline-Items absteigend und nutzt Join-Datum als Start', async () => {
     listPeriodsMock.mockResolvedValue([
@@ -60,7 +49,7 @@ describe('useEventsPeriods timeline', () => {
       useEventsPeriods({
         year: 2024,
         qualifications: [{ name: 'Pflegekraft' }],
-        form,
+        setForm: vi.fn(),
         selectedEmployee,
         setSelectedEmployee: vi.fn(),
         setDataset: vi.fn<(value: YearDataset | null | ((prev: YearDataset | null) => YearDataset | null)) => void>(),

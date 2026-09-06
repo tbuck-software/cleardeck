@@ -54,6 +54,10 @@ export const api = {
       call('saveEmployee', baseApi.saveEmployee, input),
     delete: (id: number, year: number) => call('deleteEmployee', baseApi.deleteEmployee, id, year),
   },
+  workingTimes: {
+    save: (input: Parameters<Api['saveWorkingTime']>[0]) =>
+      call('saveWorkingTime', baseApi.saveWorkingTime, input),
+  },
   events: {
     save: (input: Parameters<Api['saveEvent']>[0]) => call('saveEvent', baseApi.saveEvent, input),
     delete: (id: number, employeeId: number) =>
@@ -84,6 +88,8 @@ export const api = {
       call('reorderCompetencyDefinitions', baseApi.reorderCompetencyDefinitions, ids),
     listEmployee: (employeeId: number) =>
       call('listEmployeeCompetencies', baseApi.listEmployeeCompetencies, employeeId),
+    bulkChange: (input: Parameters<Api['bulkChangeCompetencies']>[0]) =>
+      call('bulkChangeCompetencies', baseApi.bulkChangeCompetencies, input),
     saveEmployee: (input: Parameters<Api['saveEmployeeCompetency']>[0]) =>
       call('saveEmployeeCompetency', baseApi.saveEmployeeCompetency, input),
     deleteEmployee: (employeeId: number, competencyDefinitionId: number) =>

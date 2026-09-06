@@ -70,6 +70,7 @@ const renderDetail = (
       availableInstructionCount={3}
       onTabChange={noop}
       onEdit={noop}
+      onCompetenciesSaved={vi.fn()} onWorkingTimeSaved={async () => undefined}
       onAddCompetency={noop}
       onAddInstruction={noop}
       onOpenSuggestedCompetencies={noop}
@@ -97,7 +98,7 @@ describe('EmployeeDetail', () => {
     renderDetail();
 
     expect(screen.getByText('Subkutane Injektion')).toBeInTheDocument();
-    expect(screen.getByText('5 · Stufe 5')).toBeInTheDocument();
+    expect(screen.getByText('Stufe 5')).toBeInTheDocument();
     expect(screen.getByText('Offen')).toBeInTheDocument();
   });
 
@@ -131,4 +132,36 @@ describe('EmployeeDetail', () => {
     expect(screen.getByText('Kompetenz hinzufügen').closest('button')).toBeDisabled();
     expect(screen.getByText('Alle Kompetenzen des Katalogs sind zugeordnet.')).toBeInTheDocument();
   });
+});
+
+it('shows effective working-time sections in the existing timeline, without recording snapshots or a second table', () => {
+  renderDetail({
+    tab: 'hist',
+    employee: {
+      ...employee,
+      workingTimes: [
+        { id: 2, periodId: 1, effectiveFrom: '2025-01-01', effectiveUntil: null, weeklyHours: 36, fte: 1 },
+        { id: 1, periodId: 1, effectiveFrom: '2024-09-01', effectiveUntil: '2024-12-31', weeklyHours: 18, fte: 0.5 },
+      ],
+      hoursHistory: [
+        { id: 3, effectiveFrom: '2025-01-01', weeklyHours: 27, fte: 0.75, verified: 1, sourceRef: null, changedAt: '2026-09-06 13:00:00' },
+      ],
+    },
+    timelineItems: [
+      { kind: 'event', date: '2025-01-01', record: { id: 1, eventDate: '2025-01-01', type: 'weekly-hours-change', title: 'Wochenstundenänderung' } },
+      { kind: 'event', date: '2024-12-01', record: { id: 2, eventDate: '2024-12-01', type: 'custom', title: 'Probezeit beendet' } },
+    ],
+  });
+  const section = screen.getByRole('heading', { name: 'Historie' }).closest('section')!;
+  expect(section).toHaveTextContent('36 Std./Woche · 1,00 VZÄ');
+  expect(section).toHaveTextContent('18 Std./Woche · 0,50 VZÄ · bis 31.12.2024');
+  expect(section).toHaveTextContent('Probezeit beendet');
+  expect(section).not.toHaveTextContent('Wochenstundenänderung');
+  expect(section).not.toHaveTextContent('Arbeitszeit erfasst');
+  expect(section).not.toHaveTextContent('27 Std./Woche');
+  expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  const rows = section.querySelectorAll('.cd-timeline-row');
+  expect(rows[0]).toHaveTextContent('01.01.2025');
+  expect(rows[1]).toHaveTextContent('01.12.2024');
+  expect(rows[2]).toHaveTextContent('01.09.2024');
 });

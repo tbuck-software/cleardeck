@@ -47,13 +47,19 @@ function inspect(bytes) {
       `SELECT id,patientId,visitDate,comment,${Number(version) >= 14 ? 'legacyQprRating' : 'qprRating'} AS oldRating FROM patient_visits ORDER BY id`,
     ),
   };
-  if (process.env.OLD_VERSION === '1.8.0') {
+  if (process.env.OLD_VERSION !== '1.7.1') {
     snapshot.competencies = all(
       'SELECT employeeId,competencyDefinitionId,level,approvedAt,approvedBy FROM employee_competencies ORDER BY employeeId,competencyDefinitionId',
     );
     snapshot.instructions = all(
       'SELECT id,employeeId,instructionDefinitionId,dueDate,completedAt FROM employee_instructions ORDER BY id',
     );
+  }
+  if (process.env.OLD_VERSION === '2.0.0') {
+    for (const table of ['employees', 'employment_periods', 'employee_events', 'patients',
+      'patient_visits', 'employee_competencies', 'employee_instructions', 'employment_terms',
+      'employment_term_history', 'competency_history', 'audits', 'audit_clients', 'audit_results'])
+      snapshot[table] = all(`SELECT * FROM ${table} ORDER BY ${table === 'audit_clients' ? 'auditId, patientId' : 'id'}`);
   }
   assert.equal(all('PRAGMA quick_check')[0].quick_check, 'ok');
   assert.equal(all('PRAGMA foreign_key_check').length, 0);
@@ -104,7 +110,7 @@ async function run() {
       keyTag: wrapped.tag.toString('base64'),
       keyFingerprint: hash(key),
       configVersion: process.env.OLD_VERSION === '1.7.1' ? 2 : 3,
-      ...(process.env.OLD_VERSION === '1.8.0' ? { storageMode: 'encrypted' } : {}),
+      ...(process.env.OLD_VERSION !== '1.7.1' ? { storageMode: 'encrypted' } : {}),
     };
     const configBytes = Buffer.from(JSON.stringify(config));
     fs.writeFileSync(path.join(data, 'config.json'), configBytes);
@@ -133,12 +139,18 @@ async function run() {
       crypto.pbkdf2Sync(password, config.salt, 200000, 32, 'sha512'),
     );
     const after = inspect(decrypt(fs.readFileSync(path.join(data, 'employee.db.enc')), key));
-    assert.equal(after.version, '21');
+    const registry = fs.readFileSync('src/main/database/migrations/index.ts', 'utf8')
+      .match(/export const migrations[^=]*=\s*\[([\s\S]*?)\]/)?.[1];
+    const registered = [...(registry || '').matchAll(/v(\d+)_/g)];
+    if (!registered.length) throw Error('Cannot determine registered target schema.');
+    const targetSchema = Number(registered.at(-1)[1]);
+    assert.equal(Number(after.version), targetSchema);
     assert.deepEqual(after.snapshot, before.snapshot);
-    const backups = fs
-      .readdirSync(path.join(data, 'backups'))
+    const backupDir = path.join(data, 'backups');
+    const backups = (fs.existsSync(backupDir) ? fs.readdirSync(backupDir) : [])
       .filter((f) => f.startsWith('before-migration-'));
-    assert.equal(backups.length, 1);
+    const expectedBackups = Number(before.version) < targetSchema ? 1 : 0;
+    assert.equal(backups.length, expectedBackups);
     fs.writeFileSync(
       path.join(result, 'result.json'),
       JSON.stringify(
@@ -155,7 +167,7 @@ async function run() {
       ),
     );
     console.log(
-      'Original configuration, keys, records and histories preserved; schema21; exactly one automatic migration backup.',
+      `Original configuration, keys, records and histories preserved; schema ${targetSchema}; ${expectedBackups} automatic migration backups.`,
     );
     return;
   }
@@ -189,12 +201,18 @@ async function run() {
     assert.equal(info.data.employees[0].name, 'Upgrade Test');
     console.log(`Unlocked installed ${info.info.version}; existing employee loaded.`);
     if (mode === 'old-ui') {
-      const sidebar = page.locator('.sidebar-content');
-      if ((await sidebar.count()) && !(await sidebar.isVisible()))
-        await page.getByRole('button', { name: 'Menü umschalten', exact: true }).click();
-      const install = page
-        .locator('.sidebar')
-        .getByRole('button', { name: 'Installieren', exact: true });
+      let install;
+      if (process.env.OLD_VERSION === '2.0.0') {
+        await page.locator('.app-sidebar .cd-nav-update').waitFor({ state: 'visible', timeout: 180000 });
+        await page.locator('.app-sidebar .cd-nav-update').click();
+        await page.getByRole('button', { name: 'Herunterladen', exact: true }).click();
+        install = page.getByRole('button', { name: 'Installieren & neu starten', exact: true });
+      } else {
+        const sidebar = page.locator('.sidebar-content');
+        if ((await sidebar.count()) && !(await sidebar.isVisible()))
+          await page.getByRole('button', { name: 'Menü umschalten', exact: true }).click();
+        install = page.locator('.sidebar').getByRole('button', { name: 'Installieren', exact: true });
+      }
       await install.waitFor({ state: 'visible', timeout: 180000 });
       await page.screenshot({ path: path.join(result, 'before-install.png') });
       console.log('Candidate downloaded; clicking the original sidebar Installieren button.');

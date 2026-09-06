@@ -1,4 +1,3 @@
-import Checkbox from '../ui/Checkbox';
 import React from 'react';
 import Dialog from '../ui/Dialog';
 import Icon from '../ui/Icon';
@@ -52,7 +51,7 @@ const EmployeeModal = ({
           : [
               {
                 title: 'Was gilt für frühere Zeiträume?',
-                body: 'Frühere Stände bleiben erhalten. Übernommene Altwerte sind ungeprüft; das Bestätigen eines heutigen Wertes bestätigt keine früheren Zeiträume.',
+                body: 'Arbeitszeiten gelten bis zur nächsten Änderung. Den Beschäftigungsbeginn unter Historie korrigieren.',
               },
             ]),
       ]}
@@ -170,15 +169,6 @@ const EmployeeModal = ({
         </div>
       </div>
 
-      <label className="cd-form-label">
-        Personalbeleg
-        <input
-          className="input"
-          value={state.sourceRef ?? ''}
-          placeholder="Vertrag oder Dokumentverweis"
-          onChange={(event) => onStateChange({ sourceRef: event.target.value })}
-        />
-      </label>
       {!isCreate && (
         <div className="cd-field-grid">
           <div className="field">
@@ -193,12 +183,6 @@ const EmployeeModal = ({
               onChange={(event) => onStateChange({ hoursEffectiveFrom: event.target.value })}
             />
           </div>
-          <Checkbox
-            checked={state.hoursVerified ?? false}
-            onChange={(event) => onStateChange({ hoursVerified: event.target.checked })}
-          >
-            Ab diesem Datum anhand der Belege geprüft
-          </Checkbox>
         </div>
       )}
       <div className="field">

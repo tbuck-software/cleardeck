@@ -27,3 +27,9 @@ Ein Beleg über Inhalt und Durchführung einer Unterweisung. Ein Termin oder ein
 
 **Vollzeitäquivalent, VZÄ**:
 Ein zeitbezogener Rechenwert aus der Arbeitszeit einer Person. ClearDeck verwendet eine betrieblich gewünschte Begrenzung auf 1,0 ab 36 Wochenstunden; die zugrunde liegende Regel ist keine allgemeine gesetzliche Definition.
+
+**Arbeitszeitstand**:
+Die vereinbarten Wochenstunden und der Stellenanteil einer Person ab einem Gültigkeitsdatum. Arbeitszeit und Qualifikation sind eigenständige Merkmale; ein Qualifikationswechsel bedeutet nicht automatisch eine Stundenänderung.
+
+**Arbeitszeitkorrektur**:
+Die Berichtigung eines bestehenden Arbeitszeitstands, einschließlich seines Gültigkeitsbeginns. Der Änderungsverlauf hält die früheren Fassungen fest.

@@ -13,7 +13,7 @@ const notes = path.resolve('release-notes.md');
 execFileSync(process.execPath, ['scripts/release-notes.js', notes]);
 fs.appendFileSync(
   notes,
-  '\nPlattformen: Version 2.0.0 erscheint für Windows und Linux. Für macOS enthält dieser Release ausschließlich den unveränderten bisherigen Updatefeed und das ZIP der Version 1.8.0, damit bestehende Mac-Clients weiterhin denselben Feed auflösen können. Es gibt hier keine neue Mac-Version; der bekannte Signaturfehler älterer Mac-Installationen ist damit nicht behoben.\n',
+  `\nPlattformen: ${version} für Windows und Linux. macOS bleibt bei 1.8.0; der bisherige Signaturfehler ist nicht behoben.\n`,
 );
 const gh = (args) => execFileSync('gh', args, { stdio: 'pipe', encoding: 'utf8' });
 // Never overwrite an existing published release or expose a partially uploaded one.

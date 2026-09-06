@@ -144,6 +144,7 @@ const App = () => {
       patientVisitModal,
     },
     setters: {
+      setEmployeeCompetencies,
       setYear,
       setDataset,
       setQualifications,
@@ -1185,7 +1186,7 @@ const App = () => {
         )}
 
         {page === 'view' && selectedEmployee && (
-          <EmployeeDetail
+          <EmployeeDetail key={selectedEmployee.id}
             instructionReminderDays={careSettings.instructionReminderDays}
             employee={selectedEmployee}
             baseHours={baseHours}
@@ -1198,6 +1199,14 @@ const App = () => {
             availableInstructionCount={availableInstructionDefinitions.length}
             onTabChange={setDetailTab}
             onEdit={openEditModal}
+            onWorkingTimeSaved={async () => {
+              const updated = await api.employees.list(year);
+              setDataset(updated);
+              const refreshed = updated.employees.find(person => person.id === selectedEmployee.id)
+                ?? (await api.employees.list(year, 'directory')).employees.find(person => person.id === selectedEmployee.id);
+              if (refreshed) await handleSelect(refreshed);
+            }}
+            onCompetenciesSaved={setEmployeeCompetencies}
             onAddCompetency={openNewEmployeeCompetencyModal}
             onAddInstruction={openNewEmployeeInstructionModal}
             onOpenSuggestedCompetencies={openSuggestedCompetencyModal}
@@ -1590,6 +1599,15 @@ const App = () => {
 
       {eventModal.open && selectedEmployee && (
         <EventModal
+          employee={selectedEmployee}
+          baseHours={baseHours}
+          onWorkingTimeSaved={async () => {
+              const updated = await api.employees.list(year);
+              setDataset(updated);
+              const refreshed = updated.employees.find(person => person.id === selectedEmployee.id)
+                ?? (await api.employees.list(year, 'directory')).employees.find(person => person.id === selectedEmployee.id);
+              if (refreshed) await handleSelect(refreshed);
+            }}
           state={eventModal}
           periodForm={addPeriodForm}
           qualifications={qualifications}

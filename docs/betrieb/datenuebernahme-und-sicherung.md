@@ -31,7 +31,7 @@ Unter Team „Mitarbeiterliste übernehmen“ wählen. Unterstützt werden Excel
 - Stunden und VZÄ in der Vorschau prüfen. Der Vorschlag verwendet `min(Wochenstunden, 36) / 36`. Bereits taggewichtete Werte aus alten Tabellen werden nicht als konstanter Stellenanteil übernommen.
 - Beschäftigungsabschnitte dürfen sich bei derselben Person nicht überschneiden. Mehrere Stundenstände mit unterschiedlichen Zeiträumen müssen getrennt nachgetragen werden.
 - Die Übernahme wird als Ganzes gespeichert. Bei einem Fehler wird keine Teilmenge zurückgelassen. Vorher entsteht eine Sicherheitskopie.
-- Importierte Stundenstände bleiben ungeprüft. Unter „Bearbeiten“ den passenden Gültigkeitsbeginn und Personalbeleg angeben und den Stand anhand der Unterlagen bestätigen.
+- Importierte Stundenstände bleiben als ungeprüfte Altdaten gekennzeichnet. Unter „Bearbeiten“ die Stunden und den passenden Gültigkeitsbeginn eintragen. Geänderte Angaben gelten mit dem Speichern als bestätigt, ohne zusätzliche Checkbox.
 
 Makros werden nicht ausgeführt. Freitext zu Arbeitszeitverläufen wird nicht automatisch in rechtlich oder fachlich bestätigte Beschäftigungsperioden umgedeutet.
 

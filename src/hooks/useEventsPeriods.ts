@@ -19,7 +19,7 @@ import type {
   TimelineItem,
 } from '../types/ui';
 
-const typeLabels: Record<Exclude<EventModalType, 'period'>, string> = {
+const typeLabels: Record<Exclude<EventModalType, 'period' | 'working-time'>, string> = {
   join: 'Eintritt',
   leave: 'Austritt',
   'name-change': 'Namensänderung',
@@ -34,7 +34,7 @@ const typeLabels: Record<Exclude<EventModalType, 'period'>, string> = {
 type UseEventsPeriodsParams = {
   year: number;
   qualifications: QualificationType[];
-  form: FormState;
+  setForm: (updater: (prev: FormState) => FormState) => void;
   selectedEmployee: EmployeeWithPeriod | null;
   setSelectedEmployee: (emp: EmployeeWithPeriod | null) => void;
   setDataset: (
@@ -73,7 +73,7 @@ const initialEventModal = (): EventModalState => ({
 const useEventsPeriods = ({
   year,
   qualifications,
-  form,
+  setForm,
   selectedEmployee,
   setSelectedEmployee,
   setDataset,
@@ -173,6 +173,25 @@ const useEventsPeriods = ({
       };
       const updated = await api.employees.save(payload);
       setDataset(updated);
+      if (addPeriodForm.periodId && addPeriodForm.periodId === selectedEmployee.periodId) {
+        const refreshed = updated.employees.find((employee) =>
+          employee.id === selectedEmployee.id && employee.periodId === selectedEmployee.periodId,
+        ) ?? {
+          ...selectedEmployee,
+          startDate: payload.startDate,
+          endDate: payload.endDate,
+          qualification: payload.qualification,
+        };
+        setSelectedEmployee(refreshed);
+        setForm((prev) => ({
+          ...prev,
+          startDate: refreshed.startDate,
+          endDate: refreshed.endDate ?? '',
+          qualification: refreshed.qualification,
+          weeklyHours: refreshed.weeklyHours ?? null,
+          fte: refreshed.fte,
+        }));
+      }
       await loadHistory(selectedEmployee.id ?? 0);
       setEventModal((prev) => ({ ...prev, open: false }));
       setToast(
@@ -190,8 +209,8 @@ const useEventsPeriods = ({
     addPeriodForm.qualification,
     addPeriodForm.startDate,
     addPeriodForm.note,
-    form.fte,
-    form.weeklyHours,
+    setForm,
+    setSelectedEmployee,
     handleError,
     loadHistory,
     selectedEmployee,
@@ -236,6 +255,7 @@ const useEventsPeriods = ({
       await handleAddPeriod();
       return;
     }
+    if (eventModal.type === 'working-time') return;
     if (!eventModal.eventDate) {
       handleError(new Error('Datum darf nicht leer sein.'));
       return;

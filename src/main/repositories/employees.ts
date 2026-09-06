@@ -13,6 +13,7 @@ import type {
   YearDataset,
 } from '../../shared/types';
 
+import { listWorkingTimes } from './workingTimes';
 import { getDb } from '../database/connection';
 import { buildEmployeeChangeEvents } from '../employeeHistory';
 import { saveEvent } from './events';
@@ -187,9 +188,10 @@ export const getYearDataset = (
       weeklyHours: terms?.weeklyHours ?? null,
       fte: terms?.fte ?? 0,
       sourceRef: terms?.sourceRef ?? null,
+      workingTimes: listWorkingTimes(row.employeeId),
       hoursHistory: db
         .prepare(
-          `SELECT h.effectiveFrom,h.weeklyHours,h.fte,h.verified,h.sourceRef,h.changedAt FROM employment_term_history h JOIN employment_periods p ON p.id=h.periodId WHERE p.employeeId=? ORDER BY h.effectiveFrom DESC,h.id DESC`,
+          `SELECT h.id,h.effectiveFrom,h.weeklyHours,h.fte,h.verified,h.sourceRef,h.changedAt FROM employment_term_history h JOIN employment_periods p ON p.id=h.periodId WHERE p.employeeId=? ORDER BY h.id DESC`,
         )
         .all(row.employeeId) as EmployeeWithPeriod['hoursHistory'],
       hoursVerified: terms?.verified === 1,

@@ -102,3 +102,32 @@ for (const [tag, mode] of [
     });
   });
 }
+
+it('reopens the original 2.0.0 schema without changing records or creating a migration backup', () => {
+  runtime.root = fs.mkdtempSync(path.join(os.tmpdir(), 'cleardeck-v200-upgrade-'));
+  setStorageMode('plain');
+  setEncryptionKey(null);
+  fs.mkdirSync(getDataDir(), { recursive: true });
+  const old = new SqliteAdapter(':memory:');
+  old.exec(fs.readFileSync(path.join(__dirname, 'fixtures', 'v2.0.0.sql'), 'utf8'));
+  const tables = ['employees', 'employment_periods', 'employee_competencies', 'competency_history',
+    'employment_terms', 'employment_term_history', 'employee_instructions', 'patients', 'patient_visits'];
+  const snapshot = (db: Pick<SqliteAdapter, 'prepare'>) => tables.map(table =>
+    db.prepare(`SELECT * FROM ${table} ORDER BY id`).all());
+  const before = snapshot(old);
+  fs.writeFileSync(getWorkingDbPath(), old.serialize());
+  fs.writeFileSync(path.join(getDataDir(), 'config.json'), '{}');
+  old.close();
+  try {
+    for (let start = 0; start < 2; start++) {
+      openDatabase();
+      expect(snapshot(getDb() as unknown as SqliteAdapter)).toEqual(before);
+      const backupDir = path.join(getDataDir(), 'backups');
+      expect(fs.existsSync(backupDir) ? fs.readdirSync(backupDir).filter(name => name.startsWith('before-migration-')) : []).toEqual([]);
+      closeDb();
+    }
+  } finally {
+    closeDb();
+    fs.rmSync(runtime.root, { recursive: true, force: true });
+  }
+});

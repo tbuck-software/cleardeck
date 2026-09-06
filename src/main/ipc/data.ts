@@ -1,3 +1,4 @@
+import { saveWorkingTime } from '../repositories/workingTimes';
 import { chooseStaffImport, commitStaffImport } from '../staffImport';
 /**
  * Data IPC Handlers
@@ -9,6 +10,7 @@ import { shell } from 'electron';
 import { handleData } from './persistentHandler';
 
 import type {
+  BulkCompetencyChange,
   AuditResult,
   EmployeeEventType,
   IntervalSource,
@@ -59,6 +61,7 @@ import {
   listCompetencyDefinitions,
   listEmployeeCompetencies,
   reorderCompetencyDefinitions,
+  bulkChangeCompetencies,
   saveEmployeeCompetency,
   updateCompetencyDefinition,
 } from '../repositories/competencies';
@@ -152,6 +155,11 @@ export const registerDataHandlers = (): void => {
   handleData('data:listPeriods', (_event, { employeeId }: { employeeId: number }) => {
     ensureDbReady();
     return listPeriods(employeeId);
+  });
+
+  handleData('data:saveWorkingTime', (_event, input) => {
+    ensureDbReady();
+    return saveWorkingTime(input);
   });
 
   handleData('data:save', (_event, input) => {
@@ -275,6 +283,11 @@ export const registerDataHandlers = (): void => {
   handleData('competencies:reorderDefinitions', (_event, { ids }: { ids: number[] }) => {
     ensureDbReady();
     return reorderCompetencyDefinitions(ids);
+  });
+
+  handleData('competencies:bulkChange', (_event, input: BulkCompetencyChange) => {
+    ensureDbReady();
+    return bulkChangeCompetencies(input);
   });
 
   handleData('competencies:listEmployee', (_event, { employeeId }: { employeeId: number }) => {

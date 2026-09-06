@@ -4,7 +4,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 const { parse } = require('yaml');
-if (require('../package.json').version !== '2.0.0')
+if (require('../package.json').version !== '2.1.0')
   throw Error('Review the platform plan before a later release.');
 const dir = path.resolve(process.argv[2]);
 fs.mkdirSync(dir, { recursive: true });
