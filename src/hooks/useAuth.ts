@@ -67,7 +67,8 @@ const useAuth = ({
         configured: false,
         unlocked: false,
         storageMode: 'encrypted',
-        startupError: err instanceof Error ? err.message : 'Der lokale Datenstatus kann nicht gelesen werden.',
+        startupError:
+          err instanceof Error ? err.message : 'Der lokale Datenstatus kann nicht gelesen werden.',
       });
       setAuthLoading(false);
       return;
@@ -166,6 +167,7 @@ const useAuth = ({
             : await api.auth.login(payload.password);
         setAppReady(state);
         if (state.unlocked) {
+          hydrateBaseHours(await api.settings.getBaseHours());
           await refreshDataset(year);
           if (mode === 'setup' && state.storageMode === 'encrypted') {
             await openRecoveryKey('setup');

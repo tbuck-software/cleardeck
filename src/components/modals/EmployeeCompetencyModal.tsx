@@ -1,3 +1,4 @@
+import FieldHelp from '../ui/FieldHelp';
 import React from 'react';
 import Dialog from '../ui/Dialog';
 import CompetencyLevelPicker from '../ui/CompetencyLevelPicker';
@@ -30,7 +31,7 @@ const EmployeeCompetencyModal = ({
       open={state.open}
       width={560}
       title={isAssigned ? state.competencyName : 'Kompetenz hinzufügen'}
-      subtitle={`${employeeName} · Stufe und fachliche Freigabe`}
+      subtitle={employeeName}
       primaryLabel="Speichern"
       onPrimary={onSave}
       deleteLabel={isAssigned ? 'Entfernen' : undefined}
@@ -65,12 +66,34 @@ const EmployeeCompetencyModal = ({
 
       <div className="field">
         <label>Stufe</label>
-        <CompetencyLevelPicker value={state.level ?? 0} onChange={(level) => onChange({ level })} />
+        <CompetencyLevelPicker
+          legacy={state.stageScheme === 'legacy'}
+          value={state.level ?? 0}
+          onChange={(level) => onChange({ level })}
+        />
       </div>
 
+      {state.stageScheme === 'legacy' && (
+        <p>
+          Alter Stufenstand, Abschluss noch ungeprüft.{' '}
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() =>
+              onChange({ stageScheme: 'practice-v1', level: null, approvedAt: '', approvedBy: '' })
+            }
+          >
+            Stand neu einschätzen
+          </button>
+        </p>
+      )}
+      <FieldHelp title="Stufen und Bestätigung">
+        Stufen 1–5: Einarbeitung läuft. Stufe 6: abgeschlossen mit Bestätigung. Die Stufe ist keine
+        eigenständige Einsatzberechtigung. Frühere Stände bleiben dokumentiert.
+      </FieldHelp>
       <div className="cd-field-grid">
         <div className="field">
-          <label htmlFor="competency-approved-at">Freigegeben am</label>
+          <label htmlFor="competency-approved-at">Bestätigt am</label>
           <input
             id="competency-approved-at"
             className="input"
@@ -80,7 +103,7 @@ const EmployeeCompetencyModal = ({
           />
         </div>
         <div className="field">
-          <label htmlFor="competency-approved-by">Freigegeben durch</label>
+          <label htmlFor="competency-approved-by">Bestätigt durch</label>
           <input
             id="competency-approved-by"
             className="input"
@@ -91,6 +114,18 @@ const EmployeeCompetencyModal = ({
         </div>
       </div>
 
+      {!!state.stageHistory?.length && (
+        <details>
+          <summary>Bisherige Stände ({state.stageHistory.length})</summary>
+          {state.stageHistory.map((entry, i) => (
+            <p key={i}>
+              {entry.changedAt}: {entry.stageScheme === 'legacy' ? 'Altmodell' : 'Einarbeitung'}{' '}
+              Stufe {entry.level ?? 'offen'} · {entry.approvedAt || 'ohne Bestätigungsdatum'} ·{' '}
+              {entry.approvedBy || 'keine Person erfasst'} · {entry.note}
+            </p>
+          ))}
+        </details>
+      )}
       <div className="field">
         <label htmlFor="competency-entry-note">Notiz</label>
         <textarea

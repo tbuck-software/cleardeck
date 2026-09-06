@@ -6,12 +6,13 @@ export const deriveQualificationTags = (qualification: string): Set<string> => {
 
   if (!value) return tags;
 
+  const assistant = /1[- ](?:jährig|jaehrig)|pflegehilf|pflegeassist|helfer/.test(value);
   if (
-    value.includes('pflegefach') ||
-    value.includes('fachkraft') ||
-    value.includes('3-jährig') ||
-    value.includes('3-jaehrig') ||
-    value.includes('examiniert')
+    !assistant &&
+    (value.includes('pflegefach') ||
+      value.includes('fachkraft') ||
+      value.includes('3-jährig') ||
+      value.includes('3-jaehrig'))
   ) {
     tags.add('Nur PFK');
   }
@@ -33,10 +34,14 @@ export const deriveQualificationTags = (qualification: string): Set<string> => {
 
   if (value.includes('praxisanleitung') || value.includes('praxisanleiter')) {
     tags.add('Praxisanleitung');
-    tags.add('Nur PFK');
+    if (!assistant) tags.add('Nur PFK');
   }
 
-  if (value.includes('qmb') || value.includes('qualitätsmanagement') || value.includes('qualitaetsmanagement')) {
+  if (
+    value.includes('qmb') ||
+    value.includes('qualitätsmanagement') ||
+    value.includes('qualitaetsmanagement')
+  ) {
     tags.add('QMB');
   }
 

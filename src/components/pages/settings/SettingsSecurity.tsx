@@ -86,23 +86,43 @@ const SettingsSecurity = ({
       </header>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-        <span className={`tag ${encrypted ? 'tag-accent-2' : 'tag-bad'}`} style={{ fontWeight: 700 }}>
+        <span
+          className={`tag ${encrypted ? 'tag-accent-2' : 'tag-bad'}`}
+          style={{ fontWeight: 700 }}
+        >
           {encrypted ? 'Verschlüsselt' : 'Unverschlüsselt'}
         </span>
         <span className="cd-muted-14">
           Letztes Backup {relativeDay(backup.lastBackupAt)} ·{' '}
-          {backup.auto === 'off' ? 'kein automatisches Backup' : AUTO_HINTS[backup.auto].replace(/\.$/, '')}
+          {backup.auto === 'off'
+            ? 'kein automatisches Backup'
+            : AUTO_HINTS[backup.auto].replace(/\.$/, '')}
         </span>
       </div>
 
-      {dbMessage && <p className="cd-muted-14" style={{ margin: 0 }}>{dbMessage}</p>}
+      {backup.lastBackupError && (
+        <p role="alert" className="cd-notice cd-notice-bad">
+          Letztes automatisches Backup fehlgeschlagen: {backup.lastBackupError}
+        </p>
+      )}
+      {encrypted && (
+        <p className="cd-muted-13">
+          Datenbank im Arbeitsspeicher; gespeicherte Änderungen werden verschlüsselt auf diesem
+          Gerät gesichert.
+        </p>
+      )}
+      {dbMessage && (
+        <p className="cd-muted-14" style={{ margin: 0 }}>
+          {dbMessage}
+        </p>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <Row
           title={backupBusy ? 'Backup läuft …' : 'Backup jetzt erstellen'}
           note={
             backup.folder
-              ? `Verschlüsselt nach ${backup.folder}`
+              ? `${encrypted ? 'Verschlüsselt' : 'Unverschlüsselt'} nach ${backup.folder}`
               : 'Zuerst unten einen Backup-Ordner wählen'
           }
           disabled={!backup.folder || backupBusy}
@@ -190,8 +210,8 @@ const SettingsSecurity = ({
           </div>
           {backup.backups.length > 0 && (
             <p className="cd-muted-13" style={{ margin: '8px 0 0' }}>
-              {backup.backups.length} {backup.backups.length === 1 ? 'Sicherung' : 'Sicherungen'} im Ordner ·
-              neueste {backup.backups[0].file}
+              {backup.backups.length} {backup.backups.length === 1 ? 'Sicherung' : 'Sicherungen'} im
+              Ordner · neueste {backup.backups[0].file}
             </p>
           )}
         </div>
@@ -215,7 +235,11 @@ const SettingsSecurity = ({
       </div>
 
       <p className="cd-muted-13" style={{ margin: '8px 0 0' }}>
-        <button type="button" className="cd-link cd-danger-link" onClick={() => void onDropDatabase()}>
+        <button
+          type="button"
+          className="cd-link cd-danger-link"
+          onClick={() => void onDropDatabase()}
+        >
           Datenbank löschen
         </button>
         {' oder '}

@@ -1,3 +1,5 @@
+import FieldHelp from '../ui/FieldHelp';
+import { localDate } from '../../utils/calendarDate';
 import React from 'react';
 import Dialog from '../ui/Dialog';
 import { describeInterval, nextDueDate } from '../../utils/instructionSchedule';
@@ -33,8 +35,13 @@ const EmployeeInstructionModal = ({
   const isAssigned = Boolean(state.id);
   const interval = definition?.intervalMonths ?? null;
   const followUpDate =
-    state.completedAt && interval != null
-      ? nextDueDate(interval, employeeBirthDate, state.completedAt)
+    state.completedAt && (interval != null || definition?.minorHazardInstruction)
+      ? nextDueDate(
+          interval,
+          employeeBirthDate,
+          state.completedAt,
+          definition?.minorHazardInstruction,
+        )
       : null;
   const shortened =
     followUpDate != null && nextDueDate(interval, null, state.completedAt) !== followUpDate;
@@ -44,10 +51,10 @@ const EmployeeInstructionModal = ({
       open={state.open}
       width={520}
       title={isAssigned ? state.instructionName : 'Einweisung hinzufügen'}
-      subtitle={`${employeeName} · Pflichtunterweisung`}
+      subtitle={employeeName}
       primaryLabel="Speichern"
       onPrimary={onSave}
-      deleteLabel={isAssigned ? 'Entfernen' : undefined}
+      deleteLabel={isAssigned ? 'Diesen Eintrag entfernen' : undefined}
       onDelete={isAssigned ? onDelete : undefined}
       onClose={onClose}
     >
@@ -93,6 +100,7 @@ const EmployeeInstructionModal = ({
             id="instruction-completed"
             className="input"
             type="date"
+            max={localDate()}
             value={state.completedAt}
             onChange={(event) => onChange({ completedAt: event.target.value })}
           />
@@ -110,7 +118,7 @@ const EmployeeInstructionModal = ({
         />
       </div>
 
-      {interval != null ? (
+      {interval != null || definition?.minorHazardInstruction ? (
         <>
           <label className="radio">
             <input
@@ -120,7 +128,10 @@ const EmployeeInstructionModal = ({
             />
             <span className="dot" style={{ borderRadius: 5 }} />
             <span>
-              Nach Abschluss wieder fällig <span className="cd-muted">— {describeInterval(interval)}</span>
+              Nach Abschluss wieder fällig{' '}
+              <span className="cd-muted">
+                — {describeInterval(interval, definition?.intervalSource)}
+              </span>
             </span>
           </label>
           {state.scheduleFollowUp && followUpDate && (
@@ -132,10 +143,40 @@ const EmployeeInstructionModal = ({
         </>
       ) : (
         <p className="cd-muted-13" style={{ margin: 0 }}>
-          Für diese Einweisung ist kein Intervall hinterlegt — sie wird nicht automatisch wieder fällig.
+          Für diese Einweisung ist kein Intervall hinterlegt — sie wird nicht automatisch wieder
+          fällig.
         </p>
       )}
 
+      <div className="field">
+        <label htmlFor="instruction-content">Inhalte</label>
+        <textarea
+          id="instruction-content"
+          className="input"
+          value={state.content ?? ''}
+          onChange={(event) => onChange({ content: event.target.value })}
+        />
+      </div>
+      <div className="field">
+        <label htmlFor="instruction-evidence">Nachweis</label>
+        <input
+          id="instruction-evidence"
+          className="input"
+          value={state.evidenceRef ?? ''}
+          onChange={(event) => onChange({ evidenceRef: event.target.value })}
+        />
+        <FieldHelp title="Was gehört zum Nachweis?">
+          Dieses Register ersetzt keine erforderliche Unterschrift. Inhalt, Zeitpunkt und
+          unterschriebenen Beleg bzw. Zertifikat im angegebenen System aufbewahren.
+        </FieldHelp>
+      </div>
+      {state.scheduleReviewRequired && (
+        <label>
+          <input type="checkbox" onChange={() => onChange({ scheduleReviewRequired: false })} />{' '}
+          Bisherige Wiedervorlage geprüft; pauschale Minderjährigenregel trifft auf dieses Thema
+          nicht zu.
+        </label>
+      )}
       <div className="field">
         <label htmlFor="instruction-entry-note">Notiz</label>
         <textarea

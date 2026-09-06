@@ -1,3 +1,4 @@
+import { localDate } from '../../utils/calendarDate';
 /**
  * Database Seed Data
  *
@@ -70,7 +71,7 @@ type PatientSeed = {
   }>;
 };
 
-const toIsoDate = (date: Date): string => date.toISOString().slice(0, 10);
+const toIsoDate = (date: Date): string => localDate(date);
 
 const shiftDays = (base: Date, days: number): string => {
   const next = new Date(base);
@@ -81,9 +82,7 @@ const shiftDays = (base: Date, days: number): string => {
 const withYear = (base: Date, year: number, dayOffset = 0): string => {
   const shifted = new Date(base);
   shifted.setUTCDate(shifted.getUTCDate() + dayOffset);
-  const next = new Date(
-    Date.UTC(year, shifted.getUTCMonth(), shifted.getUTCDate()),
-  );
+  const next = new Date(Date.UTC(year, shifted.getUTCMonth(), shifted.getUTCDate()));
   return toIsoDate(next);
 };
 
@@ -146,7 +145,9 @@ export const seedDatabase = (db: DatabaseType): void => {
   }
 
   const today = new Date();
-  const baseDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+  const baseDate = new Date(
+    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()),
+  );
   const baseHours = 38;
 
   // Zielbild fuer den Demo-Dienst:
@@ -697,9 +698,10 @@ export const seedDatabase = (db: DatabaseType): void => {
 
     // D is an additional mark: it can land on any group, including one whose
     // assessment is still missing.
-    const hkpCode = index % 11 === 3 ? HKP[(index / 11) | 0] ?? '31a' : null;
+    const hkpCode = index % 11 === 3 ? (HKP[(index / 11) | 0] ?? '31a') : null;
     // Intensive care is rare and only ever alongside an HKP service.
-    const intensiveCare = hkpCode && index % 22 === 3 ? INTENSIVE[(index / 22) | 0] ?? 'AKI' : null;
+    const intensiveCare =
+      hkpCode && index % 22 === 3 ? (INTENSIVE[(index / 22) | 0] ?? 'AKI') : null;
 
     // Two people were admitted days ago: their first visit is coming up but not
     // yet overdue, which is a different state from "no visit for two years".
@@ -747,7 +749,7 @@ export const seedDatabase = (db: DatabaseType): void => {
       mobilityImpaired,
       hkpCode,
       intensiveCare,
-      careLevel: index % 8 === 5 ? null : ((index % 4) + 2),
+      careLevel: index % 8 === 5 ? null : (index % 4) + 2,
       visits,
     };
   });
@@ -940,8 +942,10 @@ export const seedDatabase = (db: DatabaseType): void => {
         note: patient.note ?? null,
         contact: patient.contact ?? null,
         admissionDate: patient.admissionDate ?? null,
-        cognitionImpaired: patient.cognitionImpaired == null ? null : patient.cognitionImpaired ? 1 : 0,
-        mobilityImpaired: patient.mobilityImpaired == null ? null : patient.mobilityImpaired ? 1 : 0,
+        cognitionImpaired:
+          patient.cognitionImpaired == null ? null : patient.cognitionImpaired ? 1 : 0,
+        mobilityImpaired:
+          patient.mobilityImpaired == null ? null : patient.mobilityImpaired ? 1 : 0,
         hkpCode: patient.hkpCode ?? null,
         intensiveCare: patient.intensiveCare ?? null,
         careLevel: patient.careLevel ?? null,
@@ -1025,8 +1029,12 @@ export const seedDatabase = (db: DatabaseType): void => {
           (employeeIndex + assignmentIndex) % 6 === 0
             ? null
             : ((employeeIndex + assignmentIndex) % 5) + 1;
-        const approvedAt = level ? shiftDays(baseDate, -(employeeIndex * 7 + assignmentIndex * 9 + 12)) : null;
-        const approvedBy = level ? approvers[(employeeIndex + assignmentIndex) % approvers.length] : null;
+        const approvedAt = level
+          ? shiftDays(baseDate, -(employeeIndex * 7 + assignmentIndex * 9 + 12))
+          : null;
+        const approvedBy = level
+          ? approvers[(employeeIndex + assignmentIndex) % approvers.length]
+          : null;
 
         insertEmployeeCompetency.run({
           employeeId: employeeRow.id,
@@ -1058,7 +1066,9 @@ export const seedDatabase = (db: DatabaseType): void => {
               ? shiftDays(baseDate, assignmentIndex * 12 + 14)
               : shiftDays(baseDate, -(assignmentIndex * 10 + 8));
         const completedAt = mode === 0 ? shiftDays(baseDate, -(assignmentIndex * 21 + 37)) : null;
-        const conductedBy = completedAt ? approvers[(employeeIndex + assignmentIndex + 1) % approvers.length] : null;
+        const conductedBy = completedAt
+          ? approvers[(employeeIndex + assignmentIndex + 1) % approvers.length]
+          : null;
 
         insertEmployeeInstruction.run({
           employeeId: employeeRow.id,

@@ -1,13 +1,29 @@
+import { chooseStaffImport, commitStaffImport } from '../staffImport';
 /**
  * Data IPC Handlers
  *
  * Handles employee, period, and event data operations.
  */
 
-import { ipcMain, shell } from 'electron';
+import { shell } from 'electron';
+import { handleData } from './persistentHandler';
 
-import type { AuditResult, EmployeeEventType, IntervalSource, YearDataset } from '../../shared/types';
-import { getDb, isDbOpen, getEncryptionKey, getStorageMode, openDatabase, closeDb, deleteDatabase as deleteDbFiles, ensureDataDir } from '../database/connection';
+import type {
+  AuditResult,
+  EmployeeEventType,
+  IntervalSource,
+  YearDataset,
+} from '../../shared/types';
+import {
+  getDb,
+  isDbOpen,
+  getEncryptionKey,
+  getStorageMode,
+  openDatabase,
+  closeDb,
+  deleteDatabase as deleteDbFiles,
+  ensureDataDir,
+} from '../database/connection';
 import {
   getYearDataset,
   listPeriods,
@@ -15,7 +31,13 @@ import {
   deleteEmployee,
   deletePeriod,
 } from '../repositories/employees';
-import { listEvents, saveEvent, deleteEvent, listUpcomingEvents, listEventsInRange } from '../repositories/events';
+import {
+  listEvents,
+  saveEvent,
+  deleteEvent,
+  listUpcomingEvents,
+  listEventsInRange,
+} from '../repositories/events';
 import {
   getExpiringTrainings,
   getBirthdaysAndAnniversaries,
@@ -104,53 +126,81 @@ const ensureDbReady = (): void => {
  * Register all data-related IPC handlers
  */
 export const registerDataHandlers = (): void => {
-  // Employee data
-  ipcMain.handle('data:list', (_event, { year }: { year: number }): YearDataset => {
+  handleData('staff:prepareImport', async () => {
     ensureDbReady();
-    return getYearDataset(year);
+    return chooseStaffImport();
   });
+  handleData('staff:commitImport', (_event, rows) => {
+    ensureDbReady();
+    return commitStaffImport(rows);
+  });
+  // Employee data
+  handleData(
+    'data:list',
+    (
+      _event,
+      {
+        year,
+        mode,
+      }: { year: number; mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory' },
+    ): YearDataset => {
+      ensureDbReady();
+      return getYearDataset(year, mode);
+    },
+  );
 
-  ipcMain.handle('data:listPeriods', (_event, { employeeId }: { employeeId: number }) => {
+  handleData('data:listPeriods', (_event, { employeeId }: { employeeId: number }) => {
     ensureDbReady();
     return listPeriods(employeeId);
   });
 
-  ipcMain.handle('data:save', (_event, input) => {
+  handleData('data:save', (_event, input) => {
     ensureDbReady();
     return saveEmployee(input);
   });
 
-  ipcMain.handle('data:delete', (_event, { id, year }: { id: number; year: number }) => {
+  handleData('data:delete', (_event, { id, year }: { id: number; year: number }) => {
     ensureDbReady();
     return deleteEmployee(id, year);
   });
 
-  ipcMain.handle(
+  handleData(
     'data:export',
-    async (_event, { year, format }: { year: number; format: 'csv' | 'xlsx' }) => {
+    async (
+      _event,
+      {
+        year,
+        format,
+        mode,
+      }: {
+        year: number;
+        format: 'csv' | 'xlsx';
+        mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory';
+      },
+    ) => {
       ensureDbReady();
-      return exportData(year, format);
+      return exportData(year, format, mode);
     },
   );
 
-  ipcMain.handle('data:openDocument', async (_event, { path: filePath }: { path: string }) => {
+  handleData('data:openDocument', async (_event, { path: filePath }: { path: string }) => {
     if (!filePath) return;
     await shell.openPath(filePath);
   });
 
   // Periods
-  ipcMain.handle('period:delete', (_event, { periodId, year }: { periodId: number; year: number }) => {
+  handleData('period:delete', (_event, { periodId, year }: { periodId: number; year: number }) => {
     ensureDbReady();
     return deletePeriod(periodId, year);
   });
 
   // Qualifications
-  ipcMain.handle('qualifications:list', () => {
+  handleData('qualifications:list', () => {
     ensureDbReady();
     return listQualifications();
   });
 
-  ipcMain.handle(
+  handleData(
     'qualifications:add',
     (_event, { name, note }: { name: string; note?: string | null }) => {
       ensureDbReady();
@@ -158,7 +208,7 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle(
+  handleData(
     'qualifications:update',
     (_event, { id, name, note }: { id: number; name: string; note?: string | null }) => {
       ensureDbReady();
@@ -166,23 +216,23 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle('qualifications:delete', (_event, { id }: { id: number }) => {
+  handleData('qualifications:delete', (_event, { id }: { id: number }) => {
     ensureDbReady();
     return deleteQualification(id);
   });
 
-  ipcMain.handle('qualifications:reorder', (_event, { ids }: { ids: number[] }) => {
+  handleData('qualifications:reorder', (_event, { ids }: { ids: number[] }) => {
     ensureDbReady();
     return reorderQualifications(ids);
   });
 
   // Competencies
-  ipcMain.handle('competencies:listDefinitions', () => {
+  handleData('competencies:listDefinitions', () => {
     ensureDbReady();
     return listCompetencyDefinitions();
   });
 
-  ipcMain.handle(
+  handleData(
     'competencies:addDefinition',
     (
       _event,
@@ -199,7 +249,7 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle(
+  handleData(
     'competencies:updateDefinition',
     (
       _event,
@@ -217,22 +267,22 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle('competencies:deleteDefinition', (_event, { id }: { id: number }) => {
+  handleData('competencies:deleteDefinition', (_event, { id }: { id: number }) => {
     ensureDbReady();
     return deleteCompetencyDefinition(id);
   });
 
-  ipcMain.handle('competencies:reorderDefinitions', (_event, { ids }: { ids: number[] }) => {
+  handleData('competencies:reorderDefinitions', (_event, { ids }: { ids: number[] }) => {
     ensureDbReady();
     return reorderCompetencyDefinitions(ids);
   });
 
-  ipcMain.handle('competencies:listEmployee', (_event, { employeeId }: { employeeId: number }) => {
+  handleData('competencies:listEmployee', (_event, { employeeId }: { employeeId: number }) => {
     ensureDbReady();
     return listEmployeeCompetencies(employeeId);
   });
 
-  ipcMain.handle(
+  handleData(
     'competencies:saveEmployee',
     (
       _event,
@@ -251,7 +301,7 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle(
+  handleData(
     'competencies:deleteEmployee',
     (
       _event,
@@ -269,12 +319,12 @@ export const registerDataHandlers = (): void => {
   );
 
   // Instructions
-  ipcMain.handle('instructions:listDefinitions', () => {
+  handleData('instructions:listDefinitions', () => {
     ensureDbReady();
     return listInstructionDefinitions();
   });
 
-  ipcMain.handle(
+  handleData(
     'instructions:addDefinition',
     (
       _event,
@@ -291,7 +341,7 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle(
+  handleData(
     'instructions:updateDefinition',
     (
       _event,
@@ -309,22 +359,22 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle('instructions:deleteDefinition', (_event, { id }: { id: number }) => {
+  handleData('instructions:deleteDefinition', (_event, { id }: { id: number }) => {
     ensureDbReady();
     return deleteInstructionDefinition(id);
   });
 
-  ipcMain.handle('instructions:reorderDefinitions', (_event, { ids }: { ids: number[] }) => {
+  handleData('instructions:reorderDefinitions', (_event, { ids }: { ids: number[] }) => {
     ensureDbReady();
     return reorderInstructionDefinitions(ids);
   });
 
-  ipcMain.handle('instructions:listEmployee', (_event, { employeeId }: { employeeId: number }) => {
+  handleData('instructions:listEmployee', (_event, { employeeId }: { employeeId: number }) => {
     ensureDbReady();
     return listEmployeeInstructions(employeeId);
   });
 
-  ipcMain.handle(
+  handleData(
     'instructions:saveEmployee',
     (
       _event,
@@ -344,7 +394,7 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle(
+  handleData(
     'instructions:employeesWithOpen',
     (_event, { instructionDefinitionId }: { instructionDefinitionId: number }) => {
       ensureDbReady();
@@ -352,7 +402,7 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle(
+  handleData(
     'instructions:assignToEmployees',
     (
       _event,
@@ -367,30 +417,30 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle(
+  handleData(
     'instructions:deleteEmployee',
     (
       _event,
       {
         employeeId,
-        instructionDefinitionId,
+        recordId,
       }: {
         employeeId: number;
-        instructionDefinitionId: number;
+        recordId: number;
       },
     ) => {
       ensureDbReady();
-      return deleteEmployeeInstruction(employeeId, instructionDefinitionId);
+      return deleteEmployeeInstruction(employeeId, recordId);
     },
   );
 
   // Events
-  ipcMain.handle('events:list', (_event, { employeeId }: { employeeId: number }) => {
+  handleData('events:list', (_event, { employeeId }: { employeeId: number }) => {
     ensureDbReady();
     return listEvents(employeeId);
   });
 
-  ipcMain.handle(
+  handleData(
     'events:save',
     (
       _event,
@@ -410,12 +460,12 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle('events:delete', (_event, { id, employeeId }: { id: number; employeeId: number }) => {
+  handleData('events:delete', (_event, { id, employeeId }: { id: number; employeeId: number }) => {
     ensureDbReady();
     return deleteEvent(id, employeeId);
   });
 
-  ipcMain.handle(
+  handleData(
     'events:listUpcoming',
     (_event, { fromDate, limit }: { fromDate?: string; limit?: number }) => {
       ensureDbReady();
@@ -423,7 +473,7 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle(
+  handleData(
     'events:listRange',
     (_event, { startDate, endDate }: { startDate: string; endDate: string }) => {
       ensureDbReady();
@@ -432,38 +482,41 @@ export const registerDataHandlers = (): void => {
   );
 
   // Settings
-  ipcMain.handle('settings:getBaseHours', () => {
+  handleData('settings:getBaseHours', () => {
     ensureDbReady();
     return getBaseHours();
   });
 
-  ipcMain.handle('settings:setBaseHours', (_event, { hours }: { hours: number }) => {
+  handleData('settings:setBaseHours', (_event, { hours }: { hours: number }) => {
     ensureDbReady();
     return setBaseHours(hours);
   });
 
-  ipcMain.handle('settings:getHiddenEventTypes', () => {
+  handleData('settings:getHiddenEventTypes', () => {
     ensureDbReady();
     return getHiddenEventTypes();
   });
 
-  ipcMain.handle('settings:setHiddenEventTypes', (_event, { types }: { types: string[] }) => {
+  handleData('settings:setHiddenEventTypes', (_event, { types }: { types: string[] }) => {
     ensureDbReady();
     return setHiddenEventTypes(types);
   });
 
   // Database management
-  ipcMain.handle('db:export', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => {
+  handleData('db:export', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => {
     ensureDbReady();
     return exportDatabase(mode);
   });
 
-  ipcMain.handle('db:import', (_event, { mode }: { mode: 'encrypted' | 'plain' }) => {
-    ensureDbReady();
-    return importDatabase(mode);
-  });
+  handleData(
+    'db:import',
+    (_event, { mode, recoveryKey }: { mode: 'encrypted' | 'plain'; recoveryKey?: string }) => {
+      ensureDbReady();
+      return importDatabase(mode, recoveryKey);
+    },
+  );
 
-  ipcMain.handle('db:delete', () => {
+  handleData('db:delete', () => {
     ensureDataDir();
     closeDb();
     deleteDbFiles();
@@ -471,75 +524,78 @@ export const registerDataHandlers = (): void => {
   });
 
   // Dashboard widgets
-  ipcMain.handle(
+  handleData(
     'dashboard:expiringTrainings',
     (_event, { withinDays, limit }: { withinDays?: number; limit?: number }) => {
       ensureDbReady();
       return getExpiringTrainings(withinDays, limit);
-    }
+    },
   );
 
-  ipcMain.handle(
+  handleData(
     'dashboard:birthdaysAnniversaries',
     (_event, { withinDays, limit }: { withinDays?: number; limit?: number }) => {
       ensureDbReady();
       return getBirthdaysAndAnniversaries(withinDays, limit);
-    }
+    },
   );
 
-  ipcMain.handle(
+  handleData(
     'dashboard:employeeStats',
     (_event, { dueSoonDays, limit }: { dueSoonDays?: number; limit?: number }) => {
       ensureDbReady();
       return getEmployeeDashboardStats(dueSoonDays, limit);
-    }
+    },
   );
 
-  ipcMain.handle('dashboard:openInstructions', (_event, { limit }: { limit?: number }) => {
+  handleData('dashboard:openInstructions', (_event, { limit }: { limit?: number }) => {
     ensureDbReady();
     return listOpenInstructions(limit);
   });
 
-  ipcMain.handle('dashboard:definitionUsage', () => {
+  handleData('dashboard:definitionUsage', () => {
     ensureDbReady();
     return getDefinitionUsage();
   });
 
   // Backups into the configured folder
-  ipcMain.handle('backup:settings', () => {
+  handleData('backup:settings', () => {
     ensureDbReady();
     const settings = getBackupSettings();
     return { ...settings, backups: listBackups(settings.folder) };
   });
 
-  ipcMain.handle('backup:setSettings', (_event, input: Partial<BackupSettings>) => {
+  handleData('backup:setSettings', (_event, input: Partial<BackupSettings>) => {
     ensureDbReady();
     const settings = setBackupSettings(input);
     return { ...settings, backups: listBackups(settings.folder) };
   });
 
-  ipcMain.handle('backup:chooseFolder', async () => {
+  handleData('backup:chooseFolder', async () => {
     ensureDbReady();
     await chooseBackupFolder();
     const settings = getBackupSettings();
     return { ...settings, backups: listBackups(settings.folder) };
   });
 
-  ipcMain.handle('backup:run', async () => {
+  handleData('backup:run', async () => {
     ensureDbReady();
     const result = await runBackup();
     const settings = getBackupSettings();
     return { ...result, settings: { ...settings, backups: listBackups(settings.folder) } };
   });
 
-  ipcMain.handle('backup:restore', async (_event, { path: source }: { path: string }) => {
-    ensureDbReady();
-    const result = await restoreBackup(source);
-    const settings = getBackupSettings();
-    return { ...result, settings: { ...settings, backups: listBackups(settings.folder) } };
-  });
+  handleData(
+    'backup:restore',
+    async (_event, { path: source, recoveryKey }: { path: string; recoveryKey?: string }) => {
+      ensureDbReady();
+      const result = await restoreBackup(source, recoveryKey);
+      const settings = getBackupSettings();
+      return { ...result, settings: { ...settings, backups: listBackups(settings.folder) } };
+    },
+  );
 
-  ipcMain.handle('settings:careSettings', () => {
+  handleData('settings:careSettings', () => {
     ensureDbReady();
     return {
       visitIntervalDays: getVisitIntervalDays(),
@@ -547,12 +603,9 @@ export const registerDataHandlers = (): void => {
     };
   });
 
-  ipcMain.handle(
+  handleData(
     'settings:setCareSettings',
-    (
-      _event,
-      input: { visitIntervalDays?: number; instructionReminderDays?: number },
-    ) => {
+    (_event, input: { visitIntervalDays?: number; instructionReminderDays?: number }) => {
       ensureDbReady();
       if (input.visitIntervalDays != null) setVisitIntervalDays(input.visitIntervalDays);
       if (input.instructionReminderDays != null)
@@ -565,7 +618,7 @@ export const registerDataHandlers = (): void => {
   );
 
   // DEV: Raw table data
-  ipcMain.handle('dev:tables', () => {
+  handleData('dev:tables', () => {
     if (!isDbOpen()) return {};
     const db = getDb();
     const tables = db
@@ -581,39 +634,33 @@ export const registerDataHandlers = (): void => {
   });
 
   // Patients
-  ipcMain.handle('patients:list', () => {
+  handleData('patients:list', () => {
     ensureDbReady();
     return listPatients();
   });
 
-  ipcMain.handle('patients:get', (_event, { id }: { id: number }) => {
+  handleData('patients:get', (_event, { id }: { id: number }) => {
     ensureDbReady();
     return getPatient(id);
   });
 
-  ipcMain.handle(
-    'patients:save',
-    (
-      _event,
-      input: SavePatientInput,
-    ) => {
-      ensureDbReady();
-      return savePatient(input);
-    },
-  );
+  handleData('patients:save', (_event, input: SavePatientInput) => {
+    ensureDbReady();
+    return savePatient(input);
+  });
 
-  ipcMain.handle('patients:delete', (_event, { id }: { id: number }) => {
+  handleData('patients:delete', (_event, { id }: { id: number }) => {
     ensureDbReady();
     return deletePatient(id);
   });
 
   // Patient Visits
-  ipcMain.handle('visits:list', (_event, { patientId }: { patientId: number }) => {
+  handleData('visits:list', (_event, { patientId }: { patientId: number }) => {
     ensureDbReady();
     return listVisits(patientId);
   });
 
-  ipcMain.handle(
+  handleData(
     'visits:save',
     (
       _event,
@@ -630,29 +677,29 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle('visits:recent', (_event, { perPatient }: { perPatient?: number }) => {
+  handleData('visits:recent', (_event, { perPatient }: { perPatient?: number }) => {
     ensureDbReady();
     return listRecentVisits(perPatient);
   });
 
-  ipcMain.handle('visits:delete', (_event, { id, patientId }: { id: number; patientId: number }) => {
+  handleData('visits:delete', (_event, { id, patientId }: { id: number; patientId: number }) => {
     ensureDbReady();
     return deleteVisit(id, patientId);
   });
 
   // Dashboard - Patient widgets
-  ipcMain.handle('dashboard:actionNeeded', (_event, { limit }: { limit?: number }) => {
+  handleData('dashboard:actionNeeded', (_event, { limit }: { limit?: number }) => {
     ensureDbReady();
     return getActionNeeded(limit);
   });
 
-  ipcMain.handle('dashboard:patientStats', () => {
+  handleData('dashboard:patientStats', () => {
     ensureDbReady();
     return getPatientStats();
   });
 
   // Patient events for calendar/upcoming
-  ipcMain.handle(
+  handleData(
     'patients:listBirthdays',
     (_event, { startDate, endDate }: { startDate: string; endDate: string }) => {
       ensureDbReady();
@@ -660,7 +707,7 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle(
+  handleData(
     'patients:listVisitsInRange',
     (_event, { startDate, endDate }: { startDate: string; endDate: string }) => {
       ensureDbReady();
@@ -669,19 +716,19 @@ export const registerDataHandlers = (): void => {
   );
 
   // MD-Prüfung
-  ipcMain.handle('audits:sections', () => AUDIT_SECTIONS);
+  handleData('audits:sections', () => AUDIT_SECTIONS);
 
-  ipcMain.handle('audits:exportPersonList', () => {
+  handleData('audits:exportPersonList', () => {
     ensureDbReady();
     return exportPersonList();
   });
 
-  ipcMain.handle('audits:list', () => {
+  handleData('audits:list', () => {
     ensureDbReady();
     return listAudits();
   });
 
-  ipcMain.handle(
+  handleData(
     'audits:save',
     (
       _event,
@@ -700,7 +747,7 @@ export const registerDataHandlers = (): void => {
     },
   );
 
-  ipcMain.handle('audits:delete', (_event, { id }: { id: number }) => {
+  handleData('audits:delete', (_event, { id }: { id: number }) => {
     ensureDbReady();
     return deleteAudit(id);
   });

@@ -1,3 +1,4 @@
+import { localDate } from '../../utils/calendarDate';
 import React, { useMemo, useState } from 'react';
 import Icon, { MoreIcon } from '../ui/Icon';
 import Segmented from '../ui/Segmented';
@@ -5,7 +6,14 @@ import Avatar from '../ui/Avatar';
 import { formatDateDE } from '../../utils/dateFormat';
 import type { EmployeeWithPeriod, QualificationType } from '../../shared/types';
 
-type SortKey = 'name' | 'qualification' | 'startDate' | 'endDate' | 'weeklyHours' | 'fte' | 'status';
+type SortKey =
+  | 'name'
+  | 'qualification'
+  | 'startDate'
+  | 'endDate'
+  | 'weeklyHours'
+  | 'fte'
+  | 'status';
 
 const COLUMNS: { key: SortKey; label: string; align?: 'right' }[] = [
   { key: 'name', label: 'Name' },
@@ -31,6 +39,8 @@ const statusTag = (employee: EmployeeWithPeriod, today: string): [string, string
 type EmployeeListProps = {
   year: number;
   years: number[];
+  directoryMode?: boolean;
+  onDirectoryModeChange?: (value: boolean) => void;
   search: string;
   statusFilter: 'all' | EmployeeWithPeriod['status'];
   qualificationFilter: string;
@@ -42,6 +52,7 @@ type EmployeeListProps = {
   onStatusChange: (value: 'all' | EmployeeWithPeriod['status']) => void;
   onQualificationChange: (value: string) => void;
   onYearChange: (year: number) => void;
+  onImport?: () => void;
   onExport: (format: 'csv' | 'xlsx') => void | Promise<void>;
   onOpenReport: () => void;
   onCreate: () => void;
@@ -51,6 +62,8 @@ type EmployeeListProps = {
 const EmployeeList = ({
   year,
   years,
+  directoryMode = false,
+  onDirectoryModeChange,
   search,
   statusFilter,
   qualificationFilter,
@@ -63,13 +76,14 @@ const EmployeeList = ({
   onQualificationChange,
   onYearChange,
   onExport,
+  onImport,
   onOpenReport,
   onCreate,
   onSelect,
 }: EmployeeListProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'name', dir: 1 });
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
 
   const rows = useMemo(() => {
     const value = (employee: EmployeeWithPeriod): string | number => {
@@ -85,7 +99,10 @@ const EmployeeList = ({
     return [...filteredEmployees].sort((a, b) => {
       const va = value(a);
       const vb = value(b);
-      const cmp = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb), 'de');
+      const cmp =
+        typeof va === 'number' && typeof vb === 'number'
+          ? va - vb
+          : String(va).localeCompare(String(vb), 'de');
       return cmp * sort.dir;
     });
   }, [filteredEmployees, sort]);
@@ -104,10 +121,17 @@ const EmployeeList = ({
             Team
           </h1>
           <p className="cd-muted" style={{ margin: '4px 0 0' }}>
-            {filteredEmployees.length} Personen im Jahr {year} · {fte2(totalFte)} VZÄ gesamt
+            {directoryMode
+              ? `${filteredEmployees.length} jemals beschäftigte Personen · jeweils letzter erfasster Stand`
+              : `${filteredEmployees.length} Personen im Jahr ${year} · ${fte2(totalFte)} VZÄ gesamt`}
           </p>
         </div>
         <div className="cd-actions">
+          {onImport && (
+            <button className="btn btn-secondary" type="button" onClick={onImport}>
+              Mitarbeiterliste übernehmen (Excel / CSV)
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-secondary btn-icon"
@@ -195,9 +219,14 @@ const EmployeeList = ({
         <select
           className="input cd-select"
           aria-label="Jahr"
-          value={year}
-          onChange={(event) => onYearChange(Number(event.target.value))}
+          value={directoryMode ? 'all' : year}
+          onChange={(event) =>
+            event.target.value === 'all'
+              ? onDirectoryModeChange?.(true)
+              : onYearChange(Number(event.target.value))
+          }
         >
+          {onDirectoryModeChange && <option value="all">Gesamtliste aller Beschäftigten</option>}
           {years.map((value) => (
             <option key={value} value={value}>
               Jahr {value}
@@ -206,22 +235,34 @@ const EmployeeList = ({
         </select>
       </div>
 
-      {rows.length === 0 && <div className="cd-panel"><div className="cd-empty">Keine Personen gefunden.</div></div>}
+      {rows.length === 0 && (
+        <div className="cd-panel">
+          <div className="cd-empty">Keine Personen gefunden.</div>
+        </div>
+      )}
 
       {rows.length > 0 && !wideTable && (
         <div className="cd-panel">
           {rows.map((employee) => {
             const [tagClass, label] = statusTag(employee, today);
             return (
-              <button key={employee.id} type="button" className="cd-item" onClick={() => void onSelect(employee)}>
+              <button
+                key={employee.id}
+                type="button"
+                className="cd-item"
+                onClick={() => void onSelect(employee)}
+              >
                 <Avatar name={employee.name} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600 }}>{employee.name}</div>
                   <div className="cd-muted-13">
-                    {employee.qualification} · {employee.weeklyHours ?? '—'} h · seit {formatDateDE(employee.startDate)}
+                    {employee.qualification} · {employee.weeklyHours ?? '—'} h · seit{' '}
+                    {formatDateDE(employee.startDate)}
                   </div>
                 </div>
-                <span style={{ fontWeight: 700, flex: 'none' }}>{fte2(employee.fte)}</span>
+                <span style={{ fontWeight: 700, flex: 'none' }}>
+                  {employee.hoursMissing ? '—' : fte2(employee.fte)}
+                </span>
                 <span className={`tag ${tagClass}`} style={{ flex: 'none' }}>
                   {label}
                 </span>
@@ -230,7 +271,7 @@ const EmployeeList = ({
           })}
           <div className="cd-panel-foot">
             <span>{rows.length} Personen</span>
-            <strong>{fte2(shownFte)} VZÄ</strong>
+            <strong>{directoryMode ? 'Letzter Stand je Person' : `${fte2(shownFte)} VZÄ`}</strong>
           </div>
         </div>
       )}
@@ -245,7 +286,9 @@ const EmployeeList = ({
                     key={column.key}
                     className="cd-th"
                     style={{ textAlign: column.align ?? 'left' }}
-                    aria-sort={sort.key === column.key ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none'}
+                    aria-sort={
+                      sort.key === column.key ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none'
+                    }
                     onClick={() => toggleSort(column.key)}
                   >
                     {column.label}{' '}
@@ -284,7 +327,9 @@ const EmployeeList = ({
                       {employee.endDate ? formatDateDE(employee.endDate) : '—'}
                     </td>
                     <td style={{ textAlign: 'right' }}>{employee.weeklyHours ?? '—'}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>{fte2(employee.fte)}</td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                      {employee.hoursMissing ? '—' : fte2(employee.fte)}
+                    </td>
                     <td>
                       <span className={`tag ${tagClass}`}>{label}</span>
                     </td>
@@ -292,16 +337,21 @@ const EmployeeList = ({
                 );
               })}
             </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={4} style={{ padding: '14px 8px', fontSize: 13, color: 'var(--color-neutral-700)' }}>
-                  Summe über {rows.length} Personen
-                </td>
-                <td style={{ textAlign: 'right', fontWeight: 600 }}>{totalHours || '—'}</td>
-                <td style={{ textAlign: 'right', fontWeight: 700 }}>{fte2(shownFte)}</td>
-                <td />
-              </tr>
-            </tfoot>
+            {!directoryMode && (
+              <tfoot>
+                <tr>
+                  <td
+                    colSpan={4}
+                    style={{ padding: '14px 8px', fontSize: 13, color: 'var(--color-neutral-700)' }}
+                  >
+                    Summe über {rows.length} Personen
+                  </td>
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{totalHours || '—'}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 700 }}>{fte2(shownFte)}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}

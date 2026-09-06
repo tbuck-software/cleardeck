@@ -21,6 +21,15 @@ export interface CompetencyDefinition {
 }
 
 export interface EmployeeCompetency {
+  stageScheme?: 'legacy' | 'practice-v1';
+  stageHistory?: {
+    stageScheme?: string;
+    changedAt: string;
+    level: number | null;
+    approvedAt: string | null;
+    approvedBy: string | null;
+    note: string | null;
+  }[];
   id?: number;
   employeeId?: number;
   competencyDefinitionId: number;
@@ -40,6 +49,7 @@ export interface EmployeeCompetency {
 export type IntervalSource = 'norm' | 'betrieblich';
 
 export interface InstructionDefinition {
+  minorHazardInstruction?: boolean;
   id?: number;
   topic: string;
   legalBasis?: string | null;
@@ -51,6 +61,10 @@ export interface InstructionDefinition {
 }
 
 export interface EmployeeInstruction {
+  minorHazardInstruction?: boolean;
+  evidenceRef?: string | null;
+  content?: string | null;
+  scheduleReviewRequired?: boolean;
   id?: number;
   employeeId?: number;
   instructionDefinitionId: number;
@@ -85,6 +99,20 @@ export interface EmploymentPeriod {
 }
 
 export interface EmployeeWithPeriod extends Employee {
+  sourceRef?: string | null;
+  hoursHistory?: {
+    effectiveFrom: string;
+    weeklyHours: number | null;
+    fte: number | null;
+    verified: number;
+    sourceRef: string | null;
+    changedAt: string;
+  }[];
+  hoursVerified?: boolean;
+  hoursMissing?: boolean;
+  reportDays?: number;
+  unweightedFte?: number | null;
+  hoursEffectiveFrom?: string;
   periodId?: number;
   startDate: string;
   endDate?: string | null;
@@ -107,6 +135,7 @@ export type EmployeeEventType =
   | 'custom';
 
 export type UnifiedEventType =
+  | 'instruction-due'
   | EmployeeEventType
   | 'birthday'
   | 'anniversary'
@@ -144,6 +173,10 @@ export interface Aggregation {
 }
 
 export interface YearDataset {
+  availableYears?: number[];
+  reportMode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory';
+  referenceDate?: string;
+  unverifiedHoursCount?: number;
   employees: EmployeeWithPeriod[];
   aggregation: Aggregation;
   baseHours?: number;
@@ -249,14 +282,16 @@ export interface EmployeeDashboardStats {
 }
 
 export interface OpenInstruction {
+  evidenceMissing?: boolean;
   id: number;
   employeeId: number;
   employeeName: string;
   topic: string;
   legalBasis?: string | null;
-  dueDate: string;
+  dueDate: string | null;
+  scheduleReviewRequired?: boolean;
   /** Negative once the due date has passed. */
-  daysUntilDue: number;
+  daysUntilDue: number | null;
 }
 
 /** Assignment counts per catalogue entry, keyed by definition id. */
@@ -280,6 +315,7 @@ export interface BackupState {
   auto: AutoBackupMode;
   keep: number;
   lastBackupAt: string | null;
+  lastBackupError?: string | null;
   backups: BackupFileInfo[];
 }
 
@@ -320,6 +356,19 @@ export type HkpCode = '6' | '8' | '29' | '31a';
 export type IntensiveCare = 'AKI' | 'AKI-B' | 'pHKP' | 'pHKP-EV';
 
 export interface Patient {
+  legacyQprStatus?: string | null;
+  serviceStatus?: 'active' | 'ended';
+  serviceEndDate?: string | null;
+  serviceScope?: 'eligible' | 'excluded' | 'unknown';
+  representativeStatus?: 'present' | 'none' | 'unknown';
+  hkpCodes?: HkpCode[];
+  assessmentSource?: 'report' | 'own' | 'unknown';
+  assessmentDate?: string | null;
+  assessmentNote?: string | null;
+  akiSetting?: 'EV' | 'MV' | null;
+  phkpFirst?: boolean;
+  phkpStartDate?: string | null;
+
   id?: number;
   name: string;
   birthDate?: string | null;
@@ -339,16 +388,23 @@ export interface Patient {
 }
 
 export interface PatientVisit {
+  legacyQprRating?: string | null;
+  assignedTo?: string | null;
+  actionDueDate?: string | null;
+  status?: 'planned' | 'completed';
+  resolvedAt?: string | null;
   id?: number;
   patientId: number;
   visitDate: string;
-  /** Follow-up required — surfaces in "Heute zu tun" until the next visit. */
+  /** Follow-up required — surfaces in "Heute zu tun" until explicit resolution. */
   actionNeeded: boolean;
   comment?: string | null;
   createdAt?: string;
 }
 
 export interface PatientWithLatestVisit extends Patient {
+  openActionOwner?: string | null;
+  openActionDueDate?: string | null;
   latestVisitDate?: string | null;
   latestActionNeeded?: boolean | null;
   visitCount?: number;
@@ -392,6 +448,7 @@ export interface PatientVisitEvent {
   visitId: number;
   patientId: number;
   patientName: string;
+  status?: 'planned' | 'completed';
   visitDate: string;
   actionNeeded: boolean;
   comment: string | null;
@@ -400,7 +457,7 @@ export interface PatientVisitEvent {
 // MD audit (Qualitätsprüfung) types
 
 /** QB 1–3 scale. QB 4 is descriptive, QB 5 and Abrechnung are pass/fail. */
-export type AuditResultValue = 'A' | 'B' | 'C' | 'D' | 'text' | 'ok' | 'no';
+export type AuditResultValue = 'A' | 'B' | 'C' | 'D' | 'text' | 'ok' | 'no' | 'unrecorded';
 
 export type AuditSectionScale = 'abcd' | 'text' | 'yesno';
 
@@ -417,6 +474,8 @@ export interface AuditResult {
 }
 
 export interface Audit {
+  reportRef?: string | null;
+  confirmed?: boolean;
   id?: number;
   auditDate: string;
   inspector?: string | null;

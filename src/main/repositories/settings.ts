@@ -57,9 +57,6 @@ export const setHiddenEventTypes = (types: string[]): string[] => {
   return types;
 };
 
-
-
-
 /**
  * Interval between Pflegevisiten. The QPR sets no fixed number, so the service
  * picks one and the app measures against it; 90 days is the common choice.
@@ -84,9 +81,9 @@ export const setVisitIntervalDays = (days: number): number => {
 /** How far ahead an upcoming Einweisung counts as "bald fällig". */
 export const getInstructionReminderDays = (): number => {
   const db = getDb();
-  const row = db.prepare("SELECT value FROM settings WHERE key = 'instructionReminderDays'").get() as
-    | { value?: string }
-    | undefined;
+  const row = db
+    .prepare("SELECT value FROM settings WHERE key = 'instructionReminderDays'")
+    .get() as { value?: string } | undefined;
   return row?.value ? Number(row.value) || 30 : 30;
 };
 
@@ -107,6 +104,7 @@ export interface BackupSettings {
   /** How many backups to keep in the folder; older ones are pruned. */
   keep: number;
   lastBackupAt: string | null;
+  lastBackupError?: string | null;
 }
 
 const readSetting = (key: string): string | null => {
@@ -136,13 +134,16 @@ export const getBackupSettings = (): BackupSettings => {
     auto: AUTO_MODES.includes(auto as AutoBackupMode) ? (auto as AutoBackupMode) : 'off',
     keep: Number.isFinite(keep) && keep > 0 ? keep : 10,
     lastBackupAt: readSetting('backupLastAt'),
+    lastBackupError: readSetting('backupLastError'),
   };
 };
 
 export const setBackupSettings = (next: Partial<BackupSettings>): BackupSettings => {
   if (next.folder !== undefined) writeSetting('backupFolder', next.folder);
   if (next.auto !== undefined) writeSetting('backupAuto', next.auto);
-  if (next.keep !== undefined) writeSetting('backupKeep', String(Math.max(1, Math.min(365, next.keep))));
+  if (next.keep !== undefined)
+    writeSetting('backupKeep', String(Math.max(1, Math.min(365, next.keep))));
+  if (next.lastBackupError !== undefined) writeSetting('backupLastError', next.lastBackupError);
   if (next.lastBackupAt !== undefined) writeSetting('backupLastAt', next.lastBackupAt);
   return getBackupSettings();
 };

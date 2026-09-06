@@ -1,13 +1,20 @@
 /// <reference types="vitest/globals" />
 
 import { buildDashboardTasks, buildDataQuality } from '../dashboardTasks';
-import type { EmployeeWithPeriod, OpenInstruction, PatientWithLatestVisit } from '../../shared/types';
+import type {
+  EmployeeWithPeriod,
+  OpenInstruction,
+  PatientWithLatestVisit,
+} from '../../shared/types';
 
 const TODAY = '2026-09-05';
 
 const patient = (overrides: Partial<PatientWithLatestVisit> = {}): PatientWithLatestVisit => ({
   id: 1,
   name: 'Erika Mustermann',
+  serviceScope: 'eligible',
+  assessmentSource: 'report',
+  assessmentDate: '2026-01-01',
   cognitionImpaired: true,
   mobilityImpaired: false,
   contact: 'Tochter · 0171',
@@ -103,7 +110,7 @@ describe('buildDashboardTasks', () => {
     });
 
     expect(tasks).toHaveLength(1);
-    expect(tasks[0].sub).toContain('Fällig seit 21 Tagen');
+    expect(tasks[0].sub).toContain('Fällig 15.08.2026');
     expect(tasks[0].target).toEqual({ kind: 'employee', id: 10, tab: 'instr' });
   });
 

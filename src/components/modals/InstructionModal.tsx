@@ -1,3 +1,5 @@
+import Checkbox from '../ui/Checkbox';
+import FieldHelp from '../ui/FieldHelp';
 import React from 'react';
 import Dialog from '../ui/Dialog';
 import Segmented from '../ui/Segmented';
@@ -22,7 +24,13 @@ type InstructionModalProps = {
   onDelete?: (id: number) => void;
 };
 
-const InstructionModal = ({ state, onChange, onClose, onSave, onDelete }: InstructionModalProps) => (
+const InstructionModal = ({
+  state,
+  onChange,
+  onClose,
+  onSave,
+  onDelete,
+}: InstructionModalProps) => (
   <Dialog
     open={state.open}
     width={480}
@@ -92,6 +100,16 @@ const InstructionModal = ({ state, onChange, onClose, onSave, onDelete }: Instru
       </div>
     )}
 
+    <Checkbox
+      checked={state.minorHazardInstruction ?? false}
+      onChange={(event) => onChange({ minorHazardInstruction: event.target.checked })}
+    >
+      Gefahrenunterweisung nach § 29 JArbSchG
+    </Checkbox>
+    <FieldHelp title="Wann gilt die halbjährliche Wiederholung?">
+      Nur für Unterweisungen über Unfall- und Gesundheitsgefahren: bei Minderjährigen mindestens
+      halbjährlich. Die Zuordnung ist anhand der Tätigkeit zu prüfen.
+    </FieldHelp>
     <div className="field">
       <label htmlFor="instruction-note">Notiz</label>
       <textarea

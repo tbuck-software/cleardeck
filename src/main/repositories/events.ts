@@ -1,3 +1,4 @@
+import { localDate, requireDate } from '../../utils/calendarDate';
 /**
  * Events Repository
  *
@@ -68,6 +69,13 @@ export const saveEvent = (input: {
   expiresAt?: string | null;
 }): EmployeeEvent[] => {
   const db = getDb();
+  requireDate(input.eventDate);
+  if (input.expiresAt) {
+    requireDate(input.expiresAt);
+    if (input.expiresAt < input.eventDate) throw new Error('Gültigkeitsende liegt vor dem Termin.');
+  }
+  if (input.type === 'join' || input.type === 'leave')
+    throw new Error('Eintritt und Austritt bitte in der Beschäftigungsperiode bearbeiten.');
   const metaStr = input.meta ? JSON.stringify(input.meta) : null;
 
   if (input.id) {
@@ -120,7 +128,7 @@ export const deleteEvent = (id: number, employeeId: number): EmployeeEvent[] => 
  */
 export const listUpcomingEvents = (fromDate?: string, limit = 10): UpcomingEvent[] => {
   const db = getDb();
-  const today = fromDate ?? new Date().toISOString().slice(0, 10);
+  const today = fromDate ?? localDate();
 
   const rows = db
     .prepare(
@@ -182,10 +190,82 @@ export const listEventsInRange = (startDate: string, endDate: string): UpcomingE
     )
     .all(startDate, endDate);
 
-  return rows.map((row: any) => ({
+  const events: UpcomingEvent[] = rows.map((row: any) => ({
     ...parseEventRow(row),
     employeeName: row.employeeName,
   }));
+  const activeOn = (id: number, date: string) =>
+    !!db
+      .prepare(
+        'SELECT 1 FROM employment_periods WHERE employeeId=? AND startDate<=? AND (endDate IS NULL OR endDate>=?)',
+      )
+      .get(id, date, date);
+  const people = db
+    .prepare('SELECT id,name,birthDate FROM employees WHERE birthDate IS NOT NULL')
+    .all() as { id: number; name: string; birthDate: string }[];
+  for (const person of people) {
+    for (let year = Number(startDate.slice(0, 4)); year <= Number(endDate.slice(0, 4)); year++) {
+      const date = `${year}-${person.birthDate.slice(5)}`;
+      if (date < startDate || date > endDate || !activeOn(person.id, date)) continue;
+      const parsed = new Date(`${date}T12:00:00`);
+      if (localDate(parsed) !== date) continue;
+      events.push({
+        id: -person.id,
+        employeeId: person.id,
+        employeeName: person.name,
+        type: 'birthday',
+        eventDate: date,
+        title: 'Geburtstag',
+        details:
+          Number(person.birthDate.slice(0, 4)) > 0
+            ? `${year - Number(person.birthDate.slice(0, 4))}. Geburtstag`
+            : undefined,
+      });
+    }
+  }
+  const due = db
+    .prepare(
+      `SELECT i.id,i.employeeId,e.name,d.topic,i.dueDate FROM employee_instructions i JOIN employees e ON e.id=i.employeeId JOIN instruction_definitions d ON d.id=i.instructionDefinitionId WHERE i.completedAt IS NULL AND i.dueDate BETWEEN ? AND ?`,
+    )
+    .all(startDate, endDate) as {
+    id: number;
+    employeeId: number;
+    name: string;
+    topic: string;
+    dueDate: string;
+  }[];
+  for (const row of due)
+    if (activeOn(row.employeeId, row.dueDate))
+      events.push({
+        id: row.id,
+        employeeId: row.employeeId,
+        employeeName: row.name,
+        type: 'instruction-due',
+        eventDate: row.dueDate,
+        title: row.topic,
+        details: 'Unterweisung fällig',
+      });
+  const expiry = db
+    .prepare(
+      `SELECT ev.id,ev.employeeId,e.name,ev.title,ev.expiresAt FROM employee_events ev JOIN employees e ON e.id=ev.employeeId WHERE ev.expiresAt BETWEEN ? AND ?`,
+    )
+    .all(startDate, endDate) as {
+    id: number;
+    employeeId: number;
+    name: string;
+    title: string;
+    expiresAt: string;
+  }[];
+  for (const row of expiry)
+    if (activeOn(row.employeeId, row.expiresAt))
+      events.push({
+        id: row.id,
+        employeeId: row.employeeId,
+        employeeName: row.name,
+        type: 'certificate-expiry',
+        eventDate: row.expiresAt,
+        title: row.title,
+        details: 'Gültigkeit endet',
+      });
+  return events.sort((a, b) => a.eventDate.localeCompare(b.eventDate));
 };
-
-

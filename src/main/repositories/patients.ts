@@ -1,3 +1,4 @@
+import { requireBirthDate } from '../../utils/calendarDate';
 /**
  * Patient Repository
  *
@@ -15,7 +16,14 @@ import type {
   PatientActionNeeded,
   PatientStats,
 } from '../../shared/types';
-import { teilgruppeOf } from '../../utils/qpr';
+import {
+  isActivePatient,
+  needsAssessment,
+  hkpCodesOf,
+  representativeMissing,
+  teilgruppeOf,
+} from '../../utils/qpr';
+import { localDate, requireDate } from '../../utils/calendarDate';
 import { getDb } from '../database/connection';
 
 const PATIENT_COLUMNS = `
@@ -24,17 +32,23 @@ const PATIENT_COLUMNS = `
   p.birthDate,
   p.diagnosis,
   p.note,
-  p.createdAt,
+  p.createdAt, p.legacyQprStatus,
   p.contact,
   p.admissionDate,
   p.cognitionImpaired,
   p.mobilityImpaired,
   p.hkpCode,
   p.intensiveCare,
-  p.careLevel
+  p.careLevel, p.serviceStatus,p.serviceEndDate,p.serviceScope,p.representativeStatus,
+  p.hkpCodes,p.assessmentSource,p.assessmentDate,p.assessmentNote,p.akiSetting,p.phkpFirst,p.phkpStartDate
 `;
 
-type PatientRow = Omit<Patient, 'cognitionImpaired' | 'mobilityImpaired'> & {
+type PatientRow = Omit<
+  Patient,
+  'cognitionImpaired' | 'mobilityImpaired' | 'hkpCodes' | 'phkpFirst'
+> & {
+  hkpCodes: string;
+  phkpFirst: number;
   cognitionImpaired: number | null;
   mobilityImpaired: number | null;
 };
@@ -46,7 +60,9 @@ const fromBool = (value: boolean | null | undefined): number | null =>
   value == null ? null : value ? 1 : 0;
 
 const mapPatient = (row: PatientRow): Patient => ({
-  ...(row as Omit<PatientRow, 'cognitionImpaired' | 'mobilityImpaired'>),
+  ...(row as Omit<PatientRow, 'cognitionImpaired' | 'mobilityImpaired' | 'hkpCodes' | 'phkpFirst'>),
+  hkpCodes: JSON.parse(row.hkpCodes || '[]'),
+  phkpFirst: row.phkpFirst === 1,
   cognitionImpaired: toBool(row.cognitionImpaired),
   mobilityImpaired: toBool(row.mobilityImpaired),
 });
@@ -61,18 +77,29 @@ export const listPatients = (): PatientWithLatestVisit[] => {
       `
       SELECT
         ${PATIENT_COLUMNS},
-        (SELECT visitDate FROM patient_visits WHERE patientId = p.id ORDER BY visitDate DESC LIMIT 1) as latestVisitDate,
-        (SELECT actionNeeded FROM patient_visits WHERE patientId = p.id ORDER BY visitDate DESC LIMIT 1) as latestActionNeeded,
+        (SELECT visitDate FROM patient_visits WHERE patientId = p.id AND status='completed' AND visitDate <= date('now','localtime') ORDER BY visitDate DESC,id DESC LIMIT 1) as latestVisitDate,
+        EXISTS(SELECT 1 FROM patient_visits WHERE patientId=p.id AND status='completed' AND visitDate<=date('now','localtime') AND actionNeeded=1 AND resolvedAt IS NULL) as latestActionNeeded,
         (SELECT COUNT(*) FROM patient_visits WHERE patientId = p.id) as visitCount
       FROM patients p
       ORDER BY p.name ASC
     `,
     )
-    .all() as (PatientRow & { latestActionNeeded: number | null; latestVisitDate: string | null; visitCount: number })[];
+    .all() as (PatientRow & {
+    latestActionNeeded: number | null;
+    latestVisitDate: string | null;
+    visitCount: number;
+  })[];
 
   return rows.map((row) => ({
     ...mapPatient(row),
     latestActionNeeded: toBool(row.latestActionNeeded),
+    ...(db
+      .prepare(
+        "SELECT assignedTo as openActionOwner, actionDueDate as openActionDueDate FROM patient_visits WHERE patientId=? AND status='completed' AND actionNeeded=1 AND resolvedAt IS NULL ORDER BY COALESCE(actionDueDate,visitDate),id LIMIT 1",
+      )
+      .get(row.id) as
+      | { openActionOwner: string | null; openActionDueDate: string | null }
+      | undefined),
   }));
 };
 
@@ -81,13 +108,25 @@ export const listPatients = (): PatientWithLatestVisit[] => {
  */
 export const getPatient = (id: number): Patient | null => {
   const db = getDb();
-  const row = db
-    .prepare(`SELECT ${PATIENT_COLUMNS} FROM patients p WHERE p.id = ?`)
-    .get(id) as PatientRow | undefined;
+  const row = db.prepare(`SELECT ${PATIENT_COLUMNS} FROM patients p WHERE p.id = ?`).get(id) as
+    | PatientRow
+    | undefined;
   return row ? mapPatient(row) : null;
 };
 
 export type SavePatientInput = {
+  serviceStatus?: 'active' | 'ended';
+  serviceEndDate?: string | null;
+  serviceScope?: 'eligible' | 'excluded' | 'unknown';
+  representativeStatus?: 'present' | 'none' | 'unknown';
+  hkpCodes?: HkpCode[];
+  assessmentSource?: 'report' | 'own' | 'unknown';
+  assessmentDate?: string | null;
+  assessmentNote?: string | null;
+  akiSetting?: 'EV' | 'MV' | null;
+  phkpFirst?: boolean;
+  phkpStartDate?: string | null;
+
   id?: number;
   name: string;
   birthDate?: string | null;
@@ -108,41 +147,74 @@ export type SavePatientInput = {
 export const savePatient = (input: SavePatientInput): PatientWithLatestVisit[] => {
   const db = getDb();
 
-  const params = {
-    name: input.name,
-    birthDate: input.birthDate ?? null,
-    diagnosis: input.diagnosis ?? null,
-    note: input.note ?? null,
-    contact: input.contact ?? null,
-    admissionDate: input.admissionDate ?? null,
-    cognitionImpaired: fromBool(input.cognitionImpaired),
-    mobilityImpaired: fromBool(input.mobilityImpaired),
-    hkpCode: input.hkpCode ?? null,
-    intensiveCare: input.intensiveCare ?? null,
-    careLevel: input.careLevel ?? null,
-  };
-
-  if (input.id) {
-    db.prepare(
-      `
-      UPDATE patients
-      SET name = @name, birthDate = @birthDate, diagnosis = @diagnosis, note = @note,
-          contact = @contact, admissionDate = @admissionDate,
-          cognitionImpaired = @cognitionImpaired, mobilityImpaired = @mobilityImpaired,
-          hkpCode = @hkpCode, intensiveCare = @intensiveCare, careLevel = @careLevel
-      WHERE id = @id
-    `,
-    ).run({ ...params, id: input.id });
-  } else {
-    db.prepare(
-      `
-      INSERT INTO patients (name, birthDate, diagnosis, note, contact, admissionDate,
-                            cognitionImpaired, mobilityImpaired, hkpCode, intensiveCare, careLevel)
-      VALUES (@name, @birthDate, @diagnosis, @note, @contact, @admissionDate,
-              @cognitionImpaired, @mobilityImpaired, @hkpCode, @intensiveCare, @careLevel)
-    `,
-    ).run(params);
+  const existing = input.id ? getPatient(input.id) : null;
+  if (input.id && !existing) throw new Error('Person nicht gefunden.');
+  const merged = { ...existing, ...input };
+  requireBirthDate(input.birthDate);
+  if (!merged.name.trim()) throw new Error('Name darf nicht leer sein.');
+  for (const value of [
+    merged.admissionDate,
+    merged.serviceEndDate,
+    merged.assessmentDate,
+    merged.phkpStartDate,
+  ]) {
+    if (value) requireDate(value);
   }
+  if (merged.serviceEndDate && merged.admissionDate && merged.serviceEndDate < merged.admissionDate)
+    throw new Error('Versorgungsende liegt vor der Aufnahme.');
+  if (merged.assessmentDate && merged.assessmentDate > localDate())
+    throw new Error('Einschätzungsdatum darf nicht in der Zukunft liegen.');
+  const codes = [
+    ...new Set(
+      input.hkpCodes ??
+        (input.hkpCode !== undefined ? (input.hkpCode ? [input.hkpCode] : []) : hkpCodesOf(merged)),
+    ),
+  ];
+  if (codes.some((c) => !['6', '8', '29', '31a'].includes(c)))
+    throw new Error('Ungültige HKP-Ziffer.');
+  const params = {
+    name: merged.name.trim(),
+    birthDate: merged.birthDate ?? null,
+    diagnosis: merged.diagnosis ?? null,
+    note: merged.note ?? null,
+    contact: merged.contact ?? null,
+    admissionDate: merged.admissionDate ?? null,
+    cognitionImpaired: fromBool(merged.cognitionImpaired),
+    mobilityImpaired: fromBool(merged.mobilityImpaired),
+    hkpCode: codes[0] ?? null,
+    hkpCodes: JSON.stringify(codes),
+    intensiveCare: merged.intensiveCare ?? null,
+    careLevel: merged.careLevel ?? null,
+    serviceStatus: merged.serviceStatus ?? 'active',
+    serviceEndDate: merged.serviceEndDate ?? null,
+    serviceScope: merged.serviceScope ?? 'unknown',
+    representativeStatus:
+      merged.representativeStatus ?? (merged.contact?.trim() ? 'present' : 'unknown'),
+    assessmentSource: merged.assessmentSource ?? 'unknown',
+    assessmentDate: merged.assessmentDate ?? null,
+    assessmentNote: merged.assessmentNote ?? null,
+    akiSetting: merged.akiSetting ?? null,
+    phkpFirst: merged.phkpFirst ? 1 : 0,
+    phkpStartDate: merged.phkpStartDate ?? null,
+  };
+  if (
+    !['active', 'ended'].includes(params.serviceStatus) ||
+    !['eligible', 'excluded', 'unknown'].includes(params.serviceScope) ||
+    !['report', 'own', 'unknown'].includes(params.assessmentSource) ||
+    !['present', 'none', 'unknown'].includes(params.representativeStatus) ||
+    (params.akiSetting && !['EV', 'MV'].includes(params.akiSetting))
+  )
+    throw new Error('Ungültiger Versorgungsstatus.');
+  const keys = Object.keys(params);
+  if (input.id)
+    db.prepare(`UPDATE patients SET ${keys.map((k) => `${k}=@${k}`).join(',')} WHERE id=@id`).run({
+      ...params,
+      id: input.id,
+    });
+  else
+    db.prepare(
+      `INSERT INTO patients (${keys.join(',')}) VALUES (${keys.map((k) => `@${k}`).join(',')})`,
+    ).run(params);
 
   return listPatients();
 };
@@ -152,7 +224,9 @@ export const savePatient = (input: SavePatientInput): PatientWithLatestVisit[] =
  */
 export const deletePatient = (id: number): PatientWithLatestVisit[] => {
   const db = getDb();
-  db.prepare('DELETE FROM patients WHERE id = ?').run(id);
+  db.prepare(
+    "UPDATE patients SET serviceStatus='ended',serviceEndDate=COALESCE(serviceEndDate,?) WHERE id=?",
+  ).run(localDate(), id);
   return listPatients();
 };
 
@@ -171,10 +245,10 @@ export const listVisits = (patientId: number): PatientVisit[] => {
   const rows = db
     .prepare(
       `
-      SELECT id, patientId, visitDate, actionNeeded, comment, createdAt
+      SELECT id, patientId, visitDate, actionNeeded, comment, createdAt, resolvedAt, status, assignedTo, actionDueDate, legacyQprRating
       FROM patient_visits
       WHERE patientId = ?
-      ORDER BY visitDate DESC
+      ORDER BY visitDate DESC,id DESC
     `,
     )
     .all(patientId) as VisitRow[];
@@ -190,35 +264,49 @@ export const saveVisit = (input: {
   visitDate: string;
   actionNeeded: boolean;
   comment?: string | null;
+  resolvedAt?: string | null;
+  status?: 'planned' | 'completed';
+  assignedTo?: string | null;
+  actionDueDate?: string | null;
 }): PatientVisit[] => {
   const db = getDb();
 
-  if (input.id) {
-    db.prepare(
-      `
-      UPDATE patient_visits
-      SET visitDate = @visitDate, actionNeeded = @actionNeeded, comment = @comment
-      WHERE id = @id
-    `,
-    ).run({
-      id: input.id,
-      visitDate: input.visitDate,
-      actionNeeded: input.actionNeeded ? 1 : 0,
-      comment: input.comment ?? null,
-    });
-  } else {
-    db.prepare(
-      `
-      INSERT INTO patient_visits (patientId, visitDate, actionNeeded, comment)
-      VALUES (@patientId, @visitDate, @actionNeeded, @comment)
-    `,
-    ).run({
-      patientId: input.patientId,
-      visitDate: input.visitDate,
-      actionNeeded: input.actionNeeded ? 1 : 0,
-      comment: input.comment ?? null,
-    });
+  requireDate(input.visitDate);
+  if (input.actionDueDate) requireDate(input.actionDueDate);
+  const status = input.status ?? (input.visitDate > localDate() ? 'planned' : 'completed');
+  if (
+    !['planned', 'completed'].includes(status) ||
+    (status === 'completed' && input.visitDate > localDate())
+  )
+    throw new Error('Eine zukünftige Visite kann nur geplant werden.');
+  if (input.resolvedAt) {
+    requireDate(input.resolvedAt);
+    if (input.resolvedAt < input.visitDate || input.resolvedAt > localDate())
+      throw new Error('Erledigung muss zwischen Visite und heute liegen.');
   }
+  const params = {
+    assignedTo: input.assignedTo?.trim() || null,
+    actionDueDate: input.actionDueDate || null,
+    status,
+    patientId: input.patientId,
+    visitDate: input.visitDate,
+    actionNeeded: input.actionNeeded ? 1 : 0,
+    comment: input.comment ?? null,
+    resolvedAt: input.resolvedAt ?? null,
+  };
+  if (input.id) {
+    const old = db.prepare('SELECT patientId FROM patient_visits WHERE id=?').get(input.id) as
+      | { patientId: number }
+      | undefined;
+    if (!old || old.patientId !== input.patientId)
+      throw new Error('Visite gehört nicht zu dieser Person.');
+    db.prepare(
+      'UPDATE patient_visits SET visitDate=@visitDate,actionNeeded=@actionNeeded,comment=@comment,resolvedAt=@resolvedAt,status=@status,assignedTo=@assignedTo,actionDueDate=@actionDueDate WHERE id=@id AND patientId=@patientId',
+    ).run({ ...params, id: input.id });
+  } else
+    db.prepare(
+      'INSERT INTO patient_visits (patientId,visitDate,actionNeeded,comment,resolvedAt,status,assignedTo,actionDueDate) VALUES (@patientId,@visitDate,@actionNeeded,@comment,@resolvedAt,@status,@assignedTo,@actionDueDate)',
+    ).run(params);
 
   return listVisits(input.patientId);
 };
@@ -228,7 +316,7 @@ export const saveVisit = (input: {
  */
 export const deleteVisit = (id: number, patientId: number): PatientVisit[] => {
   const db = getDb();
-  db.prepare('DELETE FROM patient_visits WHERE id = ?').run(id);
+  db.prepare('DELETE FROM patient_visits WHERE id = ? AND patientId = ?').run(id, patientId);
   return listVisits(patientId);
 };
 
@@ -241,12 +329,12 @@ export const listRecentVisits = (perPatient = 4): Record<number, PatientVisit[]>
   const rows = db
     .prepare(
       `
-      SELECT id, patientId, visitDate, actionNeeded, comment, createdAt
+      SELECT id, patientId, visitDate, actionNeeded, comment, createdAt, resolvedAt, status, assignedTo, actionDueDate, legacyQprRating
       FROM (
         SELECT
           v.*,
-          ROW_NUMBER() OVER (PARTITION BY v.patientId ORDER BY v.visitDate DESC) AS rn
-        FROM patient_visits v
+          ROW_NUMBER() OVER (PARTITION BY v.patientId ORDER BY v.visitDate DESC,v.id DESC) AS rn
+        FROM patient_visits v WHERE v.status='completed'
       )
       WHERE rn <= ?
       ORDER BY patientId ASC, visitDate ASC
@@ -266,28 +354,17 @@ export const listRecentVisits = (perPatient = 4): Record<number, PatientVisit[]>
  * Patients whose most recent visit recorded a follow-up — for the dashboard.
  * Only the latest visit counts: an older flag was answered by the visit after it.
  */
-export const getActionNeeded = (limit = 10): PatientActionNeeded[] => {
-  const db = getDb();
-  return db
+export const getActionNeeded = (limit = -1): PatientActionNeeded[] =>
+  getDb()
     .prepare(
       `
-      SELECT
-        p.id as patientId,
-        p.name as patientName,
-        v.id as visitId,
-        v.visitDate,
-        v.comment
-      FROM patients p
-      INNER JOIN patient_visits v ON v.id = (
-        SELECT id FROM patient_visits WHERE patientId = p.id ORDER BY visitDate DESC LIMIT 1
-      )
-      WHERE v.actionNeeded = 1
-      ORDER BY v.visitDate DESC
-      LIMIT ?
-    `,
+  SELECT p.id as patientId,p.name as patientName,v.id as visitId,v.visitDate,v.comment
+  FROM patients p JOIN patient_visits v ON v.patientId=p.id
+  WHERE p.serviceStatus='active' AND (p.serviceEndDate IS NULL OR p.serviceEndDate>=?)
+    AND v.status='completed' AND v.visitDate<=? AND v.actionNeeded=1 AND v.resolvedAt IS NULL
+  ORDER BY v.visitDate,v.id LIMIT ?`,
     )
-    .all(limit) as PatientActionNeeded[];
-};
+    .all(localDate(), localDate(), limit) as PatientActionNeeded[];
 
 /**
  * Get upcoming patient birthdays within a date range
@@ -295,31 +372,57 @@ export const getActionNeeded = (limit = 10): PatientActionNeeded[] => {
 export const listPatientBirthdays = (
   startDate: string,
   endDate: string,
-): { patientId: number; patientName: string; birthDate: string; date: string; hasKnownYear: boolean }[] => {
+): {
+  patientId: number;
+  patientName: string;
+  birthDate: string;
+  date: string;
+  hasKnownYear: boolean;
+}[] => {
   const db = getDb();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const results: { patientId: number; patientName: string; birthDate: string; date: string; hasKnownYear: boolean }[] = [];
+  const start = new Date(`${startDate}T12:00:00`);
+  const end = new Date(`${endDate}T12:00:00`);
+  const results: {
+    patientId: number;
+    patientName: string;
+    birthDate: string;
+    date: string;
+    hasKnownYear: boolean;
+  }[] = [];
 
   // Get all patients with birth dates
   const patients = db
-    .prepare(`SELECT id, name, birthDate FROM patients WHERE birthDate IS NOT NULL`)
-    .all() as { id: number; name: string; birthDate: string }[];
+    .prepare(
+      `SELECT id, name, birthDate, admissionDate, serviceEndDate FROM patients WHERE birthDate IS NOT NULL AND serviceStatus='active'`,
+    )
+    .all() as {
+    id: number;
+    name: string;
+    birthDate: string;
+    admissionDate: string | null;
+    serviceEndDate: string | null;
+  }[];
 
   for (const patient of patients) {
-    const birthDate = new Date(patient.birthDate);
+    const birthDate = new Date(`${patient.birthDate}T12:00:00`);
     const birthYear = parseInt(patient.birthDate.slice(0, 4), 10);
     const hasKnownYear = birthYear > 0;
 
     // Check each year in range
     for (let year = start.getFullYear(); year <= end.getFullYear(); year++) {
       const thisYearBirthday = new Date(year, birthDate.getMonth(), birthDate.getDate());
-      if (thisYearBirthday >= start && thisYearBirthday <= end) {
+      if (
+        localDate(thisYearBirthday) >= startDate &&
+        localDate(thisYearBirthday) <= endDate &&
+        thisYearBirthday.getMonth() === birthDate.getMonth() &&
+        (!patient.admissionDate || patient.admissionDate <= localDate(thisYearBirthday)) &&
+        (!patient.serviceEndDate || patient.serviceEndDate >= localDate(thisYearBirthday))
+      ) {
         results.push({
           patientId: patient.id,
           patientName: patient.name,
           birthDate: patient.birthDate,
-          date: thisYearBirthday.toISOString().slice(0, 10),
+          date: localDate(thisYearBirthday),
           hasKnownYear,
         });
       }
@@ -335,7 +438,15 @@ export const listPatientBirthdays = (
 export const listPatientVisitsInRange = (
   startDate: string,
   endDate: string,
-): { visitId: number; patientId: number; patientName: string; visitDate: string; actionNeeded: boolean; comment: string | null }[] => {
+): {
+  visitId: number;
+  patientId: number;
+  patientName: string;
+  visitDate: string;
+  status: 'planned' | 'completed';
+  actionNeeded: boolean;
+  comment: string | null;
+}[] => {
   const db = getDb();
   const rows = db
     .prepare(
@@ -345,7 +456,8 @@ export const listPatientVisitsInRange = (
         v.patientId,
         p.name as patientName,
         v.visitDate,
-        v.actionNeeded,
+        v.status,
+        CASE WHEN v.status='completed' AND v.resolvedAt IS NULL THEN v.actionNeeded ELSE 0 END AS actionNeeded,
         v.comment
       FROM patient_visits v
       INNER JOIN patients p ON v.patientId = p.id
@@ -354,69 +466,39 @@ export const listPatientVisitsInRange = (
       ORDER BY v.visitDate ASC
     `,
     )
-    .all(startDate, endDate) as { visitId: number; patientId: number; patientName: string; visitDate: string; actionNeeded: number; comment: string | null }[];
+    .all(startDate, endDate) as {
+    visitId: number;
+    patientId: number;
+    patientName: string;
+    visitDate: string;
+    status: 'planned' | 'completed';
+    actionNeeded: number;
+    comment: string | null;
+  }[];
 
   return rows.map((row) => ({ ...row, actionNeeded: row.actionNeeded === 1 }));
 };
 
 export const getPatientStats = (): PatientStats => {
-  const db = getDb();
-
-  const totalRow = db.prepare('SELECT COUNT(*) as count FROM patients').get() as { count: number };
-
-  const assessmentRows = db
-    .prepare('SELECT cognitionImpaired, mobilityImpaired FROM patients')
-    .all() as { cognitionImpaired: number | null; mobilityImpaired: number | null }[];
-
+  const patients = listPatients().filter((p) => isActivePatient(p));
   const byGroup = { A: 0, B: 0, C: 0, none: 0, unrated: 0 };
-  assessmentRows.forEach((row) => {
-    const group = teilgruppeOf(toBool(row.cognitionImpaired), toBool(row.mobilityImpaired));
-    if (group == null) byGroup.unrated += 1;
-    else byGroup[group] += 1;
+  patients.forEach((p) => {
+    const group = needsAssessment(p) ? null : teilgruppeOf(p.cognitionImpaired, p.mobilityImpaired);
+    if (group == null) byGroup.unrated++;
+    else byGroup[group]++;
   });
-
-  const hkpRow = db
-    .prepare('SELECT COUNT(*) as count FROM patients WHERE hkpCode IS NOT NULL')
-    .get() as { count: number };
-  const intensiveRow = db
-    .prepare('SELECT COUNT(*) as count FROM patients WHERE intensiveCare IS NOT NULL')
-    .get() as { count: number };
-  const contactRow = db
-    .prepare("SELECT COUNT(*) as count FROM patients WHERE contact IS NULL OR TRIM(contact) = ''")
-    .get() as { count: number };
-
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const recentRow = db
+  const recent = getDb()
     .prepare(
-      `
-      SELECT COUNT(*) as count
-      FROM patient_visits
-      WHERE date(visitDate) >= date(?)
-    `,
+      `SELECT COUNT(*) as count FROM patient_visits WHERE status='completed' AND visitDate BETWEEN date(?,'-30 days') AND ?`,
     )
-    .get(thirtyDaysAgo.toISOString().slice(0, 10)) as { count: number };
-
-  const actionRow = db
-    .prepare(
-      `
-      SELECT COUNT(*) as count
-      FROM patients p
-      INNER JOIN patient_visits v ON v.id = (
-        SELECT id FROM patient_visits WHERE patientId = p.id ORDER BY visitDate DESC LIMIT 1
-      )
-      WHERE v.actionNeeded = 1
-    `,
-    )
-    .get() as { count: number };
-
+    .get(localDate(), localDate()) as { count: number };
   return {
-    totalPatients: totalRow.count,
+    totalPatients: patients.length,
     byGroup,
-    hkpCount: hkpRow.count,
-    intensiveCareCount: intensiveRow.count,
-    recentVisits: recentRow.count,
-    actionNeededCount: actionRow.count,
-    missingContactCount: contactRow.count,
+    hkpCount: patients.filter((p) => hkpCodesOf(p).length > 0).length,
+    intensiveCareCount: patients.filter((p) => p.intensiveCare).length,
+    recentVisits: recent.count,
+    actionNeededCount: getActionNeeded().length,
+    missingContactCount: patients.filter(representativeMissing).length,
   };
 };

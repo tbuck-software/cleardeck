@@ -6,8 +6,19 @@
  * dismissal for the session; fixing the underlying record is what removes it.
  */
 
-import type { EmployeeWithPeriod, OpenInstruction, PatientWithLatestVisit } from '../shared/types';
-import { daysBetween, teilgruppeOf, visitDue } from './qpr';
+import type {
+  EmployeeWithPeriod,
+  OpenInstruction,
+  PatientWithLatestVisit,
+  ExpiringTraining,
+} from '../shared/types';
+import {
+  daysBetween,
+  visitDue,
+  isActivePatient,
+  needsAssessment,
+  representativeMissing,
+} from './qpr';
 
 export type TaskTarget =
   | { kind: 'employee'; id: number; tab?: 'comp' | 'instr' | 'hist' }
@@ -21,6 +32,7 @@ export type DashboardTask = {
   tagClass: string;
   /** Lower sorts first. */
   weight: number;
+  dueDate?: string | null;
   target: TaskTarget;
 };
 
@@ -32,6 +44,8 @@ type BuildInput = {
   visitIntervalDays: number;
   /** Leaving within this window is worth preparing for. */
   leaveHorizonDays?: number;
+  instructionReminderDays?: number;
+  expiringTrainings?: ExpiringTraining[];
 };
 
 const formatDate = (iso: string): string =>
@@ -44,18 +58,21 @@ export const buildDashboardTasks = ({
   openInstructions,
   visitIntervalDays,
   leaveHorizonDays = 60,
+  instructionReminderDays = 30,
+  expiringTrainings = [],
 }: BuildInput): DashboardTask[] => {
   const tasks: DashboardTask[] = [];
 
   patients.forEach((patient) => {
-    if (patient.id == null) return;
+    if (patient.id == null || !isActivePatient(patient, today)) return;
     const target: TaskTarget = { kind: 'patient', id: patient.id };
 
     if (patient.latestActionNeeded) {
       tasks.push({
         id: `patient-action-${patient.id}`,
         title: `${patient.name} — Handlungsbedarf aus Visite`,
-        sub: `Letzte Visite ${formatDate(patient.latestVisitDate ?? '')} · Folgevisite dokumentieren`,
+        sub: `${patient.openActionOwner || 'Zuständigkeit klären'} · ${patient.openActionDueDate ? `fällig ${formatDate(patient.openActionDueDate)}` : 'Frist klären'} · offene Maßnahme bearbeiten und Erledigung erfassen`,
+        dueDate: patient.openActionDueDate,
         tag: 'Visite',
         tagClass: 'tag-bad',
         weight: 0,
@@ -63,12 +80,11 @@ export const buildDashboardTasks = ({
       });
     }
 
-    const missingAssessment =
-      patient.cognitionImpaired == null || patient.mobilityImpaired == null;
+    const missingAssessment = needsAssessment(patient, today);
     if (missingAssessment) {
       tasks.push({
         id: `patient-assessment-${patient.id}`,
-        title: `${patient.name} — Gutachten-Daten fehlen`,
+        title: `${patient.name} — Einstufung prüfen`,
         sub: 'Mobilität (Modul 1) und Kognition (Modul 2) eintragen, sonst ist die MD-Stichprobenliste unvollständig',
         tag: 'Stammdaten',
         tagClass: 'tag-accent',
@@ -82,6 +98,26 @@ export const buildDashboardTasks = ({
       today,
       visitIntervalDays,
     );
+    if (due.missingAnchor)
+      tasks.push({
+        id: `patient-admission-${patient.id}`,
+        title: `${patient.name} · Aufnahmedatum fehlt`,
+        sub: 'Erste Pflegevisite kann ohne Aufnahmeanker nicht terminiert werden',
+        tag: 'Stammdaten',
+        tagClass: 'tag-accent',
+        weight: 2,
+        target,
+      });
+    if (patient.serviceScope !== 'eligible' && patient.serviceScope !== 'excluded')
+      tasks.push({
+        id: `patient-scope-${patient.id}`,
+        title: `${patient.name} · Leistungsumfang klären`,
+        sub: 'Zugehörigkeit zur QPR-Personenliste bestätigen',
+        tag: 'Stammdaten',
+        tagClass: 'tag-accent',
+        weight: 2,
+        target,
+      });
     if (due.overdue) {
       tasks.push({
         id: `patient-visit-${patient.id}`,
@@ -94,7 +130,7 @@ export const buildDashboardTasks = ({
       });
     }
 
-    if (!patient.contact?.trim()) {
+    if (representativeMissing(patient)) {
       tasks.push({
         id: `patient-contact-${patient.id}`,
         title: `${patient.name} — Bevollmächtigte/Betreuung fehlt`,
@@ -108,20 +144,54 @@ export const buildDashboardTasks = ({
   });
 
   openInstructions.forEach((instruction) => {
-    const overdue = instruction.daysUntilDue < 0;
-    if (!overdue && instruction.daysUntilDue > 30) return;
+    const overdue = instruction.daysUntilDue != null && instruction.daysUntilDue < 0;
+    const undated = instruction.daysUntilDue == null;
+    if (
+      !instruction.evidenceMissing &&
+      !instruction.scheduleReviewRequired &&
+      !undated &&
+      !overdue &&
+      instruction.daysUntilDue! > instructionReminderDays
+    )
+      return;
+    const state = instruction.evidenceMissing
+      ? 'Nachweis verknüpfen'
+      : instruction.scheduleReviewRequired
+        ? 'Wiedervorlage prüfen'
+        : undated
+          ? 'Termin festlegen'
+          : overdue
+            ? 'überfällig'
+            : 'bald fällig';
     tasks.push({
       id: `instruction-${instruction.id}`,
-      title: `${instruction.employeeName} — Einweisung ${instruction.topic} ${overdue ? 'überfällig' : 'bald fällig'}`,
-      sub: overdue
-        ? `Fällig seit ${-instruction.daysUntilDue} Tagen${instruction.legalBasis ? ` · ${instruction.legalBasis}` : ''}`
-        : `Fällig ${formatDate(instruction.dueDate)}${instruction.legalBasis ? ` · ${instruction.legalBasis}` : ''}`,
-      tag: 'Einweisung',
+      title: `${instruction.employeeName} — ${instruction.topic}: ${state}`,
+      sub: instruction.evidenceMissing
+        ? 'Durchführung erfasst; Beleg in Pflegecampus / Personalakte fehlt im Register'
+        : instruction.dueDate
+          ? `Fällig ${formatDate(instruction.dueDate)}`
+          : 'Zuordnung ohne Termin',
+      tag: 'Nachweis',
       tagClass: overdue ? 'tag-accent' : 'tag-neutral',
       weight: overdue ? 1 : 4,
+      dueDate: instruction.dueDate,
       target: { kind: 'employee', id: instruction.employeeId, tab: 'instr' },
     });
   });
+  expiringTrainings
+    .filter((training) => training.daysUntilExpiry < 0)
+    .forEach((training) =>
+      tasks.push({
+        id: `certificate-${training.id}`,
+        title: `${training.employeeName} — ${training.title}: Gültigkeit abgelaufen`,
+        sub: `Gültig bis ${formatDate(training.expiresAt)} · aktuellen Nachweis prüfen`,
+        tag: 'Nachweis',
+        tagClass: 'tag-accent',
+        weight: 1,
+        dueDate: training.expiresAt,
+        target: { kind: 'employee', id: training.employeeId, tab: 'hist' },
+      }),
+    );
 
   employees.forEach((employee) => {
     if (employee.id == null) return;
@@ -154,7 +224,12 @@ export const buildDashboardTasks = ({
     }
   });
 
-  return tasks.sort((a, b) => a.weight - b.weight || a.title.localeCompare(b.title, 'de'));
+  return tasks.sort(
+    (a, b) =>
+      a.weight - b.weight ||
+      (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') ||
+      a.title.localeCompare(b.title, 'de'),
+  );
 };
 
 export type DataQualityCheck = {
@@ -171,9 +246,7 @@ export const buildDataQuality = (
 ): DataQualityCheck[] => {
   const missingHours = employees.filter((e) => e.status === 'active' && e.weeklyHours == null);
   const missingBirth = employees.filter((e) => e.status === 'active' && !e.birthDate);
-  const missingAssessment = patients.filter(
-    (p) => teilgruppeOf(p.cognitionImpaired, p.mobilityImpaired) == null,
-  );
+  const missingAssessment = patients.filter((p) => isActivePatient(p) && needsAssessment(p));
   const missingEnd = employees.filter((e) => e.status === 'left' && !e.endDate);
 
   const check = (
@@ -215,7 +288,9 @@ export const buildDataQuality = (
         : 'Patient:innen ohne Gutachten-Daten (Teilgruppe)',
       'Alle Patient:innen haben eine Teilgruppe',
       'var(--color-accent-500)',
-      missingAssessment[0]?.id != null ? { kind: 'patient', id: missingAssessment[0].id } : undefined,
+      missingAssessment[0]?.id != null
+        ? { kind: 'patient', id: missingAssessment[0].id }
+        : undefined,
     ),
     check(
       'end',

@@ -39,7 +39,8 @@ const SettingsAbout = ({
           {appInfo?.version && <span className="tag tag-accent">v{appInfo.version}</span>}
         </div>
         <p className="cd-muted" style={{ margin: '4px 0 0' }}>
-          Team- und Patient:innen-Verwaltung für den Pflegedienst — lokal, verschlüsselt, ohne Cloud.
+          Team- und Patient:innen-Verwaltung für den Pflegedienst — lokal, verschlüsselt, ohne
+          Cloud.
         </p>
       </div>
     </div>
@@ -55,7 +56,9 @@ const SettingsAbout = ({
       <div>
         <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>Entwickler</div>
         <div style={{ fontWeight: 600 }}>{appInfo?.author ?? 'Torben Buck'}</div>
-        {appInfo?.email && <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>{appInfo.email}</div>}
+        {appInfo?.email && (
+          <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>{appInfo.email}</div>
+        )}
       </div>
       <div>
         <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>Lizenz</div>
@@ -74,6 +77,11 @@ const SettingsAbout = ({
         </div>
       </div>
     </div>
+
+    <p className="cd-muted-13">
+      ClearDeck hieß früher Employee DB. Beide Namen bezeichnen dieselbe App; die Umbenennung ist
+      keine Synchronisierung zwischen zwei Produkten.
+    </p>
 
     <p className="cd-muted-14" style={{ margin: 0 }}>
       Updates werden beim Start und stündlich geprüft.{' '}

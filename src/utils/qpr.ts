@@ -75,14 +75,17 @@ export const teilgruppeOf = (
 };
 
 /** D is an additional mark alongside A–C, never a replacement for it. */
-export const hasTeilgruppeD = (patient: Pick<Patient, 'hkpCode'>): boolean =>
-  patient.hkpCode != null;
+export const hasTeilgruppeD = (patient: Pick<Patient, 'hkpCode' | 'hkpCodes'>): boolean =>
+  hkpCodesOf(patient).length > 0;
 
 /** "B + HKP 31a", "A", "—" — the compact form used in lists and exports. */
-export const teilgruppeLabel = (patient: Pick<Patient, 'cognitionImpaired' | 'mobilityImpaired' | 'hkpCode'>): string => {
+export const teilgruppeLabel = (
+  patient: Pick<Patient, 'cognitionImpaired' | 'mobilityImpaired' | 'hkpCode' | 'hkpCodes'>,
+): string => {
   const group = teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired);
   const base = group == null ? '—' : group === 'none' ? 'ohne' : group;
-  return patient.hkpCode ? `${base} + HKP ${patient.hkpCode}` : base;
+  const codes = hkpCodesOf(patient);
+  return codes.length ? `${base} + HKP ${codes.join(', ')}` : base;
 };
 
 const MS_PER_DAY = 86_400_000;
@@ -97,7 +100,9 @@ export const addDays = (isoDate: string, days: number): string => {
 };
 
 export const daysBetween = (from: string, to: string): number =>
-  Math.round((new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / MS_PER_DAY);
+  Math.round(
+    (new Date(`${to}T00:00:00`).getTime() - new Date(`${from}T00:00:00`).getTime()) / MS_PER_DAY,
+  );
 
 export type VisitDue = {
   dueDate: string;
@@ -105,6 +110,7 @@ export type VisitDue = {
   overdue: boolean;
   /** No visit documented yet — the due date counts from admission. */
   first: boolean;
+  missingAnchor?: boolean;
   label: string;
 };
 
@@ -119,7 +125,16 @@ export const visitDue = (
   intervalDays: number = DEFAULT_VISIT_INTERVAL_DAYS,
 ): VisitDue => {
   const first = !input.latestVisitDate;
-  const anchor = input.latestVisitDate ?? input.admissionDate ?? today;
+  if (!input.latestVisitDate && !input.admissionDate)
+    return {
+      dueDate: '',
+      daysUntilDue: 0,
+      overdue: false,
+      first: true,
+      missingAnchor: true,
+      label: 'Aufnahmedatum fehlt; Fälligkeit ungeklärt',
+    };
+  const anchor = input.latestVisitDate ?? input.admissionDate!;
   const dueDate = addDays(anchor, first ? FIRST_VISIT_DAYS : intervalDays);
   const daysUntilDue = daysBetween(today, dueDate);
   return {
@@ -134,4 +149,41 @@ export const visitDue = (
           ? 'heute'
           : `in ${daysUntilDue} Tagen`,
   };
+};
+
+/** The full code list is authoritative; the scalar remains a legacy compatibility field. */
+export const hkpCodesOf = (patient: Pick<Patient, 'hkpCode' | 'hkpCodes'>): HkpCode[] =>
+  patient.hkpCodes ?? (patient.hkpCode ? [patient.hkpCode] : []);
+
+export const isActivePatient = (patient: Patient, today = toIsoDate(new Date())): boolean =>
+  patient.serviceStatus !== 'ended' &&
+  (!patient.admissionDate || patient.admissionDate <= today) &&
+  (!patient.serviceEndDate || patient.serviceEndDate >= today);
+
+export const representativeMissing = (patient: Patient): boolean =>
+  patient.representativeStatus !== 'none' && !patient.contact?.trim();
+
+export const needsAssessment = (patient: Patient, today = toIsoDate(new Date())): boolean => {
+  if (
+    teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired) == null ||
+    !patient.assessmentDate ||
+    !patient.assessmentSource ||
+    patient.assessmentSource === 'unknown' ||
+    patient.assessmentDate > today
+  )
+    return true;
+  if (patient.assessmentSource === 'own') return !patient.assessmentNote?.trim();
+  const date = new Date(`${patient.assessmentDate}T12:00:00`);
+  const month = date.getMonth();
+  date.setFullYear(date.getFullYear() + 1);
+  if (date.getMonth() !== month) date.setDate(0);
+  return toIsoDate(date) < today;
+};
+
+export const intensiveCareForList = (patient: Patient, today = toIsoDate(new Date())): string => {
+  if (!patient.intensiveCare) return '';
+  if (patient.intensiveCare.startsWith('AKI'))
+    return `AKI${patient.intensiveCare === 'AKI-B' ? ' B' : ''} ${patient.akiSetting ?? '(EV/MV fehlt)'}`;
+  const days = patient.phkpStartDate ? daysBetween(patient.phkpStartDate, today) : -1;
+  return patient.phkpFirst && days >= 0 && days < 28 ? 'pHKP E' : 'pHKP';
 };

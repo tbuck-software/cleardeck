@@ -91,7 +91,11 @@ const AuthScreen = ({
         <img src={logoUrl} alt="" className="auth-logo" />
         <div>
           <h1 className="auth-title">
-            {isSetup ? 'ClearDeck einrichten' : screenLockOnly ? 'Bildschirm verdeckt' : 'ClearDeck entsperren'}
+            {isSetup
+              ? 'ClearDeck einrichten'
+              : screenLockOnly
+                ? 'Bildschirm verdeckt'
+                : 'ClearDeck entsperren'}
           </h1>
           <p className="cd-muted" style={{ margin: 0 }}>
             {isSetup
@@ -102,6 +106,13 @@ const AuthScreen = ({
           </p>
         </div>
 
+        {isSetup && (
+          <p className="cd-muted-13">
+            ClearDeck ist der neue Name von Employee DB. Eine neue Einrichtung beginnt ohne
+            Beispieldaten. Vorhandene Sicherungen lassen sich anschließend unter Sicherheit &amp;
+            Backup wiederherstellen.
+          </p>
+        )}
         {isSetup && (
           <Segmented
             ariaLabel="Speichermodus"
@@ -163,9 +174,18 @@ const AuthScreen = ({
             <span>{displayError}</span>
           </div>
         )}
-        {message && <p className="cd-muted-14" style={{ margin: 0 }}>{message}</p>}
+        {message && (
+          <p className="cd-muted-14" style={{ margin: 0 }}>
+            {message}
+          </p>
+        )}
 
-        <button type="submit" className="btn btn-primary" style={{ minHeight: 44, paddingInline: 22 }} disabled={busy}>
+        <button
+          type="submit"
+          className="btn btn-primary"
+          style={{ minHeight: 44, paddingInline: 22 }}
+          disabled={busy}
+        >
           {busy
             ? 'Bitte warten…'
             : isSetup
@@ -196,7 +216,6 @@ const AuthScreen = ({
             )}
           </div>
         )}
-
       </form>
       {footer && <div className="auth-corner">{footer}</div>}
     </div>

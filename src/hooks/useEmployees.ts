@@ -1,3 +1,4 @@
+import { localDate } from '../utils/calendarDate';
 import { useCallback, useMemo, useState } from 'react';
 import api from '../services/api';
 import type {
@@ -75,7 +76,8 @@ const emptyEmployeeInstructionModal = (): EmployeeInstructionModalState => ({
   dueDate: '',
   completedAt: '',
   conductedBy: '',
-  note: '', scheduleFollowUp: false,
+  note: '',
+  scheduleFollowUp: false,
 });
 
 const emptySuggestedCompetencyModal = (): SuggestedCompetencyModalState => ({
@@ -140,13 +142,11 @@ const useEmployees = ({
   });
   const [competencyDefinitions, setCompetencyDefinitions] = useState<CompetencyDefinition[]>([]);
   const [competencyEdits, setCompetencyEdits] = useState<Record<number, string>>({});
-  const [competencyModal, setCompetencyModal] = useState<CompetencyModalState>(
-    emptyCompetencyModal(),
-  );
+  const [competencyModal, setCompetencyModal] =
+    useState<CompetencyModalState>(emptyCompetencyModal());
   const [instructionDefinitions, setInstructionDefinitions] = useState<InstructionDefinition[]>([]);
-  const [instructionModal, setInstructionModal] = useState<InstructionModalState>(
-    emptyInstructionModal(),
-  );
+  const [instructionModal, setInstructionModal] =
+    useState<InstructionModalState>(emptyInstructionModal());
   const [form, setForm] = useState<FormState>(emptyForm(currentYear));
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithPeriod | null>(null);
   const [employeeCompetencies, setEmployeeCompetencies] = useState<EmployeeCompetency[]>([]);
@@ -282,7 +282,9 @@ const useEmployees = ({
     setLoading(true);
     try {
       const weeklyHoursNum =
-        form.weeklyHours !== undefined && form.weeklyHours !== null ? Number(form.weeklyHours) : NaN;
+        form.weeklyHours !== undefined && form.weeklyHours !== null
+          ? Number(form.weeklyHours)
+          : NaN;
       const useLinked = form.linked ?? true;
       const derivedFte =
         useLinked && !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0
@@ -518,11 +520,17 @@ const useEmployees = ({
             topic,
             legalBasis: instructionModal.legalBasis,
             note: instructionModal.note,
+            intervalMonths: instructionModal.intervalMonths,
+            intervalSource: instructionModal.intervalSource,
+            minorHazardInstruction: instructionModal.minorHazardInstruction,
           })
         : await api.instructions.addDefinition({
             topic,
             legalBasis: instructionModal.legalBasis,
             note: instructionModal.note,
+            intervalMonths: instructionModal.intervalMonths,
+            intervalSource: instructionModal.intervalSource,
+            minorHazardInstruction: instructionModal.minorHazardInstruction,
           });
       setInstructionDefinitions(list);
       setInstructionModal(emptyInstructionModal());
@@ -585,6 +593,8 @@ const useEmployees = ({
       competencyDefinitionId: entry.competencyDefinitionId,
       competencyName: entry.competencyName,
       level: entry.level ?? null,
+      stageScheme: entry.stageScheme ?? 'legacy',
+      stageHistory: entry.stageHistory,
       approvedAt: entry.approvedAt ?? '',
       approvedBy: entry.approvedBy ?? '',
       note: entry.note ?? '',
@@ -641,6 +651,7 @@ const useEmployees = ({
         employeeId: selectedEmployee.id,
         competencyDefinitionId: employeeCompetencyModal.competencyDefinitionId,
         level: employeeCompetencyModal.level,
+        stageScheme: employeeCompetencyModal.stageScheme ?? 'practice-v1',
         approvedAt: employeeCompetencyModal.approvedAt || null,
         approvedBy: employeeCompetencyModal.approvedBy || null,
         note: employeeCompetencyModal.note || null,
@@ -756,13 +767,18 @@ const useEmployees = ({
       completedAt: entry.completedAt ?? '',
       conductedBy: entry.conductedBy ?? '',
       note: entry.note ?? '',
-        scheduleFollowUp: true,
+      evidenceRef: entry.evidenceRef ?? '',
+      content: entry.content ?? '',
+      scheduleReviewRequired: entry.scheduleReviewRequired ?? false,
+      scheduleFollowUp: true,
     });
   }, []);
 
   const openNewEmployeeInstructionModal = useCallback(() => {
     const assignedDefinitionIds = new Set(
-      employeeInstructions.map((entry) => entry.instructionDefinitionId),
+      employeeInstructions
+        .filter((entry) => !entry.completedAt)
+        .map((entry) => entry.instructionDefinitionId),
     );
     const nextDefinition = instructionDefinitions.find(
       (definition) => definition.id && !assignedDefinitionIds.has(definition.id),
@@ -782,7 +798,7 @@ const useEmployees = ({
       completedAt: '',
       conductedBy: '',
       note: '',
-        scheduleFollowUp: true,
+      scheduleFollowUp: true,
     });
   }, [employeeInstructions, instructionDefinitions, setToast]);
 
@@ -798,6 +814,9 @@ const useEmployees = ({
         conductedBy: employeeInstructionModal.conductedBy || null,
         note: employeeInstructionModal.note || null,
         scheduleFollowUp: employeeInstructionModal.scheduleFollowUp,
+        evidenceRef: employeeInstructionModal.evidenceRef,
+        content: employeeInstructionModal.content,
+        scheduleReviewRequired: employeeInstructionModal.scheduleReviewRequired,
       });
       setEmployeeInstructions(list);
       setEmployeeInstructionModal(emptyEmployeeInstructionModal());
@@ -809,11 +828,11 @@ const useEmployees = ({
   }, [employeeInstructionModal, handleError, selectedEmployee, setToast]);
 
   const handleDeleteEmployeeInstruction = useCallback(async () => {
-    if (!selectedEmployee?.id || !employeeInstructionModal.instructionDefinitionId) return;
+    if (!selectedEmployee?.id || !employeeInstructionModal.id) return;
     try {
       const list = await api.instructions.deleteEmployee(
         selectedEmployee.id,
-        employeeInstructionModal.instructionDefinitionId,
+        employeeInstructionModal.id,
       );
       setEmployeeInstructions(list);
       setEmployeeInstructionModal(emptyEmployeeInstructionModal());
@@ -822,7 +841,7 @@ const useEmployees = ({
     } catch (err) {
       handleError(err);
     }
-  }, [employeeInstructionModal.instructionDefinitionId, handleError, selectedEmployee, setToast]);
+  }, [employeeInstructionModal.id, handleError, selectedEmployee, setToast]);
 
   const openEditModal = useCallback(() => {
     if (!selectedEmployee) return;
@@ -830,18 +849,22 @@ const useEmployees = ({
     const computedWeeklyHours =
       selectedEmployee.weeklyHours !== null && selectedEmployee.weeklyHours !== undefined
         ? String(selectedEmployee.weeklyHours)
-        : cappedSelectedFte
-          ? (cappedSelectedFte * (baseHours || 36)).toFixed(1)
-          : '';
+        : '';
     setEditModal({
       open: true,
       mode: 'edit',
       name: selectedEmployee.name,
       note: selectedEmployee.note ?? '',
       weeklyHours: computedWeeklyHours,
-      fteValue: cappedSelectedFte ? cappedSelectedFte.toFixed(2) : '',
-      linked: true,
+      fteValue: String(cappedSelectedFte),
+      linked: false,
       birthDate: selectedEmployee.birthDate ?? '',
+      hoursEffectiveFrom:
+        selectedEmployee.endDate && selectedEmployee.endDate < localDate()
+          ? selectedEmployee.endDate
+          : localDate(),
+      hoursVerified: false,
+      sourceRef: selectedEmployee.sourceRef ?? '',
     });
   }, [baseHours, selectedEmployee]);
 
@@ -861,7 +884,7 @@ const useEmployees = ({
       note: '',
       weeklyHours: '',
       linked: true,
-      fteValue: freshForm.fte ? clampFte(freshForm.fte).toFixed(2) : '',
+      fteValue: '',
       birthDate: '',
     });
   }, [qualifications, year]);
@@ -872,13 +895,22 @@ const useEmployees = ({
         handleError(new Error('Name darf nicht leer sein.'));
         return;
       }
+      if (!editModal.weeklyHours && !editModal.fteValue) {
+        handleError(
+          new Error('Bitte Wochenstunden oder einen ausdrücklich festgelegten VZÄ-Wert eintragen.'),
+        );
+        return;
+      }
       setLoading(true);
       try {
         const weeklyHoursNum =
-          editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : form.weeklyHours ?? null;
+          editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : (form.weeklyHours ?? null);
         const useLinked = editModal.linked ?? true;
         const derivedFte =
-          useLinked && typeof weeklyHoursNum === 'number' && !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0
+          useLinked &&
+          typeof weeklyHoursNum === 'number' &&
+          !Number.isNaN(weeklyHoursNum) &&
+          weeklyHoursNum > 0
             ? deriveFteFromWeeklyHours(weeklyHoursNum, baseHours)
             : editModal.fteValue
               ? Number(editModal.fteValue)
@@ -893,16 +925,13 @@ const useEmployees = ({
           year,
           linked: useLinked,
           birthDate: editModal.birthDate || null,
+          hoursEffectiveFrom:
+            editModal.mode === 'create' ? form.startDate : editModal.hoursEffectiveFrom,
+          hoursVerified: weeklyHoursNum != null,
+          sourceRef: editModal.sourceRef,
         };
         const updated = await api.employees.save(payload);
         setDataset(updated);
-        setToast('Gespeichert.');
-        setPage('list');
-        resetForm();
-      } catch (err) {
-        handleError(err);
-      } finally {
-        setLoading(false);
         setEditModal({
           open: false,
           mode: 'edit',
@@ -913,6 +942,13 @@ const useEmployees = ({
           fteValue: '',
           birthDate: '',
         });
+        setToast('Gespeichert.');
+        setPage('list');
+        resetForm();
+      } catch (err) {
+        handleError(err);
+      } finally {
+        setLoading(false);
         setTimeout(() => setToast(null), 2000);
       }
       return;
@@ -921,10 +957,13 @@ const useEmployees = ({
     setLoading(true);
     try {
       const weeklyHoursNum =
-        editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : form.weeklyHours ?? null;
+        editModal.weeklyHours !== '' ? Number(editModal.weeklyHours) : (form.weeklyHours ?? null);
       const useLinked = editModal.linked ?? true;
       const derivedFte =
-        useLinked && typeof weeklyHoursNum === 'number' && !Number.isNaN(weeklyHoursNum) && weeklyHoursNum > 0
+        useLinked &&
+        typeof weeklyHoursNum === 'number' &&
+        !Number.isNaN(weeklyHoursNum) &&
+        weeklyHoursNum > 0
           ? deriveFteFromWeeklyHours(weeklyHoursNum, baseHours)
           : editModal.fteValue
             ? Number(editModal.fteValue)
@@ -941,17 +980,24 @@ const useEmployees = ({
         year,
         linked: useLinked,
         birthDate: editModal.birthDate || null,
+        hoursEffectiveFrom: editModal.hoursEffectiveFrom,
+        sourceRef: editModal.sourceRef,
+        hoursVerified: editModal.hoursVerified,
       };
-      const updated = await api.employees.save(payload);
-      setDataset(updated);
-      setSelectedEmployee({
-        ...selectedEmployee,
-        name: payload.name,
-        note: payload.note,
-        weeklyHours: weeklyHoursNum ?? selectedEmployee.weeklyHours ?? null,
-        fte: payload.fte,
-        birthDate: payload.birthDate,
+      const updated = await api.employees.save({
+        ...payload,
+        updateHours:
+          weeklyHoursNum !== selectedEmployee.weeklyHours ||
+          fteValue !== selectedEmployee.fte ||
+          editModal.hoursVerified === true,
       });
+      setDataset(updated);
+      const refreshed =
+        updated.employees.find((employee) => employee.id === selectedEmployee.id) ??
+        (await api.employees.list(year, 'directory')).employees.find(
+          (employee) => employee.id === selectedEmployee.id,
+        );
+      if (refreshed) setSelectedEmployee(refreshed);
       setForm((prev) => ({
         ...prev,
         name: payload.name,
@@ -959,11 +1005,6 @@ const useEmployees = ({
         weeklyHours: weeklyHoursNum ?? prev.weeklyHours ?? null,
         fte: payload.fte,
       }));
-      setToast('Gespeichert.');
-    } catch (err) {
-      handleError(err);
-    } finally {
-      setLoading(false);
       setEditModal({
         open: false,
         mode: 'edit',
@@ -974,9 +1015,25 @@ const useEmployees = ({
         fteValue: '',
         birthDate: '',
       });
+      setToast('Gespeichert.');
+    } catch (err) {
+      handleError(err);
+    } finally {
+      setLoading(false);
       setTimeout(() => setToast(null), 2000);
     }
-  }, [baseHours, editModal, form, handleError, resetForm, selectedEmployee, setLoading, setPage, setToast, year]);
+  }, [
+    baseHours,
+    editModal,
+    form,
+    handleError,
+    resetForm,
+    selectedEmployee,
+    setLoading,
+    setPage,
+    setToast,
+    year,
+  ]);
 
   const filteredEmployees = useMemo(() => {
     if (!dataset) return [];
@@ -999,39 +1056,34 @@ const useEmployees = ({
   const totalFte = dataset?.aggregation.totalFte ?? 0;
   const totalHeadcount = dataset?.aggregation.totalHeadcount ?? 0;
 
-  const crumbs = useCallback(
-    (): { label: string; page?: Page }[] => {
-      if (page === 'dashboard') return [{ label: 'Dashboard' }];
-      if (page === 'list') return [{ label: 'Dashboard', page: 'dashboard' }, { label: 'Team' }];
-      if (page === 'new')
-        return [
-          { label: 'Dashboard', page: 'dashboard' },
-          { label: 'Team', page: 'list' },
-          { label: 'Neu anlegen' },
-        ];
-      if (page === 'settings')
-        return [
-          { label: 'Dashboard', page: 'dashboard' },
-          { label: 'Einstellungen' },
-        ];
-      if (page === 'view' && selectedEmployee)
-        return [
-          { label: 'Dashboard', page: 'dashboard' },
-          { label: 'Team', page: 'list' },
-          { label: selectedEmployee.name },
-        ];
+  const crumbs = useCallback((): { label: string; page?: Page }[] => {
+    if (page === 'dashboard') return [{ label: 'Dashboard' }];
+    if (page === 'list') return [{ label: 'Dashboard', page: 'dashboard' }, { label: 'Team' }];
+    if (page === 'new')
       return [
         { label: 'Dashboard', page: 'dashboard' },
         { label: 'Team', page: 'list' },
-        { label: 'Bearbeiten' },
+        { label: 'Neu anlegen' },
       ];
-    },
-    [page, selectedEmployee],
-  );
+    if (page === 'settings')
+      return [{ label: 'Dashboard', page: 'dashboard' }, { label: 'Einstellungen' }];
+    if (page === 'view' && selectedEmployee)
+      return [
+        { label: 'Dashboard', page: 'dashboard' },
+        { label: 'Team', page: 'list' },
+        { label: selectedEmployee.name },
+      ];
+    return [
+      { label: 'Dashboard', page: 'dashboard' },
+      { label: 'Team', page: 'list' },
+      { label: 'Bearbeiten' },
+    ];
+  }, [page, selectedEmployee]);
 
   const getSidebarPage = (): Page => {
     if (page === 'new' || page === 'edit' || page === 'view') return 'list';
-    if (page === 'patient-view' || page === 'patient-new' || page === 'patient-edit') return 'patients';
+    if (page === 'patient-view' || page === 'patient-new' || page === 'patient-edit')
+      return 'patients';
     return page;
   };
   const sidebarPage: Page = getSidebarPage();

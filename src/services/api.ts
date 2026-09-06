@@ -36,7 +36,8 @@ export const api = {
     lock: () => call('lock', baseApi.lock),
     changePassword: (input: Parameters<Api['changePassword']>[0]) =>
       call('changePassword', baseApi.changePassword, input),
-    enableEncryption: (password: string) => call('enableEncryption', baseApi.enableEncryption, password),
+    enableEncryption: (password: string) =>
+      call('enableEncryption', baseApi.enableEncryption, password),
     disableEncryption: () => call('disableEncryption', baseApi.disableEncryption),
   },
   recovery: {
@@ -45,10 +46,12 @@ export const api = {
       call('recoverWithKey', baseApi.recoverWithKey, input),
   },
   employees: {
-    list: (year: number) => call('listEmployees', baseApi.listEmployees, year),
+    list: (year: number, mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory') =>
+      call('listEmployees', baseApi.listEmployees, year, mode),
     listPeriods: (employeeId: number) => call('listPeriods', baseApi.listPeriods, employeeId),
     listEvents: (employeeId: number) => call('listEvents', baseApi.listEvents, employeeId),
-    save: (input: Parameters<Api['saveEmployee']>[0]) => call('saveEmployee', baseApi.saveEmployee, input),
+    save: (input: Parameters<Api['saveEmployee']>[0]) =>
+      call('saveEmployee', baseApi.saveEmployee, input),
     delete: (id: number, year: number) => call('deleteEmployee', baseApi.deleteEmployee, id, year),
   },
   events: {
@@ -113,17 +116,26 @@ export const api = {
         instructionDefinitionId,
       ),
     employeesWithOpen: (instructionDefinitionId: number) =>
-      call('employeesWithOpenInstruction', baseApi.employeesWithOpenInstruction, instructionDefinitionId),
+      call(
+        'employeesWithOpenInstruction',
+        baseApi.employeesWithOpenInstruction,
+        instructionDefinitionId,
+      ),
     assignToEmployees: (input: Parameters<Api['assignInstructionToEmployees']>[0]) =>
       call('assignInstructionToEmployees', baseApi.assignInstructionToEmployees, input),
   },
   data: {
-    export: (year: number, format: ExportFormat) => call('exportData', baseApi.exportData, year, format),
+    export: (
+      year: number,
+      format: ExportFormat,
+      mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory',
+    ) => call('exportData', baseApi.exportData, year, format, mode),
     openDocument: (path: string) => call('openDocument', baseApi.openDocument, path),
   },
   db: {
     export: (mode: 'encrypted' | 'plain') => call('exportDatabase', baseApi.exportDatabase, mode),
-    import: (mode: 'encrypted' | 'plain') => call('importDatabase', baseApi.importDatabase, mode),
+    import: (mode: 'encrypted' | 'plain', recoveryKey?: string) =>
+      call('importDatabase', baseApi.importDatabase, mode, recoveryKey),
     delete: () => call('deleteDatabase', baseApi.deleteDatabase),
     reset: () => call('resetApp', baseApi.resetApp),
   },
@@ -167,8 +179,7 @@ export const api = {
       call('deleteVisit', baseApi.deleteVisit, id, patientId),
     listRecentVisits: (perPatient?: number) =>
       call('listRecentVisits', baseApi.listRecentVisits, perPatient),
-    getActionNeeded: (limit?: number) =>
-      call('getActionNeeded', baseApi.getActionNeeded, limit),
+    getActionNeeded: (limit?: number) => call('getActionNeeded', baseApi.getActionNeeded, limit),
     getPatientStats: () => call('getPatientStats', baseApi.getPatientStats),
     listBirthdays: (startDate: string, endDate: string) =>
       call('listPatientBirthdays', baseApi.listPatientBirthdays, startDate, endDate),
@@ -184,7 +195,8 @@ export const api = {
       call('setBackupSettings', baseApi.setBackupSettings, input),
     chooseFolder: () => call('chooseBackupFolder', baseApi.chooseBackupFolder),
     run: () => call('runBackup', baseApi.runBackup),
-    restore: (path: string) => call('restoreBackup', baseApi.restoreBackup, path),
+    restore: (path: string, recoveryKey?: string) =>
+      call('restoreBackup', baseApi.restoreBackup, path, recoveryKey),
   },
   careSettings: {
     get: () => call('getCareSettings', baseApi.getCareSettings),

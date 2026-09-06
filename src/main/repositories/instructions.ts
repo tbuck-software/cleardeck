@@ -1,4 +1,9 @@
-import type { EmployeeInstruction, InstructionDefinition, IntervalSource } from '../../shared/types';
+import { localDate, requireDate } from '../../utils/calendarDate';
+import type {
+  EmployeeInstruction,
+  InstructionDefinition,
+  IntervalSource,
+} from '../../shared/types';
 import { getDb } from '../database/connection';
 import { nextDueDate } from '../../utils/instructionSchedule';
 
@@ -9,6 +14,7 @@ const normalizeDefinitionRows = (rows: any[]): InstructionDefinition[] =>
     legalBasis: row.legalBasis ?? null,
     note: row.note ?? null,
     sortOrder: row.sortOrder ?? null,
+    minorHazardInstruction: row.minorHazardInstruction === 1,
     intervalMonths: row.intervalMonths ?? null,
     intervalSource: (row.intervalSource ?? null) as IntervalSource | null,
   }));
@@ -18,7 +24,7 @@ export const listInstructionDefinitions = (): InstructionDefinition[] => {
   const rows = db
     .prepare(
       `
-      SELECT id, topic, legalBasis, note, sortOrder, intervalMonths, intervalSource
+      SELECT id, topic, legalBasis, note, sortOrder, intervalMonths, intervalSource, minorHazardInstruction
       FROM instruction_definitions
       ORDER BY sortOrder ASC, id ASC
     `,
@@ -33,8 +39,16 @@ export const addInstructionDefinition = (input: {
   note?: string | null;
   intervalMonths?: number | null;
   intervalSource?: IntervalSource | null;
+  minorHazardInstruction?: boolean;
 }): InstructionDefinition[] => {
   const db = getDb();
+  if (
+    input.intervalMonths != null &&
+    (!Number.isInteger(input.intervalMonths) ||
+      input.intervalMonths <= 0 ||
+      input.intervalMonths > 120)
+  )
+    throw new Error('Intervall muss 1 bis 120 Monate betragen.');
   const topic = input.topic.trim();
   if (!topic) {
     throw new Error('Einweisung darf nicht leer sein.');
@@ -44,14 +58,15 @@ export const addInstructionDefinition = (input: {
   };
   db.prepare(
     `
-    INSERT INTO instruction_definitions (topic, legalBasis, note, sortOrder, intervalMonths, intervalSource)
-    VALUES (@topic, @legalBasis, @note, @sortOrder, @intervalMonths, @intervalSource)
+    INSERT INTO instruction_definitions (topic, legalBasis, note, sortOrder, intervalMonths, intervalSource, minorHazardInstruction)
+    VALUES (@topic, @legalBasis, @note, @sortOrder, @intervalMonths, @intervalSource, @minorHazardInstruction)
   `,
   ).run({
     topic,
     legalBasis: input.legalBasis?.trim() || null,
     note: input.note?.trim() || null,
     sortOrder: (maxSort.mx ?? 0) + 1,
+    minorHazardInstruction: input.minorHazardInstruction ? 1 : 0,
     intervalMonths: input.intervalMonths ?? null,
     intervalSource: input.intervalMonths == null ? null : (input.intervalSource ?? 'betrieblich'),
   });
@@ -65,12 +80,26 @@ export const updateInstructionDefinition = (input: {
   note?: string | null;
   intervalMonths?: number | null;
   intervalSource?: IntervalSource | null;
+  minorHazardInstruction?: boolean;
 }): InstructionDefinition[] => {
   const db = getDb();
+  if (
+    input.intervalMonths != null &&
+    (!Number.isInteger(input.intervalMonths) ||
+      input.intervalMonths <= 0 ||
+      input.intervalMonths > 120)
+  )
+    throw new Error('Intervall muss 1 bis 120 Monate betragen.');
   const topic = input.topic.trim();
   if (!topic) {
     throw new Error('Einweisung darf nicht leer sein.');
   }
+  const existing = db.prepare('SELECT * FROM instruction_definitions WHERE id=?').get(input.id) as
+    | InstructionDefinition
+    | undefined;
+  if (!existing) throw new Error('Definition nicht gefunden.');
+  const months =
+    input.intervalMonths === undefined ? existing.intervalMonths : input.intervalMonths;
   db.prepare(
     `
     UPDATE instruction_definitions
@@ -78,7 +107,8 @@ export const updateInstructionDefinition = (input: {
         legalBasis = @legalBasis,
         note = @note,
         intervalMonths = @intervalMonths,
-        intervalSource = @intervalSource
+        intervalSource = @intervalSource,
+        minorHazardInstruction = @minorHazardInstruction
     WHERE id = @id
   `,
   ).run({
@@ -86,8 +116,13 @@ export const updateInstructionDefinition = (input: {
     topic,
     legalBasis: input.legalBasis?.trim() || null,
     note: input.note?.trim() || null,
-    intervalMonths: input.intervalMonths ?? null,
-    intervalSource: input.intervalMonths == null ? null : (input.intervalSource ?? 'betrieblich'),
+    minorHazardInstruction:
+      input.minorHazardInstruction === undefined
+        ? Number(existing.minorHazardInstruction ?? 0)
+        : Number(input.minorHazardInstruction),
+    intervalMonths: months ?? null,
+    intervalSource:
+      months == null ? null : (input.intervalSource ?? existing.intervalSource ?? 'betrieblich'),
   });
   return listInstructionDefinitions();
 };
@@ -101,6 +136,12 @@ export const reorderInstructionDefinitions = (orderedIds: number[]): Instruction
 
 export const deleteInstructionDefinition = (id: number): InstructionDefinition[] => {
   const db = getDb();
+  if (
+    db
+      .prepare('SELECT id FROM employee_instructions WHERE instructionDefinitionId=? LIMIT 1')
+      .get(id)
+  )
+    throw new Error('Das Thema besitzt Nachweise oder Zuordnungen und kann nicht gelöscht werden.');
   db.prepare('DELETE FROM instruction_definitions WHERE id = ?').run(id);
   return listInstructionDefinitions();
 };
@@ -119,6 +160,8 @@ export const listEmployeeInstructions = (employeeId: number): EmployeeInstructio
         idf.sortOrder,
         idf.intervalMonths,
         idf.intervalSource,
+        idf.minorHazardInstruction,
+        ei.evidenceRef, ei.content, ei.scheduleReviewRequired,
         ei.dueDate,
         ei.completedAt,
         ei.conductedBy,
@@ -138,8 +181,12 @@ export const listEmployeeInstructions = (employeeId: number): EmployeeInstructio
     instructionDefinitionId: row.instructionDefinitionId,
     instructionName: row.instructionName,
     legalBasis: row.legalBasis ?? null,
+    minorHazardInstruction: row.minorHazardInstruction === 1,
     intervalMonths: row.intervalMonths ?? null,
     intervalSource: (row.intervalSource ?? null) as IntervalSource | null,
+    evidenceRef: row.evidenceRef ?? null,
+    content: row.content ?? null,
+    scheduleReviewRequired: row.scheduleReviewRequired === 1,
     dueDate: row.dueDate ?? null,
     completedAt: row.completedAt ?? null,
     conductedBy: row.conductedBy ?? null,
@@ -156,70 +203,110 @@ export const saveEmployeeInstruction = (input: {
   completedAt?: string | null;
   conductedBy?: string | null;
   note?: string | null;
-  /** Whether finishing this one should schedule the next; see docs/adr/0002. */
   scheduleFollowUp?: boolean;
+  evidenceRef?: string | null;
+  content?: string | null;
+  scheduleReviewRequired?: boolean;
 }): EmployeeInstruction[] => {
   const db = getDb();
-  const values = {
-    employeeId: input.employeeId,
-    instructionDefinitionId: input.instructionDefinitionId,
-    dueDate: input.dueDate ?? null,
-    completedAt: input.completedAt ?? null,
-    conductedBy: input.conductedBy?.trim() || null,
-    note: input.note?.trim() || null,
-  };
-
-  const write = db.transaction(() => {
-    if (input.id) {
+  if (input.dueDate) requireDate(input.dueDate, 'Fälligkeit');
+  if (input.completedAt) {
+    requireDate(input.completedAt, 'Durchführung');
+    if (input.completedAt > localDate())
+      throw new Error('Eine Durchführung kann nicht in der Zukunft liegen.');
+  }
+  db.transaction(() => {
+    let id = input.id;
+    const old = id
+      ? (db
+          .prepare('SELECT * FROM employee_instructions WHERE id=? AND employeeId=?')
+          .get(id, input.employeeId) as EmployeeInstruction | undefined)
+      : undefined;
+    if (id && (!old || old.instructionDefinitionId !== input.instructionDefinitionId))
+      throw new Error('Nachweis nicht gefunden oder falsches Thema.');
+    if (id && old && input.dueDate !== undefined && input.dueDate !== old.dueDate)
+      db.prepare('UPDATE employee_instructions SET previousInstructionId=NULL WHERE id=?').run(id);
+    const evidence =
+      input.evidenceRef === undefined
+        ? (old?.evidenceRef ?? null)
+        : input.evidenceRef?.trim() || null;
+    const content =
+      input.content === undefined ? (old?.content ?? null) : input.content?.trim() || null;
+    const review =
+      input.scheduleReviewRequired === undefined
+        ? Number(old?.scheduleReviewRequired ?? 0)
+        : Number(input.scheduleReviewRequired);
+    if (id)
       db.prepare(
-        `
-        UPDATE employee_instructions
-        SET dueDate = @dueDate,
-            completedAt = @completedAt,
-            conductedBy = @conductedBy,
-            note = @note
-        WHERE id = @id
-      `,
-      ).run({ ...values, id: input.id });
-    } else {
-      db.prepare(
-        `
-        INSERT INTO employee_instructions
-          (employeeId, instructionDefinitionId, dueDate, completedAt, conductedBy, note)
-        VALUES (@employeeId, @instructionDefinitionId, @dueDate, @completedAt, @conductedBy, @note)
-      `,
-      ).run(values);
-    }
-
-    if (!input.scheduleFollowUp || !values.completedAt) return;
-
+        'UPDATE employee_instructions SET dueDate=?,completedAt=?,conductedBy=?,note=?,evidenceRef=?,content=?,scheduleReviewRequired=? WHERE id=? AND employeeId=?',
+      ).run(
+        input.dueDate ?? null,
+        input.completedAt ?? null,
+        input.conductedBy ?? null,
+        input.note ?? null,
+        evidence,
+        content,
+        review,
+        id,
+        input.employeeId,
+      );
+    else
+      id = Number(
+        db
+          .prepare(
+            'INSERT INTO employee_instructions(employeeId,instructionDefinitionId,dueDate,completedAt,conductedBy,note,evidenceRef,content) VALUES (?,?,?,?,?,?,?,?)',
+          )
+          .run(
+            input.employeeId,
+            input.instructionDefinitionId,
+            input.dueDate ?? null,
+            input.completedAt ?? null,
+            input.conductedBy ?? null,
+            input.note ?? null,
+            evidence,
+            content,
+          ).lastInsertRowid,
+      );
+    if (!input.scheduleFollowUp || !input.completedAt) return;
     const definition = db
-      .prepare('SELECT intervalMonths FROM instruction_definitions WHERE id = ?')
-      .get(input.instructionDefinitionId) as { intervalMonths: number | null } | undefined;
-    const employee = db
-      .prepare('SELECT birthDate FROM employees WHERE id = ?')
-      .get(input.employeeId) as { birthDate: string | null } | undefined;
-
-    const due = nextDueDate(definition?.intervalMonths, employee?.birthDate, values.completedAt);
-    if (!due) return;
-
-    // The finished row stays as the record; the follow-up is a new open one.
-    const alreadyOpen = db
       .prepare(
-        'SELECT id FROM employee_instructions WHERE employeeId = ? AND instructionDefinitionId = ? AND completedAt IS NULL',
+        'SELECT intervalMonths,minorHazardInstruction FROM instruction_definitions WHERE id=?',
       )
-      .get(input.employeeId, input.instructionDefinitionId) as { id: number } | undefined;
-    if (alreadyOpen) return;
-
+      .get(input.instructionDefinitionId) as {
+      intervalMonths: number | null;
+      minorHazardInstruction: number;
+    };
+    const employee = db
+      .prepare('SELECT birthDate FROM employees WHERE id=?')
+      .get(input.employeeId) as { birthDate: string | null };
+    const due = nextDueDate(
+      definition.intervalMonths,
+      employee.birthDate,
+      input.completedAt,
+      definition.minorHazardInstruction === 1,
+    );
+    if (!due) return;
+    const linked = db
+      .prepare(
+        'SELECT id FROM employee_instructions WHERE previousInstructionId=? AND completedAt IS NULL',
+      )
+      .get(id) as { id: number } | undefined;
+    if (linked) {
+      db.prepare('UPDATE employee_instructions SET dueDate=? WHERE id=?').run(due, linked.id);
+      return;
+    }
+    if (
+      db
+        .prepare(
+          'SELECT id FROM employee_instructions WHERE employeeId=? AND instructionDefinitionId=? AND completedAt IS NULL',
+        )
+        .get(input.employeeId, input.instructionDefinitionId)
+    )
+      return;
     db.prepare(
-      `
-      INSERT INTO employee_instructions (employeeId, instructionDefinitionId, dueDate)
-      VALUES (?, ?, ?)
-    `,
-    ).run(input.employeeId, input.instructionDefinitionId, due);
-  });
-
-  write();
+      'INSERT INTO employee_instructions(employeeId,instructionDefinitionId,dueDate,previousInstructionId) VALUES (?,?,?,?)',
+    ).run(input.employeeId, input.instructionDefinitionId, due, id);
+  })();
   return listEmployeeInstructions(input.employeeId);
 };
 
@@ -253,6 +340,7 @@ export const assignInstructionToEmployees = (input: {
 }): number => {
   const db = getDb();
   const dueDate = input.dueDate || null;
+  if (dueDate) requireDate(dueDate, 'Fälligkeit');
 
   const openEntry = db.prepare(
     'SELECT id FROM employee_instructions WHERE employeeId = ? AND instructionDefinitionId = ? AND completedAt IS NULL',
@@ -276,11 +364,12 @@ export const assignInstructionToEmployees = (input: {
 
 export const deleteEmployeeInstruction = (
   employeeId: number,
-  instructionDefinitionId: number,
+  recordId: number,
 ): EmployeeInstruction[] => {
   const db = getDb();
-  db.prepare(
-    'DELETE FROM employee_instructions WHERE employeeId = ? AND instructionDefinitionId = ?',
-  ).run(employeeId, instructionDefinitionId);
+  db.prepare('DELETE FROM employee_instructions WHERE employeeId = ? AND id = ?').run(
+    employeeId,
+    recordId,
+  );
   return listEmployeeInstructions(employeeId);
 };

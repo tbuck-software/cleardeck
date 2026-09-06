@@ -1,3 +1,5 @@
+import FieldHelp from '../ui/FieldHelp';
+import { localDate } from '../../utils/calendarDate';
 import React from 'react';
 import Icon from '../ui/Icon';
 import Segmented from '../ui/Segmented';
@@ -5,6 +7,8 @@ import { formatDateDE } from '../../utils/dateFormat';
 import {
   TEILGRUPPE_SHORT,
   teilgruppeOf,
+  hkpCodesOf,
+  needsAssessment,
   visitDue,
 } from '../../utils/qpr';
 import type { PatientVisit, PatientWithLatestVisit } from '../../shared/types';
@@ -43,10 +47,12 @@ const PatientList = ({
   onCreate,
   onSelect,
 }: PatientListProps) => {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
 
   const rows = patients.map((patient) => {
-    const group = teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired);
+    const group = needsAssessment(patient, today)
+      ? null
+      : teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired);
     const due = visitDue(
       { latestVisitDate: patient.latestVisitDate, admissionDate: patient.admissionDate },
       today,
@@ -61,7 +67,9 @@ const PatientList = ({
     C: rows.filter((row) => row.group === 'C').length,
     D: rows.filter((row) => row.patient.hkpCode != null).length,
   };
-  const visitsDue = rows.filter((row) => row.due.overdue || row.due.daysUntilDue <= 14).length;
+  const visitsDue = rows.filter(
+    (row) => !row.due.missingAnchor && (row.due.overdue || row.due.daysUntilDue <= 14),
+  ).length;
   const actionNeeded = rows.filter((row) => row.patient.latestActionNeeded).length;
 
   return (
@@ -72,8 +80,8 @@ const PatientList = ({
             Patient:innen
           </h1>
           <p className="cd-muted" style={{ margin: '4px 0 0' }}>
-            {patients.length} Personen · {visitsDue} Visiten fällig · {actionNeeded} mit Handlungsbedarf · Gruppen A{' '}
-            {counts.A} · B {counts.B} · C {counts.C} · D {counts.D}
+            {patients.length} Personen · {visitsDue} Visiten fällig · {actionNeeded} mit
+            Handlungsbedarf · Gruppen A {counts.A} · B {counts.B} · C {counts.C} · D {counts.D}
           </p>
         </div>
         <button type="button" className="btn btn-primary" onClick={onCreate}>
@@ -96,7 +104,8 @@ const PatientList = ({
         <Segmented
           ariaLabel="Teilgruppe"
           options={[
-            { value: 'all' as TeilgruppeFilter, label: 'Alle Gruppen' },
+            { value: 'all' as TeilgruppeFilter, label: 'Aktive' },
+            { value: 'archived' as TeilgruppeFilter, label: 'Archiv' },
             { value: 'A' as TeilgruppeFilter, label: 'A' },
             { value: 'B' as TeilgruppeFilter, label: 'B' },
             { value: 'C' as TeilgruppeFilter, label: 'C' },
@@ -116,7 +125,12 @@ const PatientList = ({
       {rows.length > 0 && !wideTable && (
         <div className="cd-panel">
           {rows.map(({ patient, group, due }) => (
-            <button key={patient.id} type="button" className="cd-item" onClick={() => void onSelect(patient)}>
+            <button
+              key={patient.id}
+              type="button"
+              className="cd-item"
+              onClick={() => void onSelect(patient)}
+            >
               <span
                 className={`tag ${group ? 'tag-accent-2' : 'tag-neutral'}`}
                 style={{ flex: 'none', fontWeight: 700, width: 34, justifyContent: 'center' }}
@@ -130,7 +144,14 @@ const PatientList = ({
                   {group ? TEILGRUPPE_SHORT[group] : 'Gutachten-Daten fehlen'}
                 </div>
               </div>
-              <span style={{ fontSize: 13, fontWeight: 600, flex: 'none', color: dueColor(due.daysUntilDue) }}>
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  flex: 'none',
+                  color: dueColor(due.daysUntilDue),
+                }}
+              >
                 {due.label}
               </span>
             </button>
@@ -157,7 +178,9 @@ const PatientList = ({
                 return (
                   <tr key={patient.id} className="cd-row" onClick={() => void onSelect(patient)}>
                     <td>
-                      <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div
+                        style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}
+                      >
                         {patient.name}
                         {patient.latestActionNeeded && (
                           <span className="tag tag-accent" style={{ fontSize: 10 }}>
@@ -172,7 +195,9 @@ const PatientList = ({
                     </td>
                     <td>{patient.diagnosis || '—'}</td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <div
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+                      >
                         <span
                           className={`tag ${group ? 'tag-accent-2' : 'tag-neutral'}`}
                           style={{ fontWeight: 700 }}
@@ -184,7 +209,7 @@ const PatientList = ({
                         </span>
                         {patient.hkpCode && (
                           <span className="tag tag-accent" style={{ fontSize: 10 }}>
-                            HKP {patient.hkpCode}
+                            HKP {hkpCodesOf(patient).join(', ')}
                           </span>
                         )}
                       </div>
@@ -209,7 +234,13 @@ const PatientList = ({
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {patient.latestVisitDate ? formatDateDE(patient.latestVisitDate) : 'keine'}
                     </td>
-                    <td style={{ whiteSpace: 'nowrap', fontWeight: 600, color: dueColor(due.daysUntilDue) }}>
+                    <td
+                      style={{
+                        whiteSpace: 'nowrap',
+                        fontWeight: 600,
+                        color: dueColor(due.daysUntilDue),
+                      }}
+                    >
                       {due.label}
                     </td>
                   </tr>
@@ -220,11 +251,12 @@ const PatientList = ({
         </div>
       )}
 
-      <p className="cd-muted-13" style={{ margin: 0 }}>
-        Teilgruppen der MD-Stichprobe: A Mobilität &amp; Kognition beeinträchtigt · B nur Mobilität · C nur Kognition
-        (Gutachten Modul 1/2, ≤ 1 Jahr, sonst eigene Einschätzung) · D zusätzlich bei aufwändiger HKP nach Ziffer 6, 8,
-        29 oder 31a. Visiten-Punkte: orange = Handlungsbedarf. Intervall {visitIntervalDays} Tage.
-      </p>
+      <FieldHelp title="Teilgruppen und Visiten">
+        Teilgruppen der MD-Stichprobe: A Mobilität &amp; Kognition beeinträchtigt · B nur Mobilität
+        · C nur Kognition (Gutachten Modul 1/2, ≤ 1 Jahr, sonst eigene Einschätzung) · D zusätzlich
+        bei aufwändiger HKP nach Ziffer 6, 8, 29 oder 31a. Visiten-Punkte: orange = Handlungsbedarf.
+        Intervall {visitIntervalDays} Tage.
+      </FieldHelp>
     </div>
   );
 };

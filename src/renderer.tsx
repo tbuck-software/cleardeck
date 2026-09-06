@@ -1,3 +1,7 @@
+import StaffImportModal from './components/modals/StaffImportModal';
+import type { StaffImportPreview } from './shared/staffImport';
+import { localDate } from './utils/calendarDate';
+import type { YearDataset } from './shared/types';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
@@ -74,11 +78,13 @@ import type {
 const emptyAuditModal = (): AuditModalState => ({
   open: false,
   mode: 'create',
-  auditDate: new Date().toISOString().slice(0, 10),
+  auditDate: localDate(),
   inspector: '',
   kind: 'regel',
   findings: '',
-  results: { qb1: 'A', qb2: 'A', qb3: 'A', qb4: 'text', qb5: 'ok', billing: 'ok' },
+  results: {},
+  confirmed: false,
+  reportRef: '',
   clientIds: [],
 });
 
@@ -139,6 +145,8 @@ const App = () => {
     },
     setters: {
       setYear,
+      setDataset,
+      setQualifications,
       setBaseHoursInput,
       setForm,
       setAddPeriodForm,
@@ -252,6 +260,49 @@ const App = () => {
   const [dayModalDate, setDayModalDate] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportYear, setReportYear] = useState(currentYear - 1);
+  const [reportMode, setReportMode] = useState<'stichtag' | 'year-average'>('stichtag');
+  const [reportDataset, setReportDataset] = useState<YearDataset | null>(null);
+  useEffect(() => {
+    if (!reportOpen || !appReady.unlocked) return;
+    let canceled = false;
+    setReportDataset(null);
+    void api.employees
+      .list(reportYear, reportMode)
+      .then((data) => {
+        if (!canceled) setReportDataset(data);
+      })
+      .catch(handleError);
+    return () => {
+      canceled = true;
+    };
+  }, [reportOpen, reportYear, reportMode, appReady.unlocked, dataset, handleError]);
+  const [staffImport, setStaffImport] = useState<StaffImportPreview | null>(null);
+  const [staffImportBusy, setStaffImportBusy] = useState(false);
+  const [directoryMode, setDirectoryMode] = useState(false);
+  const [directoryDataset, setDirectoryDataset] = useState<YearDataset | null>(null);
+  const [currentDataset, setCurrentDataset] = useState<YearDataset | null>(null);
+  useEffect(() => {
+    if (!appReady.unlocked) {
+      setCurrentDataset(null);
+      return;
+    }
+    let canceled = false;
+    void api.employees
+      .list(currentYear, 'current')
+      .then((data) => {
+        if (!canceled) setCurrentDataset(data);
+      })
+      .catch(handleError);
+    void api.employees
+      .list(currentYear, 'directory')
+      .then((data) => {
+        if (!canceled) setDirectoryDataset(data);
+      })
+      .catch(handleError);
+    return () => {
+      canceled = true;
+    };
+  }, [appReady.unlocked, currentYear, dataset, handleError]);
   const [auditModal, setAuditModal] = useState<AuditModalState>(emptyAuditModal);
   const [auditView, setAuditView] = useState<AuditWithDetails | null>(null);
   const [previousPage, setPreviousPage] = useState<Page>('dashboard');
@@ -283,8 +334,8 @@ const App = () => {
 
   const inSettings = SETTINGS_PAGES.includes(page);
   const years = useMemo(
-    () => [currentYear - 2, currentYear - 1, currentYear],
-    [currentYear],
+    () => dataset?.availableYears ?? [currentYear - 2, currentYear - 1, currentYear],
+    [currentYear, dataset?.availableYears],
   );
 
   // — employee edit modal: hours and VZÄ stay in step while linked —
@@ -294,7 +345,10 @@ const App = () => {
       const next = { ...prev, weeklyHours: value };
       if (prev.linked) {
         const hours = Number(value);
-        const fte = !Number.isNaN(hours) && hours > 0 ? deriveFteFromWeeklyHours(hours, baseHours || 36) : null;
+        const fte =
+          !Number.isNaN(hours) && hours > 0
+            ? deriveFteFromWeeklyHours(hours, baseHours || 36)
+            : null;
         next.fteValue = fte ? fte.toFixed(2) : '';
       }
       return next;
@@ -306,7 +360,8 @@ const App = () => {
       const next = { ...prev, fteValue: value };
       if (prev.linked) {
         const fte = Number(value);
-        const hours = !Number.isNaN(fte) && fte > 0 ? deriveWeeklyHoursFromFte(fte, baseHours || 36) : null;
+        const hours =
+          !Number.isNaN(fte) && fte > 0 ? deriveWeeklyHoursFromFte(fte, baseHours || 36) : null;
         next.weeklyHours = hours ? hours.toFixed(1) : '';
       }
       return next;
@@ -319,11 +374,15 @@ const App = () => {
       if (!checked) return next;
       if (prev.weeklyHours) {
         const hours = Number(prev.weeklyHours);
-        const fte = !Number.isNaN(hours) && hours > 0 ? deriveFteFromWeeklyHours(hours, baseHours || 36) : null;
+        const fte =
+          !Number.isNaN(hours) && hours > 0
+            ? deriveFteFromWeeklyHours(hours, baseHours || 36)
+            : null;
         if (fte) next.fteValue = fte.toFixed(2);
       } else if (prev.fteValue) {
         const fte = Number(prev.fteValue);
-        const hours = !Number.isNaN(fte) && fte > 0 ? deriveWeeklyHoursFromFte(fte, baseHours || 36) : null;
+        const hours =
+          !Number.isNaN(fte) && fte > 0 ? deriveWeeklyHoursFromFte(fte, baseHours || 36) : null;
         if (hours) next.weeklyHours = hours.toFixed(1);
       }
       return next;
@@ -371,7 +430,7 @@ const App = () => {
     ],
   );
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
 
   // Visits change through the detail page, so the list's trend bars are
   // refreshed whenever the patient list itself is reloaded.
@@ -385,16 +444,26 @@ const App = () => {
       buildDashboardTasks({
         today,
         patients,
-        employees: dataset?.employees ?? [],
+        employees: currentDataset?.employees ?? [],
         openInstructions: dashboardWidgets.openInstructions,
+        instructionReminderDays: careSettings.instructionReminderDays,
+        expiringTrainings: dashboardWidgets.expiringTrainings,
         visitIntervalDays: careSettings.visitIntervalDays,
       }),
-    [today, patients, dataset?.employees, dashboardWidgets.openInstructions, careSettings.visitIntervalDays],
+    [
+      today,
+      patients,
+      currentDataset?.employees,
+      dashboardWidgets.openInstructions,
+      dashboardWidgets.expiringTrainings,
+      careSettings.visitIntervalDays,
+      careSettings.instructionReminderDays,
+    ],
   );
 
   const quality = useMemo(
-    () => buildDataQuality(dataset?.employees ?? [], patients),
-    [dataset?.employees, patients],
+    () => buildDataQuality(currentDataset?.employees ?? [], patients),
+    [currentDataset?.employees, patients],
   );
 
   const upcoming = useMemo(
@@ -402,7 +471,9 @@ const App = () => {
       unifiedEvents
         .filter((event) => {
           const days = Math.round(
-            (new Date(`${event.date}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000,
+            (new Date(`${event.date}T00:00:00`).getTime() -
+              new Date(`${today}T00:00:00`).getTime()) /
+              86400000,
           );
           return days >= 0 && days <= 30;
         })
@@ -426,7 +497,11 @@ const App = () => {
     try {
       const result = await api.backup.run();
       setBackup(result.settings);
-      setToastMessage(result.saved ? `Backup geschrieben: ${result.file}` : (result.error ?? 'Backup fehlgeschlagen.'));
+      setToastMessage(
+        result.saved
+          ? `Backup geschrieben: ${result.file}`
+          : (result.error ?? 'Backup fehlgeschlagen.'),
+      );
     } catch (err) {
       handleError(err);
     } finally {
@@ -434,10 +509,10 @@ const App = () => {
     }
   };
 
-  const restoreFromBackup = async (source: string) => {
+  const restoreFromBackup = async (source: string, recoveryKey?: string) => {
     setRestoreBusy(true);
     try {
-      const result = await api.backup.restore(source);
+      const result = await api.backup.restore(source, recoveryKey);
       setBackup(result.settings);
       if (result.saved) {
         setRestoreOpen(false);
@@ -461,7 +536,9 @@ const App = () => {
       setPasswordOpen(false);
       setToastMessage('Passwort geändert.');
     } catch (err) {
-      setPasswordError(err instanceof Error ? err.message : 'Das Passwort konnte nicht geändert werden.');
+      setPasswordError(
+        err instanceof Error ? err.message : 'Das Passwort konnte nicht geändert werden.',
+      );
     } finally {
       setPasswordBusy(false);
     }
@@ -481,11 +558,11 @@ const App = () => {
 
   const restoreSnapshot = useCallback(
     async (snapshot: ReturnType<typeof buildNavigationSnapshot>) => {
-      const { page: resolvedPage, employee, patient } = resolveNavigationSnapshot(
-        snapshot,
-        dataset?.employees ?? [],
-        patients,
-      );
+      const {
+        page: resolvedPage,
+        employee,
+        patient,
+      } = resolveNavigationSnapshot(snapshot, dataset?.employees ?? [], patients);
 
       if (resolvedPage !== 'patients') setSelectedPatient(null);
 
@@ -568,7 +645,8 @@ const App = () => {
         );
       }
       if (target === 'patients') setSelectedPatient(null);
-      if (!SETTINGS_PAGES.includes(target) && !SETTINGS_PAGES.includes(page)) setPreviousPage(target);
+      if (!SETTINGS_PAGES.includes(target) && !SETTINGS_PAGES.includes(page))
+        setPreviousPage(target);
       goTo(target);
     },
     [goTo, page, pushHistorySnapshot, setSelectedPatient],
@@ -599,27 +677,50 @@ const App = () => {
   const openTarget = useCallback(
     (target: TaskTarget) => {
       if (target.kind === 'employee') {
-        const employee = dataset?.employees.find((entry) => entry.id === target.id);
+        const employee =
+          directoryDataset?.employees.find((entry) => entry.id === target.id) ??
+          currentDataset?.employees.find((entry) => entry.id === target.id) ??
+          dataset?.employees.find((entry) => entry.id === target.id);
         if (employee) void navigateToEmployee(employee, target.tab ?? 'comp');
         return;
       }
       const patient = patients.find((entry) => entry.id === target.id);
       if (patient) void navigateToPatient(patient);
     },
-    [dataset?.employees, patients, navigateToEmployee, navigateToPatient],
+    [
+      dataset?.employees,
+      currentDataset?.employees,
+      directoryDataset?.employees,
+      patients,
+      navigateToEmployee,
+      navigateToPatient,
+    ],
   );
 
   const openEvent = useCallback(
-    async (event: { employeeId?: number; patientId?: number }) => {
+    async (event: { employeeId?: number; patientId?: number; type?: string }) => {
       if (event.patientId) {
         const patient = patients.find((entry) => entry.id === event.patientId);
         if (patient) await navigateToPatient(patient);
         return;
       }
-      const employee = dataset?.employees.find((entry) => entry.id === event.employeeId);
-      if (employee) await navigateToEmployee(employee);
+      const employee =
+        directoryDataset?.employees.find((entry) => entry.id === event.employeeId) ??
+        currentDataset?.employees.find((entry) => entry.id === event.employeeId) ??
+        dataset?.employees.find((entry) => entry.id === event.employeeId);
+      if (employee) {
+        await navigateToEmployee(employee);
+        if (event.type === 'instruction-due') setDetailTab('instr');
+      }
     },
-    [dataset?.employees, patients, navigateToEmployee, navigateToPatient],
+    [
+      dataset?.employees,
+      currentDataset?.employees,
+      directoryDataset?.employees,
+      patients,
+      navigateToEmployee,
+      navigateToPatient,
+    ],
   );
 
   // — keyboard —
@@ -681,38 +782,46 @@ const App = () => {
       return [
         ...(dataset?.employees ?? [])
           .filter((employee) => matches(employee.name))
-          .map((employee): PaletteResult => ({
-            id: `employee-${employee.id}`,
-            kind: 'Team',
-            title: employee.name,
-            sub: String(employee.qualification),
-            run: () => void navigateToEmployee(employee),
-          })),
+          .map(
+            (employee): PaletteResult => ({
+              id: `employee-${employee.id}`,
+              kind: 'Team',
+              title: employee.name,
+              sub: String(employee.qualification),
+              run: () => void navigateToEmployee(employee),
+            }),
+          ),
         ...patients
           .filter((patient) => matches(`${patient.name} ${patient.diagnosis ?? ''}`))
-          .map((patient): PaletteResult => ({
-            id: `patient-${patient.id}`,
-            kind: 'Patient:in',
-            title: patient.name,
-            sub: patient.diagnosis ?? '',
-            run: () => void navigateToPatient(patient),
-          })),
+          .map(
+            (patient): PaletteResult => ({
+              id: `patient-${patient.id}`,
+              kind: 'Patient:in',
+              title: patient.name,
+              sub: patient.diagnosis ?? '',
+              run: () => void navigateToPatient(patient),
+            }),
+          ),
         ...pages
           .filter((entry) => matches(entry.label))
-          .map((entry): PaletteResult => ({
-            id: `page-${entry.page}`,
-            kind: 'Seite',
-            title: entry.label,
-            run: () => navigateToPage(entry.page),
-          })),
+          .map(
+            (entry): PaletteResult => ({
+              id: `page-${entry.page}`,
+              kind: 'Seite',
+              title: entry.label,
+              run: () => navigateToPage(entry.page),
+            }),
+          ),
         ...paletteActions
           .filter((entry) => matches(entry.label))
-          .map((entry): PaletteResult => ({
-            id: `action-${entry.label}`,
-            kind: 'Aktion',
-            title: entry.label,
-            run: entry.run,
-          })),
+          .map(
+            (entry): PaletteResult => ({
+              id: `action-${entry.label}`,
+              kind: 'Aktion',
+              title: entry.label,
+              run: entry.run,
+            }),
+          ),
       ];
     },
     [
@@ -780,7 +889,7 @@ const App = () => {
     try {
       const results = auditSections.map((section) => ({
         sectionKey: section.key,
-        result: auditModal.results[section.key] ?? (section.scale === 'text' ? 'text' : 'A'),
+        result: auditModal.results[section.key] ?? 'unrecorded',
       }));
       const updated = await api.audits.save({
         id: auditModal.id,
@@ -788,6 +897,8 @@ const App = () => {
         inspector: auditModal.inspector || null,
         kind: auditModal.kind,
         findings: auditModal.findings || null,
+        reportRef: auditModal.reportRef || null,
+        confirmed: auditModal.confirmed ?? false,
         results,
         clientIds: auditModal.clientIds,
       });
@@ -819,7 +930,12 @@ const App = () => {
 
   // — Verwaltung lists —
 
-  const adminPage = (): { title: string; subtitle: string; items: AdminItem[]; empty: string } | null => {
+  const adminPage = (): {
+    title: string;
+    subtitle: string;
+    items: AdminItem[];
+    empty: string;
+  } | null => {
     if (page === 'quals') {
       return {
         title: 'Qualifikationen',
@@ -855,7 +971,8 @@ const App = () => {
     if (page === 'instrs') {
       return {
         title: 'Einweisungen',
-        subtitle: 'Pflichtunterweisungen mit Rechtsgrundlage und Wiederholungsintervall.',
+        subtitle:
+          'Unterweisungen und Nachweise mit betrieblicher Zuordnung und Wiederholungsintervall.',
         empty: 'Noch keine Einweisung angelegt.',
         items: instructionDefinitions
           .filter((entry) => entry.id != null)
@@ -917,7 +1034,13 @@ const App = () => {
           loading={loading}
           onChange={(next) => setRecoveryReset((prev) => ({ ...prev, ...next }))}
           onClose={() =>
-            setRecoveryReset({ open: false, recoveryKey: '', newPassword: '', repeat: '', error: null })
+            setRecoveryReset({
+              open: false,
+              recoveryKey: '',
+              newPassword: '',
+              repeat: '',
+              error: null,
+            })
           }
           onSubmit={handleRecoveryReset}
         />
@@ -1011,20 +1134,47 @@ const App = () => {
 
         {page === 'list' && (
           <EmployeeList
+            onImport={() =>
+              void window.api.chooseStaffImport().then(setStaffImport).catch(handleError)
+            }
             year={year}
+            directoryMode={directoryMode}
+            onDirectoryModeChange={setDirectoryMode}
             years={years}
             search={search}
             statusFilter={statusFilter}
             qualificationFilter={qualificationFilter}
             qualifications={qualifications}
-            filteredEmployees={filteredEmployees}
-            totalFte={totalFte}
+            filteredEmployees={
+              directoryMode
+                ? (directoryDataset?.employees ?? []).filter(
+                    (e) =>
+                      e.name.toLowerCase().includes(search.toLowerCase()) &&
+                      (statusFilter === 'all' || e.status === statusFilter) &&
+                      (qualificationFilter === 'all' || e.qualification === qualificationFilter),
+                  )
+                : filteredEmployees
+            }
+            totalFte={directoryMode ? (directoryDataset?.aggregation.totalFte ?? 0) : totalFte}
             wideTable={wideTable}
             onSearchChange={setSearch}
             onStatusChange={setStatusFilter}
             onQualificationChange={setQualificationFilter}
-            onYearChange={setYear}
-            onExport={handleExport}
+            onYearChange={(value) => {
+              setDirectoryMode(false);
+              setYear(value);
+            }}
+            onExport={
+              directoryMode
+                ? () =>
+                    void api.data
+                      .export(currentYear, 'xlsx', 'directory')
+                      .then((r) => {
+                        if (r.error) handleError(new Error(r.error));
+                      })
+                      .catch(handleError)
+                : handleExport
+            }
             onOpenReport={() => {
               setReportYear(year);
               setReportOpen(true);
@@ -1036,6 +1186,7 @@ const App = () => {
 
         {page === 'view' && selectedEmployee && (
           <EmployeeDetail
+            instructionReminderDays={careSettings.instructionReminderDays}
             employee={selectedEmployee}
             baseHours={baseHours}
             tab={detailTab}
@@ -1054,7 +1205,9 @@ const App = () => {
             onSelectInstruction={openEmployeeInstructionModal}
             onStartNewPeriod={openNewPeriodModal}
             onSelectTimelineItem={(item) =>
-              item.kind === 'period' ? openExistingPeriodModal(item.record) : openEventModalForEvent(item.record)
+              item.kind === 'period'
+                ? openExistingPeriodModal(item.record)
+                : openEventModalForEvent(item.record)
             }
           />
         )}
@@ -1095,7 +1248,9 @@ const App = () => {
             hiddenGroups={hiddenEventGroups}
             onToggleGroup={(group) =>
               setHiddenEventGroups((current) =>
-                current.includes(group) ? current.filter((entry) => entry !== group) : [...current, group],
+                current.includes(group)
+                  ? current.filter((entry) => entry !== group)
+                  : [...current, group],
               )
             }
             onViewChange={calendarActions.setView}
@@ -1151,7 +1306,13 @@ const App = () => {
             onEdit={(id) => {
               if (page === 'quals') {
                 const entry = qualifications.find((item) => item.id === id);
-                if (entry) setQualificationModal({ open: true, id, value: entry.name, note: entry.note ?? '' });
+                if (entry)
+                  setQualificationModal({
+                    open: true,
+                    id,
+                    value: entry.name,
+                    note: entry.note ?? '',
+                  });
               }
               if (page === 'comps') {
                 const entry = competencyDefinitions.find((item) => item.id === id);
@@ -1177,6 +1338,7 @@ const App = () => {
                     note: entry.note ?? '',
                     intervalMonths: entry.intervalMonths ?? null,
                     intervalSource: entry.intervalSource ?? 'betrieblich',
+                    minorHazardInstruction: entry.minorHazardInstruction ?? false,
                   });
               }
             }}
@@ -1184,11 +1346,26 @@ const App = () => {
             onAssign={page === 'instrs' ? openAssignInstructionModal : undefined}
             onReorder={(id, targetIndex) => {
               if (page === 'quals')
-                reorderTo(admin.items.map((item) => item.id), id, targetIndex, reorderQualification);
+                reorderTo(
+                  admin.items.map((item) => item.id),
+                  id,
+                  targetIndex,
+                  reorderQualification,
+                );
               if (page === 'comps')
-                reorderTo(admin.items.map((item) => item.id), id, targetIndex, reorderCompetencyDefinition);
+                reorderTo(
+                  admin.items.map((item) => item.id),
+                  id,
+                  targetIndex,
+                  reorderCompetencyDefinition,
+                );
               if (page === 'instrs')
-                reorderTo(admin.items.map((item) => item.id), id, targetIndex, reorderInstructionDefinition);
+                reorderTo(
+                  admin.items.map((item) => item.id),
+                  id,
+                  targetIndex,
+                  reorderInstructionDefinition,
+                );
             }}
           />
         )}
@@ -1264,7 +1441,11 @@ const App = () => {
         {page === 'dev' && <DevPage />}
       </main>
 
-      <CommandPalette open={paletteOpen} results={paletteResults} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette
+        open={paletteOpen}
+        results={paletteResults}
+        onClose={() => setPaletteOpen(false)}
+      />
 
       <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
       <RecoveryKeyModal
@@ -1277,7 +1458,13 @@ const App = () => {
         loading={loading}
         onChange={(next) => setRecoveryReset((prev) => ({ ...prev, ...next }))}
         onClose={() =>
-          setRecoveryReset({ open: false, recoveryKey: '', newPassword: '', repeat: '', error: null })
+          setRecoveryReset({
+            open: false,
+            recoveryKey: '',
+            newPassword: '',
+            repeat: '',
+            error: null,
+          })
         }
         onSubmit={handleRecoveryReset}
       />
@@ -1434,6 +1621,7 @@ const App = () => {
 
       <BackupExportModal
         open={exportOpen}
+        encryptedAvailable={storageMode === 'encrypted'}
         onExport={(mode) => {
           setExportOpen(false);
           void handleDbExport(mode);
@@ -1445,10 +1633,10 @@ const App = () => {
         busy={restoreBusy}
         backups={backup.backups}
         folder={backup.folder}
-        onRestore={(source) => void restoreFromBackup(source)}
-        onPickFile={() => {
+        onRestore={(source, recoveryKey) => void restoreFromBackup(source, recoveryKey)}
+        onPickFile={(recoveryKey) => {
           setRestoreOpen(false);
-          void handleDbImport(storageMode === 'encrypted' ? 'encrypted' : 'plain');
+          void handleDbImport(storageMode === 'encrypted' ? 'encrypted' : 'plain', recoveryKey);
         }}
         onClose={() => setRestoreOpen(false)}
       />
@@ -1470,6 +1658,31 @@ const App = () => {
         onSave={() => void saveAudit()}
         onDelete={auditModal.id ? deleteAudit : undefined}
       />
+      <StaffImportModal
+        preview={staffImport}
+        employees={directoryDataset?.employees ?? []}
+        busy={staffImportBusy}
+        onChange={setStaffImport}
+        onClose={() => {
+          if (!staffImportBusy) setStaffImport(null);
+        }}
+        onSave={() => {
+          if (!staffImport) return;
+          setStaffImportBusy(true);
+          void window.api
+            .commitStaffImport(staffImport.rows)
+            .then(async (result) => {
+              setDataset(await api.employees.list(year));
+              setQualifications(await api.qualifications.list());
+              setStaffImport(null);
+              setToastMessage(
+                `${result.imported} Zeilen übernommen. Historische Werte anhand der Belege prüfen.`,
+              );
+            })
+            .catch(handleError)
+            .finally(() => setStaffImportBusy(false));
+        }}
+      />
       <AuditViewModal
         audit={auditView}
         sections={auditSections}
@@ -1484,6 +1697,8 @@ const App = () => {
             inspector: auditView.inspector ?? '',
             kind: auditView.kind ?? 'regel',
             findings: auditView.findings ?? '',
+            reportRef: auditView.reportRef ?? '',
+            confirmed: auditView.confirmed ?? false,
             results: Object.fromEntries(
               auditView.results.map((entry) => [entry.sectionKey, entry.result]),
             ),
@@ -1511,19 +1726,29 @@ const App = () => {
       <ReportModal
         open={reportOpen}
         year={reportYear}
+        mode={reportMode}
+        onModeChange={setReportMode}
         years={years}
         baseHours={baseHours}
-        dataset={dataset}
+        dataset={reportDataset}
+        loading={!reportDataset}
         onYearChange={(next) => {
           setReportYear(next);
-          setYear(next);
         }}
         onExport={() => {
           setReportOpen(false);
-          void handleExport('xlsx');
+          void api.data
+            .export(reportYear, 'xlsx', reportMode)
+            .then((result) => {
+              if (result.error) handleError(new Error(result.error));
+              else if (result.saved) setToastMessage(`Jahresnachweis ${reportYear} gespeichert.`);
+            })
+            .catch(handleError);
         }}
         onFixMissingHours={() => {
-          const target = (dataset?.employees ?? []).find((employee) => employee.weeklyHours == null);
+          const target = (dataset?.employees ?? []).find(
+            (employee) => employee.weeklyHours == null,
+          );
           if (target?.id != null) {
             setReportOpen(false);
             openTarget({ kind: 'employee', id: target.id, tab: 'hist' });

@@ -1,3 +1,4 @@
+import { localDate } from '../utils/calendarDate';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { AppState, EmployeeWithPeriod } from '../shared/types';
 import { statusLabels, fteHelp } from '../constants';
@@ -152,6 +153,7 @@ const useAppLogic = () => {
     loadDashboardWidgets: dashboardWidgetsSlice.actions.loadAll,
     refreshPatients: patientSlice.actions.refreshPatients,
     loadPatientDashboard: patientDashboardSlice.actions.loadAll,
+    loadCalendar: calendarSlice.actions.loadEvents,
   });
   loadActionsRef.current = {
     loadHiddenEventTypes: upcomingEventsSlice.actions.loadHiddenEventTypes,
@@ -159,6 +161,7 @@ const useAppLogic = () => {
     loadDashboardWidgets: dashboardWidgetsSlice.actions.loadAll,
     refreshPatients: patientSlice.actions.refreshPatients,
     loadPatientDashboard: patientDashboardSlice.actions.loadAll,
+    loadCalendar: calendarSlice.actions.loadEvents,
   };
 
   // Load upcoming events and filters when app is unlocked
@@ -171,6 +174,31 @@ const useAppLogic = () => {
       loadActionsRef.current.loadPatientDashboard();
     }
   }, [authSlice.appReady.unlocked]);
+
+  useEffect(() => {
+    if (!authSlice.appReady.unlocked) return;
+    void loadActionsRef.current.loadDashboardWidgets();
+  }, [
+    authSlice.appReady.unlocked,
+    employeeSlice.state.dataset,
+    employeeSlice.state.employeeInstructions,
+    employeeSlice.state.employeeCompetencies,
+    eventSlice.state.events,
+  ]);
+
+  useEffect(() => {
+    if (!authSlice.appReady.unlocked) return;
+    void loadActionsRef.current.loadCalendar();
+    void loadActionsRef.current.loadUpcomingEvents();
+    void loadActionsRef.current.loadPatientDashboard();
+  }, [
+    authSlice.appReady.unlocked,
+    employeeSlice.state.dataset,
+    employeeSlice.state.employeeInstructions,
+    eventSlice.state.events,
+    patientSlice.state.patients,
+    patientSlice.state.visits,
+  ]);
 
   useEffect(() => {
     if (employeeSlice.state.qualificationFilter === 'all') return;
@@ -203,7 +231,7 @@ const useAppLogic = () => {
     eventSlice.setters.setEventModal((prev) => ({
       ...prev,
       type: 'period',
-      eventDate: new Date().toISOString().slice(0, 10),
+      eventDate: localDate(),
       title: '',
       details: '',
       previousValue: null,
@@ -289,6 +317,7 @@ const useAppLogic = () => {
     setters: {
       setYear,
       setDataset: employeeSlice.setters.setDataset,
+      setQualifications: employeeSlice.setters.setQualifications,
       setBaseHoursInput: settingsSlice.setters.setBaseHoursInput,
       setForm: employeeSlice.setters.setForm,
       setAddPeriodForm: eventSlice.setters.setAddPeriodForm,

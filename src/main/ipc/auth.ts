@@ -32,6 +32,8 @@ import {
   getStorageMode,
   isDbOpen,
 } from '../database/connection';
+import { writeAtomic } from '../atomicFile';
+import { getDb, getWorkingDbPath } from '../database/connection';
 import { archiveAppData } from '../dataArchive';
 
 // Track unlock state
@@ -67,7 +69,8 @@ const syncRuntimeState = (): AppState => {
     setStorageMode('encrypted');
     return {
       ...getDefaultAppState(),
-      startupError: err instanceof Error ? err.message : 'Die lokale Konfiguration kann nicht gelesen werden.',
+      startupError:
+        err instanceof Error ? err.message : 'Die lokale Konfiguration kann nicht gelesen werden.',
     };
   }
   if (!config) {
@@ -110,19 +113,22 @@ export const registerAuthHandlers = (): void => {
 
   ipcMain.handle('app:state', (): AppState => syncRuntimeState());
 
-  ipcMain.handle('app:info', (): AppInfo => ({
-    name: app.getName(),
-    version: app.getVersion(),
-    author: 'Torben Buck – tbuck software',
-    email: 'mail@tbuck.de',
-    github: 'https://github.com/Rasalas/employee-db',
-    license: 'Proprietär (Einzelnutzer-Lizenz)',
-    copyright: `© ${new Date().getFullYear()} tbuck software`,
-    electronVersion: process.versions.electron,
-    nodeVersion: process.versions.node,
-    platform: process.platform,
-    arch: process.arch,
-  }));
+  ipcMain.handle(
+    'app:info',
+    (): AppInfo => ({
+      name: app.getName(),
+      version: app.getVersion(),
+      author: 'Torben Buck – tbuck software',
+      email: 'mail@tbuck.de',
+      github: 'https://github.com/Rasalas/employee-db',
+      license: 'Proprietär (Einzelnutzer-Lizenz)',
+      copyright: `© ${new Date().getFullYear()} tbuck software`,
+      electronVersion: process.versions.electron,
+      nodeVersion: process.versions.node,
+      platform: process.platform,
+      arch: process.arch,
+    }),
+  );
 
   ipcMain.handle('app:openExternal', async (_event, url: string): Promise<boolean> => {
     if (!url) return false;
@@ -158,7 +164,7 @@ export const registerAuthHandlers = (): void => {
     setStorageMode('encrypted');
     setEncryptionKey(keyBytes);
     unlocked = true;
-    openDatabase();
+    openDatabase({ create: true });
     persistEncryptedDb();
     return buildConfiguredState('encrypted', true);
   });
@@ -176,7 +182,7 @@ export const registerAuthHandlers = (): void => {
     setStorageMode('plain');
     setEncryptionKey(null);
     unlocked = true;
-    openDatabase();
+    openDatabase({ create: true });
     return buildConfiguredState('plain', true);
   });
 
@@ -195,7 +201,13 @@ export const registerAuthHandlers = (): void => {
       }
       return buildConfiguredState('plain', true);
     }
-    if (!config.salt || !config.passwordHash || !config.encryptedKey || !config.keyIv || !config.keyTag) {
+    if (
+      !config.salt ||
+      !config.passwordHash ||
+      !config.encryptedKey ||
+      !config.keyIv ||
+      !config.keyTag
+    ) {
       throw new Error('Die Verschlüsselungskonfiguration ist unvollständig.');
     }
     const derived = deriveKey(password, config.salt);
@@ -226,8 +238,14 @@ export const registerAuthHandlers = (): void => {
 
     setStorageMode('encrypted');
     setEncryptionKey(keyBytes);
-    unlocked = true;
-    openDatabase();
+    try {
+      openDatabase();
+      unlocked = true;
+    } catch (error) {
+      unlocked = false;
+      setEncryptionKey(null);
+      throw error;
+    }
     return buildConfiguredState('encrypted', true);
   });
 
@@ -266,7 +284,10 @@ export const registerAuthHandlers = (): void => {
    */
   ipcMain.handle(
     'auth:changePassword',
-    (_event, { currentPassword, newPassword }: { currentPassword: string; newPassword: string }): AppState => {
+    (
+      _event,
+      { currentPassword, newPassword }: { currentPassword: string; newPassword: string },
+    ): AppState => {
       const config = readConfig();
       if (!config) {
         throw new Error('Die App wurde noch nicht eingerichtet.');
@@ -394,6 +415,7 @@ export const registerAuthHandlers = (): void => {
     if (!isDbOpen()) {
       openDatabase();
     }
+    writeAtomic(getWorkingDbPath(), getDb().serialize());
     closeDb();
     writeConfig({
       storageMode: 'plain',

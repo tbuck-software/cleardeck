@@ -1,3 +1,4 @@
+import { localDate } from '../../utils/calendarDate';
 import fs from 'fs';
 import { ipcMain, dialog, shell, BrowserWindow } from 'electron';
 import { clearDiagnostics, diagnosticsDir, readDiagnostics } from '../diagnostics';
@@ -17,11 +18,13 @@ export const registerDiagnosticHandlers = (getWindow: () => BrowserWindow | null
   ipcMain.handle('diagnostics:export', async (): Promise<boolean> => {
     const options = {
       title: 'Diagnose für Feedback speichern',
-      defaultPath: `ClearDeck-Diagnose-${new Date().toISOString().slice(0, 10)}.txt`,
+      defaultPath: `ClearDeck-Diagnose-${localDate()}.txt`,
       filters: [{ name: 'Textdatei', extensions: ['txt'] }],
     };
     const window = getWindow();
-    const result = window ? await dialog.showSaveDialog(window, options) : await dialog.showSaveDialog(options);
+    const result = window
+      ? await dialog.showSaveDialog(window, options)
+      : await dialog.showSaveDialog(options);
     if (result.canceled || !result.filePath) return false;
     fs.writeFileSync(result.filePath, formatDiagnostics(readDiagnostics()), 'utf8');
     return true;

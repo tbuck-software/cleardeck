@@ -1,3 +1,5 @@
+import Checkbox from '../ui/Checkbox';
+import FieldHelp from '../ui/FieldHelp';
 import React, { useMemo, useState } from 'react';
 import Dialog from '../ui/Dialog';
 import Icon from '../ui/Icon';
@@ -68,13 +70,31 @@ const AuditModal = ({
       open={modal.open}
       width={620}
       title={modal.mode === 'edit' ? 'Prüfung bearbeiten' : 'Prüfung erfassen'}
-      subtitle="Ergebnisse aus dem Prüfbericht des Medizinischen Dienstes je Qualitätsbereich."
+      subtitle="Interne Zusammenfassung des Prüfberichts"
       primaryLabel="Speichern"
       onPrimary={onSave}
       deleteLabel={modal.mode === 'edit' && onDelete ? 'Löschen' : undefined}
       onDelete={onDelete}
       onClose={onClose}
     >
+      <FieldHelp title="Einordnung der Ergebnisse">
+        Dies ist kein vollständiger QPR-Prüfbogen und kein offizielles Gesamturteil. Fehlende
+        Angaben bleiben offen. Alte Einträge müssen anhand des Originalberichts geprüft werden.
+      </FieldHelp>
+      <label className="cd-form-label">
+        Originalbericht
+        <input
+          className="input"
+          value={modal.reportRef ?? ''}
+          onChange={(e) => onChange({ ...modal, reportRef: e.target.value })}
+        />
+      </label>
+      <Checkbox
+        checked={modal.confirmed ?? false}
+        onChange={(e) => onChange({ ...modal, confirmed: e.target.checked })}
+      >
+        Mit Originalbericht abgeglichen
+      </Checkbox>
       <div className="cd-field-grid">
         <div className="field">
           <label htmlFor="audit-date">Prüfdatum</label>
@@ -112,7 +132,7 @@ const AuditModal = ({
       </div>
 
       <div className="field">
-        <label>Ergebnis je Qualitätsbereich</label>
+        <label>Interne Zusammenfassung je Qualitätsbereich</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {sections.map((section) => (
             <div
@@ -123,11 +143,13 @@ const AuditModal = ({
               {section.scale === 'abcd' && (
                 <Segmented
                   ariaLabel={section.name}
-                  options={(['A', 'B', 'C', 'D'] as AuditResultValue[]).map((value) => ({
-                    value,
-                    label: value,
-                  }))}
-                  value={modal.results[section.key] ?? 'A'}
+                  options={(['unrecorded', 'A', 'B', 'C', 'D'] as AuditResultValue[]).map(
+                    (value) => ({
+                      value,
+                      label: value === 'unrecorded' ? 'Nicht erfasst' : value,
+                    }),
+                  )}
+                  value={modal.results[section.key] ?? 'unrecorded'}
                   onChange={(value) => setResult(section.key, value)}
                 />
               )}
@@ -135,15 +157,24 @@ const AuditModal = ({
                 <Segmented
                   ariaLabel={section.name}
                   options={[
-                    { value: 'ok' as AuditResultValue, label: 'erfüllt' },
-                    { value: 'no' as AuditResultValue, label: 'nicht erfüllt' },
+                    { value: 'unrecorded' as AuditResultValue, label: 'Nicht erfasst' },
+                    {
+                      value: 'ok' as AuditResultValue,
+                      label: section.key === 'billing' ? 'Keine Auffälligkeit erfasst' : 'erfüllt',
+                    },
+                    {
+                      value: 'no' as AuditResultValue,
+                      label: section.key === 'billing' ? 'Auffälligkeit erfasst' : 'nicht erfüllt',
+                    },
                   ]}
-                  value={modal.results[section.key] ?? 'ok'}
+                  value={modal.results[section.key] ?? 'unrecorded'}
                   onChange={(value) => setResult(section.key, value)}
                 />
               )}
               {section.scale === 'text' && (
-                <span className="cd-muted-13">beschreibend — siehe Feststellungen</span>
+                <span className="cd-muted-13">
+                  Beschreibend in Feststellungen erfassen; keine automatische Bewertung.
+                </span>
               )}
             </div>
           ))}
@@ -184,7 +215,9 @@ const AuditModal = ({
 
             {clientSearch.trim() !== '' && (
               <div className="cd-typeahead">
-                {matches.length === 0 && <span className="cd-muted-13">Keine weiteren Treffer.</span>}
+                {matches.length === 0 && (
+                  <span className="cd-muted-13">Keine weiteren Treffer.</span>
+                )}
                 {matches.map((patient) => (
                   <button
                     key={patient.id}
@@ -204,7 +237,9 @@ const AuditModal = ({
 
             <div className="cd-token-row">
               {selected.length === 0 && (
-                <span className="cd-muted-13">Noch niemand gewählt — über die Suche hinzufügen.</span>
+                <span className="cd-muted-13">
+                  Noch niemand gewählt — über die Suche hinzufügen.
+                </span>
               )}
               {selected.map((patient) => (
                 <span key={patient.id} className="cd-token">

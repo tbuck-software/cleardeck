@@ -1,10 +1,12 @@
 # QPR Teil 1a: Allgemeine ambulante Pflege
 
-Recherchestand: 05.09.2026.
+Recherchestand: 05.09.2026; Aktualitätshinweis ergänzt am 06.09.2026.
 
 Die daraus abgeleiteten fachlichen Produktentscheidungen für ClearDeck sind in [ADR 0001: Stichprobenmerkmale, Pflegevisiten und Prüfergebnisse trennen](../adr/0001-qpr-stichprobe-pflegevisite-und-pruefergebnisse.md) dokumentiert.
 
 Diese Übersicht bezieht sich auf die **Originalfassung der QPR Teil 1a vom 19.05.2025**, genehmigt am 07.08.2025 und in Kraft ab 01.07.2026. Sie ist keine konsolidierte Darstellung späterer QPR-Fassungen. Die inzwischen geänderte gesetzliche Ankündigungsfrist wird in Abschnitt 7 gesondert ausgewiesen.
+
+**Aktualität:** Seit 30.07.2026 gilt eine überarbeitete QPR Teil 1a. Kapitel 4 Abs. 2 nennt nun selbst die Ankündigung grundsätzlich zwei Arbeitstage zuvor. Laut [MD Bund, Mitteilung vom 29.07.2026](https://md-bund.de/aktuell/aktuelle-meldungen/neue-qualitaetspruefungs-richtlinien-fuer-ambulante-pflege-und-betreuungsdienste.html) enthält diese Überarbeitung keine weiteren Änderungen gegenüber der unmittelbar vorherigen Fassung. Das ersetzt keinen vollständigen Vergleich mit der hier gewünschten Originalfassung von 2025. Die folgenden Fundstellen bleiben deshalb auf die Originalfassung bezogen; Abschnitt 7 verlinkt zusätzlich die seit 30.07.2026 geltende Richtlinie.
 
 Primärquelle: [MD Bund, QPR Teil 1a vom 19.05.2025 einschließlich Anlagen](https://md-bund.de/fileadmin/dokumente/Publikationen/SPV/PV_Qualitaetspruefung/QPR_Teil_1a_ambulante_Pflegedienste_2025_05_19.pdf). Seitenangaben beziehen sich auf diese PDF-Fassung.
 
@@ -129,10 +131,11 @@ Fundstellen: Kap. 7.2 und Kap. 12; [Anlage 6, insbesondere Abschnitte 2–6, S. 
 
 - **Originalfassung vom 19.05.2025:** Grundsätzlich einen Tag zuvor. Fußnote 1 stellt ausdrücklich klar, dass spätere gesetzliche Änderungen und die am Prüfungstag geltenden gesetzlichen Regelungen maßgeblich sind. Fundstelle: [Kap. 4 Abs. 2 und Fußnote 1, S. 15](https://md-bund.de/fileadmin/dokumente/Publikationen/SPV/PV_Qualitaetspruefung/QPR_Teil_1a_ambulante_Pflegedienste_2025_05_19.pdf#page=15).
 - **Gesetzesstand bei Recherche am 05.09.2026:** Grundsätzlich **zwei Arbeitstage zuvor**, gemäß [§ 114a Abs. 1 Satz 2 SGB XI](https://www.gesetze-im-internet.de/sgb_11/__114a.html).
+- **QPR gültig ab 30.07.2026:** Dieselbe Frist steht inzwischen ausdrücklich in [Kap. 4 Abs. 2, S. 15 der überarbeiteten QPR Teil 1a](https://md-bund.de/fileadmin/dokumente/Publikationen/SPV/PV_Qualitaetspruefung/QPR_Teil1a_ambulante_Pflegedienste_2026_07_30.pdf#page=15). Damit beruht die Angabe nicht mehr allein auf dem geänderten Gesetz und dem Vorbehalt der Originalfassung.
 - Anlassprüfungen sollen unangemeldet erfolgen.
 
 ## Grenzen der Aussage
 
 - Die Aussagen zur Originalfassung sind anhand der verlinkten Primärquelle geprüft.
 - Die numerischen Modulschwellen sind aus der gesetzlichen Bewertungssystematik hergeleitet; sie stehen nicht als Zahlen in Kapitel 8 der QPR.
-- Spätere QPR-Fassungen wurden nicht vollständig mit der Originalfassung verglichen. Eine unveränderte Fortgeltung aller hier beschriebenen Einzelheiten in späteren Fassungen wird daher nicht behauptet.
+- Die Ankündigungsregel wurde zusätzlich in der seit 30.07.2026 geltenden QPR geprüft. Ein vollständiger Vergleich aller späteren Fassungen mit der Originalfassung wurde nicht durchgeführt. Die Aussage des MD Bund über den begrenzten Umfang der Juli-Änderung bezieht sich auf die unmittelbar vorherige Fassung.

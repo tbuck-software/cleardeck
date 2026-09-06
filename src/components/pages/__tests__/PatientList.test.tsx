@@ -12,6 +12,9 @@ const patients: PatientWithLatestVisit[] = [
     diagnosis: 'Demenz',
     birthDate: '1941-03-02',
     careLevel: 3,
+    serviceScope: 'eligible',
+    assessmentSource: 'report',
+    assessmentDate: '2026-01-01',
     cognitionImpaired: true,
     mobilityImpaired: false,
     hkpCode: null,
@@ -22,6 +25,9 @@ const patients: PatientWithLatestVisit[] = [
     id: 2,
     name: 'Werner Fuchs',
     diagnosis: 'Herzinsuffizienz',
+    serviceScope: 'eligible',
+    assessmentSource: 'report',
+    assessmentDate: '2026-01-01',
     cognitionImpaired: true,
     mobilityImpaired: true,
     hkpCode: '31a',
@@ -32,6 +38,9 @@ const patients: PatientWithLatestVisit[] = [
     id: 3,
     name: 'Kurt Ziegler',
     diagnosis: 'COPD',
+    serviceScope: 'eligible',
+    assessmentSource: 'report',
+    assessmentDate: '2026-01-01',
     cognitionImpaired: null,
     mobilityImpaired: null,
     hkpCode: null,
@@ -49,7 +58,9 @@ const visitTrends: Record<number, PatientVisit[]> = {
 
 const noop = (): void => undefined;
 
-const renderList = (overrides: Partial<React.ComponentProps<typeof PatientList>> = {}): ReturnType<typeof render> =>
+const renderList = (
+  overrides: Partial<React.ComponentProps<typeof PatientList>> = {},
+): ReturnType<typeof render> =>
   render(
     <PatientList
       search=""

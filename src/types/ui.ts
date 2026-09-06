@@ -37,7 +37,7 @@ export type Page =
 export const SETTINGS_PAGES: Page[] = ['settings', 'security', 'about', 'logs', 'shortcuts'];
 
 /** Filter for the Patient:innen list — 'D' means "has an aufwändige HKP code". */
-export type TeilgruppeFilter = 'all' | 'A' | 'B' | 'C' | 'D';
+export type TeilgruppeFilter = 'archived' | 'all' | 'A' | 'B' | 'C' | 'D';
 
 export type CalendarView = 'month' | 'week' | 'year';
 
@@ -85,6 +85,7 @@ export type CompetencyModalPayload = Pick<
 >;
 
 export type InstructionModalState = {
+  minorHazardInstruction?: boolean;
   open: boolean;
   id?: number;
   topic: string;
@@ -140,6 +141,9 @@ export type ConfirmState = {
 } | null;
 
 export type EditModalState = {
+  sourceRef?: string | null;
+  hoursEffectiveFrom?: string;
+  hoursVerified?: boolean;
   open: boolean;
   mode: 'edit' | 'create';
   name: string;
@@ -171,6 +175,15 @@ export type EventModalState = {
 };
 
 export type EmployeeCompetencyModalState = {
+  stageHistory?: {
+    stageScheme?: string;
+    changedAt: string;
+    level: number | null;
+    approvedAt: string | null;
+    approvedBy: string | null;
+    note: string | null;
+  }[];
+  stageScheme?: 'legacy' | 'practice-v1';
   open: boolean;
   id?: number;
   competencyDefinitionId: number | null;
@@ -182,6 +195,9 @@ export type EmployeeCompetencyModalState = {
 };
 
 export type EmployeeInstructionModalState = {
+  evidenceRef?: string;
+  content?: string;
+  scheduleReviewRequired?: boolean;
   open: boolean;
   id?: number;
   instructionDefinitionId: number | null;
@@ -204,6 +220,18 @@ export type PeriodToDeleteState = { periodId: number; label: string } | null;
 // Patient-related UI types
 
 export type PatientModalState = {
+  serviceStatus?: 'active' | 'ended';
+  serviceEndDate?: string | null;
+  serviceScope?: 'eligible' | 'excluded' | 'unknown';
+  representativeStatus?: 'present' | 'none' | 'unknown';
+  hkpCodes?: HkpCode[];
+  assessmentSource?: 'report' | 'own' | 'unknown';
+  assessmentDate?: string | null;
+  assessmentNote?: string | null;
+  akiSetting?: 'EV' | 'MV' | null;
+  phkpFirst?: boolean;
+  phkpStartDate?: string | null;
+
   open: boolean;
   mode: 'create' | 'edit';
   id?: number;
@@ -222,6 +250,10 @@ export type PatientModalState = {
 };
 
 export type VisitModalState = {
+  assignedTo?: string | null;
+  actionDueDate?: string | null;
+  status?: 'planned' | 'completed';
+  resolvedAt?: string | null;
   open: boolean;
   id?: number;
   patientId: number;
@@ -231,6 +263,8 @@ export type VisitModalState = {
 };
 
 export type AuditModalState = {
+  reportRef?: string;
+  confirmed?: boolean;
   open: boolean;
   mode: 'create' | 'edit' | 'view';
   id?: number;

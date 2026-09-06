@@ -1,3 +1,4 @@
+import { localDate } from '../../utils/calendarDate';
 import React from 'react';
 import Segmented from '../ui/Segmented';
 import Icon from '../ui/Icon';
@@ -5,7 +6,20 @@ import TaskRow from '../ui/TaskRow';
 import type { UnifiedEvent, YearDataset } from '../../shared/types';
 import type { DashboardTask, DataQualityCheck, TaskTarget } from '../../utils/dashboardTasks';
 
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+const MONTHS_SHORT = [
+  'Jan',
+  'Feb',
+  'Mär',
+  'Apr',
+  'Mai',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Dez',
+];
 
 /** Bar colours follow the qualification order, most-qualified first. */
 const QUAL_COLORS = [
@@ -75,7 +89,7 @@ const Dashboard = ({
   onOpenTasks,
 }: DashboardProps) => {
   const now = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const today = localDate(now);
   const todayLabel = now.toLocaleDateString('de-DE', {
     weekday: 'long',
     day: 'numeric',
@@ -85,7 +99,9 @@ const Dashboard = ({
 
   const employees = dataset?.employees ?? [];
   const withHours = employees.filter((employee) => employee.weeklyHours != null);
-  const newHires = employees.filter((employee) => employee.startDate?.startsWith(String(year))).length;
+  const newHires = employees.filter((employee) =>
+    employee.startDate?.startsWith(String(year)),
+  ).length;
   const leavers = employees.filter((employee) => employee.endDate?.startsWith(String(year))).length;
   const fullTime = employees.filter((employee) => (employee.fte ?? 0) >= 1).length;
   // The preview is a working queue: only open tasks, newest urgency first.
@@ -105,19 +121,34 @@ const Dashboard = ({
       sub: `Basis ${baseHours} Std./Woche`,
       color: 'var(--color-accent-700)',
     },
-    { value: String(totalHeadcount), label: 'Personen', sub: `im Jahr ${year} beschäftigt`, color: 'var(--color-text)' },
+    {
+      value: String(totalHeadcount),
+      label: 'Personen',
+      sub: `im Jahr ${year} beschäftigt`,
+      color: 'var(--color-text)',
+    },
     {
       value: fte2(totalFte / Math.max(1, withHours.length)),
       label: 'Ø VZÄ je Person',
       sub: `${fullTime} in Vollzeit`,
       color: 'var(--color-text)',
     },
-    { value: String(newHires), label: 'Eintritte', sub: `im Jahr ${year}`, color: 'var(--color-accent-2-700)' },
-    { value: String(leavers), label: 'Austritte', sub: `im Jahr ${year}`, color: 'var(--color-text)' },
+    {
+      value: String(newHires),
+      label: 'Eintritte',
+      sub: `im Jahr ${year}`,
+      color: 'var(--color-accent-2-700)',
+    },
+    {
+      value: String(leavers),
+      label: 'Austritte',
+      sub: `im Jahr ${year}`,
+      color: 'var(--color-text)',
+    },
     {
       value: String(actionNeededCount),
       label: 'Handlungsbedarf',
-      sub: 'Patient:innen · aus letzter Visite',
+      sub: 'Patient:innen · offene Visitenmaßnahmen',
       color: actionNeededCount > 0 ? 'var(--bad-800)' : 'var(--ok-800)',
     },
   ];
@@ -146,7 +177,10 @@ const Dashboard = ({
         </div>
         <div className="cd-panel">
           {openTasks.length === 0 && (
-            <div className="cd-empty">Nichts offen — alle Fristen und Stammdaten sind aktuell.</div>
+            <div className="cd-empty">
+              Keine weiteren Aufgaben in dieser Ansicht. Zurückgestellte Aufgaben und nicht erfasste
+              Nachweise sind damit nicht fachlich erledigt.
+            </div>
           )}
           {preview.map((task) => (
             <TaskRow
@@ -189,7 +223,8 @@ const Dashboard = ({
                 <div className="cd-bar-label">
                   <span style={{ fontWeight: 600 }}>{category.qualification}</span>
                   <span className="cd-muted">
-                    {category.headcount} Personen · <strong style={{ color: 'var(--color-text)' }}>{fte2(category.fte)}</strong> VZÄ
+                    {category.headcount} Personen ·{' '}
+                    <strong style={{ color: 'var(--color-text)' }}>{fte2(category.fte)}</strong> VZÄ
                   </span>
                 </div>
                 <div className="cd-bar-track">
@@ -203,7 +238,9 @@ const Dashboard = ({
                 </div>
               </div>
             ))}
-            {categories.length === 0 && <div className="cd-empty">Keine Beschäftigten im Jahr {year}.</div>}
+            {categories.length === 0 && (
+              <div className="cd-empty">Keine Beschäftigten im Jahr {year}.</div>
+            )}
           </div>
           <p className="cd-muted-13" style={{ margin: '14px 0 0' }}>
             Basis {baseHours} Std./Woche.{' '}
@@ -221,10 +258,14 @@ const Dashboard = ({
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {upcoming.length === 0 && <div className="cd-empty">Keine Termine in den nächsten 30 Tagen.</div>}
+            {upcoming.length === 0 && (
+              <div className="cd-empty">Keine Termine in den nächsten 30 Tagen.</div>
+            )}
             {upcoming.map((event) => {
               const days = Math.round(
-                (new Date(`${event.date}T00:00:00`).getTime() - new Date(`${today}T00:00:00`).getTime()) / 86400000,
+                (new Date(`${event.date}T00:00:00`).getTime() -
+                  new Date(`${today}T00:00:00`).getTime()) /
+                  86400000,
               );
               const soon = days <= 3;
               return (
@@ -235,12 +276,19 @@ const Dashboard = ({
                   style={{ padding: '10px 8px' }}
                   onClick={() => onOpenEvent(event)}
                 >
-                  <div className="cd-daychip" style={{ color: soon ? 'var(--color-accent-700)' : 'var(--color-text)' }}>
+                  <div
+                    className="cd-daychip"
+                    style={{ color: soon ? 'var(--color-accent-700)' : 'var(--color-text)' }}
+                  >
                     {event.date.slice(8, 10)}
-                    <div className="cd-daychip-mon">{MONTHS_SHORT[Number(event.date.slice(5, 7)) - 1]}</div>
+                    <div className="cd-daychip-mon">
+                      {MONTHS_SHORT[Number(event.date.slice(5, 7)) - 1]}
+                    </div>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600 }}>{event.employeeName ?? event.patientName ?? event.title}</div>
+                    <div style={{ fontWeight: 600 }}>
+                      {event.employeeName ?? event.patientName ?? event.title}
+                    </div>
                     <div className="cd-muted-13">{event.title}</div>
                   </div>
                   <span

@@ -3,12 +3,16 @@ import { COMPETENCY_LEVELS } from '../pages/EmployeeDetail';
 
 type CompetencyLevelPickerProps = {
   value: number;
+  legacy?: boolean;
   onChange: (level: number) => void;
 };
 
-const CompetencyLevelPicker = ({ value, onChange }: CompetencyLevelPickerProps) => (
+const CompetencyLevelPicker = ({ value, onChange, legacy = false }: CompetencyLevelPickerProps) => (
   <div style={{ display: 'flex', gap: 6 }} role="radiogroup" aria-label="Kompetenzstufe">
-    {COMPETENCY_LEVELS.map((label, level) => {
+    {(legacy
+      ? ['Offen', 'Unterwiesen', 'Beobachtet', 'U. Aufsicht', 'Selbstständig', 'Kann anleiten']
+      : COMPETENCY_LEVELS
+    ).map((label, level) => {
       const active = value === level;
       return (
         <button

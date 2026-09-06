@@ -13,8 +13,6 @@ const DERIVED_TYPES: EventModalType[] = [
 
 const TYPE_LABELS: { value: EventModalType; label: string }[] = [
   { value: 'period', label: 'Qualifikation / Periode' },
-  { value: 'join', label: 'Eintritt' },
-  { value: 'leave', label: 'Austritt' },
   { value: 'care-visit', label: 'Pflegevisite' },
   { value: 'emergency-training', label: 'Notfallschulung' },
   { value: 'custom', label: 'Sonstiges' },
@@ -51,7 +49,9 @@ const EventModal = ({
 }: EventModalProps) => {
   const isPeriod = state.type === 'period';
   const showValuePair =
-    state.type === 'name-change' || state.type === 'fte-change' || state.type === 'weekly-hours-change';
+    state.type === 'name-change' ||
+    state.type === 'fte-change' ||
+    state.type === 'weekly-hours-change';
 
   const deleteLabel = isPeriod
     ? periodForm.periodId
@@ -119,7 +119,9 @@ const EventModal = ({
                 className="input"
                 type="date"
                 value={periodForm.startDate}
-                onChange={(event) => onPeriodFormChange({ ...periodForm, startDate: event.target.value })}
+                onChange={(event) =>
+                  onPeriodFormChange({ ...periodForm, startDate: event.target.value })
+                }
               />
             </div>
             <div className="field">
@@ -129,7 +131,9 @@ const EventModal = ({
                 className="input"
                 type="date"
                 value={periodForm.endDate}
-                onChange={(event) => onPeriodFormChange({ ...periodForm, endDate: event.target.value })}
+                onChange={(event) =>
+                  onPeriodFormChange({ ...periodForm, endDate: event.target.value })
+                }
               />
             </div>
             <div className="field cd-field-wide">
