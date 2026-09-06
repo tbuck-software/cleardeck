@@ -36,7 +36,7 @@ Die Pfade werden vor der Registrierung der Datenbankzugriffe gesetzt. Die Dev-Au
 
 ## Geprüft
 
-Die vollständige Testsuite benötigt Node.js 26.1 oder neuer für `DatabaseSync.serialize()` und `deserialize()` im SQLite-Testadapter. Der CI-Prüfjob verwendet dafür Node.js 26.8.1. Mit dieser Version führt `npx vitest run` auch die Sicherungs- und Migrationstests aus. Die Funktionen wurden laut [Node.js-Dokumentation](https://nodejs.org/api/sqlite.html#databaseserializedbname) in 26.1 eingeführt. Installerbau und Windows-Installationsprüfung verwenden weiterhin Node.js 22; die ausgelieferte App nutzt das SQLite-Modul von Electron.
+Die vollständige Testsuite benötigt Node.js 26.1 oder neuer für `DatabaseSync.serialize()` und `deserialize()` im SQLite-Testadapter. Der CI-Prüfjob verwendet dafür Node.js 26.8.1. Mit dieser Version führt `npx vitest run` auch die Sicherungs- und Migrationstests aus. Die Funktionen wurden laut [Node.js-Dokumentation](https://nodejs.org/api/sqlite.html#databaseserializedbname) in 26.1 eingeführt. Installerbau und Windows-Installationsprüfung verwenden weiterhin Node.js 22; die ausgelieferte App nutzt `better-sqlite3` im Electron-Runtime.
 
 - Nativer macOS-Start mit eigener Bundle-ID, gültiger lokaler Signatur und Fenstertitel „ClearDeck Dev“.
 - Installierte ClearDeck-App und Dev-App liefen gleichzeitig als getrennte Prozesse.

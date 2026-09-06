@@ -1,0 +1,152 @@
+{
+  "artifacts": {
+    "version": "2.0.0",
+    "manifests": [
+      {
+        "name": "latest.yml",
+        "version": "2.0.0",
+        "files": [
+          "ClearDeck-2.0.0-Setup.exe"
+        ]
+      },
+      {
+        "name": "latest-linux.yml",
+        "version": "2.0.0",
+        "files": [
+          "cleardeck_2.0.0_amd64.deb",
+          "cleardeck-2.0.0-1.x86_64.rpm"
+        ]
+      },
+      {
+        "name": "latest-mac.yml",
+        "version": "1.8.0",
+        "files": [
+          "ClearDeck-darwin-arm64-1.8.0.zip"
+        ]
+      }
+    ],
+    "assets": [
+      "ClearDeck-2.0.0-Setup.exe",
+      "ClearDeck-darwin-arm64-1.8.0.zip",
+      "ClearDeck-win32-x64-2.0.0.zip",
+      "RELEASES",
+      "cleardeck-2.0.0-1.x86_64.rpm",
+      "cleardeck-2.0.0-full.nupkg",
+      "cleardeck_2.0.0_amd64.deb",
+      "latest-linux.yml",
+      "latest-mac.yml",
+      "latest.yml"
+    ],
+    "hashes": {
+      "ClearDeck-2.0.0-Setup.exe": "e7e01c30dc77bc1f4a6626ffdd670d207db8e7e679bd0a7a16ae47d2e8d958a0",
+      "ClearDeck-darwin-arm64-1.8.0.zip": "7b315d54b025b136488238592f6b185cce81297646cdc845b918c14bea4ac5c3",
+      "ClearDeck-win32-x64-2.0.0.zip": "a08b9e43f7c2dd35ed3b5c2fea2c1928bede43969c9d2071c935dbb867e11423",
+      "RELEASES": "5f07e3a5a78bab8323fbc01f3d852507cc7bd0e0b7326d5263e307db518fbf8f",
+      "cleardeck-2.0.0-1.x86_64.rpm": "b131d0d2d7ceb4afe5d26390158756d47d918ca260768657ea9ad6f2d9ea3c68",
+      "cleardeck-2.0.0-full.nupkg": "d7eeaae8a308c3092b99025f5cbd7449e2ba543adebb9a3eae08841420b7c5d4",
+      "cleardeck_2.0.0_amd64.deb": "142ae070495cf0de75cabd1205edc29836c303acf2a6a43a732b2c75dd03d98d",
+      "latest-linux.yml": "55d6f54a761414689ec7c0ff281dc2721e7c42ce2dd49a75e9905196d523e0ae",
+      "latest-mac.yml": "8ef281d3f9634ee683df3110cbde4ba77e8b023cb551d050728dd3a53583e07a",
+      "latest.yml": "056349e739410b8e2ba52c05842e762fea6229db016c71fdd6aa0e1c369f2a2c"
+    }
+  },
+  "feeds": [
+    {
+      "channel": "latest",
+      "installed": "1.7.1",
+      "offered": "2.0.0",
+      "updateAvailable": true,
+      "resolved": [
+        "ClearDeck-2.0.0-Setup.exe"
+      ]
+    },
+    {
+      "channel": "latest",
+      "installed": "1.8.0",
+      "offered": "2.0.0",
+      "updateAvailable": true,
+      "resolved": [
+        "ClearDeck-2.0.0-Setup.exe"
+      ]
+    },
+    {
+      "channel": "latest-mac",
+      "installed": "1.7.1",
+      "offered": "1.8.0",
+      "updateAvailable": true,
+      "resolved": [
+        "ClearDeck-darwin-arm64-1.8.0.zip"
+      ]
+    },
+    {
+      "channel": "latest-mac",
+      "installed": "1.8.0",
+      "offered": "1.8.0",
+      "updateAvailable": false,
+      "resolved": [
+        "ClearDeck-darwin-arm64-1.8.0.zip"
+      ]
+    }
+  ],
+  "release": {
+    "assets": [
+      {
+        "digest": "sha256:b131d0d2d7ceb4afe5d26390158756d47d918ca260768657ea9ad6f2d9ea3c68",
+        "name": "cleardeck-2.0.0-1.x86_64.rpm",
+        "size": 94990825
+      },
+      {
+        "digest": "sha256:d7eeaae8a308c3092b99025f5cbd7449e2ba543adebb9a3eae08841420b7c5d4",
+        "name": "cleardeck-2.0.0-full.nupkg",
+        "size": 135806263
+      },
+      {
+        "digest": "sha256:e7e01c30dc77bc1f4a6626ffdd670d207db8e7e679bd0a7a16ae47d2e8d958a0",
+        "name": "ClearDeck-2.0.0-Setup.exe",
+        "size": 136565248
+      },
+      {
+        "digest": "sha256:7b315d54b025b136488238592f6b185cce81297646cdc845b918c14bea4ac5c3",
+        "name": "ClearDeck-darwin-arm64-1.8.0.zip",
+        "size": 117152639
+      },
+      {
+        "digest": "sha256:a08b9e43f7c2dd35ed3b5c2fea2c1928bede43969c9d2071c935dbb867e11423",
+        "name": "ClearDeck-win32-x64-2.0.0.zip",
+        "size": 140522113
+      },
+      {
+        "digest": "sha256:142ae070495cf0de75cabd1205edc29836c303acf2a6a43a732b2c75dd03d98d",
+        "name": "cleardeck_2.0.0_amd64.deb",
+        "size": 90904110
+      },
+      {
+        "digest": "sha256:55d6f54a761414689ec7c0ff281dc2721e7c42ce2dd49a75e9905196d523e0ae",
+        "name": "latest-linux.yml",
+        "size": 10815
+      },
+      {
+        "digest": "sha256:8ef281d3f9634ee683df3110cbde4ba77e8b023cb551d050728dd3a53583e07a",
+        "name": "latest-mac.yml",
+        "size": 359
+      },
+      {
+        "digest": "sha256:056349e739410b8e2ba52c05842e762fea6229db016c71fdd6aa0e1c369f2a2c",
+        "name": "latest.yml",
+        "size": 10721
+      },
+      {
+        "digest": "sha256:5f07e3a5a78bab8323fbc01f3d852507cc7bd0e0b7326d5263e307db518fbf8f",
+        "name": "RELEASES",
+        "size": 80
+      }
+    ],
+    "draft": false,
+    "html_url": "https://github.com/Rasalas/employee-db/releases/tag/v2.0.0",
+    "prerelease": false,
+    "published_at": "2026-09-06T09:07:37Z",
+    "tag_name": "v2.0.0"
+  },
+  "allPublishedBytesMatchTagBuild": true,
+  "releaseNotesMatchChangelog": true
+}

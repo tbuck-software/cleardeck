@@ -1,0 +1,8 @@
+{
+  "from": "1.7.1",
+  "to": "2.0.0",
+  "configPreserved": true,
+  "dataPreserved": true,
+  "schema": "21",
+  "automaticMigrationBackups": 1
+}
