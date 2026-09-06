@@ -1,0 +1,31 @@
+{
+  "release": "https://github.com/Rasalas/employee-db/releases/tag/v2.0.0",
+  "correctedAt": "2026-09-06T09:16:37.403Z",
+  "changedAssets": [
+    "latest.yml",
+    "latest-linux.yml"
+  ],
+  "note": "- Übersichtlichere Oberfläche mit Hilfe direkt am Formular.\n- Offene Aufgaben und Fristen auf einen Blick.\n- Personen und Funktionen schnell finden.\n- Bessere Bedienung in kleinen Fenstern.\n- Patientenlisten flexibel sortieren.\n- Arbeitszeiten und Beschäftigungsverläufe nachvollziehen.\n- Genauere Jahresauswertungen und Exporte.\n- Personaldaten mit Vorschau aus Excel oder CSV übernehmen.\n- Einweisungen und Nachweise gezielt nachverfolgen.\n- Einarbeitung und Kompetenzen im Blick behalten.\n- Pflegemerkmale und Pflegeleistungen genauer erfassen.\n- Personenlisten für die Pflegeprüfung exportieren.\n- Pflegevisiten und offene Maßnahmen nachverfolgen.\n- Prüfergebnisse mit Originalberichten verknüpfen.\n- Bestehende Daten automatisch übernehmen und sichern.\n- Sicherungen einfacher verwalten und wiederherstellen.\n- Updates mit Fortschrittsanzeige herunterladen und installieren.",
+  "bulletCount": 17,
+  "releaseBodyMatches": true,
+  "changelogMatches": true,
+  "onlyVersion200NoteChanged": true,
+  "historicalNotesPreserved": true,
+  "allNonNoteManifestFieldsPreserved": true,
+  "otherEightAssetsByteIdentical": true,
+  "macFeedAndZipByteIdentical": true,
+  "tagUnchanged": true,
+  "releaseIdUnchanged": true,
+  "hashes": {
+    "cleardeck-2.0.0-1.x86_64.rpm": "b131d0d2d7ceb4afe5d26390158756d47d918ca260768657ea9ad6f2d9ea3c68",
+    "cleardeck-2.0.0-full.nupkg": "d7eeaae8a308c3092b99025f5cbd7449e2ba543adebb9a3eae08841420b7c5d4",
+    "ClearDeck-2.0.0-Setup.exe": "e7e01c30dc77bc1f4a6626ffdd670d207db8e7e679bd0a7a16ae47d2e8d958a0",
+    "ClearDeck-darwin-arm64-1.8.0.zip": "7b315d54b025b136488238592f6b185cce81297646cdc845b918c14bea4ac5c3",
+    "ClearDeck-win32-x64-2.0.0.zip": "a08b9e43f7c2dd35ed3b5c2fea2c1928bede43969c9d2071c935dbb867e11423",
+    "cleardeck_2.0.0_amd64.deb": "142ae070495cf0de75cabd1205edc29836c303acf2a6a43a732b2c75dd03d98d",
+    "latest-linux.yml": "e887be9b2b2ba69e8384f3cfa0ceb77c9596087aca6d3cc2b3e3d791345811ed",
+    "latest-mac.yml": "8ef281d3f9634ee683df3110cbde4ba77e8b023cb551d050728dd3a53583e07a",
+    "latest.yml": "13d947c7d8955aeb3dd6bb6a5004ac7097d03732ec0932a123bbe175bbc1614d",
+    "RELEASES": "5f07e3a5a78bab8323fbc01f3d852507cc7bd0e0b7326d5263e307db518fbf8f"
+  }
+}
