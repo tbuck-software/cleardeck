@@ -1,6 +1,5 @@
 import Checkbox from '../ui/Checkbox';
 import BirthDateInput from '../ui/BirthDateInput';
-import FieldHelp from '../ui/FieldHelp';
 import React from 'react';
 import { validDate } from '../../utils/calendarDate';
 import Dialog from '../ui/Dialog';
@@ -36,19 +35,17 @@ export default function StaffImportModal({
       width={1080}
       title="Mitarbeiterliste prüfen"
       subtitle={preview.source}
+      help={[
+        {
+          title: 'Hinweise zur Übernahme',
+          body: 'Übernommen werden nur ausgewählte Zeilen. Gleiche Namen werden nicht automatisch zusammengeführt. Der Stellenanteil wird zunächst aus Wochenstunden mit der Vorlagenregel bis 36 Stunden / 36 vorgeschlagen; bereits taggewichtete Excel-VZÄ werden nicht erneut gewichtet. Zeiträume, Qualifikation und vorgeschlagene Werte bitte prüfen. Vor der Übernahme wird gesichert. Überschneidungen werden abgewiesen; ein Fehler verwirft die gesamte Auswahl. Belege anschließend je Zeitraum bestätigen.',
+        },
+      ]}
       primaryLabel={`${count} Zeilen übernehmen`}
       primaryDisabled={busy || !count}
       onPrimary={onSave}
       onClose={onClose}
     >
-      <FieldHelp title="Hinweise zur Übernahme">
-        Übernommen werden nur ausgewählte Zeilen. Gleiche Namen werden nicht automatisch
-        zusammengeführt. Der Stellenanteil wird zunächst aus Wochenstunden mit der Vorlagenregel bis
-        36 Stunden / 36 vorgeschlagen; bereits taggewichtete Excel-VZÄ werden nicht erneut
-        gewichtet. Zeiträume, Qualifikation und vorgeschlagene Werte bitte prüfen. Vor der Übernahme
-        wird gesichert. Überschneidungen werden abgewiesen; ein Fehler verwirft die gesamte Auswahl.
-        Belege anschließend je Zeitraum bestätigen.
-      </FieldHelp>
       <div className="cd-table-wrap cd-import-table">
         <table className="ds-table">
           <thead>

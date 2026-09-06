@@ -1,8 +1,48 @@
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
 const { prepareDevRuntime } = require('./dev-runtime');
 
 const root = path.resolve(__dirname, '..');
+const normalLock = path.join(root, '.cache', 'cleardeck-normal-runner.lock');
+fs.mkdirSync(path.dirname(normalLock), { recursive: true });
+try {
+  fs.writeFileSync(normalLock, String(process.pid), { flag: 'wx' });
+} catch (error) {
+  if (error.code !== 'EEXIST') throw error;
+  const pid = Number(fs.readFileSync(normalLock, 'utf8'));
+  if (!Number.isInteger(pid) || pid < 1) throw Error('Ungültige Entwicklungs-Startdatei.');
+  try {
+    process.kill(pid, 0);
+    console.error('Die normale Entwicklung läuft bereits. Bitte zuerst beenden.');
+    process.exit(1);
+  } catch (error) {
+    if (error.code !== 'ESRCH') throw error;
+  }
+  fs.unlinkSync(normalLock);
+  fs.writeFileSync(normalLock, String(process.pid), { flag: 'wx' });
+}
+process.once('exit', () => {
+  if (fs.existsSync(normalLock) && fs.readFileSync(normalLock, 'utf8') === String(process.pid))
+    fs.unlinkSync(normalLock);
+});
+// Both Forge configurations write .webpack. Reject concurrent starts before
+// Forge removes that directory, while keeping the profiles independent.
+const demoLock = path.join(root, '.cache', 'cleardeck-demo-runner.lock');
+if (fs.existsSync(demoLock)) {
+  const pid = Number(fs.readFileSync(demoLock, 'utf8'));
+  if (!Number.isInteger(pid) || pid < 1) {
+    console.error('Ungültige Demo-Startdatei. Bitte den Demo-Start prüfen.');
+    process.exit(1);
+  }
+  try {
+    process.kill(pid, 0);
+    console.error('Die Demo-Entwicklung läuft. Bitte zuerst im Demo-Terminal mit Strg+C beenden.');
+    process.exit(1);
+  } catch (error) {
+    if (error.code !== 'ESRCH') throw error;
+  }
+}
 const updates = process.argv.includes('--updates');
 const runtime = prepareDevRuntime(root);
 const env = { ...process.env };

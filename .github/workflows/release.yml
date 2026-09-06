@@ -2,55 +2,153 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
+    branches: ['feat/update-download-flow']
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - run: npx vitest run
+
   build:
+    needs: checks
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
-          cache-dependency-path: package-lock.json
-
-      - name: Install build deps (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Linux build dependencies
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y rpm fakeroot
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Test update manifest generation
-        run: npx vitest run scripts/__tests__/updateManifest.test.ts
-
-      - name: Build artifacts
-        run: ${{ runner.os == 'Windows' && 'set SKIP_FUSES=1 && npm run make' || 'SKIP_FUSES=1 npm run make' }}
+      - run: npm ci
+      - name: Build candidate
+        run: npm run make
         env:
+          SKIP_FUSES: '1'
           GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
-
-      - name: Generate update yml
-        run: node scripts/generate-update-yml.js
-
-      - name: Extract release notes
-        run: node scripts/release-notes.js release-notes.md
-
-      - name: Upload to Release
-        uses: softprops/action-gh-release@v2
+      - run: node scripts/generate-update-yml.js
+      - uses: actions/upload-artifact@v4
         with:
-          files: out/make/**/*
-          body_path: release-notes.md
+          name: release-${{ runner.os }}
+          path: out/make/**
+          if-no-files-found: error
+          retention-days: 7
+
+  retained-mac-feed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # Proposed 2.0.0 platform plan: no new Mac binary. Keep the previous
+      # channel bytes so old Mac clients do not lose their shared GitHub feed.
+      - run: node scripts/retain-mac-feed.cjs retained-mac
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-mac-retained
+          path: retained-mac/*
+          if-no-files-found: error
+          retention-days: 7
+
+  windows-upgrade:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        old-version: ['1.7.1', '1.8.0']
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-Windows
+          path: candidate
+      - name: Original installed app to candidate
+        shell: pwsh
+        run: ./scripts/test-windows-candidate.ps1 -OldVersion '${{ matrix.old-version }}' -Artifacts '${{ github.workspace }}/candidate'
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: upgrade-${{ matrix.old-version }}
+          path: |
+            ${{ runner.temp }}/cleardeck-candidate-result/*.json
+            ${{ runner.temp }}/cleardeck-candidate-result/*.png
+          retention-days: 7
+
+  verify:
+    needs: [build, retained-mac-feed]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+      - run: node scripts/verify-release-artifacts.cjs release-assets 1.8.0
+
+  publish:
+    # Branch/manual runs only prepare a reviewable candidate. Push the version
+    # tag only after the platform plan and candidate have been accepted.
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [checks, build, retained-mac-feed, windows-upgrade, verify]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release-assets
+      - name: Upload draft, verify downloaded bytes, then publish
+        run: node scripts/publish-verified-release.cjs release-assets
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -93,8 +93,11 @@
 }
 
 .cd-nav-badge {
+  flex: none;
   font-size: 11px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
   background: var(--color-accent-2-700);
   color: #fff;
   border-radius: 999px;
@@ -103,6 +106,19 @@
   display: grid;
   place-items: center;
   padding: 0 5px;
+}
+
+.app-sidebar[data-wide='false'] .cd-nav {
+  position: relative;
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.app-sidebar[data-wide='false'] .cd-nav-badge {
+  position: absolute;
+  top: -11px;
+  right: -4px;
+  box-shadow: 0 0 0 2px var(--color-side);
 }
 
 .app-main {

@@ -1,6 +1,6 @@
-import FieldHelp from '../ui/FieldHelp';
-import { localDate } from '../../utils/calendarDate';
-import React from 'react';
+import HelpPopover from '../ui/HelpPopover';
+import { localDate, validDate } from '../../utils/calendarDate';
+import React, { useMemo, useState } from 'react';
 import Icon from '../ui/Icon';
 import Segmented from '../ui/Segmented';
 import { formatDateDE } from '../../utils/dateFormat';
@@ -13,6 +13,17 @@ import {
 } from '../../utils/qpr';
 import type { PatientVisit, PatientWithLatestVisit } from '../../shared/types';
 import type { TeilgruppeFilter } from '../../types/ui';
+
+type SortKey = 'name' | 'diagnosis' | 'group' | 'visits' | 'latest' | 'due';
+const COLUMNS: { key: SortKey; label: string }[] = [
+  { key: 'name', label: 'Name' },
+  { key: 'diagnosis', label: 'Diagnose' },
+  { key: 'group', label: 'Teilgruppe' },
+  { key: 'visits', label: 'Visiten' },
+  { key: 'latest', label: 'Letzte Visite' },
+  { key: 'due', label: 'Nächste fällig' },
+];
+const collator = new Intl.Collator('de', { sensitivity: 'base', numeric: true });
 
 export const dueColor = (daysUntilDue: number): string =>
   daysUntilDue < 0
@@ -48,18 +59,52 @@ const PatientList = ({
   onSelect,
 }: PatientListProps) => {
   const today = localDate();
+  const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'name', dir: 1 });
 
-  const rows = patients.map((patient) => {
-    const group = needsAssessment(patient, today)
-      ? null
-      : teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired);
-    const due = visitDue(
-      { latestVisitDate: patient.latestVisitDate, admissionDate: patient.admissionDate },
-      today,
-      visitIntervalDays,
-    );
-    return { patient, group, due };
-  });
+  const rows = useMemo(
+    () =>
+      patients
+        .map((patient) => {
+          const group = needsAssessment(patient, today)
+            ? null
+            : teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired);
+          const due = visitDue(
+            { latestVisitDate: patient.latestVisitDate, admissionDate: patient.admissionDate },
+            today,
+            visitIntervalDays,
+          );
+          const dateValue = (value?: string | null) => (value && validDate(value) ? value : null);
+          const values: Record<SortKey, string | number | null> = {
+            name: patient.name.trim() || null,
+            diagnosis: patient.diagnosis?.trim() || null,
+            group,
+            visits: patient.visitCount ?? visitTrends[patient.id ?? -1]?.length ?? null,
+            latest: dateValue(patient.latestVisitDate),
+            due: dateValue(due.dueDate),
+          };
+          return { patient, group, due, value: values[sort.key] };
+        })
+        .sort((a, b) => {
+          // Missing values stay last in both directions; ties keep a stable name order.
+          if (a.value == null && b.value != null) return 1;
+          if (a.value != null && b.value == null) return -1;
+          const compared =
+            a.value == null || b.value == null
+              ? 0
+              : typeof a.value === 'number' && typeof b.value === 'number'
+                ? a.value - b.value
+                : collator.compare(String(a.value), String(b.value));
+          return (
+            compared * sort.dir ||
+            collator.compare(a.patient.name, b.patient.name) ||
+            (a.patient.id ?? 0) - (b.patient.id ?? 0)
+          );
+        }),
+    [patients, visitTrends, today, visitIntervalDays, sort],
+  );
+
+  const toggleSort = (key: SortKey) =>
+    setSort((current) => ({ key, dir: current.key === key && current.dir === 1 ? -1 : 1 }));
 
   const counts = {
     A: rows.filter((row) => row.group === 'A').length,
@@ -84,10 +129,25 @@ const PatientList = ({
             Handlungsbedarf · Gruppen A {counts.A} · B {counts.B} · C {counts.C} · D {counts.D}
           </p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={onCreate}>
-          <Icon name="plus" size={16} />
-          Patient:in anlegen
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <HelpPopover
+            heading="Patient:innen"
+            entries={[
+              {
+                title: 'Teilgruppen der MD-Stichprobe',
+                body: 'A Mobilität & Kognition beeinträchtigt · B nur Mobilität · C nur Kognition (Gutachten Modul 1/2, ≤ 1 Jahr, sonst eigene Einschätzung) · D zusätzlich bei aufwändiger HKP nach Ziffer 6, 8, 29 oder 31a.',
+              },
+              {
+                title: 'Visiten',
+                body: `Orange markierte Punkte stehen für Handlungsbedarf. Das Visitenintervall beträgt ${visitIntervalDays} Tage.`,
+              },
+            ]}
+          />
+          <button type="button" className="btn btn-primary" onClick={onCreate}>
+            <Icon name="plus" size={16} />
+            Patient:in anlegen
+          </button>
+        </div>
       </header>
 
       <div className="cd-filters">
@@ -164,12 +224,35 @@ const PatientList = ({
           <table className="ds-table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Diagnose</th>
-                <th>Teilgruppe</th>
-                <th>Visiten</th>
-                <th>Letzte Visite</th>
-                <th>Nächste fällig</th>
+                {COLUMNS.map((column) => (
+                  <th
+                    key={column.key}
+                    className="cd-th"
+                    aria-sort={
+                      sort.key === column.key
+                        ? sort.dir === 1
+                          ? 'ascending'
+                          : 'descending'
+                        : 'none'
+                    }
+                  >
+                    <button
+                      type="button"
+                      className="cd-sort-button"
+                      onClick={() => toggleSort(column.key)}
+                      title={
+                        column.key === 'visits'
+                          ? 'Nach Anzahl erfasster Visiten sortieren'
+                          : undefined
+                      }
+                    >
+                      {column.label}{' '}
+                      <span aria-hidden="true" style={{ color: 'var(--color-accent)' }}>
+                        {sort.key === column.key ? (sort.dir === 1 ? '↑' : '↓') : ''}
+                      </span>
+                    </button>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -250,13 +333,6 @@ const PatientList = ({
           </table>
         </div>
       )}
-
-      <FieldHelp title="Teilgruppen und Visiten">
-        Teilgruppen der MD-Stichprobe: A Mobilität &amp; Kognition beeinträchtigt · B nur Mobilität
-        · C nur Kognition (Gutachten Modul 1/2, ≤ 1 Jahr, sonst eigene Einschätzung) · D zusätzlich
-        bei aufwändiger HKP nach Ziffer 6, 8, 29 oder 31a. Visiten-Punkte: orange = Handlungsbedarf.
-        Intervall {visitIntervalDays} Tage.
-      </FieldHelp>
     </div>
   );
 };

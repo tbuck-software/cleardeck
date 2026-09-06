@@ -2,38 +2,25 @@
 
 ## [Unreleased]
 
-- Neu gestaltete Oberfläche: eigene Seitenleiste mit Übersicht, Team, Patient:innen, MD-Prüfung und Kalender, eigener Bereich für Verwaltung und Einstellungen.
-- „Heute zu tun“ auf der Übersicht sammelt offene Fristen, Visiten und Datenlücken automatisch und springt direkt zum betroffenen Datensatz.
-- Suche über Personen, Patient:innen, Seiten und Aktionen mit Strg+K.
-- QPR-Teilgruppen A–D werden aus Mobilität (Modul 1) und Kognition (Modul 2) abgeleitet statt bewertet; eine aufwändige HKP-Leistung ergänzt Teilgruppe D zusätzlich.
-- Pflegevisiten dokumentieren „Handlungsbedarf“ statt einer A–D-Note. Bisherige Visiten mit C oder D werden übernommen, die alten Buchstaben bleiben gespeichert.
-- Neue Seite „MD-Prüfung“ mit Vorbereitungs-Checks, Stichprobenzählung gegen die Sollzahlen und erfassten Prüfergebnissen je Qualitätsbereich.
-- Personenliste nach Anlage 7 als Excel exportieren.
-- Pflegevisiten-Intervall und Erinnerung an Einweisungen sind einstellbar.
-- Neue Seite „Tastenkürzel“; „Über ClearDeck“, „Sicherheit & Backup“ und „Logs & Diagnose“ als eigene Bereiche.
-- Kalender: Tagesansicht per Klick, Filter nach Terminart. Termine östlich von Greenwich landen nicht mehr auf dem Vortag.
-- App lässt sich über die Seitenleiste sperren; ohne Verschlüsselung verdeckt sie nur den Bildschirm und wird per Knopf wieder freigegeben.
-- Einweisungen haben ein eigenes Wiederholungsintervall statt einer pauschalen Jahresfrist. Beim Abschließen entsteht ein Folgeeintrag, der abgeschlossene bleibt als Nachweis stehen.
-- Bei Beschäftigten unter 18 wird das Intervall auf sechs Monate verkürzt (JArbSchG § 29 Abs. 2).
-- Korrigierte Rechtsgrundlagen im Einweisungskatalog: Hygiene folgt aus BioStoffV / TRBA 250 statt IfSG, Medizinprodukte aus der MPBetreibV statt MDR/MPDG. Medizinprodukte haben bewusst kein Zeitintervall.
-- Fünf fehlende Pflichtunterweisungen ergänzt: Gefahrstoffe, Ersthelfer-Fortbildung, Brandschutzhelfer, Hautschutz und die Belehrung nach IfSG § 43.
-- Backups in einen wählbaren Ordner, automatisch beim Schließen sowie täglich oder wöchentlich, mit einstellbarer Aufbewahrung. Wiederherstellen legt vorher ein Sicherheits-Backup an.
-- Passwort ändern, ohne dass Recovery-Key oder ältere Backups unbrauchbar werden.
-- Excel-Exporte werden wieder geschrieben; sie schlugen zuvor mit „cannot save file" fehl.
-- Einweisungen lassen sich aus der Verwaltung heraus mehreren Personen auf einmal zuordnen, mit gemeinsamem Fälligkeitsdatum.
-- Das Fenster lässt sich deutlich kleiner ziehen (ab 820 × 560). Die schmale Darstellung — Seitenleiste als Symbole, gestapelte Zeilen statt Tabelle — war bisher durch die Mindestgröße gar nicht erreichbar.
-- Gesperrte Knöpfe sagen jetzt, warum: „Alle Kompetenzen des Katalogs sind zugeordnet.“ statt eines toten Knopfes.
-- Demodaten decken alle Teilgruppen, aufwändige HKP-Leistungen und bewusste Datenlücken ab.
+## [2.0.0]
 
-- Neue Ansicht „Logs & Diagnose“ in den Einstellungen mit Zeitstempeln, Fehlerstufen und kopierbaren Ereignissen.
-- Bereinigte Diagnosedatei bei Bedarf lokal speichern und einer Feedback-Nachricht anhängen.
-
-- Updates gezielt herunterladen, mit Fortschrittsbalken und geschätzter Restzeit.
-- Heruntergeladene Updates per zweitem Klick installieren und ClearDeck neu starten.
-- Neuerungen direkt am Update-Symbol lesen, auch vor der Anmeldung.
-- Update-Fehler bleiben sichtbar und lassen sich kopieren. Ein Fensterwechsel verwirft den Downloadstatus nicht mehr.
-- Zuverlässigere Windows-Updates durch korrigierte Installationsdateinamen.
-- Fehler beim Öffnen der lokalen Konfiguration werden angezeigt, statt die Ersteinrichtung anzubieten.
+- Neu gestaltete Oberfläche mit Übersicht, Team, Patient:innen, MD-Prüfung, Kalender und eigenen Einstellungsseiten. Hilfe ist direkt am jeweiligen Formular erreichbar.
+- „Heute zu tun“ sammelt offene Fristen, Visiten, Maßnahmen und Datenlücken. Globale Suche mit Strg+K führt zu Personen, Seiten und Aktionen.
+- Kleine Fenster zeigen eine kompakte Navigation und gestapelte Listen. Der Aufgabenzähler bleibt als „9+“ lesbar; Tooltip und breite Navigation zeigen die genaue Anzahl.
+- Patientenlisten lassen sich nach Name, Diagnose, Teilgruppe, Visitenanzahl und Terminen auf- oder absteigend sortieren. Fehlende Werte bleiben am Ende.
+- Beschäftigungsabschnitte, Wiedereintritte, Qualifikationen und historische Wochenstunden bleiben nachvollziehbar. Stichtags- und Jahresmittelauswertungen berücksichtigen den jeweils gültigen Stellenanteil.
+- Personalbestände aus Excel/CSV mit Vorschau und Prüfung übernehmen. Jahresnachweise und Excel-Exporte verwenden die ausgewählten Zeiträume und Werte.
+- Einweisungen dokumentieren Durchführung, Inhalte, Beleg und Folgetermin getrennt. Sammelzuordnung und regelbezogene Wiedervorlagen ergänzen den korrigierten Katalog; die Jugendregel gilt nur für die dafür einschlägigen Unterweisungen.
+- Einarbeitung und Kompetenzen dokumentieren Stufen, Bestätigung und Verlauf. Offene Nachweise bleiben von durchgeführten Einweisungen unterscheidbar.
+- QPR-Stichprobenmerkmale werden aus Mobilität und Kognition ermittelt. Mehrere aufwändige HKP-Leistungen, Einstufungsquelle, Gutachtendatum und ungeklärte Angaben bleiben getrennt erfasst.
+- Personenliste nach Anlage 7 exportieren, einschließlich Versorgungsumfang, Vertretung und AKI/pHKP. Die MD-Seite zeigt Merkmalsbestände und Vorbereitungsbedarf; sie führt keine offizielle Zufallsziehung durch.
+- Pflegevisiten als geplant oder durchgeführt dokumentieren. Maßnahmen erhalten Zuständigkeit, Termin und Erledigung. Bisherige Visitenbewertungen bleiben als historische Angaben erhalten.
+- MD-Prüfungen enthalten Entwurfsstatus, Qualitätsbereiche und eine Referenz zum vollständigen Originalbericht. Interne Zusammenfassungen werden nicht als offizieller Gesamtbuchstabe ausgegeben.
+- Datenbestände aus 1.7.1 und 1.8.0 werden beim ersten Öffnen automatisch weitergeführt. Vor einer Migration entsteht automatisch eine Sicherheitskopie. Fehler verändern den Originalbestand nicht; bisheriges Passwort und Schlüssel bleiben gültig.
+- Verbesserte Sicherung und Wiederherstellung, einstellbarer Sicherungsordner und Aufbewahrung. Ältere Backups bleiben nach einem Passwortwechsel verwendbar. Fehlende Datenbanken oder fehlerhafte Konfigurationen führen nicht zu einem leeren Ersatzbestand.
+- Updates gezielt herunterladen, Fortschritt und geschätzte Restzeit sehen, anschließend installieren und neu starten. Updatefehler bleiben sichtbar und kopierbar; Neuerungen übersprungener Versionen sind nachlesbar.
+- Windows-Update-Metadaten verwenden eindeutige Installationsdateinamen. Lokale Logs und bereinigte Diagnoseexporte erleichtern die Fehlerklärung.
+- Separater Entwicklungsmodus mit umfangreichem synthetischem Demo-Bestand und automatischer Übernahme von Codeänderungen. Produktionsdaten werden dabei nicht verwendet.
 
 ## [1.8.0]
 

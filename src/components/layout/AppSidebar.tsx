@@ -59,12 +59,27 @@ const AppSidebar = ({
       type="button"
       className="cd-nav"
       aria-current={current === entry.key ? 'page' : undefined}
-      title={wide ? undefined : entry.label}
+      aria-label={
+        entry.badge
+          ? `${entry.label}, ${entry.badge} ${entry.badge === 1 ? 'offene Aufgabe' : 'offene Aufgaben'}`
+          : entry.label
+      }
+      title={
+        wide
+          ? undefined
+          : entry.badge
+            ? `${entry.label}, ${entry.badge} ${entry.badge === 1 ? 'offene Aufgabe' : 'offene Aufgaben'}`
+            : entry.label
+      }
       onClick={() => onNavigate(entry.key)}
     >
       <Icon name={entry.icon} />
       {wide && <span style={{ flex: 1 }}>{entry.label}</span>}
-      {entry.badge ? <span className="cd-nav-badge">{entry.badge}</span> : null}
+      {entry.badge ? (
+        <span className="cd-nav-badge" aria-hidden="true">
+          {!wide && entry.badge > 9 ? '9+' : entry.badge}
+        </span>
+      ) : null}
     </button>
   );
 

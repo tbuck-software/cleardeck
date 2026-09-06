@@ -788,17 +788,194 @@
   flex-wrap: wrap;
   gap: 8px 16px;
 }
-.cd-help {
-  margin: 4px 0 12px;
-}
-.cd-help > summary {
-  cursor: pointer;
+
+/* The one remaining native disclosure — a history list — wearing the same quiet
+   pill as the help trigger. */
+.cd-disclosure > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   width: fit-content;
-  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  list-style: none;
+  font: 600 13px/1.2 var(--font-body);
+  color: var(--color-neutral-700);
 }
-.cd-help-content {
-  margin-top: 8px;
+
+.cd-disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cd-disclosure > summary::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 5px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.15s ease;
+}
+
+.cd-disclosure[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.cd-disclosure > summary:hover {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  color: var(--color-text);
+}
+
+.cd-disclosure-body {
+  padding: var(--space-2) 12px 0;
+  font-size: 13px;
   line-height: 1.5;
+  color: var(--color-neutral-800);
+}
+
+.cd-disclosure-body p {
+  margin: 0 0 var(--space-1);
+}
+
+/* One quality area and its rating, as a row that wraps on narrow dialogs. */
+.cd-result-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cd-result-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+}
+
+.cd-result-name {
+  flex: 1;
+  min-width: 200px;
+  font-size: 14px;
+}
+
+/* Grouped form sections with a quiet legend — the shape dialogs use when
+   fields fall into more than one topic. */
+.cd-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cd-form-section + .cd-form-section {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-divider);
+}
+
+.cd-form-legend {
+  font: 700 11px/1.2 var(--font-heading);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+  margin: 0;
+}
+
+/* A switch and the fields it reveals, so the extra inputs appear where the
+   switch is rather than somewhere further up the form. */
+.cd-toggle-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cd-toggle-fields {
+  margin-left: 24px;
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--color-divider);
+}
+
+/* — screen help —
+   One quiet affordance per screen, always top right of a page header or dialog
+   head, so background notes never sit between the fields they explain. */
+.cd-helpover-anchor {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+
+.cd-help-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  font: 600 13px/1.2 var(--font-body);
+  color: var(--color-neutral-700);
+}
+
+.cd-help-trigger:hover,
+.cd-help-trigger.is-open {
+  background: color-mix(in srgb, var(--color-text) 7%, transparent);
+  color: var(--color-text);
+}
+
+.cd-helpover {
+  position: absolute;
+  top: calc(100% + 8px);
+  z-index: 40;
+  width: min(360px, calc(100vw - 48px));
+  max-height: min(60vh, 460px);
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg);
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-neutral-800);
+  text-align: left;
+  cursor: default;
+  animation: cdIn 0.14s ease;
+}
+
+.cd-helpover-end {
+  right: 0;
+}
+
+.cd-helpover-start {
+  left: 0;
+}
+
+.cd-helpover-head {
+  font: 700 11px/1.2 var(--font-heading);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+  margin-bottom: var(--space-2);
+}
+
+.cd-helpover-entry + .cd-helpover-entry {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-divider);
+}
+
+.cd-helpover-entry h4 {
+  font-size: 14px;
+  margin: 0 0 4px;
+}
+
+.cd-helpover-entry p {
+  margin: var(--space-2) 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-helpover {
+    animation: none;
+  }
 }
 .cd-history-table {
   overflow-x: auto;

@@ -1,5 +1,4 @@
 import Checkbox from '../ui/Checkbox';
-import FieldHelp from '../ui/FieldHelp';
 import React from 'react';
 import Dialog from '../ui/Dialog';
 import Segmented from '../ui/Segmented';
@@ -46,6 +45,16 @@ const PatientModal = ({ modal, onChange, onClose, onSave, onDelete }: PatientMod
       open={modal.open}
       width={560}
       title={modal.mode === 'edit' ? 'Patient:in bearbeiten' : 'Patient:in anlegen'}
+      help={[
+        {
+          title: 'Welche Leistungen gehören zur MD-Liste?',
+          body: 'Enthalten sind Leistungen nach §§ 36/39 SGB XI oder §§ 37/37c SGB V; pflegerische Betreuung nach § 36 gehört dazu. Ausgeschlossen: nur Haushalt nach SGB XI, nur § 45a/45b oder deren Kombination, sowie nur Beratung § 37 Abs. 3.',
+        },
+        {
+          title: 'Kriterien für Mobilität und Kognition',
+          body: 'Gutachten höchstens ein Jahr alt: Modul 1 ab 4, Modul 2 ab 6 ungewichteten Punkten. Sonst selbst einschätzen: körperlich bedingte personelle Hilfe bei Treppen und in der Wohnung; Kognition bei nahezu täglichen Störungen von Gedächtnis, Zeit, Ort oder Personenerkennung.',
+        },
+      ]}
       primaryLabel={modal.mode === 'edit' ? 'Speichern' : 'Anlegen'}
       primaryDisabled={!modal.name.trim()}
       onPrimary={onSave}
@@ -53,158 +62,137 @@ const PatientModal = ({ modal, onChange, onClose, onSave, onDelete }: PatientMod
       onDelete={onDelete}
       onClose={onClose}
     >
-      <div className="cd-field-grid">
-        <label className="cd-form-label">
-          Versorgungsstatus
-          <select
-            className="input"
-            value={modal.serviceStatus ?? 'active'}
-            onChange={(e) =>
-              onChange({ ...modal, serviceStatus: e.target.value as 'active' | 'ended' })
-            }
-          >
-            <option value="active">Aktiv</option>
-            <option value="ended">Beendet / archiviert</option>
-          </select>
-        </label>
-        <label className="cd-form-label">
-          Versorgungsende
-          <input
-            className="input"
-            type="date"
-            value={modal.serviceEndDate ?? ''}
-            onChange={(e) => onChange({ ...modal, serviceEndDate: e.target.value || null })}
-          />
-        </label>
-        <label className="cd-form-label cd-field-wide">
-          Leistungsumfang für Anlage 7
-          <select
-            className="input"
-            value={modal.serviceScope ?? 'unknown'}
-            onChange={(e) =>
-              onChange({
-                ...modal,
-                serviceScope: e.target.value as 'eligible' | 'excluded' | 'unknown',
-              })
-            }
-          >
-            <option value="unknown">Noch zu prüfen</option>
-            <option value="eligible">§§ 36/39 SGB XI oder §§ 37/37c SGB V</option>
-            <option value="excluded">Ausschließlich ausgeschlossene Leistungen</option>
-          </select>
-        </label>
-        <FieldHelp title="Welche Leistungen gehören zur MD-Liste?">
-          Ausgeschlossen: nur Haushalt nach SGB XI, nur § 45a/45b oder deren Kombination, sowie nur
-          Beratung § 37 Abs. 3. Pflegerische Betreuung nach § 36 gehört zur Liste.
-        </FieldHelp>
-        <label className="cd-form-label cd-field-wide">
-          Vertretung / Betreuung
-          <select
-            className="input"
-            value={modal.representativeStatus ?? 'unknown'}
-            onChange={(e) =>
-              onChange({
-                ...modal,
-                representativeStatus: e.target.value as 'present' | 'none' | 'unknown',
-              })
-            }
-          >
-            <option value="unknown">Ungeklärt</option>
-            <option value="present">Vorhanden</option>
-            <option value="none">Keine vorhanden</option>
-          </select>
-        </label>
-      </div>
-      <div className="cd-field-grid">
-        <div className="field cd-field-wide">
-          <label htmlFor="patient-name">Name</label>
-          <input
-            id="patient-name"
-            className="input"
-            placeholder="Vor- und Nachname"
-            value={modal.name}
-            onChange={(event) => onChange({ ...modal, name: event.target.value })}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="patient-birthdate">Geburtsdatum</label>
-          <BirthDateInput
-            id="patient-birthdate"
-            value={modal.birthDate}
-            onChange={(birthDate) => onChange({ ...modal, birthDate })}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="patient-admission">Aufnahme</label>
-          <input
-            id="patient-admission"
-            className="input"
-            type="date"
-            value={modal.admissionDate}
-            onChange={(event) => onChange({ ...modal, admissionDate: event.target.value })}
-          />
-        </div>
-        <div className="field cd-field-wide">
-          <label htmlFor="patient-diagnosis">Diagnose(n)</label>
-          <input
-            id="patient-diagnosis"
-            className="input"
-            placeholder="z. B. Demenz, Hypertonie"
-            value={modal.diagnosis}
-            onChange={(event) => onChange({ ...modal, diagnosis: event.target.value })}
-          />
-        </div>
-        <div className="field cd-field-wide">
-          <label htmlFor="patient-contact">Kontakt der Vertretung</label>
-          <input
-            id="patient-contact"
-            className="input"
-            placeholder="Name und Telefon"
-            value={modal.contact}
-            onChange={(event) => onChange({ ...modal, contact: event.target.value })}
-          />
+      <div className="cd-form-section">
+        <p className="cd-form-legend">Versorgung</p>
+        <div className="cd-field-grid">
+          <div className="field">
+            <label>Versorgungsstatus</label>
+            <Segmented
+              fill
+              ariaLabel="Versorgungsstatus"
+              options={[
+                { value: 'active' as const, label: 'Aktiv' },
+                { value: 'ended' as const, label: 'Beendet' },
+              ]}
+              value={modal.serviceStatus ?? 'active'}
+              onChange={(serviceStatus) => onChange({ ...modal, serviceStatus })}
+            />
+          </div>
+          <label className="cd-form-label">
+            Versorgungsende
+            <input
+              className="input"
+              type="date"
+              value={modal.serviceEndDate ?? ''}
+              onChange={(e) => onChange({ ...modal, serviceEndDate: e.target.value || null })}
+            />
+          </label>
+          <div className="field cd-field-wide">
+            <label>Leistungsumfang für Anlage 7</label>
+            <Segmented
+              fill
+              wrap
+              ariaLabel="Leistungsumfang für Anlage 7"
+              options={[
+                { value: 'unknown' as const, label: 'Noch zu prüfen' },
+                { value: 'eligible' as const, label: 'Auf der Liste' },
+                { value: 'excluded' as const, label: 'Ausgeschlossen' },
+              ]}
+              value={modal.serviceScope ?? 'unknown'}
+              onChange={(serviceScope) => onChange({ ...modal, serviceScope })}
+            />
+          </div>
+          <div className="field cd-field-wide">
+            <label>Vertretung / Betreuung</label>
+            <Segmented
+              fill
+              wrap
+              ariaLabel="Vertretung / Betreuung"
+              options={[
+                { value: 'unknown' as const, label: 'Ungeklärt' },
+                { value: 'present' as const, label: 'Vorhanden' },
+                { value: 'none' as const, label: 'Keine vorhanden' },
+              ]}
+              value={modal.representativeStatus ?? 'unknown'}
+              onChange={(representativeStatus) => onChange({ ...modal, representativeStatus })}
+            />
+          </div>
         </div>
       </div>
 
-      <div
-        style={{
-          borderTop: '1px solid var(--color-divider)',
-          paddingTop: 14,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: '.06em',
-            textTransform: 'uppercase',
-            color: 'var(--color-neutral-700)',
-          }}
-        >
-          Einstufung und Quelle
+      <div className="cd-form-section">
+        <p className="cd-form-legend">Stammdaten</p>
+        <div className="cd-field-grid">
+          <div className="field cd-field-wide">
+            <label htmlFor="patient-name">Name</label>
+            <input
+              id="patient-name"
+              className="input"
+              placeholder="Vor- und Nachname"
+              value={modal.name}
+              onChange={(event) => onChange({ ...modal, name: event.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="patient-birthdate">Geburtsdatum</label>
+            <BirthDateInput
+              id="patient-birthdate"
+              value={modal.birthDate}
+              onChange={(birthDate) => onChange({ ...modal, birthDate })}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="patient-admission">Aufnahme</label>
+            <input
+              id="patient-admission"
+              className="input"
+              type="date"
+              value={modal.admissionDate}
+              onChange={(event) => onChange({ ...modal, admissionDate: event.target.value })}
+            />
+          </div>
+          <div className="field cd-field-wide">
+            <label htmlFor="patient-diagnosis">Diagnose(n)</label>
+            <input
+              id="patient-diagnosis"
+              className="input"
+              placeholder="z. B. Demenz, Hypertonie"
+              value={modal.diagnosis}
+              onChange={(event) => onChange({ ...modal, diagnosis: event.target.value })}
+            />
+          </div>
+          <div className="field cd-field-wide">
+            <label htmlFor="patient-contact">Kontakt der Vertretung</label>
+            <input
+              id="patient-contact"
+              className="input"
+              placeholder="Name und Telefon"
+              value={modal.contact}
+              onChange={(event) => onChange({ ...modal, contact: event.target.value })}
+            />
+          </div>
         </div>
+      </div>
+
+      <div className="cd-form-section">
+        <p className="cd-form-legend">Einstufung und Quelle</p>
 
         <div className="cd-field-grid">
-          <label className="cd-form-label">
-            Quelle
-            <select
-              className="input"
+          <div className="field cd-field-wide">
+            <label>Quelle</label>
+            <Segmented
+              fill
+              wrap
+              ariaLabel="Quelle der Einstufung"
+              options={[
+                { value: 'unknown' as const, label: 'Unbekannt' },
+                { value: 'report' as const, label: 'Pflegegrad-Gutachten' },
+                { value: 'own' as const, label: 'Eigene Einschätzung' },
+              ]}
               value={modal.assessmentSource ?? 'unknown'}
-              onChange={(e) =>
-                onChange({
-                  ...modal,
-                  assessmentSource: e.target.value as 'report' | 'own' | 'unknown',
-                })
-              }
-            >
-              <option value="unknown">Unbekannt</option>
-              <option value="report">Pflegegrad-Gutachten</option>
-              <option value="own">Eigene Einschätzung</option>
-            </select>
-          </label>
+              onChange={(assessmentSource) => onChange({ ...modal, assessmentSource })}
+            />
+          </div>
           <label className="cd-form-label">
             Datum
             <input
@@ -222,12 +210,6 @@ const PatientModal = ({ modal, onChange, onClose, onSave, onDelete }: PatientMod
               onChange={(e) => onChange({ ...modal, assessmentNote: e.target.value })}
             />
           </label>
-          <FieldHelp title="Kriterien für Mobilität und Kognition">
-            Gutachten höchstens ein Jahr alt: Modul 1 ab 4, Modul 2 ab 6 ungewichteten Punkten.
-            Sonst selbst einschätzen: körperlich bedingte personelle Hilfe bei Treppen und in der
-            Wohnung; Kognition bei nahezu täglichen Störungen von Gedächtnis, Zeit, Ort oder
-            Personenerkennung.
-          </FieldHelp>
           {needsAssessment(modal) && (
             <p role="status" className="cd-field-wide">
               Einstufung offen oder veraltet. Quelle, Datum und Merkmale prüfen.
@@ -322,20 +304,23 @@ const PatientModal = ({ modal, onChange, onClose, onSave, onDelete }: PatientMod
         </div>
 
         {modal.intensiveCare?.startsWith('AKI') && (
-          <label className="cd-form-label">
-            Versorgungsform
-            <select
-              className="input"
-              value={modal.akiSetting ?? ''}
-              onChange={(e) =>
-                onChange({ ...modal, akiSetting: (e.target.value || null) as 'EV' | 'MV' | null })
+          <div className="field">
+            <label>Versorgungsform</label>
+            <Segmented
+              fill
+              wrap
+              ariaLabel="Versorgungsform"
+              options={[
+                { value: NONE, label: 'Unbekannt' },
+                { value: 'EV', label: 'Einfachversorgung (EV)' },
+                { value: 'MV', label: 'Mehrfachversorgung (MV)' },
+              ]}
+              value={modal.akiSetting ?? NONE}
+              onChange={(value) =>
+                onChange({ ...modal, akiSetting: value === NONE ? null : (value as 'EV' | 'MV') })
               }
-            >
-              <option value="">Unbekannt</option>
-              <option value="EV">Einfachversorgung (EV)</option>
-              <option value="MV">Mehrfachversorgung (MV)</option>
-            </select>
-          </label>
+            />
+          </div>
         )}
         {modal.intensiveCare?.startsWith('pHKP') && (
           <div className="cd-field-grid">

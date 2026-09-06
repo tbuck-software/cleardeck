@@ -1,5 +1,4 @@
 import Checkbox from '../ui/Checkbox';
-import FieldHelp from '../ui/FieldHelp';
 import React from 'react';
 import Dialog from '../ui/Dialog';
 import Segmented from '../ui/Segmented';
@@ -36,6 +35,12 @@ const InstructionModal = ({
     width={480}
     title={state.id ? 'Einweisung bearbeiten' : 'Neue Einweisung'}
     subtitle="Änderungen gelten sofort für alle Zuordnungen."
+    help={[
+      {
+        title: 'Wann gilt die halbjährliche Wiederholung?',
+        body: 'Nur für Unterweisungen über Unfall- und Gesundheitsgefahren: bei Minderjährigen mindestens halbjährlich. Die Zuordnung ist anhand der Tätigkeit zu prüfen.',
+      },
+    ]}
     primaryLabel="Speichern"
     primaryDisabled={!state.topic.trim()}
     onPrimary={onSave}
@@ -106,10 +111,6 @@ const InstructionModal = ({
     >
       Gefahrenunterweisung nach § 29 JArbSchG
     </Checkbox>
-    <FieldHelp title="Wann gilt die halbjährliche Wiederholung?">
-      Nur für Unterweisungen über Unfall- und Gesundheitsgefahren: bei Minderjährigen mindestens
-      halbjährlich. Die Zuordnung ist anhand der Tätigkeit zu prüfen.
-    </FieldHelp>
     <div className="field">
       <label htmlFor="instruction-note">Notiz</label>
       <textarea

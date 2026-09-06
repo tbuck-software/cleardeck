@@ -1,5 +1,4 @@
 import Checkbox from '../ui/Checkbox';
-import FieldHelp from '../ui/FieldHelp';
 import React from 'react';
 import Dialog from '../ui/Dialog';
 import Icon from '../ui/Icon';
@@ -43,6 +42,20 @@ const EmployeeModal = ({
       open={state.open}
       width={560}
       title={isCreate ? 'Person anlegen' : 'Person bearbeiten'}
+      help={[
+        {
+          title: 'Wie werden VZÄ berechnet?',
+          body: `Betriebliche VZÄ-Regel: ab 36 Wochenstunden 1,0; darunter Anteil am eingestellten Bezugswert. ${fteHelp}`,
+        },
+        ...(isCreate
+          ? []
+          : [
+              {
+                title: 'Was gilt für frühere Zeiträume?',
+                body: 'Frühere Stände bleiben erhalten. Übernommene Altwerte sind ungeprüft; das Bestätigen eines heutigen Wertes bestätigt keine früheren Zeiträume.',
+              },
+            ]),
+      ]}
       primaryLabel={isCreate ? 'Anlegen' : 'Speichern'}
       primaryDisabled={!state.name.trim()}
       onPrimary={onSave}
@@ -157,10 +170,6 @@ const EmployeeModal = ({
         </div>
       </div>
 
-      <FieldHelp title="Wie werden VZÄ berechnet?">
-        Betriebliche VZÄ-Regel: ab 36 Wochenstunden 1,0; darunter Anteil am eingestellten
-        Bezugswert. {fteHelp}
-      </FieldHelp>
       <label className="cd-form-label">
         Personalbeleg
         <input
@@ -190,10 +199,6 @@ const EmployeeModal = ({
           >
             Ab diesem Datum anhand der Belege geprüft
           </Checkbox>
-          <FieldHelp title="Was gilt für frühere Zeiträume?">
-            Frühere Stände bleiben erhalten. Übernommene Altwerte sind ungeprüft; das Bestätigen
-            eines heutigen Wertes bestätigt keine früheren Zeiträume.
-          </FieldHelp>
         </div>
       )}
       <div className="field">

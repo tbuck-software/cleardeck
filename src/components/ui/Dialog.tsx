@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import Icon from './Icon';
+import HelpPopover, { type HelpEntry } from './HelpPopover';
 
 type DialogProps = {
   open: boolean;
@@ -8,6 +9,8 @@ type DialogProps = {
   /** Design widths run 460–620px; pass the one the screen specifies. */
   width?: number;
   children?: React.ReactNode;
+  /** Background notes for this dialog, collected behind the head's help button. */
+  help?: HelpEntry[];
   primaryLabel?: string;
   primaryDisabled?: boolean;
   primaryDanger?: boolean;
@@ -24,6 +27,7 @@ const Dialog = ({
   subtitle,
   width = 480,
   children,
+  help,
   primaryLabel,
   primaryDisabled,
   primaryDanger,
@@ -61,9 +65,17 @@ const Dialog = ({
           <div className="dialog-title" style={{ fontSize: 24 }}>
             {title}
           </div>
-          <button type="button" className="btn btn-ghost btn-icon" aria-label="Schließen" onClick={onClose}>
-            <Icon name="close" />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {help && <HelpPopover heading={title} entries={help} />}
+            <button
+              type="button"
+              className="btn btn-ghost btn-icon"
+              aria-label="Schließen"
+              onClick={onClose}
+            >
+              <Icon name="close" />
+            </button>
+          </div>
         </div>
         {subtitle && <p className="cd-dialog-sub">{subtitle}</p>}
 

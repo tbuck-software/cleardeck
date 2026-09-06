@@ -1,4 +1,3 @@
-import FieldHelp from '../ui/FieldHelp';
 import { localDate } from '../../utils/calendarDate';
 import React from 'react';
 import Dialog from '../ui/Dialog';
@@ -52,6 +51,12 @@ const EmployeeInstructionModal = ({
       width={520}
       title={isAssigned ? state.instructionName : 'Einweisung hinzufügen'}
       subtitle={employeeName}
+      help={[
+        {
+          title: 'Was gehört zum Nachweis?',
+          body: 'Dieses Register ersetzt keine erforderliche Unterschrift. Inhalt, Zeitpunkt und unterschriebenen Beleg bzw. Zertifikat im angegebenen System aufbewahren.',
+        },
+      ]}
       primaryLabel="Speichern"
       onPrimary={onSave}
       deleteLabel={isAssigned ? 'Diesen Eintrag entfernen' : undefined}
@@ -165,10 +170,6 @@ const EmployeeInstructionModal = ({
           value={state.evidenceRef ?? ''}
           onChange={(event) => onChange({ evidenceRef: event.target.value })}
         />
-        <FieldHelp title="Was gehört zum Nachweis?">
-          Dieses Register ersetzt keine erforderliche Unterschrift. Inhalt, Zeitpunkt und
-          unterschriebenen Beleg bzw. Zertifikat im angegebenen System aufbewahren.
-        </FieldHelp>
       </div>
       {state.scheduleReviewRequired && (
         <label>

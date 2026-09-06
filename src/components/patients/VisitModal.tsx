@@ -1,7 +1,8 @@
-import FieldHelp from '../ui/FieldHelp';
 import React from 'react';
 import { localDate } from '../../utils/calendarDate';
+import Checkbox from '../ui/Checkbox';
 import Dialog from '../ui/Dialog';
+import Segmented from '../ui/Segmented';
 import type { VisitModalState } from '../../types/ui';
 
 type VisitModalProps = {
@@ -26,6 +27,16 @@ const VisitModal = ({
     width={540}
     title={modal.id ? 'Pflegevisite bearbeiten' : 'Neue Pflegevisite'}
     subtitle={`${patientName} · interne Qualitätssicherung`}
+    help={[
+      {
+        title: 'Geplant oder durchgeführt?',
+        body: 'Geplante Termine zählen erst nach ausdrücklicher Bestätigung als durchgeführte Visite.',
+      },
+      {
+        title: 'Handlungsbedarf',
+        body: 'Eine Visite mit Handlungsbedarf bleibt bis zum Erledigt-Datum offen. Erledigte Maßnahme und gegebenenfalls Nachkontrolle in den Beobachtungen erläutern.',
+      },
+    ]}
     primaryLabel="Speichern"
     onPrimary={onSave}
     deleteLabel={modal.id && onDelete ? 'Löschen' : undefined}
@@ -35,24 +46,52 @@ const VisitModal = ({
     onClose={onClose}
   >
     <div className="cd-field-grid">
-      <label className="cd-form-label">
-        Status
-        <select
+      <div className="field">
+        <label htmlFor="visit-date">Datum</label>
+        <input
+          id="visit-date"
           className="input"
+          type="date"
+          value={modal.visitDate}
+          onChange={(event) => onChange({ ...modal, visitDate: event.target.value })}
+        />
+      </div>
+      <div className="field">
+        <label>Status</label>
+        <Segmented
+          fill
+          ariaLabel="Status"
+          options={[
+            { value: 'planned' as const, label: 'Geplant' },
+            { value: 'completed' as const, label: 'Durchgeführt' },
+          ]}
           value={modal.status ?? (modal.visitDate > localDate() ? 'planned' : 'completed')}
-          onChange={(e) =>
-            onChange({ ...modal, status: e.target.value as 'planned' | 'completed' })
-          }
-        >
-          <option value="planned">Geplant</option>
-          <option value="completed">Durchgeführt</option>
-        </select>
-      </label>
-      <FieldHelp title="Geplant oder durchgeführt?">
-        Geplante Termine zählen erst nach ausdrücklicher Bestätigung als durchgeführte Visite.
-      </FieldHelp>
+          onChange={(status) => onChange({ ...modal, status })}
+        />
+      </div>
+    </div>
+
+    <div className="field">
+      <label htmlFor="visit-comment">Beobachtungen</label>
+      <textarea
+        id="visit-comment"
+        className="input"
+        placeholder="Was wurde beobachtet, welche Maßnahme folgt?"
+        value={modal.comment}
+        onChange={(event) => onChange({ ...modal, comment: event.target.value })}
+      />
+    </div>
+
+    <div className="cd-toggle-group">
+      <Checkbox
+        checked={modal.actionNeeded}
+        onChange={(event) => onChange({ ...modal, actionNeeded: event.target.checked })}
+      >
+        <strong>Handlungsbedarf</strong> <span className="cd-muted">bis zur Erledigung offen</span>
+      </Checkbox>
+
       {modal.actionNeeded && (
-        <div className="cd-field-grid cd-field-wide">
+        <div className="cd-field-grid cd-toggle-fields">
           <label className="cd-form-label">
             Zuständige Person
             <input
@@ -70,58 +109,20 @@ const VisitModal = ({
               onChange={(e) => onChange({ ...modal, actionDueDate: e.target.value || null })}
             />
           </label>
+          <label className="cd-form-label">
+            Erledigt am
+            <input
+              className="input"
+              type="date"
+              min={modal.visitDate}
+              max={localDate()}
+              value={modal.resolvedAt ?? ''}
+              onChange={(e) => onChange({ ...modal, resolvedAt: e.target.value || null })}
+            />
+          </label>
         </div>
       )}
-      {modal.actionNeeded && (
-        <label className="cd-form-label">
-          Erledigt am
-          <input
-            className="input"
-            type="date"
-            min={modal.visitDate}
-            max={localDate()}
-            value={modal.resolvedAt ?? ''}
-            onChange={(e) => onChange({ ...modal, resolvedAt: e.target.value || null })}
-          />
-          <span className="cd-muted-13">
-            Erledigte Maßnahme und gegebenenfalls Nachkontrolle in den Beobachtungen erläutern.
-          </span>
-        </label>
-      )}
-      <div className="field">
-        <label htmlFor="visit-date">Datum</label>
-        <input
-          id="visit-date"
-          className="input"
-          type="date"
-          value={modal.visitDate}
-          onChange={(event) => onChange({ ...modal, visitDate: event.target.value })}
-        />
-      </div>
     </div>
-
-    <div className="field">
-      <label htmlFor="visit-comment">Beobachtungen</label>
-      <textarea
-        id="visit-comment"
-        className="input"
-        placeholder="Was wurde beobachtet, welche Maßnahme folgt?"
-        value={modal.comment}
-        onChange={(event) => onChange({ ...modal, comment: event.target.value })}
-      />
-    </div>
-
-    <label className="radio">
-      <input
-        type="checkbox"
-        checked={modal.actionNeeded}
-        onChange={(event) => onChange({ ...modal, actionNeeded: event.target.checked })}
-      />
-      <span className="dot" style={{ borderRadius: 5 }} />
-      <span>
-        <strong>Handlungsbedarf</strong> <span className="cd-muted">bis zur Erledigung offen</span>
-      </span>
-    </label>
   </Dialog>
 );
 

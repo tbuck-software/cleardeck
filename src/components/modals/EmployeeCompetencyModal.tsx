@@ -1,4 +1,3 @@
-import FieldHelp from '../ui/FieldHelp';
 import React from 'react';
 import Dialog from '../ui/Dialog';
 import CompetencyLevelPicker from '../ui/CompetencyLevelPicker';
@@ -32,6 +31,12 @@ const EmployeeCompetencyModal = ({
       width={560}
       title={isAssigned ? state.competencyName : 'Kompetenz hinzufügen'}
       subtitle={employeeName}
+      help={[
+        {
+          title: 'Stufen und Bestätigung',
+          body: 'Stufen 1–5: Einarbeitung läuft. Stufe 6: abgeschlossen mit Bestätigung. Die Stufe ist keine eigenständige Einsatzberechtigung. Frühere Stände bleiben dokumentiert.',
+        },
+      ]}
       primaryLabel="Speichern"
       onPrimary={onSave}
       deleteLabel={isAssigned ? 'Entfernen' : undefined}
@@ -87,10 +92,6 @@ const EmployeeCompetencyModal = ({
           </button>
         </p>
       )}
-      <FieldHelp title="Stufen und Bestätigung">
-        Stufen 1–5: Einarbeitung läuft. Stufe 6: abgeschlossen mit Bestätigung. Die Stufe ist keine
-        eigenständige Einsatzberechtigung. Frühere Stände bleiben dokumentiert.
-      </FieldHelp>
       <div className="cd-field-grid">
         <div className="field">
           <label htmlFor="competency-approved-at">Bestätigt am</label>
@@ -115,15 +116,17 @@ const EmployeeCompetencyModal = ({
       </div>
 
       {!!state.stageHistory?.length && (
-        <details>
+        <details className="cd-disclosure">
           <summary>Bisherige Stände ({state.stageHistory.length})</summary>
-          {state.stageHistory.map((entry, i) => (
-            <p key={i}>
-              {entry.changedAt}: {entry.stageScheme === 'legacy' ? 'Altmodell' : 'Einarbeitung'}{' '}
-              Stufe {entry.level ?? 'offen'} · {entry.approvedAt || 'ohne Bestätigungsdatum'} ·{' '}
-              {entry.approvedBy || 'keine Person erfasst'} · {entry.note}
-            </p>
-          ))}
+          <div className="cd-disclosure-body">
+            {state.stageHistory.map((entry, i) => (
+              <p key={i}>
+                {entry.changedAt}: {entry.stageScheme === 'legacy' ? 'Altmodell' : 'Einarbeitung'}{' '}
+                Stufe {entry.level ?? 'offen'} · {entry.approvedAt || 'ohne Bestätigungsdatum'} ·{' '}
+                {entry.approvedBy || 'keine Person erfasst'} · {entry.note}
+              </p>
+            ))}
+          </div>
         </details>
       )}
       <div className="field">
