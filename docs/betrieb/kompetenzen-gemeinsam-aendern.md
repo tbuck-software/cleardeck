@@ -1,6 +1,6 @@
 # Kompetenzstufen gemeinsam ändern
 
-Stand: 07.09.2026, Arbeitsstand nach Release 2.0.0.
+Stand: 07.09.2026, ab Version 2.1.0.
 
 1. Person öffnen und **Kompetenzen** wählen.
 2. Gewünschte Kompetenzen links ankreuzen. **Alle auswählen** umfasst sämtliche zugeordneten Kompetenzen dieser Person, auch unterhalb des sichtbaren Ausschnitts. Einzelne Einträge lassen sich danach wieder abwählen.

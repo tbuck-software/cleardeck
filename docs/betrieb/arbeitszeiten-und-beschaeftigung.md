@@ -1,6 +1,6 @@
 # Arbeitszeiten und Beschäftigung erfassen
 
-Stand: 06.09.2026, Arbeitsstand nach Release 2.0.0.
+Stand: 07.09.2026, ab Version 2.1.0.
 
 Die Personenkopfzeile zeigt den ausgewählten Arbeitszeitstand mit Wochenstunden und VZÄ. Unter **Historie** stehen Beschäftigungsabschnitte, gültige Arbeitszeiten und Ereignisse gemeinsam nach ihrem fachlichen Datum. Eine Arbeitszeitzeile zeigt beispielsweise 18 Std./Woche und 0,50 VZÄ ab 01.09.2024 bis 31.12.2024; die nächste 36 Std./Woche und 1,00 VZÄ ab 01.01.2025.
 
