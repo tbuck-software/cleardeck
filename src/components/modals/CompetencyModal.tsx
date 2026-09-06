@@ -1,5 +1,6 @@
 import React from 'react';
 import Dialog from '../ui/Dialog';
+import Segmented from '../ui/Segmented';
 import type { CompetencyModalState } from '../../types/ui';
 
 type CompetencyModalProps = {
@@ -35,17 +36,14 @@ const CompetencyModal = ({ state, onChange, onClose, onSave, onDelete }: Compete
         />
       </div>
       <div className="field">
-        <label htmlFor="competency-category">Kategorie</label>
-        <select
-          id="competency-category"
-          className="input"
+        <label>Kategorie</label>
+        <Segmented
+          fill
+          ariaLabel="Kategorie"
+          options={['Allgemein', 'SGB XI', 'SGB V'].map((value) => ({ value, label: value }))}
           value={state.category}
-          onChange={(event) => onChange({ category: event.target.value })}
-        >
-          <option value="Allgemein">Allgemein</option>
-          <option value="SGB XI">SGB XI</option>
-          <option value="SGB V">SGB V</option>
-        </select>
+          onChange={(category) => onChange({ category })}
+        />
       </div>
       <div className="field cd-field-wide">
         <label htmlFor="competency-relevance">Relevanz</label>

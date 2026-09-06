@@ -536,6 +536,18 @@ textarea.input {
   user-select: none;
 }
 
+.cd-sort-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
 .cd-th:hover {
   color: var(--color-text);
 }

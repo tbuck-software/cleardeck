@@ -1,0 +1,442 @@
+[
+  {
+    "wide": false,
+    "count": 1,
+    "text": "1",
+    "badge": {
+      "x": 71,
+      "y": 186.25,
+      "right": 89,
+      "bottom": 204.25,
+      "width": 18,
+      "height": 18
+    },
+    "textBox": {
+      "x": 76.2734375,
+      "y": 188.75,
+      "right": 83.7265625,
+      "bottom": 201.75,
+      "width": 7.453125,
+      "height": 13
+    },
+    "icon": {
+      "x": 52.5,
+      "y": 206.25,
+      "right": 70.5,
+      "bottom": 224.25,
+      "width": 18,
+      "height": 18
+    },
+    "rail": {
+      "x": 24,
+      "y": 59.25,
+      "right": 100,
+      "bottom": 369.25,
+      "width": 76,
+      "height": 310
+    },
+    "previous": {
+      "x": 38,
+      "y": 145.25,
+      "right": 85,
+      "bottom": 181.25,
+      "width": 47,
+      "height": 36
+    },
+    "next": {
+      "x": 38,
+      "y": 239.25,
+      "right": 85,
+      "bottom": 275.25,
+      "width": 47,
+      "height": 36
+    },
+    "label": "Übersicht, 1 offene Aufgabe",
+    "title": "Übersicht, 1 offene Aufgabe"
+  },
+  {
+    "wide": false,
+    "count": 9,
+    "text": "9",
+    "badge": {
+      "x": 331,
+      "y": 186.25,
+      "right": 349,
+      "bottom": 204.25,
+      "width": 18,
+      "height": 18
+    },
+    "textBox": {
+      "x": 336.2734375,
+      "y": 188.75,
+      "right": 343.7265625,
+      "bottom": 201.75,
+      "width": 7.453125,
+      "height": 13
+    },
+    "icon": {
+      "x": 312.5,
+      "y": 206.25,
+      "right": 330.5,
+      "bottom": 224.25,
+      "width": 18,
+      "height": 18
+    },
+    "rail": {
+      "x": 284,
+      "y": 59.25,
+      "right": 360,
+      "bottom": 369.25,
+      "width": 76,
+      "height": 310
+    },
+    "previous": {
+      "x": 298,
+      "y": 145.25,
+      "right": 345,
+      "bottom": 181.25,
+      "width": 47,
+      "height": 36
+    },
+    "next": {
+      "x": 298,
+      "y": 239.25,
+      "right": 345,
+      "bottom": 275.25,
+      "width": 47,
+      "height": 36
+    },
+    "label": "Übersicht, 9 offene Aufgaben",
+    "title": "Übersicht, 9 offene Aufgaben"
+  },
+  {
+    "wide": false,
+    "count": 10,
+    "text": "9+",
+    "badge": {
+      "x": 584.09375,
+      "y": 186.25,
+      "right": 609,
+      "bottom": 204.25,
+      "width": 24.90625,
+      "height": 18
+    },
+    "textBox": {
+      "x": 589.09375,
+      "y": 188.75,
+      "right": 604,
+      "bottom": 201.75,
+      "width": 14.90625,
+      "height": 13
+    },
+    "icon": {
+      "x": 572.5,
+      "y": 206.25,
+      "right": 590.5,
+      "bottom": 224.25,
+      "width": 18,
+      "height": 18
+    },
+    "rail": {
+      "x": 544,
+      "y": 59.25,
+      "right": 620,
+      "bottom": 369.25,
+      "width": 76,
+      "height": 310
+    },
+    "previous": {
+      "x": 558,
+      "y": 145.25,
+      "right": 605,
+      "bottom": 181.25,
+      "width": 47,
+      "height": 36
+    },
+    "next": {
+      "x": 558,
+      "y": 239.25,
+      "right": 605,
+      "bottom": 275.25,
+      "width": 47,
+      "height": 36
+    },
+    "label": "Übersicht, 10 offene Aufgaben",
+    "title": "Übersicht, 10 offene Aufgaben"
+  },
+  {
+    "wide": false,
+    "count": 154,
+    "text": "9+",
+    "badge": {
+      "x": 844.09375,
+      "y": 186.25,
+      "right": 869,
+      "bottom": 204.25,
+      "width": 24.90625,
+      "height": 18
+    },
+    "textBox": {
+      "x": 849.09375,
+      "y": 188.75,
+      "right": 864,
+      "bottom": 201.75,
+      "width": 14.90625,
+      "height": 13
+    },
+    "icon": {
+      "x": 832.5,
+      "y": 206.25,
+      "right": 850.5,
+      "bottom": 224.25,
+      "width": 18,
+      "height": 18
+    },
+    "rail": {
+      "x": 804,
+      "y": 59.25,
+      "right": 880,
+      "bottom": 369.25,
+      "width": 76,
+      "height": 310
+    },
+    "previous": {
+      "x": 818,
+      "y": 145.25,
+      "right": 865,
+      "bottom": 181.25,
+      "width": 47,
+      "height": 36
+    },
+    "next": {
+      "x": 818,
+      "y": 239.25,
+      "right": 865,
+      "bottom": 275.25,
+      "width": 47,
+      "height": 36
+    },
+    "label": "Übersicht, 154 offene Aufgaben",
+    "title": "Übersicht, 154 offene Aufgaben"
+  },
+  {
+    "wide": true,
+    "count": 1,
+    "text": "1",
+    "badge": {
+      "x": 213,
+      "y": 580.25,
+      "right": 231,
+      "bottom": 598.25,
+      "width": 18,
+      "height": 18
+    },
+    "textBox": {
+      "x": 218.2734375,
+      "y": 582.75,
+      "right": 225.7265625,
+      "bottom": 595.75,
+      "width": 7.453125,
+      "height": 13
+    },
+    "icon": {
+      "x": 52,
+      "y": 580.25,
+      "right": 70,
+      "bottom": 598.25,
+      "width": 18,
+      "height": 18
+    },
+    "rail": {
+      "x": 24,
+      "y": 433.25,
+      "right": 260,
+      "bottom": 743.25,
+      "width": 236,
+      "height": 310
+    },
+    "previous": {
+      "x": 38,
+      "y": 519.25,
+      "right": 245,
+      "bottom": 555.25,
+      "width": 207,
+      "height": 36
+    },
+    "next": {
+      "x": 38,
+      "y": 613.25,
+      "right": 245,
+      "bottom": 649.25,
+      "width": 207,
+      "height": 36
+    },
+    "label": "Übersicht, 1 offene Aufgabe",
+    "title": ""
+  },
+  {
+    "wide": true,
+    "count": 9,
+    "text": "9",
+    "badge": {
+      "x": 473,
+      "y": 580.25,
+      "right": 491,
+      "bottom": 598.25,
+      "width": 18,
+      "height": 18
+    },
+    "textBox": {
+      "x": 478.2734375,
+      "y": 582.75,
+      "right": 485.7265625,
+      "bottom": 595.75,
+      "width": 7.453125,
+      "height": 13
+    },
+    "icon": {
+      "x": 312,
+      "y": 580.25,
+      "right": 330,
+      "bottom": 598.25,
+      "width": 18,
+      "height": 18
+    },
+    "rail": {
+      "x": 284,
+      "y": 433.25,
+      "right": 520,
+      "bottom": 743.25,
+      "width": 236,
+      "height": 310
+    },
+    "previous": {
+      "x": 298,
+      "y": 519.25,
+      "right": 505,
+      "bottom": 555.25,
+      "width": 207,
+      "height": 36
+    },
+    "next": {
+      "x": 298,
+      "y": 613.25,
+      "right": 505,
+      "bottom": 649.25,
+      "width": 207,
+      "height": 36
+    },
+    "label": "Übersicht, 9 offene Aufgaben",
+    "title": ""
+  },
+  {
+    "wide": true,
+    "count": 10,
+    "text": "10",
+    "badge": {
+      "x": 726.09375,
+      "y": 580.25,
+      "right": 751,
+      "bottom": 598.25,
+      "width": 24.90625,
+      "height": 18
+    },
+    "textBox": {
+      "x": 731.09375,
+      "y": 582.75,
+      "right": 746,
+      "bottom": 595.75,
+      "width": 14.90625,
+      "height": 13
+    },
+    "icon": {
+      "x": 572,
+      "y": 580.25,
+      "right": 590,
+      "bottom": 598.25,
+      "width": 18,
+      "height": 18
+    },
+    "rail": {
+      "x": 544,
+      "y": 433.25,
+      "right": 780,
+      "bottom": 743.25,
+      "width": 236,
+      "height": 310
+    },
+    "previous": {
+      "x": 558,
+      "y": 519.25,
+      "right": 765,
+      "bottom": 555.25,
+      "width": 207,
+      "height": 36
+    },
+    "next": {
+      "x": 558,
+      "y": 613.25,
+      "right": 765,
+      "bottom": 649.25,
+      "width": 207,
+      "height": 36
+    },
+    "label": "Übersicht, 10 offene Aufgaben",
+    "title": ""
+  },
+  {
+    "wide": true,
+    "count": 154,
+    "text": "154",
+    "badge": {
+      "x": 978.6484375,
+      "y": 580.25,
+      "right": 1011,
+      "bottom": 598.25,
+      "width": 32.3515625,
+      "height": 18
+    },
+    "textBox": {
+      "x": 983.6484375,
+      "y": 582.75,
+      "right": 1006,
+      "bottom": 595.75,
+      "width": 22.3515625,
+      "height": 13
+    },
+    "icon": {
+      "x": 832,
+      "y": 580.25,
+      "right": 850,
+      "bottom": 598.25,
+      "width": 18,
+      "height": 18
+    },
+    "rail": {
+      "x": 804,
+      "y": 433.25,
+      "right": 1040,
+      "bottom": 743.25,
+      "width": 236,
+      "height": 310
+    },
+    "previous": {
+      "x": 818,
+      "y": 519.25,
+      "right": 1025,
+      "bottom": 555.25,
+      "width": 207,
+      "height": 36
+    },
+    "next": {
+      "x": 818,
+      "y": 613.25,
+      "right": 1025,
+      "bottom": 649.25,
+      "width": 207,
+      "height": 36
+    },
+    "label": "Übersicht, 154 offene Aufgaben",
+    "title": ""
+  }
+]

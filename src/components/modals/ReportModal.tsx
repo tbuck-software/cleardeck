@@ -1,4 +1,3 @@
-import FieldHelp from '../ui/FieldHelp';
 import React from 'react';
 import Dialog from '../ui/Dialog';
 import Segmented from '../ui/Segmented';
@@ -72,17 +71,25 @@ const ReportModal = ({
       open={open}
       width={600}
       title="Jahresnachweis"
+      help={[
+        {
+          title: 'Berechnung und Verwendung',
+          body: `${
+            mode === 'stichtag'
+              ? `Bestand zum 31.12.${year}.`
+              : `Jahresdurchschnitt ${year}: Stellenanteil × inklusive Beschäftigungstage / Kalendertage des Jahres.`
+          } Ob dieser Nachweis dem benötigten Vertragsformular entspricht, ist betrieblich zu prüfen.`,
+        },
+        {
+          title: 'Wie werden Wechsel berücksichtigt?',
+          body: 'Stunden- und Qualifikationswechsel teilen den Zeitraum. Personen zählen je Qualifikation einmal; bei einem Wechsel kann dieselbe Person in mehreren Kategorien vorkommen. Die Gesamtzahl zählt jede Person einmal.',
+        },
+      ]}
       primaryLabel="Als Excel exportieren"
       onPrimary={onExport}
       primaryDisabled={loading || !dataset}
       onClose={onClose}
     >
-      <FieldHelp title="Berechnung und Verwendung">
-        {mode === 'stichtag'
-          ? `Bestand zum 31.12.${year}.`
-          : `Jahresdurchschnitt ${year}: Stellenanteil × inklusive Beschäftigungstage / Kalendertage des Jahres.`}{' '}
-        Ob dieser Nachweis dem benötigten Vertragsformular entspricht, ist betrieblich zu prüfen.
-      </FieldHelp>
       {(dataset?.unverifiedHoursCount ?? 0) > 0 && (
         <p role="alert">
           Vorläufig: {dataset?.unverifiedHoursCount} Stellenanteile noch ungeprüft.
@@ -99,13 +106,6 @@ const ReportModal = ({
           value={mode}
           onChange={onModeChange}
         />
-      )}
-      {mode === 'year-average' && (
-        <FieldHelp title="Wie werden Wechsel berücksichtigt?">
-          Stunden- und Qualifikationswechsel teilen den Zeitraum. Personen zählen je Qualifikation
-          einmal; bei einem Wechsel kann dieselbe Person in mehreren Kategorien vorkommen. Die
-          Gesamtzahl zählt jede Person einmal.
-        </FieldHelp>
       )}
       {employees.some((e) => e.hoursMissing) && (
         <p role="alert">

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { app } from 'electron';
 import type { DiagnosticEntry, DiagnosticSnapshot, UpdateStatus } from '../shared/types';
+import { appVersion } from './appVersion';
 
 const MAX_RECORDS = 250;
 const MAX_BYTES = 256 * 1024;
@@ -78,7 +79,7 @@ const writeRecord = (record: Record): void => {
   }
 };
 
-export const recordAppStart = (): void => writeRecord({ at: new Date().toISOString(), event: 'start', version: safeVersion(app.getVersion()) });
+export const recordAppStart = (): void => writeRecord({ at: new Date().toISOString(), event: 'start', version: safeVersion(appVersion()) });
 
 export const recordUpdateStatus = (status: UpdateStatus): void => {
   const common = { at: new Date().toISOString(), version: safeVersion(status.version) };

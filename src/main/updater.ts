@@ -8,6 +8,7 @@ import { app, BrowserWindow } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { gt, lte, valid, rcompare } from 'semver';
 
+import { appVersion } from './appVersion';
 import { recordUpdateStatus } from './diagnostics';
 import type { UpdateStatus } from '../shared/types';
 import { getPackagedUpdateConfig, resolveUpdateSource } from './updateSource';
@@ -38,7 +39,7 @@ const fail = (error: unknown) => publish({
   retry: retryAction,
 });
 const rememberRelease = (info: { version: string; releaseNotes?: string | { version: string; note: string | null }[] }) => {
-  const installedVersion = app.getVersion();
+  const installedVersion = appVersion();
   const notes = typeof info.releaseNotes === 'string' ? info.releaseNotes : info.releaseNotes
     ?.filter((entry) => valid(entry.version) && valid(installedVersion) && valid(info.version)
       && gt(entry.version, installedVersion) && lte(entry.version, info.version))

@@ -2,19 +2,9 @@
 const fs = require('fs');
 const path = require('path');
 const { app } = require('electron');
-const root = path.resolve(__dirname, '..');
-const ts = require('typescript');
-require.extensions['.ts'] = (module, filename) =>
-  module._compile(
-    ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
-      compilerOptions: {
-        module: ts.ModuleKind.CommonJS,
-        target: ts.ScriptTarget.ES2022,
-        esModuleInterop: true,
-      },
-    }).outputText,
-    filename,
-  );
+const root = process.env.CLEARDECK_DEMO_ROOT;
+if (!root || path.resolve(root) !== process.cwd())
+  throw Error('Use npm run demo from this project');
 if (app.isPackaged) throw Error('Demo launcher is development-only');
 const container = path.join(root, '.cache', 'cleardeck-demo-profile');
 const marker = path.join(container, 'demo-profile.json');
@@ -60,13 +50,6 @@ if (!app.requestSingleInstanceLock()) {
     conn.persistEncryptedDb();
   } else if (JSON.parse(fs.readFileSync(marker, 'utf8')).kind !== 'cleardeck-synthetic-demo')
     throw Error('Invalid demo profile marker');
-  global.MAIN_WINDOW_WEBPACK_ENTRY = `file://${path.join(root, '.cache', 'cleardeck-demo-runtime', 'index.html')}`;
-  global.MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY = path.join(
-    root,
-    '.cache',
-    'cleardeck-demo-runtime',
-    'preload.js',
-  );
   app.getVersion = () => require('../package.json').version;
   app.on('browser-window-created', (_event, window) => {
     window.webContents.on('did-finish-load', () => {
@@ -83,6 +66,7 @@ if (!app.requestSingleInstanceLock()) {
       w.focus();
     }
   });
-  require('../src/index.ts');
+  const main = require('../src/index.ts');
+  require('./demo-control.cjs').serve(app, main.shutdown);
   app.setName('ClearDeck Demo · synthetische Daten');
 }

@@ -36,7 +36,7 @@ module.exports = function populateDemo(db) {
     );
     for (const e of db.prepare('SELECT * FROM employees ORDER BY id').all()) {
       db.prepare('UPDATE employees SET name=?, note=?, fte=? WHERE id=?').run(
-        `Demo · ${e.name}`,
+        e.name,
         `[DEMO] ${e.note || 'Frei erfundene Testperson.'}`,
         fte(e.weeklyHours),
         e.id,
@@ -89,7 +89,7 @@ module.exports = function populateDemo(db) {
       db.prepare(
         `UPDATE patients SET name=?,note=?,serviceStatus=?,serviceEndDate=?,serviceScope=?,representativeStatus=?,contact=?,hkpCodes=?,hkpCode=?,assessmentSource=?,assessmentDate=?,assessmentNote=?,akiSetting=?,phkpFirst=?,phkpStartDate=? WHERE id=?`,
       ).run(
-        `Demo · ${p.name}`,
+        p.name,
         `[DEMO] ${unknown ? 'Absichtlich offen: Leistungsumfang prüfen. ' : ''}${p.note || 'Frei erfundener Versorgungsfall.'}`,
         ended ? 'ended' : 'active',
         ended ? shift(today, -10) : null,

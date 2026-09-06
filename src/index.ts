@@ -92,7 +92,7 @@ app.on('ready', () => {
  */
 let shuttingDown = false;
 
-const shutdown = async (): Promise<void> => {
+export const shutdown = async (): Promise<void> => {
   try {
     await runAutoBackupIfDue();
   } finally {

@@ -15,6 +15,9 @@ import { rendererConfig } from './webpack.renderer.config';
 import { productName, version } from './package.json';
 
 const shouldUseFuses = process.env.SKIP_FUSES !== '1';
+const demo = process.env.CLEARDECK_DEV_SCENARIO === 'demo';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const demoHooks = demo ? require('./scripts/demo-forge-hooks.cjs') : null;
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -37,9 +40,23 @@ const config: ForgeConfig = {
   plugins: [
     new AutoUnpackNativesPlugin({}),
     new WebpackPlugin({
-      mainConfig,
+      mainConfig: demo
+        ? {
+            ...mainConfig,
+            entry: './scripts/demo-main.cjs',
+            // Load the installed native module directly across watch rebuilds.
+            externals: { 'better-sqlite3': 'commonjs better-sqlite3' },
+            plugins: [...(mainConfig.plugins ?? []), new demoHooks.DemoRestartPlugin()],
+          }
+        : mainConfig,
+      ...(demo ? { port: 3137, loggerPort: 9137 } : {}),
       renderer: {
-        config: rendererConfig,
+        config: demo
+          ? {
+              ...rendererConfig,
+              plugins: [...(rendererConfig.plugins ?? []), new demoHooks.DemoRestartPlugin()],
+            }
+          : rendererConfig,
         entryPoints: [
           {
             html: './src/index.html',
@@ -71,6 +88,7 @@ const config: ForgeConfig = {
       : []),
   ],
   hooks: {
+    ...(demo ? { postStart: demoHooks.postStart } : {}),
     postPackage: async (_forgeConfig, options) => {
       signMacBundles(options, {
         identity: process.env.MAC_SIGN_IDENTITY,

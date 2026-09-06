@@ -78,6 +78,85 @@ const renderList = (
   );
 
 describe('PatientList', () => {
+  const namesInOrder = () =>
+    screen
+      .getAllByRole('row')
+      .slice(1)
+      .map((row) => row.querySelector('td > div')?.firstChild?.textContent);
+
+  it('sortiert deutsche Namen in beide Richtungen ohne die Eingabeliste zu ändern', () => {
+    const input = [
+      { ...patients[0], name: 'Zoe Ziegler' },
+      { ...patients[1], name: 'Änne Müller' },
+      { ...patients[2], name: 'Berta Braun' },
+    ];
+    renderList({ patients: input });
+    expect(namesInOrder()).toEqual(['Änne Müller', 'Berta Braun', 'Zoe Ziegler']);
+    fireEvent.click(screen.getByRole('button', { name: 'Name' }));
+    expect(namesInOrder()).toEqual(['Zoe Ziegler', 'Berta Braun', 'Änne Müller']);
+    expect(screen.getByRole('columnheader', { name: 'Name' })).toHaveAttribute(
+      'aria-sort',
+      'descending',
+    );
+    expect(input.map((p) => p.name)).toEqual(['Zoe Ziegler', 'Änne Müller', 'Berta Braun']);
+  });
+
+  it('sortiert Diagnosen und lässt fehlende Angaben in beiden Richtungen am Ende', () => {
+    renderList({ patients: [patients[0], { ...patients[1], diagnosis: ' ' }, patients[2]] });
+    fireEvent.click(screen.getByRole('button', { name: 'Diagnose' }));
+    expect(namesInOrder()).toEqual(['Kurt Ziegler', 'Erika Mustermann', 'Werner Fuchs']);
+    fireEvent.click(screen.getByRole('button', { name: 'Diagnose' }));
+    expect(namesInOrder()).toEqual(['Erika Mustermann', 'Kurt Ziegler', 'Werner Fuchs']);
+  });
+
+  it('sortiert Visiten numerisch und Datumswerte chronologisch statt nach Anzeigetext', () => {
+    renderList({
+      patients: [
+        { ...patients[0], visitCount: 10 },
+        { ...patients[1], visitCount: 2 },
+        { ...patients[2], visitCount: 0 },
+      ],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Visiten' }));
+    expect(namesInOrder()).toEqual(['Kurt Ziegler', 'Werner Fuchs', 'Erika Mustermann']);
+    fireEvent.click(screen.getByRole('button', { name: 'Letzte Visite' }));
+    expect(namesInOrder()).toEqual(['Werner Fuchs', 'Erika Mustermann', 'Kurt Ziegler']);
+    fireEvent.click(screen.getByRole('button', { name: 'Letzte Visite' }));
+    expect(namesInOrder()).toEqual(['Erika Mustermann', 'Werner Fuchs', 'Kurt Ziegler']);
+  });
+
+  it('sortiert Fälligkeiten einschließlich Erstvisiten und hält unbekannte Termine am Ende', () => {
+    renderList({
+      patients: [
+        patients[0],
+        { ...patients[1], latestVisitDate: null, admissionDate: null },
+        patients[2],
+      ],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Nächste fällig' }));
+    expect(namesInOrder()).toEqual(['Kurt Ziegler', 'Erika Mustermann', 'Werner Fuchs']);
+    fireEvent.click(screen.getByRole('button', { name: 'Nächste fällig' }));
+    expect(namesInOrder()).toEqual(['Erika Mustermann', 'Kurt Ziegler', 'Werner Fuchs']);
+  });
+
+  it('erhält die gefilterte Archivliste, Gruppenauswahl und Datensatzauswahl beim Sortieren', () => {
+    const onSelect = vi.fn(),
+      onGroupChange = vi.fn();
+    renderList({
+      patients: [patients[0], patients[2]],
+      groupFilter: 'archived',
+      onSelect,
+      onGroupChange,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Teilgruppe' }));
+    expect(namesInOrder()).toEqual(['Erika Mustermann', 'Kurt Ziegler']);
+    expect(screen.getByRole('radio', { name: 'Archiv' })).toBeChecked();
+    fireEvent.click(screen.getByText('Kurt Ziegler'));
+    expect(onSelect).toHaveBeenCalledWith(patients[2]);
+    fireEvent.click(screen.getByRole('radio', { name: 'A' }));
+    expect(onGroupChange).toHaveBeenCalledWith('A');
+  });
+
   it('zählt die Teilgruppen im Untertitel', () => {
     renderList();
 
@@ -104,10 +183,12 @@ describe('PatientList', () => {
     expect(screen.getByText('Handlungsbedarf')).toBeInTheDocument();
   });
 
-  it('nennt das eingestellte Intervall in der Erläuterung', () => {
+  it('nennt das eingestellte Intervall in der Hilfe', () => {
     renderList({ visitIntervalDays: 30 });
 
-    expect(screen.getByText(/Intervall 30 Tage/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Hilfe' }));
+
+    expect(screen.getByText(/Visitenintervall beträgt 30 Tage/)).toBeInTheDocument();
   });
 
   it('öffnet eine Zeile', () => {

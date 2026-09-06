@@ -1,4 +1,4 @@
-import FieldHelp from '../ui/FieldHelp';
+import HelpPopover from '../ui/HelpPopover';
 import { localDate } from '../../utils/calendarDate';
 import React from 'react';
 import Icon from '../ui/Icon';
@@ -157,7 +157,37 @@ const AuditPage = ({
               : ' · noch keine bestätigte Prüfung'}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <HelpPopover
+            heading="MD-Prüfung"
+            entries={[
+              {
+                title: 'Personenliste und Stichprobe',
+                body: (
+                  <>
+                    Personenliste nach Anlage 7: alphabetisch alle Personen mit Leistungen nach
+                    §§ 36/39 SGB XI beziehungsweise §§ 37/37c SGB V. Enthalten sind Name,
+                    gegebenenfalls Vertretung mit Telefon, Teilgruppe A/B/C, aufwändige
+                    HKP-Ziffern und AKI/pHKP. Ausnahmen erläutert das Personenformular. Die Liste
+                    wird nach Ankündigung erstellt und zu Prüfungsbeginn vorgelegt. Regelprüfungen
+                    werden grundsätzlich zwei Arbeitstage vorher angekündigt; Anlassprüfungen
+                    sollen unangemeldet erfolgen.
+                    <p>
+                      Die Sollzahlen gelten nur nach Kapitel 8.1. Bei AKI-/pHKP-Verträgen gelten
+                      Kapitel 8.2/8.3; deren Auswahl berechnet ClearDeck nicht. Der MD zieht
+                      zuerst je zwei Personen aus A, B und C, danach drei weitere aus D.
+                      Unterbesetzte Gruppen werden nicht aufgefüllt. {countNone} Personen ohne
+                      Beeinträchtigung und ohne aufwändige HKP sind nicht stichprobenrelevant.
+                    </p>
+                  </>
+                ),
+              },
+              {
+                title: 'Bewertung und Originalbericht',
+                body: 'QB 1–3 werden je Qualitätsaspekt mit A–D bewertet (A keine Auffälligkeiten · B ohne Risiko · C Defizit mit Risiko · D Defizit mit eingetretener Folge), QB 4 beschreibend, QB 5 erfüllt / nicht erfüllt, Abrechnung nach Auffälligkeiten. Der Buchstabe in der Liste ist das schwächste Ergebnis aus QB 1–3 — im Prüfbericht stehen die Ergebnisse je Qualitätsaspekt und Person (P1–PX). ClearDeck erfasst hier nur eine interne Zusammenfassung mit Referenz zum vollständigen Originalbericht.',
+              },
+            ]}
+          />
           <button type="button" className="btn btn-secondary" onClick={onCreateAudit}>
             Prüfung erfassen
           </button>
@@ -167,22 +197,6 @@ const AuditPage = ({
           </button>
         </div>
       </header>
-
-      <FieldHelp title="Personenliste und Stichprobe">
-        Personenliste nach Anlage 7: alphabetisch alle Personen mit Leistungen nach §§ 36/39 SGB XI
-        beziehungsweise §§ 37/37c SGB V. Enthalten sind Name, gegebenenfalls Vertretung mit Telefon,
-        Teilgruppe A/B/C, aufwändige HKP-Ziffern und AKI/pHKP. Ausnahmen erläutert das
-        Personenformular. Die Liste wird nach Ankündigung erstellt und zu Prüfungsbeginn vorgelegt.
-        Regelprüfungen werden grundsätzlich zwei Arbeitstage vorher angekündigt; Anlassprüfungen
-        sollen unangemeldet erfolgen.
-        <p>
-          Die Sollzahlen gelten nur nach Kapitel 8.1. Bei AKI-/pHKP-Verträgen gelten Kapitel
-          8.2/8.3; deren Auswahl berechnet ClearDeck nicht. Der MD zieht zuerst je zwei Personen aus
-          A, B und C, danach drei weitere aus D. Unterbesetzte Gruppen werden nicht aufgefüllt.
-          {countNone} Personen ohne Beeinträchtigung und ohne aufwändige HKP sind nicht
-          stichprobenrelevant.
-        </p>
-      </FieldHelp>
 
       <section>
         <h3 className="cd-h3" style={{ marginBottom: 12 }}>
@@ -252,14 +266,6 @@ const AuditPage = ({
             );
           })}
         </div>
-        <FieldHelp title="Bewertung und Originalbericht">
-          QB 1–3 werden je Qualitätsaspekt mit A–D bewertet (A keine Auffälligkeiten · B ohne Risiko
-          · C Defizit mit Risiko · D Defizit mit eingetretener Folge), QB 4 beschreibend, QB 5
-          erfüllt / nicht erfüllt, Abrechnung nach Auffälligkeiten. Der Buchstabe in der Liste ist
-          das schwächste Ergebnis aus QB 1–3 — im Prüfbericht stehen die Ergebnisse je
-          Qualitätsaspekt und Person (P1–PX). ClearDeck erfasst hier nur eine interne
-          Zusammenfassung mit Referenz zum vollständigen Originalbericht.
-        </FieldHelp>
       </section>
     </div>
   );

@@ -32,6 +32,7 @@ import {
   getStorageMode,
   isDbOpen,
 } from '../database/connection';
+import { appVersion } from '../appVersion';
 import { writeAtomic } from '../atomicFile';
 import { getDb, getWorkingDbPath } from '../database/connection';
 import { archiveAppData } from '../dataArchive';
@@ -117,7 +118,7 @@ export const registerAuthHandlers = (): void => {
     'app:info',
     (): AppInfo => ({
       name: app.getName(),
-      version: app.getVersion(),
+      version: appVersion(),
       author: 'Torben Buck – tbuck software',
       email: 'mail@tbuck.de',
       github: 'https://github.com/Rasalas/employee-db',
