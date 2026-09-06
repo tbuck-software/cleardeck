@@ -50,7 +50,7 @@ const useAppLogic = () => {
   const eventSlice = useEventsPeriods({
     year,
     qualifications: employeeSlice.state.qualifications,
-    form: employeeSlice.state.form,
+    setForm: employeeSlice.setters.setForm,
     selectedEmployee: employeeSlice.state.selectedEmployee,
     setSelectedEmployee: employeeSlice.setters.setSelectedEmployee,
     setDataset: employeeSlice.setters.setDataset,
@@ -315,6 +315,7 @@ const useAppLogic = () => {
       patientDashboard: patientDashboardSlice.state,
     },
     setters: {
+      setEmployeeCompetencies: employeeSlice.setters.setEmployeeCompetencies,
       setYear,
       setDataset: employeeSlice.setters.setDataset,
       setQualifications: employeeSlice.setters.setQualifications,

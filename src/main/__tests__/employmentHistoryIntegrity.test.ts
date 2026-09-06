@@ -50,6 +50,23 @@ describe('effective employment and year reports', () => {
     ]);
   });
 
+  it('backdates unchanged March hours to January while preserving the earlier half-time period', () => {
+    const input = { ...base, startDate: '2024-09-01', weeklyHours: 18, fte: 0.5, hoursVerified: true };
+    const person = saveEmployee(input).employees[0];
+    const fullTime = { ...input, id: person.id, periodId: person.periodId,
+      weeklyHours: 36, fte: 1, updateHours: true, year: 2025 };
+    saveEmployee({ ...fullTime, hoursEffectiveFrom: '2025-03-01' });
+    saveEmployee({ ...fullTime, hoursEffectiveFrom: '2025-01-01' });
+    expect(getYearDataset(2024, 'stichtag').aggregation.totalFte).toBe(0.5);
+    expect(getYearDataset(2025, 'year-average').aggregation.totalFte).toBe(1);
+    expect(db.prepare('SELECT effectiveFrom,weeklyHours,verified FROM employment_terms ORDER BY effectiveFrom').all())
+      .toEqual([
+        { effectiveFrom: '2024-09-01', weeklyHours: 18, verified: 1 },
+        { effectiveFrom: '2025-01-01', weeklyHours: 36, verified: 1 },
+        { effectiveFrom: '2025-03-01', weeklyHours: 36, verified: 1 },
+      ]);
+  });
+
   it('excludes summer exits from the December snapshot but retains them in history', () => {
     saveEmployee({ ...base, endDate: '2024-06-30' });
     expect(getYearDataset(2024).employees).toHaveLength(1);

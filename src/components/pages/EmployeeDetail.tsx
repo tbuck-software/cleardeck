@@ -1,5 +1,7 @@
 import { localDate } from '../../utils/calendarDate';
-import React from 'react';
+import React, { useState } from 'react';
+import EmployeeCompetencies from './EmployeeCompetencies';
+import WorkingTimeModal from '../modals/WorkingTimeModal';
 import Icon from '../ui/Icon';
 import Avatar from '../ui/Avatar';
 import Segmented from '../ui/Segmented';
@@ -9,21 +11,12 @@ import type {
   EmployeeCompetency,
   EmployeeInstruction,
   EmployeeWithPeriod,
+  WorkingTime,
 } from '../../shared/types';
 import type { TimelineItem } from '../../types/ui';
 
 export type DetailTab = 'comp' | 'instr' | 'hist';
 
-/** Level 0 means "not yet assessed"; 1–5 follow the Kompetenzmatrix. */
-export const COMPETENCY_LEVELS = [
-  'Offen',
-  'Stufe 1',
-  'Stufe 2',
-  'Stufe 3',
-  'Stufe 4',
-  'Stufe 5',
-  'Abgeschlossen',
-];
 
 const fte2 = (value: number | null | undefined) =>
   value == null ? '—' : value.toFixed(2).replace('.', ',');
@@ -61,6 +54,8 @@ type EmployeeDetailProps = {
   availableInstructionCount: number;
   onTabChange: (tab: DetailTab) => void;
   onEdit: () => void;
+  onWorkingTimeSaved: () => Promise<void>;
+  onCompetenciesSaved: (entries: EmployeeCompetency[]) => void;
   onAddCompetency: () => void;
   onAddInstruction: () => void;
   onOpenSuggestedCompetencies: () => void;
@@ -83,6 +78,8 @@ const EmployeeDetail = ({
   availableInstructionCount,
   onTabChange,
   onEdit,
+  onWorkingTimeSaved,
+  onCompetenciesSaved,
   onAddCompetency,
   onAddInstruction,
   onOpenSuggestedCompetencies,
@@ -91,6 +88,17 @@ const EmployeeDetail = ({
   onStartNewPeriod,
   onSelectTimelineItem,
 }: EmployeeDetailProps) => {
+  const [workingTimeEdit, setWorkingTimeEdit] = useState<WorkingTime | null>();
+  const workingTimes = employee.workingTimes ?? [];
+  const workingHistory = employee.hoursHistory ?? [];
+  const historyItems = [
+    ...timelineItems.filter(item => !(item.kind === 'event' &&
+      (item.record.type === 'fte-change' || item.record.type === 'weekly-hours-change') &&
+      workingHistory.some(entry => entry.effectiveFrom === item.date))),
+    ...workingTimes.map(record => ({
+      kind: 'working-time' as const, date: record.effectiveFrom, record,
+    })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
   const today = localDate();
   const leaving = employee.status === 'active' && employee.endDate;
   const statusTag =
@@ -137,7 +145,7 @@ const EmployeeDetail = ({
 
       {employee.hoursVerified === false && (
         <p role="status" className="cd-muted-13">
-          Stunden und VZÄ noch ungeprüft. Personalbeleg unter „Bearbeiten“ bestätigen.
+          Arbeitszeit aus Altdaten übernommen. Stunden und Gültigkeitsdatum unter „Bearbeiten“ prüfen.
         </p>
       )}
       <div className="cd-facts">
@@ -172,109 +180,18 @@ const EmployeeDetail = ({
         options={[
           { value: 'comp' as DetailTab, label: 'Kompetenzen', count: competencies.length },
           { value: 'instr' as DetailTab, label: 'Einweisungen', count: instructions.length },
-          { value: 'hist' as DetailTab, label: 'Historie', count: timelineItems.length },
+          { value: 'hist' as DetailTab, label: 'Historie', count: historyItems.length },
         ]}
         value={tab}
         onChange={onTabChange}
       />
 
       {tab === 'comp' && (
-        <section>
-          <div className="cd-section-head">
-            <div>
-              <h3 className="cd-h3">Kompetenzmatrix</h3>
-              <p className="cd-muted-14" style={{ margin: '4px 0 0' }}>
-                Stufen 1–5 dokumentieren die laufende Einarbeitung, Stufe 6 den bestätigten
-                Abschluss. Klick auf eine Zeile öffnet den Verlauf.
-              </p>
-            </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {availableCompetencyCount === 0 && (
-                <span className="cd-muted-13">Alle Kompetenzen des Katalogs sind zugeordnet.</span>
-              )}
-              {suggestedCompetencyCount > 0 && (
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={onOpenSuggestedCompetencies}
-                >
-                  {suggestedCompetencyCount} Vorschläge aus Qualifikation
-                </button>
-              )}
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={availableCompetencyCount === 0}
-                onClick={onAddCompetency}
-              >
-                <Icon name="plus" size={16} />
-                Kompetenz hinzufügen
-              </button>
-            </div>
-          </div>
-          <div className="cd-panel">
-            {competencies.length === 0 && (
-              <div className="cd-empty">Noch keine Kompetenzen zugeordnet.</div>
-            )}
-            {competencies.map((competency) => {
-              const level = competency.level ?? 0;
-              const tagClass = !level
-                ? 'tag-neutral'
-                : level === 6 && competency.stageScheme === 'practice-v1'
-                  ? 'tag-accent-2'
-                  : 'tag-accent';
-              return (
-                <button
-                  key={competency.id ?? competency.competencyDefinitionId}
-                  type="button"
-                  className="cd-item"
-                  onClick={() => onSelectCompetency(competency)}
-                >
-                  <span className="cd-code">{competency.competencyCode ?? ''}</span>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600 }}>{competency.competencyName}</div>
-                    <div className="cd-muted-13">
-                      {competency.category ?? 'Ohne Kategorie'} ·{' '}
-                      {competency.approvedAt
-                        ? `bestätigt ${formatDateDE(competency.approvedAt)}`
-                        : 'keine Bestätigung'}
-                    </div>
-                  </div>
-                  {competency.stageHistory?.length ? (
-                    <div className="cd-muted-13">
-                      {competency.stageHistory.length} dokumentierte Stände; zuletzt{' '}
-                      {competency.stageHistory[0].changedAt}
-                    </div>
-                  ) : null}
-                  <div className="cd-level-dots" aria-label={`Stufe ${level} von 6`}>
-                    {[1, 2, 3, 4, 5, 6].map((step) => (
-                      <span
-                        key={step}
-                        style={{
-                          background:
-                            level && step <= level
-                              ? level === 6 && competency.stageScheme === 'practice-v1'
-                                ? 'var(--color-accent-2-500)'
-                                : 'var(--color-accent-500)'
-                              : 'transparent',
-                          border: `2px solid ${level && step <= level ? 'transparent' : 'var(--color-neutral-300)'}`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                  <span
-                    className={`tag ${tagClass}`}
-                    style={{ flex: 'none', minWidth: 110, justifyContent: 'center' }}
-                  >
-                    {level
-                      ? `${level} · ${competency.stageScheme === 'legacy' ? `Altmodell Stufe ${level}, fachlich prüfen` : COMPETENCY_LEVELS[level]}`
-                      : 'Offen'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
+        <EmployeeCompetencies employeeId={employee.id!} employeeName={employee.name}
+          competencies={competencies} availableCompetencyCount={availableCompetencyCount}
+          suggestedCompetencyCount={suggestedCompetencyCount} onSaved={onCompetenciesSaved}
+          onAddCompetency={onAddCompetency} onOpenSuggestedCompetencies={onOpenSuggestedCompetencies}
+          onSelectCompetency={onSelectCompetency} />
       )}
 
       {tab === 'instr' && (
@@ -343,79 +260,47 @@ const EmployeeDetail = ({
         </section>
       )}
 
-      {tab === 'hist' && employee.hoursHistory?.length ? (
-        <section>
-          <h3 className="cd-h3">Arbeitszeitstände und Korrekturen</h3>
-          <p className="cd-muted-13">
-            Wirksamkeitsdatum und Erfassung sind getrennt. Mehrere Zeilen für dasselbe
-            Wirksamkeitsdatum dokumentieren Korrekturen.
-          </p>
-          <div className="cd-table-wrap cd-history-table">
-            <table className="ds-table">
-              <thead>
-                <tr>
-                  <th>Gültig ab</th>
-                  <th>Stunden</th>
-                  <th>VZÄ</th>
-                  <th>Quelle / Status</th>
-                  <th>Erfasst</th>
-                </tr>
-              </thead>
-              <tbody>
-                {employee.hoursHistory.map((h, i) => (
-                  <tr key={i}>
-                    <td>{formatDateDE(h.effectiveFrom)}</td>
-                    <td>{h.weeklyHours ?? 'unbekannt'}</td>
-                    <td>{h.fte == null ? 'unbekannt' : fte2(h.fte)}</td>
-                    <td>
-                      {h.sourceRef || 'Quelle nicht hinterlegt'} ·{' '}
-                      {h.verified ? 'bestätigt' : 'ungeprüft'}
-                    </td>
-                    <td>{h.changedAt}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      ) : null}
       {tab === 'hist' && (
         <section>
           <div className="cd-section-head">
             <div>
               <h3 className="cd-h3">Historie</h3>
               <p className="cd-muted-14" style={{ margin: '4px 0 0' }}>
-                Beschäftigungsperioden und Ereignisse — Grundlage für die Jahreszuordnung.
+                Beschäftigung, Arbeitszeiten und Ereignisse.
               </p>
             </div>
             <button type="button" className="btn btn-primary" onClick={onStartNewPeriod}>
-              <Icon name="plus" size={16} />
-              Eintrag hinzufügen
+              <Icon name="plus" size={16} /> Eintrag hinzufügen
             </button>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', paddingLeft: 8 }}>
-            {timelineItems.length === 0 && <div className="cd-empty">Keine Einträge.</div>}
-            {timelineItems.map((item, index) => {
+            {historyItems.length === 0 && <div className="cd-empty">Keine Einträge.</div>}
+            {historyItems.map((item, index) => {
               const isPeriod = item.kind === 'period';
+              const isWorkingTime = item.kind === 'working-time';
               const title = isPeriod
                 ? item.record.endDate
                   ? 'Beschäftigungsperiode'
                   : 'Eintritt'
-                : item.record.title;
+                : isWorkingTime ? 'Arbeitszeit' : item.record.title;
               const detail = isPeriod
                 ? `${item.record.qualification}${item.record.endDate ? ` · bis ${formatDateDE(item.record.endDate)}` : ''}`
-                : (item.record.details ?? '');
+                : isWorkingTime
+                  ? `${item.record.weeklyHours ?? '—'} Std./Woche · ${fte2(item.record.fte)} VZÄ${item.record.effectiveUntil ? ` · bis ${formatDateDE(item.record.effectiveUntil)}` : ''}`
+                  : (item.record.details ?? '');
               return (
                 <div
                   key={`${item.kind}-${item.record.id ?? index}`}
                   className="cd-timeline-row cd-row"
                   role="button"
+                  aria-label={isWorkingTime ? `Arbeitszeit ab ${formatDateDE(item.date)} bearbeiten` : undefined}
                   tabIndex={0}
-                  onClick={() => onSelectTimelineItem(item)}
+                  onClick={() => isWorkingTime ? setWorkingTimeEdit(item.record) : onSelectTimelineItem(item)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      onSelectTimelineItem(item);
+                      if (isWorkingTime) setWorkingTimeEdit(item.record);
+                      else onSelectTimelineItem(item);
                     }
                   }}
                 >
@@ -439,6 +324,10 @@ const EmployeeDetail = ({
             })}
           </div>
         </section>
+      )}
+      {workingTimeEdit !== undefined && (
+        <WorkingTimeModal entry={workingTimeEdit} employee={employee} baseHours={baseHours}
+          onSaved={onWorkingTimeSaved} onClose={() => setWorkingTimeEdit(undefined)} />
       )}
     </div>
   );

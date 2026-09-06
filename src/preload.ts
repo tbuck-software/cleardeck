@@ -1,6 +1,8 @@
 import type { StaffImportPreview, StaffImportRow } from './shared/staffImport';
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
+  BulkCompetencyChange,
+  SaveWorkingTimeInput,
   AppState,
   AppInfo,
   EmploymentPeriod,
@@ -62,6 +64,7 @@ export type Api = {
   ) => Promise<YearDataset>;
   listPeriods: (employeeId: number) => Promise<EmploymentPeriod[]>;
   listEvents: (employeeId: number) => Promise<EmployeeEvent[]>;
+  saveWorkingTime: (input: SaveWorkingTimeInput) => Promise<void>;
   saveEmployee: (input: {
     id?: number;
     periodId?: number;
@@ -132,6 +135,7 @@ export type Api = {
   deleteCompetencyDefinition: (id: number) => Promise<CompetencyDefinition[]>;
   reorderCompetencyDefinitions: (ids: number[]) => Promise<CompetencyDefinition[]>;
   listEmployeeCompetencies: (employeeId: number) => Promise<EmployeeCompetency[]>;
+  bulkChangeCompetencies: (input: BulkCompetencyChange) => Promise<EmployeeCompetency[]>;
   saveEmployeeCompetency: (input: {
     stageScheme?: 'legacy' | 'practice-v1';
     id?: number;
@@ -341,6 +345,7 @@ const api: Api = {
   listPeriods: (employeeId) => ipcRenderer.invoke('data:listPeriods', { employeeId }),
   listEvents: (employeeId) => ipcRenderer.invoke('events:list', { employeeId }),
   saveEmployee: (input) => ipcRenderer.invoke('data:save', input),
+  saveWorkingTime: (input) => ipcRenderer.invoke('data:saveWorkingTime', input),
   deleteEmployee: (id, year) => ipcRenderer.invoke('data:delete', { id, year }),
   saveEvent: (input) => ipcRenderer.invoke('events:save', input),
   deleteEvent: (id, employeeId) => ipcRenderer.invoke('events:delete', { id, employeeId }),
@@ -364,6 +369,7 @@ const api: Api = {
     ipcRenderer.invoke('competencies:reorderDefinitions', { ids }),
   listEmployeeCompetencies: (employeeId) =>
     ipcRenderer.invoke('competencies:listEmployee', { employeeId }),
+  bulkChangeCompetencies: (input) => ipcRenderer.invoke('competencies:bulkChange', input),
   saveEmployeeCompetency: (input) => ipcRenderer.invoke('competencies:saveEmployee', input),
   deleteEmployeeCompetency: (employeeId, competencyDefinitionId) =>
     ipcRenderer.invoke('competencies:deleteEmployee', { employeeId, competencyDefinitionId }),

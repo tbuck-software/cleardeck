@@ -1,6 +1,7 @@
 import React from 'react';
+import WorkingTimeModal from './WorkingTimeModal';
 import Dialog from '../ui/Dialog';
-import type { QualificationType } from '../../shared/types';
+import type { EmployeeWithPeriod, QualificationType } from '../../shared/types';
 import type { AddPeriodFormState, EventModalState, EventModalType } from '../../types/ui';
 
 /** Change events are written by the app itself; they stay selectable only while editing one. */
@@ -13,6 +14,7 @@ const DERIVED_TYPES: EventModalType[] = [
 
 const TYPE_LABELS: { value: EventModalType; label: string }[] = [
   { value: 'period', label: 'Qualifikation / Periode' },
+  { value: 'working-time', label: 'Arbeitszeit' },
   { value: 'care-visit', label: 'Pflegevisite' },
   { value: 'emergency-training', label: 'Notfallschulung' },
   { value: 'custom', label: 'Sonstiges' },
@@ -24,6 +26,9 @@ const TYPE_LABELS: { value: EventModalType; label: string }[] = [
 
 type EventModalProps = {
   state: EventModalState;
+  employee: EmployeeWithPeriod;
+  baseHours: number;
+  onWorkingTimeSaved: () => Promise<void>;
   periodForm: AddPeriodFormState;
   qualifications: QualificationType[];
   onStateChange: (next: Partial<EventModalState>) => void;
@@ -36,7 +41,7 @@ type EventModalProps = {
 };
 
 const EventModal = ({
-  state,
+  state, employee, baseHours, onWorkingTimeSaved,
   periodForm,
   qualifications,
   onStateChange,
@@ -61,12 +66,44 @@ const EventModal = ({
       ? 'Eintrag löschen'
       : undefined;
 
+  const typeSelection = (
+      <div className="field">
+        <label htmlFor="event-type">Typ</label>
+        <select
+          id="event-type"
+          className="input"
+          value={state.type}
+          onChange={(event) => {
+            const nextType = event.target.value as EventModalType;
+            if (DERIVED_TYPES.includes(nextType) && !state.id) return;
+            onStateChange({ type: nextType, title: '', details: '' });
+          }}
+        >
+          {TYPE_LABELS.filter(
+            (entry) => (entry.value !== 'working-time' || (!state.id && !periodForm.periodId)) &&
+              (!DERIVED_TYPES.includes(entry.value) || state.id != null),
+          ).map((entry) => (
+            <option
+              key={entry.value}
+              value={entry.value}
+              disabled={DERIVED_TYPES.includes(entry.value) && state.type !== entry.value}
+            >
+              {entry.label}
+            </option>
+          ))}
+        </select>
+      </div>
+  );
+  if (state.type === 'working-time') return (
+    <WorkingTimeModal entry={null} employee={employee} baseHours={baseHours}
+      onSaved={onWorkingTimeSaved} onClose={onClose} typeSelection={typeSelection} />
+  );
+
   return (
     <Dialog
       open={state.open}
       width={560}
       title={state.id || periodForm.periodId ? 'Eintrag bearbeiten' : 'Neuer Eintrag'}
-      subtitle="Beschäftigungsperioden und Ereignisse — Grundlage für die Jahreszuordnung."
       primaryLabel="Speichern"
       onPrimary={isPeriod ? onSavePeriod : onSaveEvent}
       deleteLabel={deleteLabel}
@@ -83,31 +120,7 @@ const EventModal = ({
       }
       onClose={onClose}
     >
-      <div className="field">
-        <label htmlFor="event-type">Typ</label>
-        <select
-          id="event-type"
-          className="input"
-          value={state.type}
-          onChange={(event) => {
-            const nextType = event.target.value as EventModalType;
-            if (DERIVED_TYPES.includes(nextType) && !state.id) return;
-            onStateChange({ type: nextType, title: '', details: '' });
-          }}
-        >
-          {TYPE_LABELS.filter(
-            (entry) => !DERIVED_TYPES.includes(entry.value) || state.id != null,
-          ).map((entry) => (
-            <option
-              key={entry.value}
-              value={entry.value}
-              disabled={DERIVED_TYPES.includes(entry.value) && state.type !== entry.value}
-            >
-              {entry.label}
-            </option>
-          ))}
-        </select>
-      </div>
+      {typeSelection}
 
       {isPeriod ? (
         <>

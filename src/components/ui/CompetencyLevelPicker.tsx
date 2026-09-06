@@ -1,5 +1,5 @@
 import React from 'react';
-import { COMPETENCY_LEVELS } from '../pages/EmployeeDetail';
+import { COMPETENCY_LEVELS, LEGACY_COMPETENCY_LEVELS } from '../../utils/competencyLevels';
 
 type CompetencyLevelPickerProps = {
   value: number;
@@ -10,7 +10,7 @@ type CompetencyLevelPickerProps = {
 const CompetencyLevelPicker = ({ value, onChange, legacy = false }: CompetencyLevelPickerProps) => (
   <div style={{ display: 'flex', gap: 6 }} role="radiogroup" aria-label="Kompetenzstufe">
     {(legacy
-      ? ['Offen', 'Unterwiesen', 'Beobachtet', 'U. Aufsicht', 'Selbstständig', 'Kann anleiten']
+      ? LEGACY_COMPETENCY_LEVELS
       : COMPETENCY_LEVELS
     ).map((label, level) => {
       const active = value === level;

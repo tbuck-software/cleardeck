@@ -98,9 +98,28 @@ export interface EmploymentPeriod {
   note?: string | null;
 }
 
+export interface WorkingTime {
+  id: number;
+  periodId: number;
+  effectiveFrom: string;
+  effectiveUntil: string | null;
+  weeklyHours: number | null;
+  fte: number;
+}
+
+export interface SaveWorkingTimeInput {
+  id?: number;
+  employeeId: number;
+  effectiveFrom: string;
+  weeklyHours: number | null;
+  fte: number;
+}
+
 export interface EmployeeWithPeriod extends Employee {
+  workingTimes?: WorkingTime[];
   sourceRef?: string | null;
   hoursHistory?: {
+    id?: number;
     effectiveFrom: string;
     weeklyHours: number | null;
     fte: number | null;
@@ -489,3 +508,14 @@ export interface AuditWithDetails extends Audit {
   results: AuditResult[];
   clientIds: number[];
 }
+
+/** Changes existing assignments without changing their assessment model or other fields. */
+export type BulkCompetencyChange = {
+  employeeId: number;
+  changes: {
+    competencyDefinitionId: number;
+    stageScheme: 'legacy' | 'practice-v1';
+    level: number;
+  }[];
+  completion?: { approvedAt: string; approvedBy: string };
+};

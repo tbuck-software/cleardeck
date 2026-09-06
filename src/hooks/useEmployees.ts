@@ -850,6 +850,12 @@ const useEmployees = ({
       selectedEmployee.weeklyHours !== null && selectedEmployee.weeklyHours !== undefined
         ? String(selectedEmployee.weeklyHours)
         : '';
+    const today = localDate();
+    const effectiveFrom = today < selectedEmployee.startDate
+      ? selectedEmployee.startDate
+      : selectedEmployee.endDate && selectedEmployee.endDate < today
+        ? selectedEmployee.endDate
+        : today;
     setEditModal({
       open: true,
       mode: 'edit',
@@ -859,11 +865,8 @@ const useEmployees = ({
       fteValue: String(cappedSelectedFte),
       linked: false,
       birthDate: selectedEmployee.birthDate ?? '',
-      hoursEffectiveFrom:
-        selectedEmployee.endDate && selectedEmployee.endDate < localDate()
-          ? selectedEmployee.endDate
-          : localDate(),
-      hoursVerified: false,
+      hoursEffectiveFrom: effectiveFrom,
+      initialHoursEffectiveFrom: effectiveFrom,
       sourceRef: selectedEmployee.sourceRef ?? '',
     });
   }, [baseHours, selectedEmployee]);
@@ -927,7 +930,7 @@ const useEmployees = ({
           birthDate: editModal.birthDate || null,
           hoursEffectiveFrom:
             editModal.mode === 'create' ? form.startDate : editModal.hoursEffectiveFrom,
-          hoursVerified: weeklyHoursNum != null,
+          hoursVerified: true,
           sourceRef: editModal.sourceRef,
         };
         const updated = await api.employees.save(payload);
@@ -969,6 +972,13 @@ const useEmployees = ({
             ? Number(editModal.fteValue)
             : form.fte;
       const fteValue = Math.min(1, Number(derivedFte) || 0);
+      const updateHours =
+        weeklyHoursNum !== (selectedEmployee.weeklyHours ?? null) ||
+        fteValue !== selectedEmployee.fte ||
+        editModal.hoursEffectiveFrom !== editModal.initialHoursEffectiveFrom;
+      if (updateHours && !editModal.hoursEffectiveFrom) {
+        throw new Error('Bitte angeben, ab wann die Arbeitszeit gilt.');
+      }
       const payload = {
         ...form,
         name: editModal.name,
@@ -982,20 +992,18 @@ const useEmployees = ({
         birthDate: editModal.birthDate || null,
         hoursEffectiveFrom: editModal.hoursEffectiveFrom,
         sourceRef: editModal.sourceRef,
-        hoursVerified: editModal.hoursVerified,
+        hoursVerified: updateHours,
       };
       const updated = await api.employees.save({
         ...payload,
-        updateHours:
-          weeklyHoursNum !== selectedEmployee.weeklyHours ||
-          fteValue !== selectedEmployee.fte ||
-          editModal.hoursVerified === true,
+        updateHours,
       });
       setDataset(updated);
       const refreshed =
-        updated.employees.find((employee) => employee.id === selectedEmployee.id) ??
+        updated.employees.find((employee) =>
+          employee.id === selectedEmployee.id && employee.periodId === selectedEmployee.periodId) ??
         (await api.employees.list(year, 'directory')).employees.find(
-          (employee) => employee.id === selectedEmployee.id,
+          (employee) => employee.id === selectedEmployee.id && employee.periodId === selectedEmployee.periodId,
         );
       if (refreshed) setSelectedEmployee(refreshed);
       setForm((prev) => ({

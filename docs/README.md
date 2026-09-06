@@ -16,3 +16,9 @@ In `research/` stehen überprüfte Sachverhalte, Herleitungen und Unsicherheiten
 
 - [Demo-Profil starten](betrieb/demo-profil.md) öffnet einen eigenen synthetischen Bestand mit 25 Beschäftigten und 72 Patient:innen.
 - [Release 2.0.0](reviews/2026-09-06-release-2.0.0.md) dokumentiert Plattformumfang, Windows-Upgrades aus 1.7.1/1.8.0 und die Prüfung der veröffentlichten Dateien.
+- [Rückmeldung zu Arbeitszeit und Kompetenzen](reviews/2026-09-06-arbeitszeit-und-kompetenzbedienung.md) dokumentiert die behobene Datumsgrenze, die entfernte Checkbox und offene Bedienwünsche.
+- [Arbeitszeiten und Beschäftigung erfassen](betrieb/arbeitszeiten-und-beschaeftigung.md) erklärt den Bedienweg am Beispiel 50 % ab September und Vollzeit ab Januar.
+
+- [Sammeländerungen für Kompetenzen](research/kompetenzen-sammelaenderung-ux.md) vergleicht offizielle Bedienwege anderer Verwaltungssoftware und leitet einen Vorschlag für Teilmengenauswahl ab. Die anschließende Umsetzung erhält beide bestehenden Stufenmodelle.
+
+- [Kompetenzstufen gemeinsam ändern](betrieb/kompetenzen-gemeinsam-aendern.md) erklärt Teilmengenauswahl, Stufenmodelle und Speicherung.

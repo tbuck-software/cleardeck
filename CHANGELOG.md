@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [2.1.0]
+
+- Arbeitszeiten direkt in der Historie ergänzen und korrigieren.
+- Frühere Arbeitszeitdaten nach einer Eintrittskorrektur sofort auswählen.
+- Einfacheres Arbeitszeitformular ohne zusätzliche Prüf-Checkbox.
+- Kompetenzstufen für ausgewählte oder alle Kompetenzen gemeinsam ändern.
+
 ## [2.0.0]
 
 - Übersichtlichere Oberfläche mit Hilfe direkt am Formular.
