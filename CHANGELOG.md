@@ -4,23 +4,23 @@
 
 ## [2.0.0]
 
-- Neu gestaltete Oberfläche mit Übersicht, Team, Patient:innen, MD-Prüfung, Kalender und eigenen Einstellungsseiten. Hilfe ist direkt am jeweiligen Formular erreichbar.
-- „Heute zu tun“ sammelt offene Fristen, Visiten, Maßnahmen und Datenlücken. Globale Suche mit Strg+K führt zu Personen, Seiten und Aktionen.
-- Kleine Fenster zeigen eine kompakte Navigation und gestapelte Listen. Der Aufgabenzähler bleibt als „9+“ lesbar; Tooltip und breite Navigation zeigen die genaue Anzahl.
-- Patientenlisten lassen sich nach Name, Diagnose, Teilgruppe, Visitenanzahl und Terminen auf- oder absteigend sortieren. Fehlende Werte bleiben am Ende.
-- Beschäftigungsabschnitte, Wiedereintritte, Qualifikationen und historische Wochenstunden bleiben nachvollziehbar. Stichtags- und Jahresmittelauswertungen berücksichtigen den jeweils gültigen Stellenanteil.
-- Personalbestände aus Excel/CSV mit Vorschau und Prüfung übernehmen. Jahresnachweise und Excel-Exporte verwenden die ausgewählten Zeiträume und Werte.
-- Einweisungen dokumentieren Durchführung, Inhalte, Beleg und Folgetermin getrennt. Sammelzuordnung und regelbezogene Wiedervorlagen ergänzen den korrigierten Katalog; die Jugendregel gilt nur für die dafür einschlägigen Unterweisungen.
-- Einarbeitung und Kompetenzen dokumentieren Stufen, Bestätigung und Verlauf. Offene Nachweise bleiben von durchgeführten Einweisungen unterscheidbar.
-- QPR-Stichprobenmerkmale werden aus Mobilität und Kognition ermittelt. Mehrere aufwändige HKP-Leistungen, Einstufungsquelle, Gutachtendatum und ungeklärte Angaben bleiben getrennt erfasst.
-- Personenliste nach Anlage 7 exportieren, einschließlich Versorgungsumfang, Vertretung und AKI/pHKP. Die MD-Seite zeigt Merkmalsbestände und Vorbereitungsbedarf; sie führt keine offizielle Zufallsziehung durch.
-- Pflegevisiten als geplant oder durchgeführt dokumentieren. Maßnahmen erhalten Zuständigkeit, Termin und Erledigung. Bisherige Visitenbewertungen bleiben als historische Angaben erhalten.
-- MD-Prüfungen enthalten Entwurfsstatus, Qualitätsbereiche und eine Referenz zum vollständigen Originalbericht. Interne Zusammenfassungen werden nicht als offizieller Gesamtbuchstabe ausgegeben.
-- Datenbestände aus 1.7.1 und 1.8.0 werden beim ersten Öffnen automatisch weitergeführt. Vor einer Migration entsteht automatisch eine Sicherheitskopie. Fehler verändern den Originalbestand nicht; bisheriges Passwort und Schlüssel bleiben gültig.
-- Verbesserte Sicherung und Wiederherstellung, einstellbarer Sicherungsordner und Aufbewahrung. Ältere Backups bleiben nach einem Passwortwechsel verwendbar. Fehlende Datenbanken oder fehlerhafte Konfigurationen führen nicht zu einem leeren Ersatzbestand.
-- Updates gezielt herunterladen, Fortschritt und geschätzte Restzeit sehen, anschließend installieren und neu starten. Updatefehler bleiben sichtbar und kopierbar; Neuerungen übersprungener Versionen sind nachlesbar.
-- Windows-Update-Metadaten verwenden eindeutige Installationsdateinamen. Lokale Logs und bereinigte Diagnoseexporte erleichtern die Fehlerklärung.
-- Separater Entwicklungsmodus mit umfangreichem synthetischem Demo-Bestand und automatischer Übernahme von Codeänderungen. Produktionsdaten werden dabei nicht verwendet.
+- Übersichtlichere Oberfläche mit Hilfe direkt am Formular.
+- Offene Aufgaben und Fristen auf einen Blick.
+- Personen und Funktionen schnell finden.
+- Bessere Bedienung in kleinen Fenstern.
+- Patientenlisten flexibel sortieren.
+- Arbeitszeiten und Beschäftigungsverläufe nachvollziehen.
+- Genauere Jahresauswertungen und Exporte.
+- Personaldaten mit Vorschau aus Excel oder CSV übernehmen.
+- Einweisungen und Nachweise gezielt nachverfolgen.
+- Einarbeitung und Kompetenzen im Blick behalten.
+- Pflegemerkmale und Pflegeleistungen genauer erfassen.
+- Personenlisten für die Pflegeprüfung exportieren.
+- Pflegevisiten und offene Maßnahmen nachverfolgen.
+- Prüfergebnisse mit Originalberichten verknüpfen.
+- Bestehende Daten automatisch übernehmen und sichern.
+- Sicherungen einfacher verwalten und wiederherstellen.
+- Updates mit Fortschrittsanzeige herunterladen und installieren.
 
 ## [1.8.0]
 
