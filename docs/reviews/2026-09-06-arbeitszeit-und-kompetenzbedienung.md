@@ -1,6 +1,6 @@
 # Arbeitszeitverläufe und gemeinsame Kompetenzänderungen
 
-Stand: 06.09.2026. Anlass ist die Rückmeldung zu einer vor März 2025 nicht auswählbaren Arbeitszeitänderung und der Wunsch, mehrere Kompetenzen gemeinsam einzustufen. Dieses Dokument trennt den geprüften Iststand vom Gestaltungsvorschlag. Die Checkbox und zwei Fehler beim Bearbeiten von Arbeitszeiten sind im Arbeitsstand behoben. Der eigene Arbeitszeiteditor ist ebenfalls umgesetzt. Gemeinsame Kompetenzänderungen wurden am 07.09.2026 anschließend umgesetzt; die abschließende Sichtprüfung steht noch aus.
+Stand: 07.09.2026, veröffentlicht mit [Version 2.1.0](2026-09-07-release-2.1.0.md). Die Arbeitszeitkorrekturen und gemeinsame Kompetenzänderungen sind umgesetzt. Die Desktopprüfung mit Screenshots wurde nachgeholt; eine schmale Ansicht bleibt ungeprüft. Die folgenden Abschnitte dokumentieren Diagnose, Entscheidungen und Prüfungen während der Umsetzung. Frühere offene Prüfschritte werden durch die späteren Ergebnisse ergänzt.
 
 ## Dokumentationsstand
 

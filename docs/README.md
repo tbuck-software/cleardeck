@@ -22,3 +22,5 @@ In `research/` stehen überprüfte Sachverhalte, Herleitungen und Unsicherheiten
 - [Sammeländerungen für Kompetenzen](research/kompetenzen-sammelaenderung-ux.md) vergleicht offizielle Bedienwege anderer Verwaltungssoftware und leitet einen Vorschlag für Teilmengenauswahl ab. Die anschließende Umsetzung erhält beide bestehenden Stufenmodelle.
 
 - [Kompetenzstufen gemeinsam ändern](betrieb/kompetenzen-gemeinsam-aendern.md) erklärt Teilmengenauswahl, Stufenmodelle und Speicherung.
+
+- [Release 2.1.0](reviews/2026-09-07-release-2.1.0.md) dokumentiert Arbeitszeitkorrekturen, gemeinsame Kompetenzänderungen und die geprüften Windows-Updatewege einschließlich 2.0.0.
