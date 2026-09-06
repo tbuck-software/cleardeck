@@ -15,3 +15,4 @@ In `research/` stehen überprüfte Sachverhalte, Herleitungen und Unsicherheiten
 - [Upgrade aus 1.7.1/1.8.0 und Designabgleich](reviews/2026-09-06-upgrade-171-180-und-design.md) dokumentiert die automatische Datenmigration, zusätzliche UI-Korrekturen und verbleibende Installergrenzen.
 
 - [Demo-Profil starten](betrieb/demo-profil.md) öffnet einen eigenen synthetischen Bestand mit 25 Beschäftigten und 72 Patient:innen.
+- [Release 2.0.0](reviews/2026-09-06-release-2.0.0.md) dokumentiert Plattformumfang, Windows-Upgrades aus 1.7.1/1.8.0 und die Prüfung der veröffentlichten Dateien.
