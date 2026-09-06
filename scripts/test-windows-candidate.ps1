@@ -41,12 +41,14 @@ try {
   }
   if (!$running) { throw 'Installer did not automatically restart the new version.' }
   if ((Get-Item $newExe).VersionInfo.ProductVersion -notlike "$version*") { throw 'Wrong installed product version.' }
+  Write-Output "Installer automatically restarted installed version $version."
   # Automatic restart is established above. Relaunch solely to attach the test
   # driver; no configuration/database conversion is performed by the harness.
   foreach ($p in $running) { $p.CloseMainWindow() | Out-Null }
   Start-Sleep -Seconds 3
   if (Get-Process cleardeck -ErrorAction SilentlyContinue) { throw 'New locked app did not close cleanly.' }
   for ($attempt=0; $attempt -lt 2; $attempt++) {
+    Write-Output "Checking installed candidate unlock and preserved data, start $($attempt + 1) of 2."
     $p = Start-Process $newExe -ArgumentList '--remote-debugging-port=9222' -PassThru
     node scripts/test-windows-candidate.cjs new-ui
     if ($LASTEXITCODE -ne 0) { throw 'Installed candidate unlock failed.' }
