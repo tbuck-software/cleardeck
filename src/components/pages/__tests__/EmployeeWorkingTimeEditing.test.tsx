@@ -80,4 +80,3 @@ it.each(['Enter', ' '])('opens the focused row with the %s key', (key) => {
   fireEvent.keyDown(row, { key });
   expect(screen.getByRole('dialog', { name: 'Arbeitszeit bearbeiten' })).toBeInTheDocument();
 });
-
