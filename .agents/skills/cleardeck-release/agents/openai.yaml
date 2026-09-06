@@ -1,0 +1,4 @@
+interface:
+  display_name: "ClearDeck veröffentlichen"
+  short_description: "Deutsche Release Notes und geprüfte Releases"
+  default_prompt: "Nutze $cleardeck-release, um die nächste ClearDeck-Version mit kurzen deutschen Stichpunkten vorzubereiten, zu prüfen und zu veröffentlichen."
