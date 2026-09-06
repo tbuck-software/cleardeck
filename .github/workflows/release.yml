@@ -20,7 +20,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          # SQLite snapshot tests use DatabaseSync.serialize/deserialize (26.1+).
+          node-version: 26.8.1
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
