@@ -29,7 +29,8 @@ function inspect(bytes) {
   const file = path.join(result, 'inspection.db');
   fs.writeFileSync(file, bytes);
   const db = new DatabaseSync(file);
-  const all = (sql) => db.prepare(sql).all();
+  // Match the plain objects reloaded from before.json without changing values.
+  const all = (sql) => db.prepare(sql).all().map((row) => ({ ...row }));
   const version = db.prepare("SELECT value FROM settings WHERE key='schema_version'").get().value;
   const snapshot = {
     employees: all('SELECT id,name,note,weeklyHours,fte,birthDate FROM employees ORDER BY id'),
