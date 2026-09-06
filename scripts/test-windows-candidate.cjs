@@ -187,16 +187,17 @@ async function run() {
       mode === 'old-ui' ? process.env.OLD_VERSION : require('../package.json').version,
     );
     assert.equal(info.data.employees[0].name, 'Upgrade Test');
+    console.log(`Unlocked installed ${info.info.version}; existing employee loaded.`);
     if (mode === 'old-ui') {
       const sidebar = page.locator('.sidebar-content');
       if ((await sidebar.count()) && !(await sidebar.isVisible()))
         await page.getByRole('button', { name: 'Menü umschalten', exact: true }).click();
-      await page.getByRole('button', { name: 'Einstellungen', exact: true }).click();
       const install = page
         .locator('.sidebar')
         .getByRole('button', { name: 'Installieren', exact: true });
       await install.waitFor({ state: 'visible', timeout: 180000 });
       await page.screenshot({ path: path.join(result, 'before-install.png') });
+      console.log('Candidate downloaded; clicking the original sidebar Installieren button.');
       try {
         await install.click();
       } catch (error) {
