@@ -4,6 +4,25 @@ $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $env:RUNNER_OS -ne 'Windows') { throw 'Disposable GitHub-hosted Windows runner required.' }
 $env:OLD_VERSION = $OldVersion
 $version = (Get-Content package.json | ConvertFrom-Json).version
+function Close-CandidateWindow([string]$Executable) {
+  $window = $null
+  for ($i=0; $i -lt 60; $i++) {
+    $window = Get-Process cleardeck -ErrorAction SilentlyContinue |
+      Where-Object { $_.Path -eq $Executable -and $_.MainWindowHandle -ne 0 } |
+      Select-Object -First 1
+    if ($window) { break }
+    Start-Sleep -Milliseconds 500
+  }
+  if (!$window) { throw 'Candidate process did not present a main window.' }
+  Write-Output "Closing ready candidate window, process $($window.Id)."
+  if (!$window.CloseMainWindow()) { throw 'Candidate main window rejected the close request.' }
+  if (!$window.WaitForExit(30000)) { throw 'Candidate did not close cleanly.' }
+  for ($i=0; $i -lt 60; $i++) {
+    if (!(Get-Process cleardeck -ErrorAction SilentlyContinue)) { return }
+    Start-Sleep -Milliseconds 500
+  }
+  throw 'Candidate child processes did not exit after the main window closed.'
+}
 $root = Join-Path $env:LOCALAPPDATA 'cleardeck'
 $data = Join-Path $env:APPDATA 'ClearDeck/data'
 if ((Test-Path $root) -or (Test-Path $data)) { throw 'Empty runner profile required.' }
@@ -44,9 +63,7 @@ try {
   Write-Output "Installer automatically restarted installed version $version."
   # Automatic restart is established above. Relaunch solely to attach the test
   # driver; no configuration/database conversion is performed by the harness.
-  foreach ($p in $running) { $p.CloseMainWindow() | Out-Null }
-  Start-Sleep -Seconds 3
-  if (Get-Process cleardeck -ErrorAction SilentlyContinue) { throw 'New locked app did not close cleanly.' }
+  Close-CandidateWindow $newExe
   for ($attempt=0; $attempt -lt 2; $attempt++) {
     Write-Output "Checking installed candidate unlock and preserved data, start $($attempt + 1) of 2."
     $p = Start-Process $newExe -ArgumentList '--remote-debugging-port=9222' -PassThru
@@ -54,8 +71,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Installed candidate unlock failed.' }
     node scripts/test-windows-candidate.cjs verify
     if ($LASTEXITCODE -ne 0) { throw 'Installed candidate data migration/preservation failed.' }
-    $p.CloseMainWindow() | Out-Null
-    if (!$p.WaitForExit(30000)) { throw 'Candidate did not close cleanly.' }
+    Close-CandidateWindow $newExe
   }
   Write-Output "PASS: original $OldVersion UI -> candidate feed -> installer -> automatic restart $version; existing password unlock, preserved data and one automatic migration backup across two starts."
 } finally {
