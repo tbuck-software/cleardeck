@@ -5,6 +5,10 @@ export default class SqliteAdapter {
   open = true;
   private raw: DatabaseSync & { deserialize(bytes: Buffer): void; serialize(): Uint8Array };
   constructor(source: string | Buffer) {
+    const prototype = DatabaseSync.prototype as typeof this.raw;
+    if (typeof prototype.serialize !== 'function' || typeof prototype.deserialize !== 'function') {
+      throw new Error('SQLite snapshot tests require Node.js 26.1 or newer; CI uses 26.8.1.');
+    }
     this.raw = new DatabaseSync(
       typeof source === 'string' ? source : ':memory:',
     ) as typeof this.raw;
