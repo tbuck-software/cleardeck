@@ -29,6 +29,7 @@ import {
 } from '../database/connection';
 import {
   getYearDataset,
+  getEmployeePeriod,
   listPeriods,
   saveEmployee,
   deleteEmployee,
@@ -157,6 +158,14 @@ export const registerDataHandlers = (): void => {
     ensureDbReady();
     return listPeriods(employeeId);
   });
+
+  handleData(
+    'data:getPeriod',
+    (_event, { employeeId, periodId, year }: { employeeId: number; periodId: number; year: number }) => {
+      ensureDbReady();
+      return getEmployeePeriod(employeeId, periodId, year);
+    },
+  );
 
   handleData('data:saveWorkingTime', (_event, input) => {
     ensureDbReady();

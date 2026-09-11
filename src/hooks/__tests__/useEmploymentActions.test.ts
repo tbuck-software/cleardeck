@@ -12,6 +12,7 @@ vi.mock('../../services/api', () => ({
     employees: {
       list: vi.fn(),
       listPeriods: vi.fn(),
+      getEmployeePeriod: vi.fn(),
       recordDeparture: vi.fn(),
       switchQualification: vi.fn(),
     },
@@ -50,6 +51,43 @@ const periodRecord = (employee: EmployeeWithPeriod): EmploymentPeriod => ({
   endDate: employee.endDate,
   qualification: employee.qualification,
 });
+const mappedHistoricalPeriod: EmployeeWithPeriod = {
+  ...sourcePeriod,
+  weeklyHours: 18,
+  fte: 0.5,
+  sourceRef: 'historical-contract',
+  workingTimes: [{
+    id: 101,
+    periodId: 10,
+    effectiveFrom: '2020-01-01',
+    effectiveUntil: '2024-12-31',
+    weeklyHours: 18,
+    fte: 0.5,
+  }],
+  hoursHistory: [{
+    id: 201,
+    effectiveFrom: '2020-01-01',
+    weeklyHours: 18,
+    fte: 0.5,
+    verified: 0,
+    sourceRef: 'historical-contract',
+    changedAt: '2020-01-02 10:00:00',
+  }],
+  hoursVerified: false,
+  hoursMissing: false,
+  hoursEffectiveFrom: '2020-01-01',
+};
+const mappedSwitchedPeriod: EmployeeWithPeriod = {
+  ...switchedPeriod,
+  weeklyHours: 18,
+  fte: 0.5,
+  sourceRef: 'historical-contract',
+  workingTimes: mappedHistoricalPeriod.workingTimes,
+  hoursHistory: mappedHistoricalPeriod.hoursHistory,
+  hoursVerified: false,
+  hoursMissing: false,
+  hoursEffectiveFrom: '2020-01-01',
+};
 
 const dataset = (employees: EmployeeWithPeriod[], reportMode: YearDataset['reportMode']): YearDataset => ({
   employees,
@@ -88,6 +126,7 @@ it('keeps the year dataset canonical and the departed historical period selected
     periodRecord(laterReentry),
     periodRecord(sourcePeriod),
   ]);
+  vi.mocked(api.employees.getEmployeePeriod).mockResolvedValue(mappedHistoricalPeriod);
   const { result, setDataset, setSelectedEmployee } = createHook();
 
   await act(async () => {
@@ -95,9 +134,9 @@ it('keeps the year dataset canonical and the departed historical period selected
   });
 
   expect(setDataset).toHaveBeenCalledWith(yearResult);
-  expect(api.employees.list).toHaveBeenCalledWith(2024, 'directory');
   expect(api.employees.listPeriods).toHaveBeenCalledWith(7);
-  expect(setSelectedEmployee).toHaveBeenCalledWith(sourcePeriod);
+  expect(api.employees.getEmployeePeriod).toHaveBeenCalledWith(7, 10, 2024);
+  expect(setSelectedEmployee).toHaveBeenCalledWith(mappedHistoricalPeriod);
 });
 
 it('selects the newly created qualification period instead of a later reentry', async () => {
@@ -109,6 +148,7 @@ it('selects the newly created qualification period instead of a later reentry', 
     periodRecord(laterReentry),
     periodRecord(switchedPeriod),
   ]);
+  vi.mocked(api.employees.getEmployeePeriod).mockResolvedValue(mappedSwitchedPeriod);
   const { result, setDataset, setSelectedEmployee } = createHook();
 
   await act(async () => {
@@ -122,5 +162,6 @@ it('selects the newly created qualification period instead of a later reentry', 
 
   expect(setDataset).toHaveBeenCalledWith(yearResult);
   expect(api.employees.listPeriods).toHaveBeenCalledWith(7);
-  expect(setSelectedEmployee).toHaveBeenCalledWith(switchedPeriod);
+  expect(api.employees.getEmployeePeriod).toHaveBeenCalledWith(7, 30, 2024);
+  expect(setSelectedEmployee).toHaveBeenCalledWith(mappedSwitchedPeriod);
 });
