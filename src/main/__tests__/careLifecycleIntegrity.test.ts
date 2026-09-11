@@ -172,6 +172,27 @@ describe('care and evidence lifecycles with real SQLite', () => {
     expect(buildPersonListRows(listPatients())).toHaveLength(0);
   });
 
+  it('keeps an unknown Pflegegrad separate from an explicit zero and validates input', () => {
+    const p = person();
+    expect(p.careLevel).toBeNull();
+
+    savePatient({ id: p.id, name: p.name, careLevel: 0 });
+    expect(listPatients().find((item) => item.id === p.id)?.careLevel).toBe(0);
+
+    savePatient({ id: p.id, name: p.name, careLevel: 4 });
+    expect(listPatients().find((item) => item.id === p.id)?.careLevel).toBe(4);
+
+    savePatient({ id: p.id, name: p.name, careLevel: null });
+    expect(listPatients().find((item) => item.id === p.id)?.careLevel).toBeNull();
+
+    expect(() =>
+      savePatient({ id: p.id, name: p.name, careLevel: 6 as never }),
+    ).toThrow('Ungültiger Pflegegrad.');
+    expect(() =>
+      savePatient({ id: p.id, name: p.name, careLevel: -1 as never }),
+    ).toThrow('Ungültiger Pflegegrad.');
+  });
+
   it('makes stale assessments and representatives explicit and computes pHKP E from both conditions', () => {
     const p = person();
     expect(needsAssessment(p, TODAY)).toBe(false);

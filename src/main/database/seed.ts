@@ -11,6 +11,7 @@ import { localDate } from '../../utils/calendarDate';
 
 import type { Database as DatabaseType } from 'better-sqlite3';
 import { nextDueDate } from '../../utils/instructionSchedule';
+import type { CareLevel } from '../../shared/types';
 
 type PeriodSeed = {
   startDate: string;
@@ -63,7 +64,7 @@ type PatientSeed = {
   mobilityImpaired?: boolean | null;
   hkpCode?: string | null;
   intensiveCare?: string | null;
-  careLevel?: number | null;
+  careLevel?: CareLevel | null;
   visits: Array<{
     visitDate: string;
     actionNeeded: boolean;
@@ -749,7 +750,7 @@ export const seedDatabase = (db: DatabaseType): void => {
       mobilityImpaired,
       hkpCode,
       intensiveCare,
-      careLevel: index % 8 === 5 ? null : (index % 4) + 2,
+      careLevel: index % 8 === 5 ? null : (((index % 4) + 2) as CareLevel),
       visits,
     };
   });

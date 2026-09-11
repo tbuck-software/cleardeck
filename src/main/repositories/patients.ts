@@ -15,6 +15,7 @@ import type {
   PatientWithLatestVisit,
   PatientActionNeeded,
   PatientStats,
+  CareLevel,
 } from '../../shared/types';
 import {
   isActivePatient,
@@ -25,6 +26,7 @@ import {
 } from '../../utils/qpr';
 import { localDate, requireDate } from '../../utils/calendarDate';
 import { getDb } from '../database/connection';
+import { isCareLevel } from '../../utils/careLevel';
 
 const PATIENT_COLUMNS = `
   p.id,
@@ -138,7 +140,7 @@ export type SavePatientInput = {
   mobilityImpaired?: boolean | null;
   hkpCode?: HkpCode | null;
   intensiveCare?: IntensiveCare | null;
-  careLevel?: number | null;
+  careLevel?: CareLevel | null;
 };
 
 /**
@@ -164,6 +166,8 @@ export const savePatient = (input: SavePatientInput): PatientWithLatestVisit[] =
     throw new Error('Versorgungsende liegt vor der Aufnahme.');
   if (merged.assessmentDate && merged.assessmentDate > localDate())
     throw new Error('Einschätzungsdatum darf nicht in der Zukunft liegen.');
+  if (merged.careLevel != null && !isCareLevel(merged.careLevel))
+    throw new Error('Ungültiger Pflegegrad.');
   const codes = [
     ...new Set(
       input.hkpCodes ??
