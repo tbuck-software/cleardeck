@@ -86,6 +86,69 @@ describe('PatientModal Leistungsumfang', () => {
     expect(screen.getByText(/Übernommene Entscheidung aus der früheren Erfassung/)).toBeInTheDocument();
   });
 
+  it('leert Suche und Gruppenzustand beim Wechsel der Person', () => {
+    const view = render(
+      <PatientModal
+        modal={modal({ mode: 'edit', id: 1 })}
+        serviceDefinitions={definitions}
+        onChange={vi.fn()}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Haushalt' } });
+    expect(screen.getByRole('searchbox')).toHaveValue('Haushalt');
+    expect(screen.getByLabelText('Hilfe bei der Haushaltsführung').closest('details')).toHaveAttribute(
+      'open',
+    );
+
+    view.rerender(
+      <PatientModal
+        modal={modal({ mode: 'edit', id: 2 })}
+        serviceDefinitions={definitions}
+        onChange={vi.fn()}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('searchbox')).toHaveValue('');
+    expect(
+      screen.getByLabelText('Hilfe bei der Haushaltsführung').closest('details'),
+    ).not.toHaveAttribute('open');
+  });
+
+  it('hält Gruppen offen, wenn die letzte Auswahl entfällt oder die Suche geleert wird', () => {
+    const view = render(
+      <PatientModal
+        modal={modal({ mode: 'edit', id: 1, serviceDefinitionIds: [1] })}
+        serviceDefinitions={definitions}
+        onChange={vi.fn()}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Große Grundpflege').closest('details')).toHaveAttribute('open');
+    view.rerender(
+      <PatientModal
+        modal={modal({ mode: 'edit', id: 1, serviceDefinitionIds: [] })}
+        serviceDefinitions={definitions}
+        onChange={vi.fn()}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+    expect(screen.getByLabelText('Große Grundpflege').closest('details')).toHaveAttribute('open');
+
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Haushalt' } });
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: '' } });
+    expect(screen.getByLabelText('Hilfe bei der Haushaltsführung').closest('details')).toHaveAttribute(
+      'open',
+    );
+  });
+
   it('öffnet Treffer bei der Suche und erklärt inaktive historische Zuordnungen', () => {
     render(
       <PatientModal
