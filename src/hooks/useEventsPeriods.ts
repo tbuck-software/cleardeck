@@ -195,7 +195,9 @@ const useEventsPeriods = ({
       await loadHistory(selectedEmployee.id ?? 0);
       setEventModal((prev) => ({ ...prev, open: false }));
       setToast(
-        addPeriodForm.periodId ? 'Periode aktualisiert.' : 'Qualifikation/Periode hinzugefügt.',
+        addPeriodForm.periodId
+          ? 'Beschäftigungsperiode aktualisiert.'
+          : 'Beschäftigungsperiode hinzugefügt.',
       );
     } catch (err) {
       handleError(err);

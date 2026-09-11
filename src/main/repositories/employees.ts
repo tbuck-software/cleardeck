@@ -305,15 +305,16 @@ export const getEmployeePeriod = (
     )
     .get(employeeId, periodId) as EmployeePeriodRow | undefined;
   if (!row) throw new Error('Beschäftigungsperiode nicht gefunden.');
-  const allPeriods = db
-    .prepare('SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods ORDER BY employeeId,startDate,id')
-    .all() as PeriodWithEmployeeId[];
+  const employeePeriods = db
+    .prepare('SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods WHERE employeeId=? ORDER BY startDate,id')
+    .all(employeeId) as PeriodWithEmployeeId[];
+  // Same reference date as the year dataset, so both map the same term.
   return mapEmployeePeriod(
     db,
     row,
     year,
-    '2200-12-31',
-    buildEmploymentStartByPeriod(allPeriods),
+    `${year}-12-31`,
+    buildEmploymentStartByPeriod(employeePeriods),
   );
 };
 
