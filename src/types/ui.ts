@@ -48,6 +48,13 @@ export type CalendarView = 'month' | 'week' | 'year';
 
 export type EventModalType = EmployeeEventType | 'period' | 'working-time';
 
+export type EmploymentActionMode = 'departure' | 'qualification';
+
+/** One recorded employment event — never a free-form edit of the period. */
+export type EmploymentActionInput =
+  | { mode: 'departure'; periodId: number; endDate: string }
+  | { mode: 'qualification'; periodId: number; effectiveFrom: string; qualification: string };
+
 export type TimelineItem =
   | { kind: 'period'; date: string; record: EmploymentPeriod }
   | { kind: 'event'; date: string; record: EmployeeEvent };

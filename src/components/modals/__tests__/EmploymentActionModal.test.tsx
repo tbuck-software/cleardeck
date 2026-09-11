@@ -1,0 +1,137 @@
+/// <reference types="vitest/globals" />
+/// <reference types="@testing-library/jest-dom" />
+
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import EmploymentActionModal from '../EmploymentActionModal';
+import type { EmployeeWithPeriod, QualificationType } from '../../../shared/types';
+
+const employee: EmployeeWithPeriod = {
+  id: 11,
+  periodId: 21,
+  name: 'Synthetic Action',
+  qualification: 'Einarbeitung',
+  startDate: '2024-01-01',
+  employmentStartDate: '2024-01-01',
+  endDate: '2025-12-31',
+  weeklyHours: 18,
+  fte: 0.5,
+  hoursVerified: false,
+  status: 'active',
+};
+const qualifications: QualificationType[] = [
+  { id: 1, name: 'Einarbeitung' },
+  { id: 2, name: 'Pflegefachkraft' },
+];
+
+it('previews the closed previous period and new qualification start', async () => {
+  const onSave = vi.fn().mockResolvedValue(undefined);
+  render(
+    <EmploymentActionModal
+      open
+      mode="qualification"
+      employee={employee}
+      periods={[{ id: 21, employeeId: 11, startDate: '2024-01-01', endDate: '2025-12-31', qualification: 'Einarbeitung' }]}
+      qualifications={qualifications}
+      onClose={vi.fn()}
+      onSave={onSave}
+    />,
+  );
+
+  fireEvent.change(screen.getByLabelText('Wechsel ab'), { target: { value: '2025-02-01' } });
+  fireEvent.change(screen.getByLabelText('Neue Qualifikation'), { target: { value: 'Pflegefachkraft' } });
+  expect(screen.getByRole('status')).toHaveTextContent('bis 31.01.2025');
+  expect(screen.getByRole('status')).toHaveTextContent('ab 01.02.2025');
+  expect(screen.getByRole('status')).toHaveTextContent('bis 31.12.2025');
+  expect(screen.getByText(/bestätigt keine Altdaten/)).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+  await waitFor(() => expect(onSave).toHaveBeenCalledWith({
+    mode: 'qualification', periodId: 21, effectiveFrom: '2025-02-01', qualification: 'Pflegefachkraft',
+  }));
+});
+
+it('keeps the draft and the saving state while the refreshed person arrives mid-save', async () => {
+  let release: () => void = () => undefined;
+  const onSave = vi.fn(() => new Promise<void>((resolve) => { release = resolve; }));
+  const onClose = vi.fn();
+  const period = { id: 21, employeeId: 11, startDate: '2024-01-01', endDate: '2025-12-31', qualification: 'Einarbeitung' };
+  const { rerender } = render(
+    <EmploymentActionModal
+      open
+      mode="qualification"
+      employee={employee}
+      periods={[period]}
+      qualifications={qualifications}
+      onClose={onClose}
+      onSave={onSave}
+    />,
+  );
+
+  fireEvent.change(screen.getByLabelText('Wechsel ab'), { target: { value: '2025-02-01' } });
+  fireEvent.change(screen.getByLabelText('Neue Qualifikation'), { target: { value: 'Pflegefachkraft' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+  await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
+
+  // The hook selects the new period before the save promise resolves.
+  rerender(
+    <EmploymentActionModal
+      open
+      mode="qualification"
+      employee={{ ...employee, periodId: 22, qualification: 'Pflegefachkraft', startDate: '2025-02-01' }}
+      periods={[{ ...period, endDate: '2025-01-31' }, { id: 22, employeeId: 11, startDate: '2025-02-01', endDate: '2025-12-31', qualification: 'Pflegefachkraft' }]}
+      qualifications={qualifications}
+      onClose={onClose}
+      onSave={onSave}
+    />,
+  );
+
+  expect(screen.getByLabelText('Wechsel ab')).toHaveValue('2025-02-01');
+  expect(screen.getByLabelText('Neue Qualifikation')).toHaveValue('Pflegefachkraft');
+  expect(screen.getByRole('button', { name: 'Speichern…' })).toBeDisabled();
+  expect(onClose).not.toHaveBeenCalled();
+
+  release();
+  await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+  expect(onSave).toHaveBeenCalledOnce();
+});
+
+it('opens a future period on its start date instead of on an error', () => {
+  render(
+    <EmploymentActionModal
+      open
+      mode="departure"
+      employee={{ ...employee, startDate: '2099-01-01', endDate: null }}
+      periods={[{ id: 21, employeeId: 11, startDate: '2099-01-01', endDate: null, qualification: 'Einarbeitung' }]}
+      qualifications={qualifications}
+      onClose={vi.fn()}
+      onSave={vi.fn()}
+    />,
+  );
+
+  expect(screen.getByLabelText('Austritt')).toHaveValue('2099-01-01');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
+it('lets an already recorded departure move to a later date', async () => {
+  const onSave = vi.fn().mockResolvedValue(undefined);
+  render(
+    <EmploymentActionModal
+      open
+      mode="departure"
+      employee={employee}
+      periods={[{ id: 21, employeeId: 11, startDate: '2024-01-01', endDate: '2025-12-31', qualification: 'Einarbeitung' }]}
+      qualifications={qualifications}
+      onClose={vi.fn()}
+      onSave={onSave}
+    />,
+  );
+
+  expect(screen.getByLabelText('Austritt')).toHaveValue('2025-12-31');
+  fireEvent.change(screen.getByLabelText('Austritt'), { target: { value: '2026-06-30' } });
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+  await waitFor(() => expect(onSave).toHaveBeenCalledWith({
+    mode: 'departure', periodId: 21, endDate: '2026-06-30',
+  }));
+});

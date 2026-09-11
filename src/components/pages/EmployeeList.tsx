@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import Icon, { MoreIcon } from '../ui/Icon';
 import Segmented from '../ui/Segmented';
 import Avatar from '../ui/Avatar';
+import ActionMenu from '../ui/ActionMenu';
 import { formatDateDE } from '../../utils/dateFormat';
 import type { EmployeeWithPeriod, QualificationType } from '../../shared/types';
 
@@ -81,7 +82,6 @@ const EmployeeList = ({
   onCreate,
   onSelect,
 }: EmployeeListProps) => {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'name', dir: 1 });
   const today = localDate();
 
@@ -134,53 +134,21 @@ const EmployeeList = ({
               Mitarbeiterliste übernehmen (Excel / CSV)
             </button>
           )}
-          <button
-            type="button"
-            className="btn btn-secondary btn-icon"
-            aria-label="Weitere Aktionen"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
+          <ActionMenu
+            ariaLabel="Weitere Aktionen"
+            triggerClassName="btn btn-secondary btn-icon"
+            items={[
+              { label: 'Jahresnachweis erstellen…', onSelect: onOpenReport },
+              { label: 'Als Excel exportieren', onSelect: () => void onExport('xlsx') },
+              { label: 'Als CSV exportieren', onSelect: () => void onExport('csv') },
+            ]}
           >
             <MoreIcon />
-          </button>
+          </ActionMenu>
           <button type="button" className="btn btn-primary" onClick={onCreate}>
             <Icon name="plus" size={16} />
             Person anlegen
           </button>
-          {menuOpen && (
-            <>
-              <div className="cd-menu-scrim" onClick={() => setMenuOpen(false)} />
-              <div className="cd-menu">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onOpenReport();
-                  }}
-                >
-                  Jahresnachweis erstellen…
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void onExport('xlsx');
-                  }}
-                >
-                  Als Excel exportieren
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void onExport('csv');
-                  }}
-                >
-                  Als CSV exportieren
-                </button>
-              </div>
-            </>
-          )}
         </div>
       </header>
 

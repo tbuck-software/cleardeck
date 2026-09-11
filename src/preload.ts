@@ -3,9 +3,12 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type {
   BulkCompetencyChange,
   SaveWorkingTimeInput,
+  RecordDepartureInput,
+  SwitchQualificationInput,
   AppState,
   AppInfo,
   EmploymentPeriod,
+  EmployeeWithPeriod,
   QualificationType,
   CompetencyDefinition,
   EmployeeCompetency,
@@ -68,8 +71,11 @@ export type Api = {
     mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory',
   ) => Promise<YearDataset>;
   listPeriods: (employeeId: number) => Promise<EmploymentPeriod[]>;
+  getEmployeePeriod: (employeeId: number, periodId: number, year: number) => Promise<EmployeeWithPeriod>;
   listEvents: (employeeId: number) => Promise<EmployeeEvent[]>;
   saveWorkingTime: (input: SaveWorkingTimeInput) => Promise<void>;
+  recordDeparture: (input: RecordDepartureInput) => Promise<YearDataset>;
+  switchQualification: (input: SwitchQualificationInput) => Promise<YearDataset>;
   saveEmployee: (input: {
     id?: number;
     periodId?: number;
@@ -355,9 +361,13 @@ const api: Api = {
   commitStaffImport: (rows) => ipcRenderer.invoke('staff:commitImport', rows),
   listEmployees: (year, mode) => ipcRenderer.invoke('data:list', { year, mode }),
   listPeriods: (employeeId) => ipcRenderer.invoke('data:listPeriods', { employeeId }),
+  getEmployeePeriod: (employeeId, periodId, year) =>
+    ipcRenderer.invoke('data:getPeriod', { employeeId, periodId, year }),
   listEvents: (employeeId) => ipcRenderer.invoke('events:list', { employeeId }),
   saveEmployee: (input) => ipcRenderer.invoke('data:save', input),
   saveWorkingTime: (input) => ipcRenderer.invoke('data:saveWorkingTime', input),
+  recordDeparture: (input) => ipcRenderer.invoke('employment:recordDeparture', input),
+  switchQualification: (input) => ipcRenderer.invoke('employment:switchQualification', input),
   deleteEmployee: (id, year) => ipcRenderer.invoke('data:delete', { id, year }),
   saveEvent: (input) => ipcRenderer.invoke('events:save', input),
   deleteEvent: (id, employeeId) => ipcRenderer.invoke('events:delete', { id, employeeId }),
