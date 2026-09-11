@@ -82,7 +82,7 @@ export const updateServiceDefinition = (input: {
       .get(input.id) as { count: number };
     if (usage.count)
       throw new Error(
-        `Kategorie kann nicht geändert werden: ${usage.count} bestehende Zuordnung(en) verwenden diese Leistung. Lege eine neue Leistung an.`,
+        `Kategorie kann nicht geändert werden: ${usage.count} bestehende Zuordnung(en) verwenden diese Leistung. Stattdessen eine neue Leistung anlegen.`,
       );
   }
   try {
