@@ -7,6 +7,7 @@
 
 import { getDb } from '../database/connection';
 import { localDate } from '../../utils/calendarDate';
+import { periodsOverlap } from '../../utils/employment';
 import type { Employee } from '../../shared/types';
 
 export type PeriodRow = {
@@ -71,25 +72,41 @@ export const findPeriodConflict = (
   startDate: string,
   endDate: string | null,
 ): { id: number; startDate: string; endDate: string | null } | undefined =>
-  getDb()
-    .prepare(
-      `SELECT id,startDate,endDate FROM employment_periods
-       WHERE employeeId=? AND id<>? AND startDate<=? AND COALESCE(endDate,'9999-12-31')>=?
-       LIMIT 1`,
-    )
-    .get(employeeId, periodId ?? -1, endDate ?? '9999-12-31', startDate) as
-    | { id: number; startDate: string; endDate: string | null }
-    | undefined;
+  (
+    getDb()
+      .prepare(
+        `SELECT id,startDate,endDate FROM employment_periods
+         WHERE employeeId=? AND id<>? ORDER BY startDate,id`,
+      )
+      .all(employeeId, periodId ?? -1) as { id: number; startDate: string; endDate: string | null }[]
+  ).find((other) => periodsOverlap({ startDate, endDate }, other));
 
-/** Shortening a period must not leave a working-time state outside of it. */
-export const assertNoStrandedTerms = (periodId: number, endDate: string): void => {
-  const stranded = getDb()
-    .prepare(
-      'SELECT effectiveFrom FROM employment_terms WHERE periodId=? AND effectiveFrom>? ORDER BY effectiveFrom LIMIT 1',
-    )
-    .get(periodId, endDate) as { effectiveFrom: string } | undefined;
-  if (stranded)
-    throw new Error(
-      `Der Arbeitszeitstand ab ${stranded.effectiveFrom} liegt nach dem neuen Austritt. Kürze den Zeitraum erst nach einer Arbeitszeitkorrektur, damit keine Arbeitszeitdaten verloren gehen.`,
-    );
+/** Narrowing a period at either end must not leave a working-time state outside of it. */
+export const assertNoStrandedTerms = (
+  periodId: number,
+  bounds: { startDate?: string; endDate?: string | null },
+): void => {
+  const db = getDb();
+  if (bounds.endDate) {
+    const late = db
+      .prepare(
+        'SELECT effectiveFrom FROM employment_terms WHERE periodId=? AND effectiveFrom>? ORDER BY effectiveFrom LIMIT 1',
+      )
+      .get(periodId, bounds.endDate) as { effectiveFrom: string } | undefined;
+    if (late)
+      throw new Error(
+        `Der Arbeitszeitstand ab ${late.effectiveFrom} liegt nach dem neuen Austritt. Kürze den Zeitraum erst nach einer Arbeitszeitkorrektur, damit keine Arbeitszeitdaten verloren gehen.`,
+      );
+  }
+  if (bounds.startDate) {
+    const early = db
+      .prepare(
+        'SELECT effectiveFrom FROM employment_terms WHERE periodId=? AND effectiveFrom<? ORDER BY effectiveFrom DESC LIMIT 1',
+      )
+      .get(periodId, bounds.startDate) as { effectiveFrom: string } | undefined;
+    if (early)
+      throw new Error(
+        `Der Arbeitszeitstand ab ${early.effectiveFrom} läge außerhalb des neuen Zeitraums. Datum und Arbeitszeit bitte getrennt prüfen.`,
+      );
+  }
 };

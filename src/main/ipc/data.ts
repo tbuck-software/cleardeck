@@ -112,6 +112,15 @@ import { AUDIT_SECTIONS, deleteAudit, listAudits, saveAudit } from '../repositor
 import { exportDatabase, importDatabase, exportData, exportPersonList } from '../export';
 import { isUnlocked } from './auth';
 import {
+  applyConsolidatePeriods,
+  applyEmployeeMerge,
+  getEmploymentIntegrityOverview,
+  previewConsolidatePeriods,
+  previewEmployeeMerge,
+  applyReconcilePeriods,
+  previewReconcilePeriods,
+} from '../employmentRepair';
+import {
   addServiceDefinition,
   listServiceDefinitions,
   reorderServiceDefinitions,
@@ -227,6 +236,35 @@ export const registerDataHandlers = (): void => {
   handleData('period:delete', (_event, { periodId, year }: { periodId: number; year: number }) => {
     ensureDbReady();
     return deletePeriod(periodId, year);
+  });
+
+  handleData('employment:integrityOverview', () => {
+    ensureDbReady();
+    return getEmploymentIntegrityOverview();
+  });
+  handleData('employment:previewConsolidate', (_event, input) => {
+    ensureDbReady();
+    return previewConsolidatePeriods(input);
+  });
+  handleData('employment:applyConsolidate', (_event, input) => {
+    ensureDbReady();
+    return applyConsolidatePeriods(input);
+  });
+  handleData('employment:previewMerge', (_event, input) => {
+    ensureDbReady();
+    return previewEmployeeMerge(input);
+  });
+  handleData('employment:applyMerge', (_event, input) => {
+    ensureDbReady();
+    return applyEmployeeMerge(input);
+  });
+  handleData('employment:previewReconcile', (_event, input) => {
+    ensureDbReady();
+    return previewReconcilePeriods(input);
+  });
+  handleData('employment:applyReconcile', (_event, input) => {
+    ensureDbReady();
+    return applyReconcilePeriods(input);
   });
 
   // Qualifications

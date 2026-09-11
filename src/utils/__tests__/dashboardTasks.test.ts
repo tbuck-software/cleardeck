@@ -3,6 +3,7 @@
 import { buildDashboardTasks, buildDataQuality } from '../dashboardTasks';
 import type {
   EmployeeWithPeriod,
+  EmploymentIntegrityOverview,
   OpenInstruction,
   PatientWithLatestVisit,
 } from '../../shared/types';
@@ -41,6 +42,7 @@ const build = (input: {
   patients?: PatientWithLatestVisit[];
   employees?: EmployeeWithPeriod[];
   openInstructions?: OpenInstruction[];
+  employmentIntegrity?: EmploymentIntegrityOverview;
 }) =>
   buildDashboardTasks({
     today: TODAY,
@@ -48,7 +50,19 @@ const build = (input: {
     employees: input.employees ?? [],
     openInstructions: input.openInstructions ?? [],
     visitIntervalDays: 90,
+    employmentIntegrity: input.employmentIntegrity,
   });
+
+const integrity = (
+  issues: EmploymentIntegrityOverview['issues'],
+): EmploymentIntegrityOverview => ({
+  issues,
+  employees: [
+    { id: 10, name: 'Anna Berger', birthDate: '1985-06-12' },
+    { id: 11, name: 'Anna Berger', birthDate: null },
+  ],
+  periods: [],
+});
 
 describe('buildDashboardTasks', () => {
   it('meldet Handlungsbedarf aus der letzten Visite', () => {
@@ -160,6 +174,54 @@ describe('buildDashboardTasks', () => {
 
   it('liefert nichts, wenn alles gepflegt ist', () => {
     expect(build({ patients: [patient()], employees: [employee()] })).toEqual([]);
+  });
+});
+
+describe('Befunde der Beschäftigungsprüfung', () => {
+  it('macht aus jedem Befund eine Aufgabe der betroffenen Person', () => {
+    const tasks = build({
+      employmentIntegrity: integrity([
+        { kind: 'overlapping-periods', severity: 'error', employeeId: 10, relatedEmployeeId: null, periodIds: [1, 2] },
+        { kind: 'reversed-period', severity: 'error', employeeId: 10, relatedEmployeeId: null, periodIds: [1] },
+        { kind: 'suspicious-period', severity: 'warning', employeeId: 10, relatedEmployeeId: null, periodIds: [2] },
+        { kind: 'same-name', severity: 'warning', employeeId: 10, relatedEmployeeId: 11, periodIds: [] },
+      ]),
+    });
+
+    expect(tasks.map((task) => task.title)).toEqual([
+      'Anna Berger — Beginn liegt nach dem Ende',
+      'Anna Berger — Beschäftigungszeiträume überschneiden sich',
+      'Anna Berger — Abschnitt vermutlich aus einer Übernahme',
+      'Anna Berger — Möglicherweise doppelt angelegt (Anna Berger)',
+    ]);
+    expect(tasks.map((task) => task.target)).toEqual(
+      Array.from({ length: 4 }, () => ({ kind: 'employee', id: 10, tab: 'hist' })),
+    );
+  });
+
+  it('nutzt die Einstufung des Befunds für die Kennzeichnung', () => {
+    const tasks = build({
+      employmentIntegrity: integrity([
+        { kind: 'reversed-period', severity: 'error', employeeId: 10, relatedEmployeeId: null, periodIds: [1] },
+        { kind: 'same-name', severity: 'warning', employeeId: 11, relatedEmployeeId: 10, periodIds: [] },
+      ]),
+    });
+
+    expect(tasks[0].tagClass).toBe('tag-bad');
+    expect(tasks[0].tag).toBe('Daten');
+    expect(tasks[1].tagClass).toBe('tag-accent');
+  });
+
+  it('meldet je Person und Befundart nur eine Aufgabe', () => {
+    const tasks = build({
+      employmentIntegrity: integrity([
+        { kind: 'overlapping-periods', severity: 'error', employeeId: 10, relatedEmployeeId: null, periodIds: [1, 2] },
+        { kind: 'overlapping-periods', severity: 'error', employeeId: 10, relatedEmployeeId: null, periodIds: [2, 3] },
+      ]),
+    });
+
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0].id).toBe('employment-overlapping-periods-10');
   });
 });
 

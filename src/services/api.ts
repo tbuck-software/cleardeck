@@ -171,6 +171,22 @@ export const api = {
     delete: (periodId: number, year: number) =>
       call('deletePeriod', baseApi.deletePeriod, periodId, year),
   },
+  employment: {
+    integrityOverview: () =>
+      call('getEmploymentIntegrityOverview', baseApi.getEmploymentIntegrityOverview),
+    previewConsolidate: (input: Parameters<Api['previewConsolidatePeriods']>[0]) =>
+      call('previewConsolidatePeriods', baseApi.previewConsolidatePeriods, input),
+    applyConsolidate: (input: Parameters<Api['applyConsolidatePeriods']>[0]) =>
+      call('applyConsolidatePeriods', baseApi.applyConsolidatePeriods, input),
+    previewMerge: (input: Parameters<Api['previewEmployeeMerge']>[0]) =>
+      call('previewEmployeeMerge', baseApi.previewEmployeeMerge, input),
+    applyMerge: (input: Parameters<Api['applyEmployeeMerge']>[0]) =>
+      call('applyEmployeeMerge', baseApi.applyEmployeeMerge, input),
+    previewReconcile: (input: Parameters<Api['previewReconcilePeriods']>[0]) =>
+      call('previewReconcilePeriods', baseApi.previewReconcilePeriods, input),
+    applyReconcile: (input: Parameters<Api['applyReconcilePeriods']>[0]) =>
+      call('applyReconcilePeriods', baseApi.applyReconcilePeriods, input),
+  },
   settings: {
     getBaseHours: () => call('getBaseHours', baseApi.getBaseHours),
     setBaseHours: (hours: number) => call('setBaseHours', baseApi.setBaseHours, hours),

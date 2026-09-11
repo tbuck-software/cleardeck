@@ -146,6 +146,7 @@ const App = () => {
       hiddenEventTypes,
       calendar,
       dashboardWidgets,
+      employmentIntegrity,
       patients,
       selectedPatient,
       patientVisits,
@@ -472,6 +473,7 @@ const App = () => {
         instructionReminderDays: careSettings.instructionReminderDays,
         expiringTrainings: dashboardWidgets.expiringTrainings,
         visitIntervalDays: careSettings.visitIntervalDays,
+        employmentIntegrity,
       }),
     [
       today,
@@ -481,6 +483,7 @@ const App = () => {
       dashboardWidgets.expiringTrainings,
       careSettings.visitIntervalDays,
       careSettings.instructionReminderDays,
+      employmentIntegrity,
     ],
   );
 
@@ -549,6 +552,17 @@ const App = () => {
     } finally {
       setRestoreBusy(false);
     }
+  };
+
+  const refreshAfterEmploymentRepair = async () => {
+    const [team, directory, current] = await Promise.all([
+      api.employees.list(year),
+      api.employees.list(currentYear, 'directory'),
+      api.employees.list(currentYear, 'current'),
+    ]);
+    setDataset(team);
+    setDirectoryDataset(directory);
+    setCurrentDataset(current);
   };
 
   const changePassword = async (input: { currentPassword: string; newPassword: string }) => {
@@ -717,10 +731,27 @@ const App = () => {
   const openTarget = useCallback(
     (target: TaskTarget) => {
       if (target.kind === 'employee') {
+        const known = employmentIntegrity.employees.find((entry) => entry.id === target.id);
         const employee =
           directoryDataset?.employees.find((entry) => entry.id === target.id) ??
           currentDataset?.employees.find((entry) => entry.id === target.id) ??
-          dataset?.employees.find((entry) => entry.id === target.id);
+          dataset?.employees.find((entry) => entry.id === target.id) ??
+          // A person without any employment period is in no reporting dataset,
+          // yet still needs to be reachable to be merged or completed.
+          (known
+            ? ({
+                id: known.id,
+                name: known.name,
+                birthDate: known.birthDate,
+                qualification: '',
+                startDate: '',
+                employmentStartDate: '',
+                endDate: null,
+                fte: null,
+                weeklyHours: null,
+                status: 'active',
+              } satisfies EmployeeWithPeriod)
+            : undefined);
         if (employee) void navigateToEmployee(employee, target.tab ?? 'comp');
         return;
       }
@@ -731,6 +762,7 @@ const App = () => {
       dataset?.employees,
       currentDataset?.employees,
       directoryDataset?.employees,
+      employmentIntegrity.employees,
       patients,
       navigateToEmployee,
       navigateToPatient,
@@ -1260,6 +1292,8 @@ const App = () => {
             competencies={employeeCompetencies}
             instructions={employeeInstructions}
             timelineItems={timelineItems}
+            employmentIntegrity={employmentIntegrity}
+            backupFolder={backup.folder}
             suggestedCompetencyCount={suggestedCompetencyDefinitions.length}
             availableCompetencyCount={availableCompetencyDefinitions.length}
             availableInstructionCount={availableInstructionDefinitions.length}
@@ -1279,6 +1313,12 @@ const App = () => {
                 ? openExistingPeriodModal(item.record)
                 : openEventModalForEvent(item.record)
             }
+            onEditPeriod={openExistingPeriodModal}
+            onOpenBackupSettings={() => navigateToPage('security')}
+            onEmploymentRepairApplied={async (message) => {
+              await refreshAfterEmploymentRepair();
+              setToastMessage(message);
+            }}
           />
         )}
 
@@ -1676,6 +1716,8 @@ const App = () => {
         onClose={() => setEditModal((prev) => ({ ...prev, open: false }))}
         onSave={handleEditModalSave}
         onDelete={form.id ? () => confirmDeleteEmployee(form.id) : undefined}
+        existingEmployees={employmentIntegrity.employees}
+        onOpenExisting={(employeeId) => openTarget({ kind: 'employee', id: employeeId })}
       />
 
       {eventModal.open && selectedEmployee && (

@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Dialog from '../ui/Dialog';
 import Icon from '../ui/Icon';
 import BirthDateInput from '../ui/BirthDateInput';
-import type { QualificationType } from '../../shared/types';
+import type { IntegrityEmployee, QualificationType } from '../../shared/types';
 import type { EditModalState, FormState } from '../../types/ui';
 import { formatDateDE } from '../../utils/dateFormat';
 
@@ -19,6 +19,9 @@ type EmployeeModalProps = {
   onClose: () => void;
   onSave: () => void;
   onDelete?: () => void;
+  /** Full roster of the employment scan, so people without periods are visible too. */
+  existingEmployees?: IntegrityEmployee[];
+  onOpenExisting?: (employeeId: number) => void;
 };
 
 const EmployeeModal = ({
@@ -34,8 +37,16 @@ const EmployeeModal = ({
   onClose,
   onSave,
   onDelete,
+  existingEmployees = [],
+  onOpenExisting,
 }: EmployeeModalProps) => {
+  const [pendingOpen, setPendingOpen] = useState<IntegrityEmployee | null>(null);
   const isCreate = state.mode === 'create';
+  const matchingEmployees = isCreate
+    ? existingEmployees.filter(
+        (employee) => employee.name.trim().toLocaleLowerCase() === state.name.trim().toLocaleLowerCase(),
+      )
+    : [];
   // The save replaces a term only when the date matches the one already on record.
   const replacesExistingTerm =
     Boolean(state.existingHoursEffectiveFrom) &&
@@ -77,6 +88,42 @@ const EmployeeModal = ({
             value={state.name}
             onChange={(event) => onStateChange({ name: event.target.value })}
           />
+          {matchingEmployees.length > 0 && !pendingOpen && (
+            <div className="cd-muted-13 cd-name-hint" role="status">
+              Gleicher Name ist nur ein Hinweis. Bitte prüfen, ob eine vorhandene Person gemeint ist.
+              {onOpenExisting &&
+                matchingEmployees.map((employee) => (
+                  <button
+                    type="button"
+                    className="cd-link"
+                    key={employee.id}
+                    onClick={() => setPendingOpen(employee)}
+                  >
+                    {employee.name} öffnen
+                  </button>
+                ))}
+            </div>
+          )}
+          {pendingOpen && (
+            <div className="cd-muted-13 cd-name-hint" role="status">
+              Die Eingaben werden verworfen. {pendingOpen.name} trotzdem öffnen?
+              <button
+                type="button"
+                className="cd-link"
+                onClick={() => {
+                  const target = pendingOpen.id;
+                  setPendingOpen(null);
+                  onClose();
+                  onOpenExisting?.(target);
+                }}
+              >
+                Öffnen
+              </button>
+              <button type="button" className="cd-link" onClick={() => setPendingOpen(null)}>
+                Abbrechen
+              </button>
+            </div>
+          )}
         </div>
 
         {isCreate && (

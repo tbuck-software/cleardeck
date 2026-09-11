@@ -47,6 +47,10 @@ import type {
   AuditSectionDefinition,
   AuditWithDetails,
   StorageMode,
+  EmploymentIntegrityOverview,
+  ConsolidatePreview,
+  EmployeeMergePreview,
+  ReconcilePeriodsPreview,
 } from './shared/types';
 
 type ExportFormat = 'csv' | 'xlsx';
@@ -219,6 +223,34 @@ export type Api = {
     recoveryKey?: string,
   ) => Promise<{ imported: boolean; error?: string; backupPath?: string }>;
   deletePeriod: (periodId: number, year: number) => Promise<YearDataset>;
+  getEmploymentIntegrityOverview: () => Promise<EmploymentIntegrityOverview>;
+  previewConsolidatePeriods: (input: { periodIds: [number, number] }) => Promise<ConsolidatePreview>;
+  applyConsolidatePeriods: (input: {
+    periodIds: [number, number];
+    previewToken: string;
+  }) => Promise<void>;
+  previewEmployeeMerge: (input: {
+    targetEmployeeId: number;
+    sourceEmployeeId: number;
+  }) => Promise<EmployeeMergePreview>;
+  applyEmployeeMerge: (input: {
+    targetEmployeeId: number;
+    sourceEmployeeId: number;
+    previewToken: string;
+  }) => Promise<void>;
+  previewReconcilePeriods: (input: {
+    periodIds: [number, number];
+    retainedPeriodId: number;
+    startDate: string;
+    endDate: string | null;
+  }) => Promise<ReconcilePeriodsPreview>;
+  applyReconcilePeriods: (input: {
+    periodIds: [number, number];
+    retainedPeriodId: number;
+    startDate: string;
+    endDate: string | null;
+    previewToken: string;
+  }) => Promise<void>;
   deleteDatabase: () => Promise<boolean>;
   resetApp: () => Promise<AppState>;
   getBaseHours: () => Promise<number>;
@@ -420,6 +452,13 @@ const api: Api = {
   exportDatabase: (mode) => ipcRenderer.invoke('db:export', { mode }),
   importDatabase: (mode, recoveryKey) => ipcRenderer.invoke('db:import', { mode, recoveryKey }),
   deletePeriod: (periodId, year) => ipcRenderer.invoke('period:delete', { periodId, year }),
+  getEmploymentIntegrityOverview: () => ipcRenderer.invoke('employment:integrityOverview'),
+  previewConsolidatePeriods: (input) => ipcRenderer.invoke('employment:previewConsolidate', input),
+  applyConsolidatePeriods: (input) => ipcRenderer.invoke('employment:applyConsolidate', input),
+  previewEmployeeMerge: (input) => ipcRenderer.invoke('employment:previewMerge', input),
+  applyEmployeeMerge: (input) => ipcRenderer.invoke('employment:applyMerge', input),
+  previewReconcilePeriods: (input) => ipcRenderer.invoke('employment:previewReconcile', input),
+  applyReconcilePeriods: (input) => ipcRenderer.invoke('employment:applyReconcile', input),
   deleteDatabase: () => ipcRenderer.invoke('db:delete'),
   resetApp: () => ipcRenderer.invoke('app:reset'),
   getBaseHours: () => ipcRenderer.invoke('settings:getBaseHours'),
