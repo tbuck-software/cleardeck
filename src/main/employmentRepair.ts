@@ -4,6 +4,7 @@ import { getDb } from './database/connection';
 import type {
   ConsolidatePreview,
   EmploymentIntegrityOverview,
+  EmploymentRepairEmployee,
   IntegrityIssue,
   IntegrityIssueKind,
   PeriodDatePreview,
@@ -34,6 +35,18 @@ const readableDate = (value: string | null): string => (value ? formatDateDE(val
 export const getEmploymentIntegrityOverview = (): EmploymentIntegrityOverview => {
   const db = getDb();
   const employees = allRows<EmployeeRow>(db, 'SELECT id,name,note,birthDate,department,fte,weeklyHours FROM employees ORDER BY name,id');
+  const repairEmployees = allRows<EmploymentRepairEmployee>(
+    db,
+    `SELECT e.id,e.name,e.birthDate,
+       MIN(p.startDate) AS startDate,
+       CASE WHEN COUNT(p.id)=0 OR SUM(CASE WHEN p.endDate IS NULL THEN 1 ELSE 0 END)>0 THEN NULL ELSE MAX(p.endDate) END AS endDate,
+       (SELECT p2.qualification FROM employment_periods p2 WHERE p2.employeeId=e.id ORDER BY p2.startDate,p2.id LIMIT 1) AS qualification,
+       COUNT(p.id) AS periodCount
+     FROM employees e
+     LEFT JOIN employment_periods p ON p.employeeId=e.id
+     GROUP BY e.id,e.name,e.birthDate
+     ORDER BY e.name,e.id`,
+  );
   const periods = allRows<PeriodRow>(
     db,
     'SELECT p.id,p.employeeId,e.name AS employeeName,p.startDate,p.endDate,p.qualification,p.note FROM employment_periods p JOIN employees e ON e.id=p.employeeId ORDER BY p.employeeId,p.startDate,p.id',
@@ -97,7 +110,7 @@ export const getEmploymentIntegrityOverview = (): EmploymentIntegrityOverview =>
     }
   }
 
-  return { issues, counts: issueCounts(issues), checkedAt: new Date().toISOString() };
+  return { issues, counts: issueCounts(issues), checkedAt: new Date().toISOString(), repairEmployees };
 };
 
 const periodRecordSummaries = (db: Db, periodId: number): RepairRecordSummary[] => {

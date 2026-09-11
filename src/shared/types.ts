@@ -544,6 +544,18 @@ export interface EmploymentIntegrityOverview {
   issues: IntegrityIssue[];
   counts: Record<IntegrityIssueKind, number>;
   checkedAt: string;
+  /** Repair-only roster; unlike reporting datasets this also includes employees without periods. */
+  repairEmployees: EmploymentRepairEmployee[];
+}
+
+export interface EmploymentRepairEmployee {
+  id: number;
+  name: string;
+  birthDate: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  qualification: string | null;
+  periodCount: number;
 }
 
 export interface RepairRecordSummary {

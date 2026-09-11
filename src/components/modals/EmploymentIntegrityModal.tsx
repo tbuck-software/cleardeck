@@ -8,6 +8,7 @@ import type {
   EmployeeMergePreview,
   EmployeeWithPeriod,
   EmploymentIntegrityOverview,
+  EmploymentRepairEmployee,
   EmploymentPeriod,
   PeriodDatePreview,
   ReconcilePeriodsPreview,
@@ -23,6 +24,10 @@ type EmploymentIntegrityModalProps = {
 };
 
 const formatDate = (value: string | null | undefined) => (value ? formatDateDE(value) : 'offen');
+
+type EmployeeLabelInput = Pick<EmploymentRepairEmployee, 'name' | 'birthDate' | 'startDate' | 'endDate' | 'qualification'> & {
+  periodCount?: number;
+};
 
 const EmploymentIntegrityModal = ({
   open,
@@ -108,14 +113,17 @@ const EmploymentIntegrityModal = ({
         period.qualification === selectedReconcileFirst.qualification,
       )
     : periodOptions;
-  const employeeLabel = (employee: EmployeeWithPeriod): string => [
+  const repairEmployees = overview?.repairEmployees ?? [];
+  const employeeLabel = (employee: EmployeeLabelInput): string => [
     employee.name,
     employee.birthDate ? `geb. ${formatDate(employee.birthDate)}` : null,
-    employee.qualification,
-    `${formatDate(employee.startDate)} – ${formatDate(employee.endDate)}`,
+    employee.qualification ?? 'keine Qualifikation',
+    employee.periodCount === 0
+      ? 'keine Beschäftigungsdaten'
+      : `${formatDate(employee.startDate)} – ${formatDate(employee.endDate)}`,
   ].filter(Boolean).join(' · ');
   const employeeLabelById = (id: number, fallbackName: string): string => {
-    const employee = employees.find((entry) => entry.id === id);
+    const employee = repairEmployees.find((entry) => entry.id === id);
     return employee ? employeeLabel(employee) : fallbackName;
   };
   const linkedRecordSummary = (records: EmployeeMergePreview['linkedRecords']): string => {
@@ -437,8 +445,8 @@ const EmploymentIntegrityModal = ({
           <div className="cd-disclosure-body">
           <p className="cd-muted-14">Gleiche Namen sind nur ein Hinweis. Ziel und Quelle ausdrücklich auswählen; alle verknüpften Nachweise werden geprüft.</p>
           <div style={{ display: 'grid', gap: 10 }}>
-            <select aria-label="Zielperson" className="input" value={targetId} onChange={(event) => { setTargetId(event.target.value); setMergePreview(null); }}><option value="">Zielperson auswählen</option>{employees.map((employee) => <option value={employee.id} key={`target-${employee.id}`}>{employeeLabel(employee)}</option>)}</select>
-            <select aria-label="Quellperson" className="input" value={sourceId} onChange={(event) => { setSourceId(event.target.value); setMergePreview(null); }}><option value="">Quellperson auswählen</option>{employees.map((employee) => <option value={employee.id} key={`source-${employee.id}`}>{employeeLabel(employee)}</option>)}</select>
+            <select aria-label="Zielperson" className="input" value={targetId} onChange={(event) => { setTargetId(event.target.value); setMergePreview(null); }}><option value="">Zielperson auswählen</option>{repairEmployees.map((employee) => <option value={employee.id} key={`target-${employee.id}`}>{employeeLabel(employee)}</option>)}</select>
+            <select aria-label="Quellperson" className="input" value={sourceId} onChange={(event) => { setSourceId(event.target.value); setMergePreview(null); }}><option value="">Quellperson auswählen</option>{repairEmployees.map((employee) => <option value={employee.id} key={`source-${employee.id}`}>{employeeLabel(employee)}</option>)}</select>
             <div style={{ display: 'flex', gap: 8 }}><button type="button" className="btn btn-secondary" onClick={() => void previewMerge()} disabled={busy || !targetId || !sourceId || targetId === sourceId}>Vorschau</button>{mergeReady && <button type="button" className="btn btn-primary" onClick={() => void applyMerge()} disabled={busy}>Zusammenführen</button>}</div>
             {mergePreview && <div role="status" className={mergePreview.conflicts.length ? 'cd-callout cd-callout-error' : 'cd-callout'}><div><strong>Vorschau:</strong> {employeeLabelById(mergePreview.target.id, mergePreview.target.name)} bleibt erhalten; Nachweise von {employeeLabelById(mergePreview.source.id, mergePreview.source.name)} werden verknüpft.</div><div>Geprüft: {linkedRecordSummary(mergePreview.linkedRecords)}. Diese Zusammenführung kann nicht automatisch rückgängig gemacht werden; vorher bei Bedarf ein Backup erstellen.</div>{mergePreview.conflicts.map((conflict) => <div key={conflict}>{conflict}</div>)}{mergeReady && <div>Bitte „Zusammenführen“ nur mit geprüfter Zielperson ausführen.</div>}</div>}
           </div>
