@@ -40,6 +40,20 @@ const instructionState = (
   return { label: 'offen', tagClass: 'tag-neutral' };
 };
 
+/** Ein- und Austrittsereignisse tragen sonst nur den Titel der Periodengrenze. */
+const GENERIC_BOUNDARY_TITLES = new Set(['eintritt', 'austritt']);
+
+const hasMeaningfulEventNote = (item: Extract<TimelineItem, { kind: 'event' }>): boolean => {
+  const { record } = item;
+  if (!GENERIC_BOUNDARY_TITLES.has(record.title.trim().toLocaleLowerCase('de-DE'))) return true;
+  return Boolean(
+    record.details?.trim() ||
+      record.previousValue?.trim() ||
+      record.newValue?.trim() ||
+      (record.meta && Object.keys(record.meta).length > 0),
+  );
+};
+
 type EmployeeDetailProps = {
   employee: EmployeeWithPeriod;
   baseHours: number;
@@ -94,33 +108,6 @@ const EmployeeDetail = ({
   const periodItems = timelineItems.filter((item) => item.kind === 'period');
   const employmentStartDate = employee.employmentStartDate;
 
-  const hasMeaningfulEventNote = (item: Extract<TimelineItem, { kind: 'event' }>): boolean => {
-    const { record } = item;
-    const title = record.title.trim().toLocaleLowerCase('de-DE');
-    const genericBoundaryTitles = new Set([
-      'eintritt',
-      'austritt',
-      'einstieg',
-      'join',
-      'leave',
-      'entry',
-      'exit',
-    ]);
-    if (!genericBoundaryTitles.has(title)) return true;
-    const details = record.details?.trim() ?? '';
-    const generatedDetails =
-      /^Startdatum\s*:?\s*\d{4}-\d{2}-\d{2}$/i.test(details) ||
-      /^Enddatum\s*:?\s*\d{4}-\d{2}-\d{2}$/i.test(details) ||
-      details === 'Aus bisherigem Eintrittsereignis übernommen. Qualifikation und Stunden prüfen.' ||
-      details === 'Beschafftigungsverhaeltnis beendet.' ||
-      details === 'Beschäftigungsverhältnis beendet.';
-    return Boolean(
-      (details && !generatedDetails) ||
-        record.previousValue?.trim() ||
-        record.newValue?.trim() ||
-        (record.meta && Object.keys(record.meta).length > 0),
-    );
-  };
   const historyItems = [
     ...timelineItems.filter(item => !(item.kind === 'event' &&
       (item.record.type === 'fte-change' || item.record.type === 'weekly-hours-change') &&

@@ -223,14 +223,8 @@ it('collapses only redundant boundary events and keeps notes or custom titles', 
       },
       {
         kind: 'event',
-        date: '2024-01-01',
-        record: {
-          id: 5,
-          eventDate: '2024-01-01',
-          type: 'join',
-          title: 'Eintritt',
-          details: 'Startdatum: 2024-01-01',
-        },
+        date: '2023-05-02',
+        record: { id: 5, eventDate: '2023-05-02', type: 'join', title: 'Eintritt' },
       },
       {
         kind: 'event',
@@ -240,8 +234,7 @@ it('collapses only redundant boundary events and keeps notes or custom titles', 
           eventDate: '2024-01-01',
           type: 'join',
           title: 'Eintritt',
-          details:
-            'Aus bisherigem Eintrittsereignis übernommen. Qualifikation und Stunden prüfen. Personalakte geprüft.',
+          details: 'Personalakte geprüft.',
         },
       },
       {
@@ -258,8 +251,9 @@ it('collapses only redundant boundary events and keeps notes or custom titles', 
   });
 
   const section = screen.getByRole('heading', { name: 'Historie' }).closest('section')!;
-  expect(section.querySelectorAll('.cd-timeline-row')).toHaveLength(4);
-  expect(section).not.toHaveTextContent('Startdatum: 2024-01-01');
+  // Nur der Eintritt ohne Notiz auf der Periodengrenze verschwindet.
+  expect(section.querySelectorAll('.cd-timeline-row')).toHaveLength(5);
+  expect(section).toHaveTextContent('02.05.2023');
   expect(section).toHaveTextContent('Personalakte geprüft.');
   expect(section).toHaveTextContent('Austritt');
   expect(section).toHaveTextContent('Vertrag bis Jahresende.');
