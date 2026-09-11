@@ -29,4 +29,48 @@ describe('Leistungskatalog-Dialog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     expect(onSave).toHaveBeenCalledOnce();
   });
+
+  it('schaltet eine gespeicherte Leistung aus dem Dialog ab', () => {
+    const onToggleActive = vi.fn();
+    render(
+      <ServiceDefinitionModal
+        state={{ open: true, id: 4, name: 'Duschen', serviceType: 's36-care' }}
+        active
+        onChange={vi.fn()}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        onToggleActive={onToggleActive}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Deaktivieren' }));
+    expect(onToggleActive).toHaveBeenCalledOnce();
+  });
+
+  it('bietet deaktivierten Leistungen die Reaktivierung an, neuen Leistungen nichts', () => {
+    const { rerender } = render(
+      <ServiceDefinitionModal
+        state={{ open: true, id: 4, name: 'Duschen', serviceType: 's36-care' }}
+        active={false}
+        onChange={vi.fn()}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        onToggleActive={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Aktivieren' })).toBeInTheDocument();
+
+    rerender(
+      <ServiceDefinitionModal
+        state={{ open: true, name: 'Duschen', serviceType: 's36-care' }}
+        onChange={vi.fn()}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+        onToggleActive={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /Aktivieren|Deaktivieren/ })).not.toBeInTheDocument();
+  });
 });

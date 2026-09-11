@@ -21,6 +21,8 @@ type InstructionModalProps = {
   onClose: () => void;
   onSave: () => void;
   onDelete?: (id: number) => void;
+  /** Assigns this instruction to several people; only for a saved entry. */
+  onAssign?: (id: number) => void;
 };
 
 const InstructionModal = ({
@@ -29,6 +31,7 @@ const InstructionModal = ({
   onClose,
   onSave,
   onDelete,
+  onAssign,
 }: InstructionModalProps) => (
   <Dialog
     open={state.open}
@@ -46,6 +49,8 @@ const InstructionModal = ({
     onPrimary={onSave}
     deleteLabel={state.id && onDelete ? 'Löschen' : undefined}
     onDelete={state.id && onDelete ? () => onDelete(state.id as number) : undefined}
+    secondaryLabel={state.id && onAssign ? 'Zuordnen' : undefined}
+    onSecondary={state.id && onAssign ? () => onAssign(state.id as number) : undefined}
     onClose={onClose}
   >
     <div className="field">

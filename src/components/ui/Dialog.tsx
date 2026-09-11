@@ -17,8 +17,11 @@ type DialogProps = {
   primaryDanger?: boolean;
   cancelLabel?: string;
   deleteLabel?: string;
+  /** Action on the edited record itself, e.g. „Zuordnen“ oder „Deaktivieren“. */
+  secondaryLabel?: string;
   onPrimary?: () => void;
   onDelete?: () => void;
+  onSecondary?: () => void;
   onClose: () => void;
 };
 
@@ -35,8 +38,10 @@ const Dialog = ({
   primaryDanger,
   cancelLabel = 'Abbrechen',
   deleteLabel,
+  secondaryLabel,
   onPrimary,
   onDelete,
+  onSecondary,
   onClose,
 }: DialogProps) => {
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -127,10 +132,15 @@ const Dialog = ({
         {children}
 
         <div className="dialog-actions" style={{ justifyContent: 'space-between' }}>
-          <div>
+          <div style={{ display: 'flex', gap: 8 }}>
             {deleteLabel && onDelete && (
               <button type="button" className="btn btn-ghost cd-danger-link" onClick={onDelete}>
                 {deleteLabel}
+              </button>
+            )}
+            {secondaryLabel && onSecondary && (
+              <button type="button" className="btn btn-secondary" onClick={onSecondary}>
+                {secondaryLabel}
               </button>
             )}
           </div>

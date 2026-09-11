@@ -6,12 +6,22 @@ import type { ServiceDefinitionModalState } from '../../types/ui';
 
 type Props = {
   state: ServiceDefinitionModalState;
+  /** Status der gespeicherten Leistung, nicht des Formulars. */
+  active?: boolean;
   onChange: (next: Partial<ServiceDefinitionModalState>) => void;
   onClose: () => void;
   onSave: () => void;
+  onToggleActive?: () => void;
 };
 
-const ServiceDefinitionModal = ({ state, onChange, onClose, onSave }: Props) => (
+const ServiceDefinitionModal = ({
+  state,
+  active,
+  onChange,
+  onClose,
+  onSave,
+  onToggleActive,
+}: Props) => (
   <Dialog
     open={state.open}
     width={520}
@@ -20,6 +30,10 @@ const ServiceDefinitionModal = ({ state, onChange, onClose, onSave }: Props) => 
     primaryLabel="Speichern"
     primaryDisabled={!state.name.trim()}
     onPrimary={onSave}
+    secondaryLabel={
+      state.id && onToggleActive ? (active === false ? 'Aktivieren' : 'Deaktivieren') : undefined
+    }
+    onSecondary={state.id && onToggleActive ? onToggleActive : undefined}
     onClose={onClose}
   >
     <div className="field">

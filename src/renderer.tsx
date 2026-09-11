@@ -929,6 +929,16 @@ const App = () => {
   );
   const [assignAlreadyOpenIds, setAssignAlreadyOpenIds] = useState<number[]>([]);
 
+  const closeInstructionModal = () =>
+    setInstructionModal({
+      open: false,
+      topic: '',
+      legalBasis: '',
+      note: '',
+      intervalMonths: null,
+      intervalSource: 'betrieblich',
+    });
+
   const openAssignInstructionModal = async (definitionId: number) => {
     try {
       setAssignAlreadyOpenIds(await api.instructions.employeesWithOpen(definitionId));
@@ -1151,6 +1161,9 @@ const App = () => {
   }
 
   const admin = adminPage();
+  const editedServiceDefinition = serviceDefinitions.find(
+    (entry) => entry.id === serviceDefinitionModal.id,
+  );
   const visibleCalendarEvents = Object.fromEntries(
     Object.entries(calendar.eventsByDate).map(([key, events]) => [
       key,
@@ -1602,9 +1615,19 @@ const App = () => {
       />
       <ServiceDefinitionModal
         state={serviceDefinitionModal}
+        active={editedServiceDefinition?.active !== false}
         onChange={(next) => setServiceDefinitionModal((prev) => ({ ...prev, ...next }))}
         onClose={() => setServiceDefinitionModal({ ...serviceDefinitionModal, open: false })}
         onSave={() => void saveServiceDefinition()}
+        onToggleActive={
+          editedServiceDefinition
+            ? () =>
+                toggleServiceDefinition(
+                  editedServiceDefinition.id as number,
+                  editedServiceDefinition.active === false,
+                )
+            : undefined
+        }
       />
       <CompetencyModal
         state={competencyModal}
@@ -1637,18 +1660,13 @@ const App = () => {
       <InstructionModal
         state={instructionModal}
         onChange={(next) => setInstructionModal((prev) => ({ ...prev, ...next }))}
-        onClose={() =>
-          setInstructionModal({
-            open: false,
-            topic: '',
-            legalBasis: '',
-            note: '',
-            intervalMonths: null,
-            intervalSource: 'betrieblich',
-          })
-        }
+        onClose={closeInstructionModal}
         onSave={handleSaveInstructionModal}
         onDelete={confirmDeleteInstructionDefinition}
+        onAssign={(id) => {
+          closeInstructionModal();
+          void openAssignInstructionModal(id);
+        }}
       />
 
       <EmployeeCompetencyModal
