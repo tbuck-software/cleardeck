@@ -77,6 +77,10 @@ import type {
   PatientWithLatestVisit,
 } from './shared/types';
 import { SERVICE_TYPE_LABEL } from './shared/services';
+import { isActivePatient } from './utils/qpr';
+
+const patientCountLabel = (count: number): string =>
+  count === 1 ? '1 aktive Person' : `${count} aktive Personen`;
 
 const emptyAuditModal = (): AuditModalState => ({
   open: false,
@@ -963,6 +967,7 @@ const App = () => {
       };
     }
     if (page === 'services') {
+      const activePatients = patients.filter((patient) => isActivePatient(patient));
       return {
         title: 'Leistungen für betreute Personen',
         subtitle:
@@ -978,7 +983,11 @@ const App = () => {
                 ? ''
                 : SERVICE_TYPE_LABEL[entry.serviceType],
             tags: entry.active === false ? ['deaktiviert'] : [],
-            usage: `${patients.reduce((count, patient) => count + (patient.serviceDefinitionIds?.includes(entry.id as number) ? 1 : 0), 0)} Personen`,
+            usage: patientCountLabel(
+              activePatients.filter((patient) =>
+                patient.serviceDefinitionIds?.includes(entry.id as number),
+              ).length,
+            ),
             active: entry.active,
           })),
       };

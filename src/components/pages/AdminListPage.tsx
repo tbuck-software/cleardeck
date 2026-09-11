@@ -63,7 +63,7 @@ const AdminListPage = ({
         {items.map((item, index) => (
           <div
             key={item.id}
-            className="cd-item"
+            className={`cd-item${item.active === false ? ' cd-row-departed' : ''}`}
             role="link"
             tabIndex={0}
             draggable
