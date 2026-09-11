@@ -2,7 +2,7 @@ import React from 'react';
 import Dialog from '../ui/Dialog';
 import Icon from '../ui/Icon';
 import BirthDateInput from '../ui/BirthDateInput';
-import type { QualificationType } from '../../shared/types';
+import type { EmployeeWithPeriod, QualificationType } from '../../shared/types';
 import type { EditModalState, FormState } from '../../types/ui';
 
 type EmployeeModalProps = {
@@ -18,6 +18,8 @@ type EmployeeModalProps = {
   onClose: () => void;
   onSave: () => void;
   onDelete?: () => void;
+  existingEmployees?: EmployeeWithPeriod[];
+  onOpenExisting?: (employee: EmployeeWithPeriod) => void;
 };
 
 const EmployeeModal = ({
@@ -33,8 +35,15 @@ const EmployeeModal = ({
   onClose,
   onSave,
   onDelete,
+  existingEmployees = [],
+  onOpenExisting,
 }: EmployeeModalProps) => {
   const isCreate = state.mode === 'create';
+  const matchingEmployees = isCreate
+    ? existingEmployees.filter(
+        (employee) => employee.name.trim().toLocaleLowerCase() === state.name.trim().toLocaleLowerCase(),
+      )
+    : [];
 
   return (
     <Dialog
@@ -72,6 +81,25 @@ const EmployeeModal = ({
             value={state.name}
             onChange={(event) => onStateChange({ name: event.target.value })}
           />
+          {matchingEmployees.length > 0 && (
+            <div className="cd-muted-13" role="status" style={{ marginTop: 6 }}>
+              Gleicher Name ist nur ein Hinweis. Bitte prüfen, ob eine vorhandene Person gemeint ist.
+              {onOpenExisting && matchingEmployees.map((employee) => (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  key={employee.id}
+                  style={{ padding: '0 4px', marginLeft: 4 }}
+                  onClick={() => {
+                    onClose();
+                    onOpenExisting(employee);
+                  }}
+                >
+                  {employee.name} öffnen
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {isCreate && (

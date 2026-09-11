@@ -524,3 +524,86 @@ export type BulkCompetencyChange = {
   }[];
   completion?: { approvedAt: string; approvedBy: string };
 };
+
+export type IntegrityIssueKind =
+  | 'reversed-period'
+  | 'overlapping-periods'
+  | 'suspicious-period'
+  | 'same-name';
+
+export interface IntegrityIssue {
+  kind: IntegrityIssueKind;
+  severity: 'error' | 'warning';
+  title: string;
+  detail: string;
+  employeeIds: number[];
+  periodIds: number[];
+}
+
+export interface EmploymentIntegrityOverview {
+  issues: IntegrityIssue[];
+  counts: Record<IntegrityIssueKind, number>;
+  checkedAt: string;
+}
+
+export interface RepairRecordSummary {
+  table: string;
+  ids: number[];
+  count: number;
+}
+
+export interface PeriodDatePreview {
+  kind: 'period-date';
+  token: string;
+  period: {
+    id: number;
+    employeeId: number;
+    employeeName: string;
+    qualification: string | null;
+    before: { startDate: string; endDate: string | null };
+    after: { startDate: string; endDate: string | null };
+  };
+  affectedRecords: RepairRecordSummary[];
+  conflicts: string[];
+}
+
+export interface ConsolidatePreview {
+  kind: 'consolidate-periods';
+  token: string;
+  employee: { id: number; name: string };
+  before: Array<{
+    id: number;
+    startDate: string;
+    endDate: string | null;
+    qualification: string | null;
+  }>;
+  after: { startDate: string; endDate: string | null; qualification: string | null };
+  affectedRecords: RepairRecordSummary[];
+  conflicts: string[];
+}
+
+export interface ReconcilePeriodsPreview {
+  kind: 'reconcile-periods';
+  token: string;
+  employee: { id: number; name: string };
+  retained: {
+    id: number;
+    before: { startDate: string; endDate: string | null };
+    after: { startDate: string; endDate: string | null };
+  };
+  removed: { id: number; startDate: string; endDate: string | null };
+  affectedRecords: RepairRecordSummary[];
+  conflicts: string[];
+}
+
+export interface EmployeeMergePreview {
+  kind: 'employee-merge';
+  token: string;
+  target: { id: number; name: string };
+  source: { id: number; name: string };
+  /** Full source row retained in the merge audit event before the source is removed. */
+  sourceSnapshot: Record<string, unknown>;
+  periods: { target: number; source: number };
+  linkedRecords: RepairRecordSummary[];
+  conflicts: string[];
+}
