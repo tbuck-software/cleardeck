@@ -1,6 +1,7 @@
 import { localDate } from '../../utils/calendarDate';
 import React from 'react';
 import Dialog from '../ui/Dialog';
+import Combobox from '../ui/Combobox';
 import { describeInterval, nextDueDate } from '../../utils/instructionSchedule';
 import { formatDateDE } from '../../utils/dateFormat';
 import type { InstructionDefinition } from '../../shared/types';
@@ -66,25 +67,25 @@ const EmployeeInstructionModal = ({
       {!isAssigned && (
         <div className="field">
           <label htmlFor="employee-instruction">Einweisung</label>
-          <select
+          <Combobox
             id="employee-instruction"
-            className="input"
-            value={state.instructionDefinitionId ?? ''}
-            onChange={(event) => {
-              const selectedId = Number(event.target.value);
-              const definition = availableDefinitions.find((entry) => entry.id === selectedId);
+            placeholder="Thema eingeben"
+            options={availableDefinitions.map((entry) => ({
+              value: entry.id as number,
+              label: entry.topic,
+            }))}
+            value={state.instructionDefinitionId}
+            onChange={(next) => {
+              const selectedId = next == null ? null : Number(next);
+              const selectedDefinition = availableDefinitions.find(
+                (entry) => entry.id === selectedId,
+              );
               onChange({
                 instructionDefinitionId: selectedId,
-                instructionName: definition?.topic ?? '',
+                instructionName: selectedDefinition?.topic ?? '',
               });
             }}
-          >
-            {availableDefinitions.map((definition) => (
-              <option key={definition.id} value={definition.id}>
-                {definition.topic}
-              </option>
-            ))}
-          </select>
+          />
         </div>
       )}
 
