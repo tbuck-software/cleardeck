@@ -104,9 +104,9 @@ export const recordDeparture = (input: RecordDepartureInput): YearDataset => {
     const period = loadPeriod(input.employeeId, input.periodId);
     if (input.endDate < period.startDate)
       throw new Error('Das Austrittsdatum liegt vor dem Beginn der Beschäftigungsperiode.');
-    if (period.endDate && input.endDate > period.endDate)
-      throw new Error('Das Austrittsdatum liegt nach dem Ende der Beschäftigungsperiode.');
 
+    // A recorded departure may move in either direction as long as no later
+    // period and no later working-time state would be stranded.
     assertNoPeriodConflict(input.employeeId, period.id, period.startDate, input.endDate);
     const futureTerm = db
       .prepare(

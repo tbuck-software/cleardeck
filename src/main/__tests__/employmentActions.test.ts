@@ -59,6 +59,37 @@ describe('employment actions', () => {
     expect(db.serialize()).toEqual(before);
   });
 
+  it('moves an existing departure later while no later period follows', () => {
+    const person = saveEmployee({
+      name: 'Synthetic Moved Departure',
+      qualification: 'Pflegekraft',
+      startDate: '2024-01-01',
+      endDate: '2024-06-30',
+      weeklyHours: 30,
+      fte: 0.83,
+      year: 2024,
+    }).employees[0];
+
+    recordDeparture({ employeeId: person.id!, periodId: person.periodId!, endDate: '2024-09-30', year: 2024 });
+    expect(db.prepare('SELECT endDate FROM employment_periods WHERE id=?').get(person.periodId))
+      .toEqual({ endDate: '2024-09-30' });
+
+    saveEmployee({
+      id: person.id,
+      name: person.name,
+      qualification: 'Pflegefachkraft',
+      startDate: '2025-01-01',
+      weeklyHours: 36,
+      fte: 1,
+      year: 2025,
+      birthDate: person.birthDate,
+    });
+    const before = db.serialize();
+    expect(() => recordDeparture({ employeeId: person.id!, periodId: person.periodId!, endDate: '2025-03-31', year: 2025 }))
+      .toThrow(/überschneidet sich/);
+    expect(db.serialize()).toEqual(before);
+  });
+
   it('maps a historical period with its effective terms despite a later reentry', () => {
     const person = saveEmployee({
       name: 'Synthetic Mapped Period',

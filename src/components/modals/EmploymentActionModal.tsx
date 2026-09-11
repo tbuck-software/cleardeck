@@ -67,9 +67,11 @@ const EmploymentActionModal = ({
     setSaving(false);
   }, [mode, open]);
 
+  // A departure may also move later; the repository rejects it if a later
+  // period or working-time state would be stranded.
   const dateWithinSelectedPeriod = validDate(date) &&
     date >= selectedPeriod.startDate &&
-    (!selectedPeriod.endDate || date <= selectedPeriod.endDate);
+    (mode === 'departure' || !selectedPeriod.endDate || date <= selectedPeriod.endDate);
   const qualificationChanged = qualification.trim() !== '' && qualification !== employee.qualification;
   const previewEnd = validDate(date) ? shiftDays(date, -1) : '';
   const canSave = Boolean(
@@ -139,7 +141,9 @@ const EmploymentActionModal = ({
       )}
       {validDate(date) && !dateWithinSelectedPeriod && (
         <p role="alert" className="cd-danger-link">
-          Das Datum muss innerhalb der ausgewählten Beschäftigungsperiode liegen.
+          {mode === 'departure'
+            ? 'Das Austrittsdatum liegt vor dem Beginn der Beschäftigungsperiode.'
+            : 'Das Datum muss innerhalb der ausgewählten Beschäftigungsperiode liegen.'}
         </p>
       )}
 
