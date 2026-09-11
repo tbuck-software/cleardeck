@@ -120,15 +120,17 @@ describe('EmployeeList', () => {
     renderList();
 
     // Die Liste startet nach Name aufsteigend.
-    const nameHeader = screen.getByText(/^Name/).closest('th') as HTMLElement;
+    const nameHeader = screen.getByRole('columnheader', { name: 'Name' });
     expect(nameHeader).toHaveAttribute('aria-sort', 'ascending');
 
-    fireEvent.click(nameHeader);
+    fireEvent.click(screen.getByRole('button', { name: 'Name' }));
     expect(nameHeader).toHaveAttribute('aria-sort', 'descending');
 
-    const hoursHeader = screen.getByText(/^Std\./).closest('th') as HTMLElement;
-    fireEvent.click(hoursHeader);
-    expect(hoursHeader).toHaveAttribute('aria-sort', 'ascending');
+    fireEvent.click(screen.getByRole('button', { name: 'Std./Wo.' }));
+    expect(screen.getByRole('columnheader', { name: 'Std./Wo.' })).toHaveAttribute(
+      'aria-sort',
+      'ascending',
+    );
     expect(nameHeader).toHaveAttribute('aria-sort', 'none');
   });
 
@@ -159,7 +161,7 @@ describe('EmployeeList', () => {
       ),
     });
 
-    fireEvent.click(screen.getByText('Eintritt').closest('th')!);
+    fireEvent.click(screen.getByRole('button', { name: 'Eintritt' }));
     const names = Array.from(document.querySelectorAll('tbody tr')).map(
       (row) => (row.textContent?.includes('Bruno') ? 'Bruno' : 'Anna'),
     );
@@ -177,5 +179,14 @@ describe('EmployeeList', () => {
     const cells = screen.getByText('Anna Beispiel').closest('tr')!.querySelectorAll('td');
     expect(cells[4].textContent).toBe('—');
     expect(cells[5].textContent).toBe('—');
+  });
+  it('zeigt die Notiz als Unterzeile und den Status in der letzten Spalte', () => {
+    renderList({ filteredEmployees: [{ ...employees[0], note: 'Leitung Tour 3' }] });
+
+    const row = screen.getByText('Anna Beispiel').closest('tr')!;
+    expect(row.querySelector('.cd-person-sub')).toHaveTextContent('Leitung Tour 3');
+
+    const cells = row.querySelectorAll('td');
+    expect(cells[cells.length - 1].textContent).toBe('aktiv');
   });
 });
