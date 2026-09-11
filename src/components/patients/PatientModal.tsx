@@ -212,13 +212,15 @@ const PatientModal = ({
                         key={serviceType}
                         className="cd-service-choice-group"
                         open={openGroups.includes(serviceType)}
-                        onToggle={(event) =>
+                        onToggle={(event) => {
+                          // React clears currentTarget before a queued updater runs.
+                          const open = event.currentTarget.open;
                           setOpenGroups((previous) =>
-                            event.currentTarget.open
+                            open
                               ? [...new Set([...previous, serviceType])]
                               : previous.filter((current) => current !== serviceType),
-                          )
-                        }
+                          );
+                        }}
                       >
                         <summary>
                           {SERVICE_TYPE_LABEL[serviceType]}
