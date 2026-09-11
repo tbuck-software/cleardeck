@@ -15,8 +15,7 @@ import type {
   EmployeeWithPeriod,
   WorkingTime,
 } from '../../shared/types';
-import type { TimelineItem } from '../../types/ui';
-import type { EmploymentActionMode } from '../modals/EmploymentActionModal';
+import type { EmploymentActionMode, TimelineItem } from '../../types/ui';
 
 export type DetailTab = 'comp' | 'instr' | 'hist';
 
