@@ -84,6 +84,10 @@ describe('PatientModal Leistungsumfang', () => {
     );
     expect(screen.getByText('MD-Personenliste: ja')).toBeInTheDocument();
     expect(screen.getByText(/Übernommene Entscheidung aus der früheren Erfassung/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Übernommene Entscheidung verwerfen' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Sie wird verworfen, sobald/)).toBeInTheDocument();
   });
 
   it('leert Suche und Gruppenzustand beim Wechsel der Person', () => {
