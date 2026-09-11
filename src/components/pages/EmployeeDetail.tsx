@@ -158,9 +158,8 @@ const EmployeeDetail = ({
   const openCount = openCompetencies + openInstructions;
 
   const endForTenure = employee.endDate && employee.endDate < today ? employee.endDate : today;
-  const tenureYears = employmentStartDate
-    ? Math.floor(daysBetween(employmentStartDate, endForTenure) / 365)
-    : 0;
+  const tenureYears = Math.floor(daysBetween(employmentStartDate, endForTenure) / 365);
+  const periodDiffersFromEmployment = employee.startDate !== employmentStartDate;
 
   return (
     <div className="cd-page cd-detail">
@@ -174,10 +173,10 @@ const EmployeeDetail = ({
             <span className={`tag ${statusTag.tagClass}`}>{statusTag.label}</span>
           </div>
           <p className="cd-muted" style={{ margin: '6px 0 0' }}>
-            {employee.qualification} · Abschnitt seit {formatDateDE(employee.startDate)}
-            <span className="cd-detail-employment-start">
-              Beschäftigt seit {formatDateDE(employmentStartDate)} ({tenureYears} Jahre)
-            </span>
+            {employee.qualification} · Beschäftigt seit {formatDateDE(employmentStartDate)} (
+            {tenureYears} Jahre)
+            {periodDiffersFromEmployment &&
+              ` · Abschnitt seit ${formatDateDE(employee.startDate)}`}
           </p>
           {employee.note && <p style={{ margin: '10px 0 0', fontSize: 14 }}>{employee.note}</p>}
         </div>

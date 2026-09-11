@@ -317,11 +317,6 @@
   color: var(--color-neutral-700);
 }
 
-.cd-detail-employment-start {
-  display: inline-block;
-  margin-left: 12px;
-  color: var(--color-neutral-800);
-}
 
 .cd-timeline-date {
   font-size: 13px;
