@@ -207,9 +207,14 @@ describe('PatientList', () => {
   });
 
   it('fällt in schmalen Fenstern auf eine Liste zurück', () => {
-    renderList({ wideTable: false });
+    renderList({
+      wideTable: false,
+      patients: [{ ...patients[0], careLevel: 0 }, patients[2]],
+    });
 
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.getByText('Erika Mustermann')).toBeInTheDocument();
+    expect(screen.getByText(/Kein Pflegegrad/)).toBeInTheDocument();
+    expect(screen.getByText(/Pflegegrad unbekannt/)).toBeInTheDocument();
   });
 });
