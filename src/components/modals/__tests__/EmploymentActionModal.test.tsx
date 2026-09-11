@@ -110,3 +110,27 @@ it('opens a future period on its start date instead of on an error', () => {
   expect(screen.getByLabelText('Austritt')).toHaveValue('2099-01-01');
   expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
+
+it('lets an already recorded departure move to a later date', async () => {
+  const onSave = vi.fn().mockResolvedValue(undefined);
+  render(
+    <EmploymentActionModal
+      open
+      mode="departure"
+      employee={employee}
+      periods={[{ id: 21, employeeId: 11, startDate: '2024-01-01', endDate: '2025-12-31', qualification: 'Einarbeitung' }]}
+      qualifications={qualifications}
+      onClose={vi.fn()}
+      onSave={onSave}
+    />,
+  );
+
+  expect(screen.getByLabelText('Austritt')).toHaveValue('2025-12-31');
+  fireEvent.change(screen.getByLabelText('Austritt'), { target: { value: '2026-06-30' } });
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+  await waitFor(() => expect(onSave).toHaveBeenCalledWith({
+    mode: 'departure', periodId: 21, endDate: '2026-06-30',
+  }));
+});
