@@ -556,6 +556,16 @@
   max-width: 900px;
 }
 
+.cd-fact-wide {
+  grid-column: span 2;
+}
+
+@media (max-width: 520px) {
+  .cd-fact-wide {
+    grid-column: auto;
+  }
+}
+
 .cd-drag {
   color: var(--color-neutral-500);
   cursor: grab;
@@ -592,6 +602,89 @@
   border-radius: var(--radius-md);
   padding: 10px 14px;
   font-size: 13px;
+}
+
+.cd-group-preview > .tag {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.cd-service-choice-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-divider);
+}
+
+.cd-service-choice-group:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.cd-service-picker {
+  border: 1px solid var(--color-divider);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.cd-service-picker > summary,
+.cd-service-choice-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+}
+
+.cd-service-picker > summary::-webkit-details-marker,
+.cd-service-choice-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cd-service-picker > summary {
+  gap: 12px;
+  padding: 11px 13px;
+  font-weight: 600;
+}
+
+.cd-service-choice-group > summary {
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--color-neutral-800);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.cd-service-picker > summary > span:first-child {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.cd-service-summary {
+  color: var(--color-neutral-700);
+  font-size: 13px;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.cd-service-picker-body {
+  padding: 0 13px 13px;
+}
+
+.cd-service-search {
+  margin-bottom: 4px;
+}
+
+.cd-service-choice-list {
+  max-height: 230px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .cd-recovery-key {
@@ -823,8 +916,12 @@
   display: none;
 }
 
-.cd-disclosure > summary::before {
+/* One chevron for every <details> disclosure; the gap spaces it. */
+.cd-disclosure > summary::before,
+.cd-service-picker > summary::before,
+.cd-service-choice-group > summary::before {
   content: '';
+  flex: none;
   width: 0;
   height: 0;
   border-left: 5px solid currentColor;
@@ -833,7 +930,9 @@
   transition: transform 0.15s ease;
 }
 
-.cd-disclosure[open] > summary::before {
+.cd-disclosure[open] > summary::before,
+.cd-service-picker[open] > summary::before,
+.cd-service-choice-group[open] > summary::before {
   transform: rotate(90deg);
 }
 

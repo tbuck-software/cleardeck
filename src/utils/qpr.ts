@@ -5,7 +5,105 @@
  * place the app derives them, so the letters never drift between screens.
  */
 
-import type { HkpCode, IntensiveCare, Patient, Teilgruppe } from '../shared/types';
+import type {
+  HkpCode,
+  IntensiveCare,
+  Patient,
+  ServiceScope,
+  ServiceType,
+  Teilgruppe,
+} from '../shared/types';
+import { SERVICE_TYPE_LABEL, SERVICE_TYPES } from '../shared/services';
+
+export type ServiceScopeResult = {
+  scope: ServiceScope;
+  /** Stands alone as a sentence and never repeats the verdict. */
+  reason: string;
+};
+
+/** One wording for "no services recorded yet", shared by every screen. */
+export const SERVICES_NOT_RECORDED = 'Leistungen sind noch nicht erfasst.';
+
+export const SERVICE_SCOPE_LABEL: Record<ServiceScope, string> = {
+  eligible: 'MD-Personenliste: ja',
+  excluded: 'MD-Personenliste: nein',
+  unknown: 'MD-Personenliste: offen',
+};
+
+const INCLUDED_SERVICE_TYPES = new Set<ServiceType>([
+  's36-care',
+  's36-support',
+  's39-prevention',
+  's37-hkp',
+  's37c-aki',
+]);
+
+/** Normalize catalogue categories before deriving the QPR conclusion. */
+export const normalizeServiceTypes = (serviceTypes?: ServiceType[] | null): ServiceType[] => {
+  const types = [...new Set(serviceTypes ?? [])].filter((type): type is ServiceType =>
+    SERVICE_TYPES.includes(type),
+  );
+  return SERVICE_TYPES.filter((type) => types.includes(type));
+};
+
+/**
+ * QPR chapter 8 inclusion/exclusion, independent of care grade and assessment
+ * data. Verified against the official MD Bund source:
+ * https://md-bund.de/fileadmin/dokumente/Publikationen/SPV/PV_Qualitaetspruefung/QPR_Teil1a_ambulante_Pflegedienste_2026_07_30.pdf#page=25
+ */
+export const deriveServiceScope = (
+  serviceTypes?: ServiceType[] | null,
+): ServiceScopeResult => {
+  const types = normalizeServiceTypes(serviceTypes);
+  if (types.length === 0) return { scope: 'unknown', reason: SERVICES_NOT_RECORDED };
+  const included = types.filter((type) => INCLUDED_SERVICE_TYPES.has(type));
+  if (included.length) {
+    const labels = included.map((type) => SERVICE_TYPE_LABEL[type]).join(', ');
+    const extras = types.some((type) => type === 'relief' || type === 'household')
+      ? ' Zusätzliche Haushalts-, Betreuungs- oder Entlastungsleistungen ändern daran nichts.'
+      : '';
+    return {
+      scope: 'eligible',
+      reason: `${labels} ${included.length === 1 ? 'gehört' : 'gehören'} zum Versorgungsumfang.${extras}`,
+    };
+  }
+  if (types.length === 1 && types[0] === 's37-consultation')
+    return {
+      scope: 'excluded',
+      reason:
+        'Ein Beratungsbesuch nach § 37 Abs. 3 SGB XI allein zählt nicht zum Versorgungsumfang.',
+    };
+  return {
+    scope: 'excluded',
+    reason:
+      'Haushaltshilfe, Betreuung oder Entlastung nach § 45a/45b SGB XI und der Beratungsbesuch nach § 37 Abs. 3 SGB XI zählen nicht zum Versorgungsumfang.',
+  };
+};
+
+/** Resolve the current conclusion while preserving an explicit pre-service legacy decision. */
+export const serviceScopeOf = (
+  patient: Pick<
+    Patient,
+    | 'serviceScope'
+    | 'serviceScopeSource'
+    | 'services'
+  >,
+): ServiceScopeResult => {
+  const serviceTypes = patient.services?.map((service) => service.serviceType);
+  const hasServiceRecord =
+    patient.serviceScopeSource === 'services' ||
+    (serviceTypes?.length ?? 0) > 0;
+  if (!hasServiceRecord && patient.serviceScopeSource !== 'services' && patient.serviceScope) {
+    return {
+      scope: patient.serviceScope,
+      reason:
+        patient.serviceScope === 'unknown'
+          ? SERVICES_NOT_RECORDED
+          : `Übernommene Entscheidung aus der früheren Erfassung. ${SERVICES_NOT_RECORDED}`,
+    };
+  }
+  return deriveServiceScope(serviceTypes);
+};
 
 /** Sampling target per group (QPR Kap. 8.1). Under-filled groups are not topped up. */
 export const TEILGRUPPE_TARGET: Record<Teilgruppe | 'D', number> = {
