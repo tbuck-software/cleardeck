@@ -635,26 +635,6 @@
   place-items: center;
 }
 
-.cd-item[data-dragging='true'] {
-  opacity: 0.5;
-}
-
-.cd-tag-row {
-  display: flex;
-  gap: 6px;
-  flex: none;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.cd-usage {
-  font-size: 13px;
-  color: var(--color-neutral-700);
-  flex: none;
-  min-width: 88px;
-  text-align: right;
-}
-
 .cd-group-preview {
   display: flex;
   align-items: center;
@@ -1193,6 +1173,15 @@
 
 .cd-listrow[data-selected='true'] {
   background: color-mix(in srgb, var(--color-accent) 7%, transparent);
+}
+
+.cd-listrow[data-dragging='true'] {
+  opacity: 0.5;
+}
+
+/* Deaktivierte Katalogeinträge bleiben lesbar, treten aber auch im Hover zurück. */
+.cd-listrow.cd-row-departed:hover {
+  background: color-mix(in srgb, var(--color-neutral-300) 55%, transparent);
 }
 
 .cd-listrow-lead {
