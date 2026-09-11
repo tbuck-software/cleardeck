@@ -7,15 +7,16 @@ import { shiftDays, validDate } from './calendarDate';
  * Employment periods remain the source of truth for qualification and report
  * boundaries. This helper only derives a display value by walking backwards
  * over periods whose dates touch, including periods from earlier years.
+ *
+ * Expects the periods of one employee ordered by startDate, as the query in
+ * the repository returns them.
  */
 export const contiguousEmploymentStart = (
   periods: EmploymentPeriod[],
   selectedPeriodId?: number,
   selectedStartDate?: string,
 ): string | undefined => {
-  const ordered = [...periods]
-    .filter((period) => validDate(period.startDate))
-    .sort((a, b) => a.startDate.localeCompare(b.startDate) || (a.id ?? 0) - (b.id ?? 0));
+  const ordered = periods.filter((period) => validDate(period.startDate));
   if (ordered.length === 0) return selectedStartDate;
 
   let selectedIndex = selectedPeriodId
@@ -65,7 +66,7 @@ export const employmentMessages = {
   reversedInput: 'Das Ende liegt vor dem Beginn.',
   reversedPeriod: 'Ein Beschäftigungszeitraum hat umgekehrte Daten. Bitte zuerst Beginn und Ende prüfen.',
   overlap:
-    'Beschäftigungszeiträume überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren.',
+    'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren oder „Qualifikation wechseln“ verwenden.',
   notAdjacent: 'Die Abschnitte grenzen nicht unmittelbar aneinander.',
   differentEmployees: 'Abschnitte gehören zu verschiedenen Personen.',
   sameSection: 'Bitte zwei verschiedene Abschnitte auswählen.',

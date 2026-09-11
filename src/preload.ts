@@ -3,9 +3,12 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type {
   BulkCompetencyChange,
   SaveWorkingTimeInput,
+  RecordDepartureInput,
+  SwitchQualificationInput,
   AppState,
   AppInfo,
   EmploymentPeriod,
+  EmployeeWithPeriod,
   QualificationType,
   CompetencyDefinition,
   EmployeeCompetency,
@@ -36,6 +39,10 @@ import type {
   PatientVisitEvent,
   HkpCode,
   IntensiveCare,
+  ServiceDefinition,
+  ServiceScope,
+  ServiceScopeSource,
+  ServiceType,
   AuditResult,
   AuditSectionDefinition,
   AuditWithDetails,
@@ -68,8 +75,11 @@ export type Api = {
     mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory',
   ) => Promise<YearDataset>;
   listPeriods: (employeeId: number) => Promise<EmploymentPeriod[]>;
+  getEmployeePeriod: (employeeId: number, periodId: number, year: number) => Promise<EmployeeWithPeriod>;
   listEvents: (employeeId: number) => Promise<EmployeeEvent[]>;
   saveWorkingTime: (input: SaveWorkingTimeInput) => Promise<void>;
+  recordDeparture: (input: RecordDepartureInput) => Promise<YearDataset>;
+  switchQualification: (input: SwitchQualificationInput) => Promise<YearDataset>;
   saveEmployee: (input: {
     id?: number;
     periodId?: number;
@@ -121,6 +131,11 @@ export type Api = {
   ) => Promise<QualificationType[]>;
   deleteQualification: (id: number) => Promise<QualificationType[]>;
   reorderQualifications: (ids: number[]) => Promise<QualificationType[]>;
+  listServiceDefinitions: () => Promise<ServiceDefinition[]>;
+  addServiceDefinition: (input: { name: string; serviceType: ServiceType }) => Promise<ServiceDefinition[]>;
+  updateServiceDefinition: (input: { id: number; name: string; serviceType: ServiceType }) => Promise<ServiceDefinition[]>;
+  setServiceDefinitionActive: (id: number, active: boolean) => Promise<ServiceDefinition[]>;
+  reorderServiceDefinitions: (ids: number[]) => Promise<ServiceDefinition[]>;
   listCompetencyDefinitions: () => Promise<CompetencyDefinition[]>;
   addCompetencyDefinition: (input: {
     code?: string | null;
@@ -286,7 +301,9 @@ export type Api = {
   savePatient: (input: {
     serviceStatus?: 'active' | 'ended';
     serviceEndDate?: string | null;
-    serviceScope?: 'eligible' | 'excluded' | 'unknown';
+    serviceScope?: ServiceScope;
+    serviceDefinitionIds?: number[];
+    serviceScopeSource?: ServiceScopeSource;
     representativeStatus?: 'present' | 'none' | 'unknown';
     hkpCodes?: HkpCode[];
     assessmentSource?: 'report' | 'own' | 'unknown';
@@ -376,9 +393,13 @@ const api: Api = {
   commitStaffImport: (rows) => ipcRenderer.invoke('staff:commitImport', rows),
   listEmployees: (year, mode) => ipcRenderer.invoke('data:list', { year, mode }),
   listPeriods: (employeeId) => ipcRenderer.invoke('data:listPeriods', { employeeId }),
+  getEmployeePeriod: (employeeId, periodId, year) =>
+    ipcRenderer.invoke('data:getPeriod', { employeeId, periodId, year }),
   listEvents: (employeeId) => ipcRenderer.invoke('events:list', { employeeId }),
   saveEmployee: (input) => ipcRenderer.invoke('data:save', input),
   saveWorkingTime: (input) => ipcRenderer.invoke('data:saveWorkingTime', input),
+  recordDeparture: (input) => ipcRenderer.invoke('employment:recordDeparture', input),
+  switchQualification: (input) => ipcRenderer.invoke('employment:switchQualification', input),
   deleteEmployee: (id, year) => ipcRenderer.invoke('data:delete', { id, year }),
   saveEvent: (input) => ipcRenderer.invoke('events:save', input),
   deleteEvent: (id, employeeId) => ipcRenderer.invoke('events:delete', { id, employeeId }),
@@ -394,6 +415,12 @@ const api: Api = {
     ipcRenderer.invoke('qualifications:update', { id, name, note }),
   deleteQualification: (id) => ipcRenderer.invoke('qualifications:delete', { id }),
   reorderQualifications: (ids) => ipcRenderer.invoke('qualifications:reorder', { ids }),
+  listServiceDefinitions: () => ipcRenderer.invoke('services:list'),
+  addServiceDefinition: (input) => ipcRenderer.invoke('services:add', input),
+  updateServiceDefinition: (input) => ipcRenderer.invoke('services:update', input),
+  setServiceDefinitionActive: (id, active) =>
+    ipcRenderer.invoke('services:setActive', { id, active }),
+  reorderServiceDefinitions: (ids) => ipcRenderer.invoke('services:reorder', { ids }),
   listCompetencyDefinitions: () => ipcRenderer.invoke('competencies:listDefinitions'),
   addCompetencyDefinition: (input) => ipcRenderer.invoke('competencies:addDefinition', input),
   updateCompetencyDefinition: (input) => ipcRenderer.invoke('competencies:updateDefinition', input),

@@ -29,6 +29,7 @@ const employee = (overrides: Partial<EmployeeWithPeriod> = {}): EmployeeWithPeri
   name: 'Anna Berger',
   qualification: '3-jährig examiniert',
   startDate: '2016-03-01',
+  employmentStartDate: '2016-03-01',
   endDate: null,
   fte: 1,
   weeklyHours: 36,
@@ -77,6 +78,22 @@ describe('buildDashboardTasks', () => {
     });
 
     expect(tasks.map((task) => task.id)).toContain('patient-assessment-1');
+  });
+
+  it('meldet fehlende Leistungen und übernommene Alt-Entscheidungen getrennt', () => {
+    expect(
+      build({ patients: [patient({ serviceScope: 'unknown', serviceScopeSource: 'services' })] }).map(
+        (task) => task.id,
+      ),
+    ).toContain('patient-scope-1');
+
+    const legacy = build({
+      patients: [patient({ serviceScope: 'eligible', serviceScopeSource: 'legacy' })],
+    });
+    const legacyTask = legacy.find((task) => task.id === 'patient-legacy-scope-1');
+    expect(legacyTask?.title).toBe('Erika Mustermann · Leistungen nachtragen');
+    expect(legacyTask?.target).toEqual({ kind: 'patient', id: 1 });
+    expect(legacy.map((task) => task.id)).not.toContain('patient-scope-1');
   });
 
   it('meldet überfällige Pflegevisiten mit Tagen', () => {

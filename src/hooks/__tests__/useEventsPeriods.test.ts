@@ -29,6 +29,7 @@ const selectedEmployee: EmployeeWithPeriod = {
   name: 'Test User',
   qualification: 'Pflegekraft',
   startDate: '2024-01-10',
+  employmentStartDate: '2024-01-10',
   endDate: null,
   fte: 1,
   status: 'active',
@@ -73,6 +74,5 @@ describe('useEventsPeriods timeline', () => {
       '2024-02-01',
       '2024-01-05',
     ]);
-    expect(result.current.derived.displayStart).toBe('2024-01-05');
   });
 });

@@ -27,6 +27,7 @@ import { v019_patient_scope_audit } from './v019_patient_scope_audit';
 import { v018_instruction_evidence } from './v018_instruction_evidence';
 import { v017_employment_terms } from './v017_employment_terms';
 import { v016_missing_instructions } from './v016_missing_instructions';
+import { v022_patient_service_scope } from './v022_patient_service_scope';
 
 export type Migration = {
   version: number;
@@ -59,6 +60,7 @@ export const migrations: Migration[] = [
   v019_patient_scope_audit,
   v020_employment_provenance,
   v021_catalog_actions,
+  v022_patient_service_scope,
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations[migrations.length - 1]?.version ?? 0;

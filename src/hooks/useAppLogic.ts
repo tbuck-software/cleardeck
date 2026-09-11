@@ -6,6 +6,7 @@ import useConfirmations from './useConfirmations';
 import useRecovery from './useRecovery';
 import useSettingsDb from './useSettingsDb';
 import useEventsPeriods from './useEventsPeriods';
+import useEmploymentActions from './useEmploymentActions';
 import useEmployees from './useEmployees';
 import useAuth from './useAuth';
 import useUpcomingEvents from './useUpcomingEvents';
@@ -14,6 +15,7 @@ import useDashboardWidgets from './useDashboardWidgets';
 import useEmploymentIntegrity from './useEmploymentIntegrity';
 import usePatients from './usePatients';
 import usePatientDashboard from './usePatientDashboard';
+import useServiceCatalog from './useServiceCatalog';
 import { userFacingErrorMessage } from '../utils/errorMessage';
 
 const useAppLogic = () => {
@@ -60,6 +62,16 @@ const useAppLogic = () => {
     setLoading,
     setToast: showToast,
     confirmAction,
+  });
+
+  const employmentActionSlice = useEmploymentActions({
+    year,
+    selectedEmployee: employeeSlice.state.selectedEmployee,
+    setDataset: employeeSlice.setters.setDataset,
+    setSelectedEmployee: employeeSlice.setters.setSelectedEmployee,
+    setForm: employeeSlice.setters.setForm,
+    loadHistory: eventSlice.actions.loadHistory,
+    setToast: showToast,
   });
 
   const {
@@ -153,6 +165,12 @@ const useAppLogic = () => {
   });
 
   const patientDashboardSlice = usePatientDashboard({ handleError });
+  const serviceCatalogSlice = useServiceCatalog({
+    handleError,
+    setToast: showToast,
+    confirmAction,
+    refreshPatients: patientSlice.actions.refreshPatients,
+  });
 
   // Store actions in refs to avoid dependency changes triggering the effect
   const loadActionsRef = useRef({
@@ -162,6 +180,7 @@ const useAppLogic = () => {
     refreshPatients: patientSlice.actions.refreshPatients,
     loadPatientDashboard: patientDashboardSlice.actions.loadAll,
     loadCalendar: calendarSlice.actions.loadEvents,
+    loadServiceDefinitions: serviceCatalogSlice.actions.loadServiceDefinitions,
   });
   loadActionsRef.current = {
     loadHiddenEventTypes: upcomingEventsSlice.actions.loadHiddenEventTypes,
@@ -170,6 +189,7 @@ const useAppLogic = () => {
     refreshPatients: patientSlice.actions.refreshPatients,
     loadPatientDashboard: patientDashboardSlice.actions.loadAll,
     loadCalendar: calendarSlice.actions.loadEvents,
+    loadServiceDefinitions: serviceCatalogSlice.actions.loadServiceDefinitions,
   };
 
   // Load upcoming events and filters when app is unlocked
@@ -180,6 +200,7 @@ const useAppLogic = () => {
       loadActionsRef.current.loadDashboardWidgets();
       loadActionsRef.current.refreshPatients();
       loadActionsRef.current.loadPatientDashboard();
+      loadActionsRef.current.loadServiceDefinitions();
     }
   }, [authSlice.appReady.unlocked]);
 
@@ -225,7 +246,11 @@ const useAppLogic = () => {
   const handleSelectWithHistory = async (emp: EmployeeWithPeriod) => {
     await employeeSlice.actions.handleSelect(emp);
     if (emp?.id) {
-      await eventSlice.actions.loadHistory(emp.id);
+      try {
+        await eventSlice.actions.loadHistory(emp.id);
+      } catch (err) {
+        handleError(err);
+      }
     }
     eventSlice.setters.setAddPeriodForm((prev) => ({
       ...prev,
@@ -251,7 +276,11 @@ const useAppLogic = () => {
     await employeeSlice.actions.handleEditModalSave();
     const id = employeeSlice.state.selectedEmployee?.id;
     if (id) {
-      await eventSlice.actions.loadHistory(id);
+      try {
+        await eventSlice.actions.loadHistory(id);
+      } catch (err) {
+        handleError(err);
+      }
     }
   };
 
@@ -305,6 +334,7 @@ const useAppLogic = () => {
       addPeriodForm: eventSlice.state.addPeriodForm,
       periodToDelete: eventSlice.state.periodToDelete,
       eventModal: eventSlice.state.eventModal,
+      employmentAction: employmentActionSlice.state,
       confirmState,
       recoveryKeyModal,
       recoveryReset,
@@ -322,6 +352,8 @@ const useAppLogic = () => {
       patientGroupFilter: patientSlice.state.groupFilter,
       patientVisitModal: patientSlice.state.visitModal,
       patientDashboard: patientDashboardSlice.state,
+      serviceDefinitions: serviceCatalogSlice.state.serviceDefinitions,
+      serviceDefinitionModal: serviceCatalogSlice.state.serviceDefinitionModal,
     },
     setters: {
       setEmployeeCompetencies: employeeSlice.setters.setEmployeeCompetencies,
@@ -354,13 +386,13 @@ const useAppLogic = () => {
       setPatientSearch: patientSlice.setters.setSearch,
       setPatientGroupFilter: patientSlice.setters.setGroupFilter,
       setPatientVisitModal: patientSlice.setters.setVisitModal,
+      setServiceDefinitionModal: serviceCatalogSlice.setters.setServiceDefinitionModal,
     },
     derived: {
       filteredEmployees: employeeSlice.derived.filteredEmployees,
       averageFte: employeeSlice.derived.averageFte,
       totalFte: employeeSlice.derived.totalFte,
       totalHeadcount: employeeSlice.derived.totalHeadcount,
-      displayStart: eventSlice.derived.displayStart,
       timelineItems: eventSlice.derived.timelineItems,
       crumbs: employeeSlice.derived.crumbs,
       sidebarPage: employeeSlice.derived.sidebarPage,
@@ -420,6 +452,9 @@ const useAppLogic = () => {
       openNewPeriodModal: eventSlice.actions.openNewPeriodModal,
       openExistingPeriodModal: eventSlice.actions.openExistingPeriodModal,
       openEventModalForEvent: eventSlice.actions.openEventModalForEvent,
+      openEmploymentAction: employmentActionSlice.actions.open,
+      closeEmploymentAction: employmentActionSlice.actions.close,
+      saveEmploymentAction: employmentActionSlice.actions.save,
       openCreateModal: employeeSlice.actions.openCreateModal,
       openEditModal: employeeSlice.actions.openEditModal,
       handleEditModalSave: handleEditModalSaveWithHistory,
@@ -444,6 +479,12 @@ const useAppLogic = () => {
       closeVisitModal: patientSlice.actions.closeVisitModal,
       refreshPatients: patientSlice.actions.refreshPatients,
       refreshEmploymentIntegrity: employmentIntegritySlice.refresh,
+      loadServiceDefinitions: serviceCatalogSlice.actions.loadServiceDefinitions,
+      saveServiceDefinition: serviceCatalogSlice.actions.saveServiceDefinition,
+      toggleServiceDefinition: serviceCatalogSlice.actions.toggleServiceDefinition,
+      reorderServiceDefinitions: serviceCatalogSlice.actions.reorderServiceDefinitions,
+      openCreateServiceDefinition: serviceCatalogSlice.actions.openCreate,
+      openEditServiceDefinition: serviceCatalogSlice.actions.openEdit,
     },
   };
 };

@@ -21,6 +21,7 @@ import {
   isActivePatient,
   needsAssessment,
   representativeMissing,
+  serviceScopeOf,
 } from '../utils/qpr';
 import { buildPersonListWorkbook, buildEmployeeWorkbook, writeWorkbook } from './workbook';
 
@@ -156,13 +157,13 @@ export const exportPersonList = async (): Promise<{
   withoutGroup?: number;
 }> => {
   const active = listPatients().filter((p) => isActivePatient(p));
-  const unknown = active.filter((p) => !p.serviceScope || p.serviceScope === 'unknown');
+  const unknown = active.filter((p) => serviceScopeOf(p).scope === 'unknown');
   if (unknown.length)
     return {
       saved: false,
-      error: `Leistungsumfang für ${unknown.length} aktive Personen ungeklärt. Bitte vor dem Anlage-7-Export in den Stammdaten bestätigen.`,
+      error: `Für ${unknown.length} aktive Personen sind die Leistungen noch nicht erfasst. In den Stammdaten die erbrachten Leistungen auswählen, bevor die Anlage-7-Liste exportiert wird.`,
     };
-  const patients = active.filter((p) => p.serviceScope === 'eligible');
+  const patients = active.filter((p) => serviceScopeOf(p).scope === 'eligible');
   const incomplete = patients.filter(
     (p) =>
       needsAssessment(p) ||

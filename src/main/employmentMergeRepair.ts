@@ -2,7 +2,7 @@ import { getDb } from './database/connection';
 import { formatDateDE } from '../utils/dateFormat';
 import { employmentMessages, hasReversedDates, periodsOverlap } from '../utils/employment';
 import type { EmployeeMergePreview, RepairRecordSummary } from '../shared/types';
-import { refreshEmployeeHoursCache } from './repositories/employees';
+import { updateEmployeeCache } from './repositories/employmentCore';
 import {
   PERIOD_COLUMNS,
   allRows,
@@ -153,7 +153,7 @@ export const applyEmployeeMerge = (input: {
       source.name,
       target.name,
     );
-    refreshEmployeeHoursCache(db, target.id);
+    updateEmployeeCache(target.id);
     db.prepare('DELETE FROM employees WHERE id=?').run(source.id);
     if ((db.pragma('foreign_key_check') as unknown[]).length)
       throw new Error('Zusammenführung würde ungültige Datenverknüpfungen erzeugen.');

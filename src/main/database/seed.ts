@@ -857,10 +857,12 @@ export const seedDatabase = (db: DatabaseType): void => {
       `
       INSERT INTO patients
         (name, birthDate, diagnosis, note, contact, admissionDate,
-         cognitionImpaired, mobilityImpaired, hkpCode, intensiveCare, careLevel)
+         cognitionImpaired, mobilityImpaired, hkpCode, intensiveCare, careLevel,
+         serviceScopeSource)
       VALUES
         (@name, @birthDate, @diagnosis, @note, @contact, @admissionDate,
-         @cognitionImpaired, @mobilityImpaired, @hkpCode, @intensiveCare, @careLevel)
+         @cognitionImpaired, @mobilityImpaired, @hkpCode, @intensiveCare, @careLevel,
+         'services')
     `,
     );
     const insertVisit = db.prepare(
@@ -912,7 +914,7 @@ export const seedDatabase = (db: DatabaseType): void => {
           eventDate: lastPeriod.endDate,
           type: 'leave',
           title: 'Austritt',
-          details: lastPeriod.note ?? 'Beschafftigungsverhaeltnis beendet.',
+          details: lastPeriod.note ?? 'Beschäftigungsverhältnis beendet.',
           meta: null,
           previousValue: null,
           newValue: null,
