@@ -26,24 +26,6 @@ import {
 } from '../../utils/employment';
 import { recordRepairEvent } from '../employmentRepairShared';
 
-/** Legacy employees.fte/weeklyHours are a cache of the term effective today. */
-export const refreshEmployeeHoursCache = (
-  db: ReturnType<typeof getDb>,
-  employeeId: number,
-): void => {
-  const current = db
-    .prepare(
-      'SELECT t.fte,t.weeklyHours FROM employment_terms t JOIN employment_periods p ON p.id=t.periodId WHERE p.employeeId=? AND t.effectiveFrom<=? ORDER BY t.effectiveFrom DESC,t.id DESC LIMIT 1',
-    )
-    .get(employeeId, localDate()) as { fte: number; weeklyHours: number | null } | undefined;
-  if (current)
-    db.prepare('UPDATE employees SET fte=?,weeklyHours=? WHERE id=?').run(
-      current.fte,
-      current.weeklyHours,
-      employeeId,
-    );
-};
-
 /**
  * Compute employee status for a given year
  */
@@ -276,6 +258,24 @@ export const listPeriods = (employeeId: number): EmploymentPeriod[] => {
   return rows;
 };
 
+/** Legacy employees.fte/weeklyHours are a cache of the term effective today. */
+export const refreshEmployeeHoursCache = (
+  db: ReturnType<typeof getDb>,
+  employeeId: number,
+): void => {
+  const current = db
+    .prepare(
+      'SELECT t.fte,t.weeklyHours FROM employment_terms t JOIN employment_periods p ON p.id=t.periodId WHERE p.employeeId=? AND t.effectiveFrom<=? ORDER BY t.effectiveFrom DESC,t.id DESC LIMIT 1',
+    )
+    .get(employeeId, localDate()) as { fte: number; weeklyHours: number | null } | undefined;
+  if (current)
+    db.prepare('UPDATE employees SET fte=?,weeklyHours=? WHERE id=?').run(
+      current.fte,
+      current.weeklyHours,
+      employeeId,
+    );
+};
+
 type PeriodBoundsInput = { startDate: string; endDate: string | null };
 
 /** Shortening a period must not orphan a working-time record outside it. */
@@ -289,9 +289,10 @@ const requireTermsInRange = (
       'SELECT COUNT(*) AS count FROM employment_terms WHERE periodId=? AND (effectiveFrom<? OR (? IS NOT NULL AND effectiveFrom>?))',
     )
     .get(periodId, bounds.startDate, bounds.endDate, bounds.endDate) as { count: number };
-  if (Number(outside.count) > 0)
+  const count = Number(outside.count);
+  if (count > 0)
     throw new Error(
-      `${outside.count} Arbeitszeitstand/-stände lägen außerhalb des neuen Zeitraums. Datum und Arbeitszeit bitte getrennt prüfen.`,
+      `${count === 1 ? 'Ein Arbeitszeitstand läge' : `${count} Arbeitszeitstände lägen`} außerhalb des neuen Zeitraums. Datum und Arbeitszeit bitte getrennt prüfen.`,
     );
 };
 

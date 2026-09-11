@@ -489,6 +489,8 @@
 }
 
 .cd-repair-list {
+  flex: 1;
+  min-width: 0;
   margin: 0;
   padding-left: 18px;
 }
