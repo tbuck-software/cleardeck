@@ -4,6 +4,7 @@ import Icon from '../ui/Icon';
 import BirthDateInput from '../ui/BirthDateInput';
 import type { QualificationType } from '../../shared/types';
 import type { EditModalState, FormState } from '../../types/ui';
+import { formatDateDE } from '../../utils/dateFormat';
 
 type EmployeeModalProps = {
   state: EditModalState;
@@ -35,6 +36,10 @@ const EmployeeModal = ({
   onDelete,
 }: EmployeeModalProps) => {
   const isCreate = state.mode === 'create';
+  // The save replaces a term only when the date matches the one already on record.
+  const replacesExistingTerm =
+    Boolean(state.existingHoursEffectiveFrom) &&
+    state.hoursEffectiveFrom === state.existingHoursEffectiveFrom;
 
   return (
     <Dialog
@@ -181,7 +186,15 @@ const EmployeeModal = ({
               max={form.endDate || undefined}
               value={state.hoursEffectiveFrom ?? ''}
               onChange={(event) => onStateChange({ hoursEffectiveFrom: event.target.value })}
+              aria-describedby="hours-effective-hint"
             />
+            {state.hoursEffectiveFrom && (
+              <p id="hours-effective-hint" className="cd-muted-13">
+                {replacesExistingTerm
+                  ? `Ersetzt den Stand vom ${formatDateDE(state.existingHoursEffectiveFrom)}.`
+                  : 'Neuer Stand ab diesem Datum. Frühere Stände bleiben in der Historie.'}
+              </p>
+            )}
           </div>
         </div>
       )}
