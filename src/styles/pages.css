@@ -1365,6 +1365,11 @@ button.cd-listrow-main {
   color: var(--color-neutral-700);
 }
 
+/* Zusatzangaben einer Visite stehen unter der Beobachtung, nicht daneben. */
+.cd-visit-line {
+  display: block;
+}
+
 .cd-timeline-tag {
   display: flex;
   flex-wrap: wrap;

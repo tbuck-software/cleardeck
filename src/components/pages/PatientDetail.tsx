@@ -2,6 +2,7 @@ import HelpPopover from '../ui/HelpPopover';
 import { localDate } from '../../utils/calendarDate';
 import React from 'react';
 import Icon from '../ui/Icon';
+import Timeline from '../ui/Timeline';
 import { formatDateDE } from '../../utils/dateFormat';
 import { dueColor } from './PatientList';
 import {
@@ -248,48 +249,40 @@ const PatientDetail = ({
         <h3 className="cd-h3" style={{ marginBottom: 12 }}>
           Pflegevisiten
         </h3>
-        <div className="cd-panel">
-          {visits.length === 0 && <div className="cd-empty">Noch keine Visite dokumentiert.</div>}
-          {visits.map((visit) => (
-            <button
-              key={visit.id}
-              type="button"
-              className="cd-item"
-              onClick={() => onSelectVisit(visit)}
-            >
-              <span
-                className="cd-dot-lg"
-                style={{
-                  background: visit.actionNeeded
-                    ? 'var(--color-accent-500)'
-                    : 'var(--color-accent-2-300)',
-                }}
-              />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600 }}>{formatDateDE(visit.visitDate)}</div>
-                <div className="cd-muted-13">{visit.comment || 'Ohne Beobachtung'}</div>
+        <Timeline
+          empty="Noch keine Visite dokumentiert."
+          items={visits.map((visit) => ({
+            key: String(visit.id),
+            date: formatDateDE(visit.visitDate),
+            color: visit.actionNeeded ? 'var(--color-accent-500)' : 'var(--color-accent-2-300)',
+            title: visit.status === 'planned' ? 'Geplante Pflegevisite' : 'Pflegevisite',
+            subline: (
+              <>
+                {visit.comment || 'Ohne Beobachtung'}
                 {visit.legacyQprRating && (
-                  <div className="cd-muted-13">Frühere Bewertung: {visit.legacyQprRating}</div>
+                  <span className="cd-visit-line">
+                    Frühere Bewertung: {visit.legacyQprRating}
+                  </span>
                 )}
                 {visit.actionNeeded && !visit.resolvedAt && (
-                  <div className="cd-muted-13">
+                  <span className="cd-visit-line">
                     {visit.assignedTo || 'Zuständigkeit offen'}
                     {visit.actionDueDate
                       ? ` · fällig ${formatDateDE(visit.actionDueDate)}`
                       : ' · Frist offen'}
-                  </div>
+                  </span>
                 )}
-              </div>
-              {visit.status === 'planned' ? 'Geplant · ' : ''}
-              {visit.resolvedAt ? `Erledigt am ${formatDateDE(visit.resolvedAt)}` : ''}
-              {visit.actionNeeded && !visit.resolvedAt && (
-                <span className="tag tag-accent" style={{ flex: 'none' }}>
-                  Handlungsbedarf
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+              </>
+            ),
+            tag: visit.resolvedAt ? (
+              <span className="tag tag-ok">Erledigt am {formatDateDE(visit.resolvedAt)}</span>
+            ) : visit.actionNeeded ? (
+              <span className="tag tag-accent">Handlungsbedarf</span>
+            ) : undefined,
+            ariaLabel: `Pflegevisite vom ${formatDateDE(visit.visitDate)} bearbeiten`,
+            onOpen: () => onSelectVisit(visit),
+          }))}
+        />
       </section>
     </div>
   );
