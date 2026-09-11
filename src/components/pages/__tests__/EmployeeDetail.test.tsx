@@ -195,10 +195,16 @@ it('shows the employment chain start separately from the selected qualification 
     ],
   });
 
-  expect(screen.getByText(/Abschnitt seit 01\.01\.2025/)).toBeInTheDocument();
-  expect(document.querySelector('.cd-detail-employment-start')).toHaveTextContent(
-    'Beschäftigt seit 01.07.2023',
-  );
+  expect(
+    screen.getByText(/Beschäftigt seit 01\.07\.2023 .* · Abschnitt seit 01\.01\.2025/),
+  ).toBeInTheDocument();
+});
+
+it('nennt nur den Beschäftigungsbeginn, wenn es nur einen Abschnitt gibt', () => {
+  renderDetail({ employee: { ...employee, startDate: '2024-01-01', employmentStartDate: '2024-01-01' } });
+
+  expect(screen.getByText(/Beschäftigt seit 01\.01\.2024/)).toBeInTheDocument();
+  expect(screen.queryByText(/Abschnitt seit/)).not.toBeInTheDocument();
 });
 
 it('collapses only redundant boundary events and keeps notes or custom titles', () => {
