@@ -1,5 +1,6 @@
 import React from 'react';
 import Dialog from '../ui/Dialog';
+import Combobox from '../ui/Combobox';
 import CompetencyLevelPicker from '../ui/CompetencyLevelPicker';
 import type { CompetencyDefinition } from '../../shared/types';
 import type { EmployeeCompetencyModalState } from '../../types/ui';
@@ -46,26 +47,25 @@ const EmployeeCompetencyModal = ({
       {!isAssigned && (
         <div className="field">
           <label htmlFor="employee-competency">Kompetenz</label>
-          <select
+          <Combobox
             id="employee-competency"
-            className="input"
-            value={state.competencyDefinitionId ?? ''}
-            onChange={(event) => {
-              const selectedId = Number(event.target.value);
+            placeholder="Kürzel oder Bezeichnung eingeben"
+            options={availableDefinitions.map((definition) => ({
+              value: definition.id as number,
+              label: definition.name,
+              code: definition.code ?? undefined,
+              group: definition.category || 'Allgemein',
+            }))}
+            value={state.competencyDefinitionId}
+            onChange={(next) => {
+              const selectedId = next == null ? null : Number(next);
               const definition = availableDefinitions.find((entry) => entry.id === selectedId);
               onChange({
                 competencyDefinitionId: selectedId,
                 competencyName: definition?.name ?? '',
               });
             }}
-          >
-            {availableDefinitions.map((definition) => (
-              <option key={definition.id} value={definition.id}>
-                {definition.code ? `${definition.code} · ` : ''}
-                {definition.name}
-              </option>
-            ))}
-          </select>
+          />
         </div>
       )}
 
