@@ -69,7 +69,6 @@ const useAppLogic = () => {
     setSelectedEmployee: employeeSlice.setters.setSelectedEmployee,
     setForm: employeeSlice.setters.setForm,
     loadHistory: eventSlice.actions.loadHistory,
-    setLoading,
     setToast: showToast,
   });
 
@@ -230,7 +229,11 @@ const useAppLogic = () => {
   const handleSelectWithHistory = async (emp: EmployeeWithPeriod) => {
     await employeeSlice.actions.handleSelect(emp);
     if (emp?.id) {
-      await eventSlice.actions.loadHistory(emp.id);
+      try {
+        await eventSlice.actions.loadHistory(emp.id);
+      } catch (err) {
+        handleError(err);
+      }
     }
     eventSlice.setters.setAddPeriodForm((prev) => ({
       ...prev,
@@ -256,7 +259,11 @@ const useAppLogic = () => {
     await employeeSlice.actions.handleEditModalSave();
     const id = employeeSlice.state.selectedEmployee?.id;
     if (id) {
-      await eventSlice.actions.loadHistory(id);
+      try {
+        await eventSlice.actions.loadHistory(id);
+      } catch (err) {
+        handleError(err);
+      }
     }
   };
 
