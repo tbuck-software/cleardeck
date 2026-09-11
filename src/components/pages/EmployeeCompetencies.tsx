@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import Checkbox from '../ui/Checkbox';
 import type { EmployeeCompetency } from '../../shared/types';
 import { COMPETENCY_LEVELS, LEGACY_COMPETENCY_LEVELS } from '../../utils/competencyLevels';
 import { formatDateDE } from '../../utils/dateFormat';
@@ -69,22 +70,21 @@ const EmployeeCompetencies = ({
       </div>
       {competencies.length > 0 && (
         <div className="cd-bulk-toolbar">
-          <label className="cd-selection-control">
-            <input
-              type="checkbox"
-              ref={allRef}
-              checked={selected.length === competencies.length}
-              aria-label={`Alle ${competencies.length} Kompetenzen auswählen`}
-              onChange={(event) =>
-                setSelectedIds(
-                  event.target.checked
-                    ? competencies.map((entry) => entry.competencyDefinitionId)
-                    : [],
-                )
-              }
-            />
+          <Checkbox
+            className="cd-select-all"
+            inputRef={allRef}
+            checked={selected.length === competencies.length}
+            aria-label={`Alle ${competencies.length} Kompetenzen auswählen`}
+            onChange={(event) =>
+              setSelectedIds(
+                event.target.checked
+                  ? competencies.map((entry) => entry.competencyDefinitionId)
+                  : [],
+              )
+            }
+          >
             Alle auswählen
-          </label>
+          </Checkbox>
           {selected.length > 0 && (
             <>
               <span role="status" className="cd-muted-13">
@@ -117,20 +117,18 @@ const EmployeeCompetencies = ({
               className="cd-selectable-row"
               data-selected={selectedIds.includes(competency.competencyDefinitionId)}
             >
-              <label className="cd-selection-control">
-                <input
-                  type="checkbox"
-                  aria-label={`${competency.competencyName} auswählen`}
-                  checked={selectedIds.includes(competency.competencyDefinitionId)}
-                  onChange={(event) =>
-                    setSelectedIds((ids) =>
-                      event.target.checked
-                        ? [...ids, competency.competencyDefinitionId]
-                        : ids.filter((id) => id !== competency.competencyDefinitionId),
-                    )
-                  }
-                />
-              </label>
+              <Checkbox
+                className="cd-row-select"
+                aria-label={`${competency.competencyName} auswählen`}
+                checked={selectedIds.includes(competency.competencyDefinitionId)}
+                onChange={(event) =>
+                  setSelectedIds((ids) =>
+                    event.target.checked
+                      ? [...ids, competency.competencyDefinitionId]
+                      : ids.filter((id) => id !== competency.competencyDefinitionId),
+                  )
+                }
+              />
               <button
                 type="button"
                 className="cd-item cd-competency-row"
