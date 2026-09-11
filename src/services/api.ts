@@ -56,6 +56,10 @@ export const api = {
     listEvents: (employeeId: number) => call('listEvents', baseApi.listEvents, employeeId),
     save: (input: Parameters<Api['saveEmployee']>[0]) =>
       call('saveEmployee', baseApi.saveEmployee, input),
+    recordDeparture: (input: Parameters<Api['recordDeparture']>[0]) =>
+      call('recordDeparture', baseApi.recordDeparture, input),
+    switchQualification: (input: Parameters<Api['switchQualification']>[0]) =>
+      call('switchQualification', baseApi.switchQualification, input),
     delete: (id: number, year: number) => call('deleteEmployee', baseApi.deleteEmployee, id, year),
   },
   workingTimes: {

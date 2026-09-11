@@ -6,6 +6,7 @@ import useConfirmations from './useConfirmations';
 import useRecovery from './useRecovery';
 import useSettingsDb from './useSettingsDb';
 import useEventsPeriods from './useEventsPeriods';
+import useEmploymentActions from './useEmploymentActions';
 import useEmployees from './useEmployees';
 import useAuth from './useAuth';
 import useUpcomingEvents from './useUpcomingEvents';
@@ -15,7 +16,7 @@ import usePatients from './usePatients';
 import usePatientDashboard from './usePatientDashboard';
 import { userFacingErrorMessage } from '../utils/errorMessage';
 
-const useAppLogic = () => {
+const useAppLogic = ({ datasetMode = 'year' }: { datasetMode?: 'year' | 'directory' } = {}) => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
   const [year, setYear] = useState<number>(currentYear);
   const [toast, setToast] = useState<string | null>(null);
@@ -59,6 +60,18 @@ const useAppLogic = () => {
     setLoading,
     setToast: showToast,
     confirmAction,
+  });
+
+  const employmentActionSlice = useEmploymentActions({
+    year,
+    selectedEmployee: employeeSlice.state.selectedEmployee,
+    setDataset: employeeSlice.setters.setDataset,
+    setSelectedEmployee: employeeSlice.setters.setSelectedEmployee,
+    setForm: employeeSlice.setters.setForm,
+    loadHistory: eventSlice.actions.loadHistory,
+    setLoading,
+    setToast: showToast,
+    datasetMode,
   });
 
   const {
@@ -298,6 +311,7 @@ const useAppLogic = () => {
       addPeriodForm: eventSlice.state.addPeriodForm,
       periodToDelete: eventSlice.state.periodToDelete,
       eventModal: eventSlice.state.eventModal,
+      employmentAction: employmentActionSlice.state,
       confirmState,
       recoveryKeyModal,
       recoveryReset,
@@ -412,6 +426,9 @@ const useAppLogic = () => {
       openNewPeriodModal: eventSlice.actions.openNewPeriodModal,
       openExistingPeriodModal: eventSlice.actions.openExistingPeriodModal,
       openEventModalForEvent: eventSlice.actions.openEventModalForEvent,
+      openEmploymentAction: employmentActionSlice.actions.open,
+      closeEmploymentAction: employmentActionSlice.actions.close,
+      saveEmploymentAction: employmentActionSlice.actions.save,
       openCreateModal: employeeSlice.actions.openCreateModal,
       openEditModal: employeeSlice.actions.openEditModal,
       handleEditModalSave: handleEditModalSaveWithHistory,

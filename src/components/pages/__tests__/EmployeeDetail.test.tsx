@@ -132,6 +132,16 @@ describe('EmployeeDetail', () => {
     expect(screen.getByText('Kompetenz hinzufügen').closest('button')).toBeDisabled();
     expect(screen.getByText('Alle Kompetenzen des Katalogs sind zugeordnet.')).toBeInTheDocument();
   });
+
+  it('offers employment changes from one discoverable action menu', () => {
+    const onOpenEmploymentAction = vi.fn();
+    renderDetail({ onOpenEmploymentAction });
+
+    fireEvent.click(screen.getByText('Beschäftigung bearbeiten'));
+    expect(screen.getByRole('menuitem', { name: 'Austritt erfassen' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Qualifikation wechseln' }));
+    expect(onOpenEmploymentAction).toHaveBeenCalledWith('qualification');
+  });
 });
 
 it('shows effective working-time sections in the existing timeline, without recording snapshots or a second table', () => {

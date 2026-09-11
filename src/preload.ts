@@ -3,6 +3,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type {
   BulkCompetencyChange,
   SaveWorkingTimeInput,
+  RecordDepartureInput,
+  SwitchQualificationInput,
   AppState,
   AppInfo,
   EmploymentPeriod,
@@ -66,6 +68,8 @@ export type Api = {
   listPeriods: (employeeId: number) => Promise<EmploymentPeriod[]>;
   listEvents: (employeeId: number) => Promise<EmployeeEvent[]>;
   saveWorkingTime: (input: SaveWorkingTimeInput) => Promise<void>;
+  recordDeparture: (input: RecordDepartureInput) => Promise<YearDataset>;
+  switchQualification: (input: SwitchQualificationInput) => Promise<YearDataset>;
   saveEmployee: (input: {
     id?: number;
     periodId?: number;
@@ -347,6 +351,8 @@ const api: Api = {
   listEvents: (employeeId) => ipcRenderer.invoke('events:list', { employeeId }),
   saveEmployee: (input) => ipcRenderer.invoke('data:save', input),
   saveWorkingTime: (input) => ipcRenderer.invoke('data:saveWorkingTime', input),
+  recordDeparture: (input) => ipcRenderer.invoke('employment:recordDeparture', input),
+  switchQualification: (input) => ipcRenderer.invoke('employment:switchQualification', input),
   deleteEmployee: (id, year) => ipcRenderer.invoke('data:delete', { id, year }),
   saveEvent: (input) => ipcRenderer.invoke('events:save', input),
   deleteEvent: (id, employeeId) => ipcRenderer.invoke('events:delete', { id, employeeId }),

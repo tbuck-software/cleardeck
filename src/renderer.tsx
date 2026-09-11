@@ -43,6 +43,7 @@ import EmployeeInstructionModal from './components/modals/EmployeeInstructionMod
 import RecommendedCompetenciesModal from './components/modals/RecommendedCompetenciesModal';
 import EmployeeModal from './components/modals/EmployeeModal';
 import EventModal from './components/modals/EventModal';
+import EmploymentActionModal from './components/modals/EmploymentActionModal';
 import PatientModal from './components/patients/PatientModal';
 import VisitModal from './components/patients/VisitModal';
 import AuditModal from './components/modals/AuditModal';
@@ -90,6 +91,7 @@ const emptyAuditModal = (): AuditModalState => ({
 });
 
 const App = () => {
+  const [directoryMode, setDirectoryMode] = useState(false);
   const {
     constants: { fteHelp },
     state: {
@@ -127,8 +129,10 @@ const App = () => {
       employeeCompetencyModal,
       employeeInstructionModal,
       suggestedCompetencyModal,
+      periods,
       addPeriodForm,
       eventModal,
+      employmentAction,
       confirmState,
       recoveryKeyModal,
       recoveryReset,
@@ -223,6 +227,9 @@ const App = () => {
       openNewPeriodModal,
       openExistingPeriodModal,
       openEventModalForEvent,
+      openEmploymentAction,
+      closeEmploymentAction,
+      saveEmploymentAction,
       calendarActions,
       openCreateModal,
       openEditModal,
@@ -240,7 +247,7 @@ const App = () => {
       openVisitModal,
       closeVisitModal,
     },
-  } = useAppLogic();
+  } = useAppLogic({ datasetMode: directoryMode ? 'directory' : 'year' });
 
   const { wideSidebar, wideTable } = useViewport();
   const {
@@ -280,7 +287,6 @@ const App = () => {
   }, [reportOpen, reportYear, reportMode, appReady.unlocked, dataset, handleError]);
   const [staffImport, setStaffImport] = useState<StaffImportPreview | null>(null);
   const [staffImportBusy, setStaffImportBusy] = useState(false);
-  const [directoryMode, setDirectoryMode] = useState(false);
   const [directoryDataset, setDirectoryDataset] = useState<YearDataset | null>(null);
   const [currentDataset, setCurrentDataset] = useState<YearDataset | null>(null);
   useEffect(() => {
@@ -1212,6 +1218,7 @@ const App = () => {
             onSelectCompetency={openEmployeeCompetencyModal}
             onSelectInstruction={openEmployeeInstructionModal}
             onStartNewPeriod={openNewPeriodModal}
+            onOpenEmploymentAction={openEmploymentAction}
             onSelectTimelineItem={(item) =>
               item.kind === 'period'
                 ? openExistingPeriodModal(item.record)
@@ -1617,6 +1624,18 @@ const App = () => {
           onSavePeriod={handleAddPeriod}
           onDeleteEvent={handleDeleteEvent}
           onDeletePeriod={(periodId, label) => setPeriodToDelete({ periodId, label })}
+        />
+      )}
+
+      {selectedEmployee && (
+        <EmploymentActionModal
+          open={employmentAction.open}
+          mode={employmentAction.mode}
+          employee={selectedEmployee}
+          periods={periods}
+          qualifications={qualifications}
+          onClose={closeEmploymentAction}
+          onSave={saveEmploymentAction}
         />
       )}
 
