@@ -80,10 +80,13 @@ describe('PatientDetail', () => {
   it('unterscheidet unbekannten Pflegegrad und keinen Pflegegrad', () => {
     const { unmount } = renderDetail({ patient: { ...patient, careLevel: 0 } });
     expect(screen.getByText('Kein Pflegegrad')).toBeInTheDocument();
+    expect(screen.queryByText('fehlt')).not.toBeInTheDocument();
     unmount();
 
+    // Der unbekannte Pflegegrad wird wie jede andere Lücke rot als „fehlt“ gezeigt.
     renderDetail({ patient: { ...patient, careLevel: null } });
-    expect(screen.getByText('Pflegegrad unbekannt')).toBeInTheDocument();
+    expect(screen.getByText('fehlt')).toBeInTheDocument();
+    expect(screen.queryByText('Pflegegrad unbekannt')).not.toBeInTheDocument();
   });
 
   it('nennt die nächste Visite als fällig oder überfällig', () => {
