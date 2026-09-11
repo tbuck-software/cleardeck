@@ -258,5 +258,13 @@ it('collapses only redundant boundary events and keeps notes or custom titles', 
   expect(section).toHaveTextContent('Austritt');
   expect(section).toHaveTextContent('Vertrag bis Jahresende.');
   expect(section).toHaveTextContent('Rückkehr aus Elternzeit');
-  expect(screen.getByRole('button', { name: 'Beschäftigungsperiode ab 01.01.2024 bearbeiten' })).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', {
+      name: 'Beschäftigungsperiode ab 01.01.2024 · Pflegekraft · bis 31.12.2024 bearbeiten',
+    }),
+  ).toBeInTheDocument();
+  // Einmalige Ereignisse gelten am Datum und nennen ihre Notiz.
+  expect(
+    screen.getByRole('button', { name: 'Austritt am 31.12.2024 · Vertrag bis Jahresende. bearbeiten' }),
+  ).toBeInTheDocument();
 });
