@@ -7,6 +7,7 @@ export type AdminItem = {
   note: string;
   tags: string[];
   usage: string;
+  active?: boolean;
 };
 
 type AdminListPageProps = {
@@ -21,6 +22,8 @@ type AdminListPageProps = {
   /** Optional per-row bulk action, e.g. assigning an instruction to many people. */
   assignLabel?: string;
   onAssign?: (id: number) => void;
+  toggleActiveLabel?: (active: boolean) => string;
+  onToggleActive?: (id: number, active: boolean) => void;
 };
 
 const AdminListPage = ({
@@ -33,6 +36,8 @@ const AdminListPage = ({
   onReorder,
   assignLabel,
   onAssign,
+  toggleActiveLabel,
+  onToggleActive,
 }: AdminListPageProps) => {
   const [draggingId, setDraggingId] = useState<number | null>(null);
 
@@ -105,6 +110,19 @@ const AdminListPage = ({
                 }}
               >
                 {assignLabel ?? 'Zuordnen'}
+              </button>
+            )}
+            {onToggleActive && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ flex: 'none' }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleActive(item.id, item.active === false);
+                }}
+              >
+                {toggleActiveLabel?.(item.active !== false) ?? 'Status ändern'}
               </button>
             )}
             <span className="cd-arrow">→</span>

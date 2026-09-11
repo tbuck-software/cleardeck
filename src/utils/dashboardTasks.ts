@@ -18,6 +18,7 @@ import {
   isActivePatient,
   needsAssessment,
   representativeMissing,
+  serviceScopeOf,
 } from './qpr';
 
 export type TaskTarget =
@@ -108,7 +109,7 @@ export const buildDashboardTasks = ({
         weight: 2,
         target,
       });
-    if (patient.serviceScope !== 'eligible' && patient.serviceScope !== 'excluded')
+    if (serviceScopeOf(patient).scope === 'unknown')
       tasks.push({
         id: `patient-scope-${patient.id}`,
         title: `${patient.name} · Leistungsumfang klären`,

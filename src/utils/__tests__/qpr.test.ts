@@ -8,6 +8,8 @@ import {
   teilgruppeLabel,
   teilgruppeOf,
   visitDue,
+  deriveServiceScope,
+  serviceScopeOf,
 } from '../qpr';
 
 describe('teilgruppeOf', () => {
@@ -87,5 +89,34 @@ describe('Datumsrechnung', () => {
     // In Deutschland wird am 29.03.2026 auf Sommerzeit umgestellt.
     expect(daysBetween('2026-03-28', '2026-03-30')).toBe(2);
     expect(addDays('2026-03-28', 2)).toBe('2026-03-30');
+  });
+});
+
+describe('QPR-Leistungsumfang', () => {
+  it('nimmt §36-Körperpflege und pflegerische Betreuung auf', () => {
+    expect(deriveServiceScope(['s36-care']).scope).toBe('eligible');
+    expect(deriveServiceScope(['s36-support']).scope).toBe('eligible');
+  });
+
+  it('schließt reine Haushaltshilfe, Entlastung und Beratung aus', () => {
+    expect(deriveServiceScope(['household', 'relief']).scope).toBe('excluded');
+    expect(deriveServiceScope(['s37-consultation']).scope).toBe('excluded');
+  });
+
+  it('nimmt gemischte Leistungen auf und ignoriert Pflegegradfelder', () => {
+    expect(deriveServiceScope(['relief', 's37-hkp']).scope).toBe('eligible');
+    expect(
+      serviceScopeOf({
+        serviceScope: 'unknown',
+        serviceScopeSource: 'services',
+        services: [],
+      }).scope,
+    ).toBe('unknown');
+  });
+
+  it('zeigt die Herkunft einer alten expliziten Entscheidung', () => {
+    expect(
+      serviceScopeOf({ serviceScope: 'eligible', serviceScopeSource: 'legacy' }),
+    ).toMatchObject({ scope: 'eligible', reason: expect.stringContaining('Übernommene') });
   });
 });

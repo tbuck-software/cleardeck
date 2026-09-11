@@ -1,5 +1,5 @@
 import Checkbox from '../ui/Checkbox';
-import React from 'react';
+import React, { useState } from 'react';
 import Dialog from '../ui/Dialog';
 import Segmented from '../ui/Segmented';
 import BirthDateInput from '../ui/BirthDateInput';
@@ -7,11 +7,13 @@ import {
   HKP_SHORT,
   hkpCodesOf,
   needsAssessment,
+  serviceScopeOf,
   INTENSIVE_CARE_LABEL,
   TEILGRUPPE_LABEL,
   teilgruppeOf,
 } from '../../utils/qpr';
-import type { HkpCode, IntensiveCare } from '../../shared/types';
+import type { HkpCode, IntensiveCare, ServiceDefinition } from '../../shared/types';
+import { SERVICE_TYPE_LABEL, SERVICE_TYPES } from '../../shared/services';
 import type { PatientModalState } from '../../types/ui';
 import {
   CARE_LEVEL_OPTIONS,
@@ -29,10 +31,61 @@ type PatientModalProps = {
   onClose: () => void;
   onSave: () => void;
   onDelete?: () => void;
+  serviceDefinitions: ServiceDefinition[];
 };
 
-const PatientModal = ({ modal, onChange, onClose, onSave, onDelete }: PatientModalProps) => {
+const PatientModal = ({
+  modal,
+  serviceDefinitions,
+  onChange,
+  onClose,
+  onSave,
+  onDelete,
+}: PatientModalProps) => {
   const group = teilgruppeOf(modal.cognitionImpaired, modal.mobilityImpaired);
+  const [servicesExpanded, setServicesExpanded] = useState(false);
+  const [serviceSearch, setServiceSearch] = useState('');
+  const selectedServiceIds = modal.serviceDefinitionIds ?? [];
+  const selectedServices = serviceDefinitions.filter(
+    (definition) => definition.id != null && selectedServiceIds.includes(definition.id),
+  );
+  const serviceSource = modal.serviceScopeSource ?? 'services';
+  const serviceDecision =
+    serviceSource === 'legacy' && selectedServiceIds.length === 0
+      ? serviceScopeOf({ serviceScope: modal.serviceScope, serviceScopeSource: 'legacy' })
+      : serviceScopeOf({
+          serviceScope: 'unknown',
+          serviceScopeSource: 'services',
+          services: selectedServices.map((definition) => ({
+            serviceDefinitionId: definition.id as number,
+            label: definition.name,
+            serviceType: definition.serviceType,
+          })),
+        });
+  const activeDefinitions = serviceDefinitions.filter(
+    (definition) => definition.active !== false || selectedServiceIds.includes(definition.id ?? -1),
+  );
+  const normalizedSearch = serviceSearch.trim().toLocaleLowerCase();
+  const filteredDefinitions = activeDefinitions.filter(
+    (entry) => !normalizedSearch || entry.name.toLocaleLowerCase().includes(normalizedSearch),
+  );
+  const selectedSummary =
+    selectedServices.length === 0
+      ? serviceSource === 'services'
+        ? 'Leistungen noch unbekannt'
+        : 'Keine Auswahl'
+      : `${selectedServices
+          .slice(0, 2)
+          .map((service) => service.name)
+          .join(', ')}${selectedServices.length > 2 ? ` + ${selectedServices.length - 2} weitere` : ''}`;
+  const toggleService = (id: number) => {
+    const nextIds = selectedServiceIds.includes(id)
+      ? selectedServiceIds.filter((current) => current !== id)
+      : [...selectedServiceIds, id];
+    onChange({ ...modal, serviceDefinitionIds: nextIds, serviceScopeSource: 'services' });
+  };
+  const clearServicesAsUnknown = () =>
+    onChange({ ...modal, serviceDefinitionIds: [], serviceScopeSource: 'services' });
 
   const impairmentOptions = (current: boolean | null) => ({
     value: current == null ? NONE : current ? 'yes' : 'no',
@@ -54,7 +107,7 @@ const PatientModal = ({ modal, onChange, onClose, onSave, onDelete }: PatientMod
       help={[
         {
           title: 'Welche Leistungen gehören zur MD-Liste?',
-          body: 'Enthalten sind Leistungen nach §§ 36/39 SGB XI oder §§ 37/37c SGB V; pflegerische Betreuung nach § 36 gehört dazu. Ausgeschlossen: nur Haushalt nach SGB XI, nur § 45a/45b oder deren Kombination, sowie nur Beratung § 37 Abs. 3.',
+          body: 'Die QPR nennt dafür die Leistungen nach § 36 und § 39 SGB XI sowie § 37 und § 37c SGB V. Nur Haushaltshilfe, nur § 45a/45b oder nur ein Beratungsbesuch nach § 37 Abs. 3 werden ausgeschlossen. Die Anlage 7 ist die daraus erstellte Personenliste.',
         },
         {
           title: 'Kriterien für Mobilität und Kognition',
@@ -94,19 +147,85 @@ const PatientModal = ({ modal, onChange, onClose, onSave, onDelete }: PatientMod
             />
           </label>
           <div className="field cd-field-wide">
-            <label>Leistungsumfang für Anlage 7</label>
-            <Segmented
-              fill
-              wrap
-              ariaLabel="Leistungsumfang für Anlage 7"
-              options={[
-                { value: 'unknown' as const, label: 'Noch zu prüfen' },
-                { value: 'eligible' as const, label: 'Auf der Liste' },
-                { value: 'excluded' as const, label: 'Ausgeschlossen' },
-              ]}
-              value={modal.serviceScope ?? 'unknown'}
-              onChange={(serviceScope) => onChange({ ...modal, serviceScope })}
-            />
+            <details
+              className="cd-service-picker"
+              open={servicesExpanded}
+              onToggle={(event) => setServicesExpanded(event.currentTarget.open)}
+            >
+              <summary>
+                <span>Welche Leistungen erbringt euer Dienst für diese Person?</span>
+                <span className="cd-service-summary" title={selectedSummary}>
+                  {selectedSummary}
+                </span>
+              </summary>
+              <div className="cd-service-picker-body">
+                <p className="cd-muted-13" style={{ margin: '0 0 8px' }}>
+                  Mehrere Leistungen auswählen. Die Einordnung für die MD-Personenliste ergibt sich
+                  daraus.
+                </p>
+                <input
+                  className="input cd-service-search"
+                  type="search"
+                  aria-label="Leistungen durchsuchen"
+                  placeholder="Leistungen durchsuchen"
+                  value={serviceSearch}
+                  onChange={(event) => setServiceSearch(event.target.value)}
+                />
+                <div className="cd-service-choice-list">
+                  {SERVICE_TYPES.map((serviceType) => {
+                    const entries = filteredDefinitions.filter((entry) => entry.serviceType === serviceType);
+                    if (!entries.length) return null;
+                    const hasSelected = entries.some(
+                      (entry) => entry.id != null && selectedServiceIds.includes(entry.id),
+                    );
+                    return (
+                      <details key={serviceType} className="cd-service-choice-group" open={hasSelected}>
+                        <summary>
+                          {serviceType === 's36-care'
+                            ? '§ 36 SGB XI · körperbezogene Pflege'
+                            : SERVICE_TYPE_LABEL[serviceType]}
+                          <span className="cd-muted-13">{entries.length}</span>
+                        </summary>
+                        <div className="cd-checkbox-group">
+                          {entries.map((entry) => (
+                            <Checkbox
+                              key={entry.id}
+                              checked={entry.id != null && selectedServiceIds.includes(entry.id)}
+                              onChange={() => {
+                                if (entry.id != null) toggleService(entry.id);
+                              }}
+                            >
+                              {entry.name}
+                            </Checkbox>
+                          ))}
+                        </div>
+                      </details>
+                    );
+                  })}
+                </div>
+                <button
+                  type="button"
+                  className={`btn btn-secondary${serviceSource === 'services' && selectedServiceIds.length === 0 ? ' is-active' : ''}`}
+                  aria-pressed={serviceSource === 'services' && selectedServiceIds.length === 0}
+                  onClick={clearServicesAsUnknown}
+                >
+                  Leistungen noch unbekannt
+                </button>
+              </div>
+            </details>
+            <div className="cd-group-preview" role="status">
+              <span
+                className={`tag ${serviceDecision.scope === 'eligible' ? 'tag-ok' : serviceDecision.scope === 'excluded' ? 'tag-neutral' : 'tag-accent'}`}
+                style={{ fontWeight: 700 }}
+              >
+                {serviceDecision.scope === 'eligible'
+                  ? 'Auf der Liste'
+                  : serviceDecision.scope === 'excluded'
+                    ? 'Nicht auf der Liste'
+                    : 'Ungeklärt'}
+              </span>
+              <span>{serviceDecision.reason}</span>
+            </div>
           </div>
           <div className="field cd-field-wide">
             <label>Vertretung / Betreuung</label>
