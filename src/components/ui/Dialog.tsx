@@ -17,7 +17,7 @@ type DialogProps = {
   primaryDanger?: boolean;
   cancelLabel?: string;
   deleteLabel?: string;
-  /** Action on the edited record itself, e.g. „Zuordnen“ oder „Deaktivieren“. */
+  /** Action on the edited record itself, e.g. „Zuordnen“ or „Deaktivieren“. */
   secondaryLabel?: string;
   onPrimary?: () => void;
   onDelete?: () => void;
