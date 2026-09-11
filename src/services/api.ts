@@ -53,9 +53,15 @@ export const api = {
     list: (year: number, mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory') =>
       call('listEmployees', baseApi.listEmployees, year, mode),
     listPeriods: (employeeId: number) => call('listPeriods', baseApi.listPeriods, employeeId),
+    getEmployeePeriod: (employeeId: number, periodId: number, year: number) =>
+      call('getEmployeePeriod', baseApi.getEmployeePeriod, employeeId, periodId, year),
     listEvents: (employeeId: number) => call('listEvents', baseApi.listEvents, employeeId),
     save: (input: Parameters<Api['saveEmployee']>[0]) =>
       call('saveEmployee', baseApi.saveEmployee, input),
+    recordDeparture: (input: Parameters<Api['recordDeparture']>[0]) =>
+      call('recordDeparture', baseApi.recordDeparture, input),
+    switchQualification: (input: Parameters<Api['switchQualification']>[0]) =>
+      call('switchQualification', baseApi.switchQualification, input),
     delete: (id: number, year: number) => call('deleteEmployee', baseApi.deleteEmployee, id, year),
   },
   workingTimes: {

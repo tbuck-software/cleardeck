@@ -17,7 +17,8 @@ const showDetail = (onSaved: () => Promise<void>) => render(
     timelineItems={[]} suggestedCompetencyCount={0} availableCompetencyCount={0} availableInstructionCount={0}
     onTabChange={vi.fn()} onEdit={vi.fn()} onCompetenciesSaved={vi.fn()} onWorkingTimeSaved={onSaved} onAddCompetency={vi.fn()}
     onAddInstruction={vi.fn()} onOpenSuggestedCompetencies={vi.fn()} onSelectCompetency={vi.fn()}
-    onSelectInstruction={vi.fn()} onStartNewPeriod={vi.fn()} onSelectTimelineItem={vi.fn()} />,
+    onSelectInstruction={vi.fn()} onStartNewPeriod={vi.fn()} onSelectTimelineItem={vi.fn()}
+    onOpenEmploymentAction={vi.fn()} />,
 );
 beforeEach(() => vi.clearAllMocks());
 
@@ -70,6 +71,40 @@ it('adds a separate entry and derives the linked FTE from hours', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
   await waitFor(() => expect(api.workingTimes.save).toHaveBeenCalledWith({
     id: undefined, employeeId: 7, effectiveFrom: '2024-09-01', weeklyHours: 18, fte: 0.5,
+  }));
+});
+
+it('keeps historical qualification corrections editable', () => {
+  const onPeriodFormChange = vi.fn();
+  render(
+    <EventModal
+      state={{ open: true, type: 'period', eventDate: '2026-01-01', title: '', details: '' }}
+      employee={employee}
+      baseHours={36}
+      onWorkingTimeSaved={async () => undefined}
+      qualifications={[{ id: 1, name: 'Pflegekraft' }, { id: 2, name: 'Pflegefachkraft' }]}
+      periodForm={{
+        startDate: '2024-09-01',
+        endDate: '2025-12-31',
+        qualification: 'Pflegekraft',
+        periodId: 9,
+      }}
+      onStateChange={vi.fn()}
+      onPeriodFormChange={onPeriodFormChange}
+      onClose={vi.fn()}
+      onSaveEvent={vi.fn()}
+      onSavePeriod={vi.fn()}
+      onDeleteEvent={vi.fn()}
+      onDeletePeriod={vi.fn()}
+    />,
+  );
+
+  const qualification = screen.getByLabelText('Qualifikation');
+  expect(qualification).not.toBeDisabled();
+  fireEvent.change(qualification, { target: { value: 'Pflegefachkraft' } });
+  expect(onPeriodFormChange).toHaveBeenCalledWith(expect.objectContaining({
+    periodId: 9,
+    qualification: 'Pflegefachkraft',
   }));
 });
 

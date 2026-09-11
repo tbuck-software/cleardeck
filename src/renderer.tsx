@@ -43,6 +43,7 @@ import EmployeeInstructionModal from './components/modals/EmployeeInstructionMod
 import RecommendedCompetenciesModal from './components/modals/RecommendedCompetenciesModal';
 import EmployeeModal from './components/modals/EmployeeModal';
 import EventModal from './components/modals/EventModal';
+import EmploymentActionModal from './components/modals/EmploymentActionModal';
 import PatientModal from './components/patients/PatientModal';
 import VisitModal from './components/patients/VisitModal';
 import AuditModal from './components/modals/AuditModal';
@@ -61,6 +62,7 @@ import { buildDashboardTasks, buildDataQuality, type TaskTarget } from './utils/
 import { groupOfEvent, type EventGroup } from './utils/eventStyle';
 import { matchesQualificationRelevance } from './utils/qualificationRelevance';
 import { userFacingErrorMessage } from './utils/errorMessage';
+import { reselectEmployee } from './utils/selectedEmployee';
 import { unifyEvents } from './utils/unifyEvents';
 import {
   buildNavigationSnapshot,
@@ -127,8 +129,10 @@ const App = () => {
       employeeCompetencyModal,
       employeeInstructionModal,
       suggestedCompetencyModal,
+      periods,
       addPeriodForm,
       eventModal,
+      employmentAction,
       confirmState,
       recoveryKeyModal,
       recoveryReset,
@@ -223,6 +227,9 @@ const App = () => {
       openNewPeriodModal,
       openExistingPeriodModal,
       openEventModalForEvent,
+      openEmploymentAction,
+      closeEmploymentAction,
+      saveEmploymentAction,
       calendarActions,
       openCreateModal,
       openEditModal,
@@ -662,6 +669,23 @@ const App = () => {
     },
     [handleSelect, pushHistorySnapshot],
   );
+
+  /** Working-time saves change the effective term, so re-read the selected period. */
+  const reloadSelectedEmployee = useCallback(async () => {
+    const employeeId = selectedEmployee?.id;
+    if (!employeeId) return;
+    const updated = await api.employees.list(year);
+    setDataset(updated);
+    const refreshed = await reselectEmployee(
+      updated,
+      (person) => person.id === employeeId,
+      async () =>
+        (await api.employees.list(year, 'directory')).employees.find(
+          (person) => person.id === employeeId,
+        ),
+    );
+    if (refreshed) await handleSelect(refreshed);
+  }, [handleSelect, selectedEmployee?.id, setDataset, year]);
 
   const navigateToPatient = useCallback(
     async (patient: PatientWithLatestVisit) => {
@@ -1198,13 +1222,7 @@ const App = () => {
             availableInstructionCount={availableInstructionDefinitions.length}
             onTabChange={setDetailTab}
             onEdit={openEditModal}
-            onWorkingTimeSaved={async () => {
-              const updated = await api.employees.list(year);
-              setDataset(updated);
-              const refreshed = updated.employees.find(person => person.id === selectedEmployee.id)
-                ?? (await api.employees.list(year, 'directory')).employees.find(person => person.id === selectedEmployee.id);
-              if (refreshed) await handleSelect(refreshed);
-            }}
+            onWorkingTimeSaved={reloadSelectedEmployee}
             onCompetenciesSaved={setEmployeeCompetencies}
             onAddCompetency={openNewEmployeeCompetencyModal}
             onAddInstruction={openNewEmployeeInstructionModal}
@@ -1212,6 +1230,7 @@ const App = () => {
             onSelectCompetency={openEmployeeCompetencyModal}
             onSelectInstruction={openEmployeeInstructionModal}
             onStartNewPeriod={openNewPeriodModal}
+            onOpenEmploymentAction={openEmploymentAction}
             onSelectTimelineItem={(item) =>
               item.kind === 'period'
                 ? openExistingPeriodModal(item.record)
@@ -1600,13 +1619,7 @@ const App = () => {
         <EventModal
           employee={selectedEmployee}
           baseHours={baseHours}
-          onWorkingTimeSaved={async () => {
-              const updated = await api.employees.list(year);
-              setDataset(updated);
-              const refreshed = updated.employees.find(person => person.id === selectedEmployee.id)
-                ?? (await api.employees.list(year, 'directory')).employees.find(person => person.id === selectedEmployee.id);
-              if (refreshed) await handleSelect(refreshed);
-            }}
+          onWorkingTimeSaved={reloadSelectedEmployee}
           state={eventModal}
           periodForm={addPeriodForm}
           qualifications={qualifications}
@@ -1617,6 +1630,18 @@ const App = () => {
           onSavePeriod={handleAddPeriod}
           onDeleteEvent={handleDeleteEvent}
           onDeletePeriod={(periodId, label) => setPeriodToDelete({ periodId, label })}
+        />
+      )}
+
+      {selectedEmployee && (
+        <EmploymentActionModal
+          open={employmentAction.open}
+          mode={employmentAction.mode}
+          employee={selectedEmployee}
+          periods={periods}
+          qualifications={qualifications}
+          onClose={closeEmploymentAction}
+          onSave={saveEmploymentAction}
         />
       )}
 
