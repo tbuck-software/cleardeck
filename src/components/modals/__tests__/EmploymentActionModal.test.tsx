@@ -11,6 +11,7 @@ const employee: EmployeeWithPeriod = {
   name: 'Synthetic Action',
   qualification: 'Einarbeitung',
   startDate: '2024-01-01',
+  employmentStartDate: '2024-01-01',
   endDate: '2025-12-31',
   weeklyHours: 18,
   fte: 0.5,
