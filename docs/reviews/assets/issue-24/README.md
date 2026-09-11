@@ -7,4 +7,6 @@ Echte Electron-Aufnahmen unter macOS mit synthetischen Demodaten, 1440 × 1000 C
 - Die Vorschau zeigt den beibehaltenen und den zusammengeführten Zeitraum sowie zwei betroffene Arbeitszeitstände. Nach dem ausdrücklichen Speichern verschwindet die Überschneidung. Der Hinweis auf die ursprüngliche Übernahme bleibt sichtbar.
 - Die erweiterten Reparaturaktionen sind standardmäßig eingeklappt. Vorschauen, Datumsgrenzen, Nachweisübernahme, Konflikte, Rückabwicklung und Personen ohne Beschäftigungsabschnitte sind zusätzlich durch Repository- und UI-Tests abgedeckt.
 
+Nachtrag: Der abgebildete Ablauf über „Daten prüfen“ im Team-Menü besteht nicht mehr. Die Prüfung läuft jetzt beim Laden der Daten mit; die Befunde erscheinen als Aufgaben unter „Heute zu tun“ und werden auf der Historie der betroffenen Person behoben. Die Aufnahmen zeigen damit den Stand vor dieser Umstellung; die Prüfungen und Vorschauen im Hintergrund sind unverändert.
+
 Die Bilder enthalten ausschließlich synthetische Personen. Windows und Linux wurden nicht visuell geprüft.
