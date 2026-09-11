@@ -212,6 +212,33 @@ describe('employment actions', () => {
     })).toThrow(/Beginn/);
   });
 
+  it('refuses to strand a working-time state through the employee editor as well', () => {
+    const person = saveEmployee({
+      name: 'Synthetic Editor Path',
+      qualification: 'Pflegekraft',
+      startDate: '2024-01-01',
+      weeklyHours: 18,
+      fte: 0.5,
+      year: 2026,
+    }).employees[0];
+    saveWorkingTime({ employeeId: person.id!, effectiveFrom: '2026-01-01', weeklyHours: 36, fte: 1 });
+    const before = db.serialize();
+
+    expect(() => saveEmployee({
+      id: person.id,
+      periodId: person.periodId,
+      name: person.name,
+      qualification: 'Pflegekraft',
+      startDate: '2024-01-01',
+      endDate: '2025-12-31',
+      weeklyHours: 18,
+      fte: 0.5,
+      updateHours: false,
+      year: 2025,
+    })).toThrow(/Arbeitszeitstand/);
+    expect(db.serialize()).toEqual(before);
+  });
+
   it('validates dates before changing anything', () => {
     const person = saveEmployee({
       name: 'Synthetic Invalid', qualification: 'Pflegekraft', startDate: '2024-01-01', fte: 1, year: 2024,
