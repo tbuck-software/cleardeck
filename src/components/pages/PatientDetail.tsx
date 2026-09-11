@@ -12,6 +12,9 @@ import {
   hkpCodesOf,
   needsAssessment,
   intensiveCareForList,
+  serviceScopeOf,
+  SERVICE_SCOPE_LABEL,
+  SERVICES_NOT_RECORDED,
   visitDue,
 } from '../../utils/qpr';
 import type { PatientVisit, PatientWithLatestVisit } from '../../shared/types';
@@ -56,9 +59,25 @@ const PatientDetail = ({
     visitIntervalDays,
   );
   const age = ageOf(patient.birthDate);
+  const serviceDecision = serviceScopeOf(patient);
+  // Labels and order come from the catalogue with the record; see useServiceCatalog.
+  const serviceLabels = patient.services?.length
+    ? patient.services.map((service) => service.label).join('; ')
+    : SERVICES_NOT_RECORDED;
 
   const missing = 'fehlt';
-  const facts: { label: string; value: string }[] = [
+  const facts: { label: string; value: string; mutedValue?: string; wide?: boolean }[] = [
+    {
+      label: 'Erbrachte Leistungen',
+      value: serviceLabels,
+      wide: true,
+    },
+    {
+      label: 'Einordnung',
+      value: SERVICE_SCOPE_LABEL[serviceDecision.scope],
+      mutedValue: serviceDecision.reason,
+      wide: true,
+    },
     {
       label: 'Quelle',
       value:
@@ -72,7 +91,10 @@ const PatientDetail = ({
       label: 'Eingeschätzt am',
       value: patient.assessmentDate ? formatDateDE(patient.assessmentDate) : missing,
     },
-    { label: 'Pflegegrad', value: careLevelLabel(patient.careLevel) },
+    {
+      label: 'Pflegegrad',
+      value: patient.careLevel == null ? missing : careLevelLabel(patient.careLevel),
+    },
     {
       label: 'Kognition (Modul 2)',
       value:
@@ -189,7 +211,7 @@ const PatientDetail = ({
         </h3>
         <div className="cd-fact-grid">
           {facts.map((fact) => (
-            <div key={fact.label}>
+            <div key={fact.label} className={fact.wide ? 'cd-fact-wide' : undefined}>
               <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>{fact.label}</div>
               <div
                 style={{
@@ -199,6 +221,7 @@ const PatientDetail = ({
               >
                 {fact.value}
               </div>
+              {fact.mutedValue && <div className="cd-muted-13">{fact.mutedValue}</div>}
             </div>
           ))}
         </div>

@@ -111,6 +111,13 @@ import type { SavePatientInput } from '../repositories/patients';
 import { AUDIT_SECTIONS, deleteAudit, listAudits, saveAudit } from '../repositories/audits';
 import { exportDatabase, importDatabase, exportData, exportPersonList } from '../export';
 import { isUnlocked } from './auth';
+import {
+  addServiceDefinition,
+  listServiceDefinitions,
+  reorderServiceDefinitions,
+  setServiceDefinitionActive,
+  updateServiceDefinition,
+} from '../repositories/services';
 
 /**
  * Ensure database is ready for operations
@@ -252,6 +259,34 @@ export const registerDataHandlers = (): void => {
   handleData('qualifications:reorder', (_event, { ids }: { ids: number[] }) => {
     ensureDbReady();
     return reorderQualifications(ids);
+  });
+
+  // Patient service catalogue
+  handleData('services:list', () => {
+    ensureDbReady();
+    return listServiceDefinitions();
+  });
+  handleData(
+    'services:add',
+    (_event, input: { name: string; serviceType: import('../../shared/types').ServiceType }) => {
+      ensureDbReady();
+      return addServiceDefinition(input);
+    },
+  );
+  handleData(
+    'services:update',
+    (_event, input: { id: number; name: string; serviceType: import('../../shared/types').ServiceType }) => {
+      ensureDbReady();
+      return updateServiceDefinition(input);
+    },
+  );
+  handleData('services:setActive', (_event, { id, active }: { id: number; active: boolean }) => {
+    ensureDbReady();
+    return setServiceDefinitionActive(id, active);
+  });
+  handleData('services:reorder', (_event, { ids }: { ids: number[] }) => {
+    ensureDbReady();
+    return reorderServiceDefinitions(ids);
   });
 
   // Competencies

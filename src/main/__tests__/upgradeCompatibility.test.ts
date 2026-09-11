@@ -64,6 +64,7 @@ for (const [tag, mode] of [
         n: 2,
       });
       expect(listPatients()[0].legacyQprStatus).toBe('C');
+      expect(listPatients()[0].serviceScopeSource).toBe('services');
       expect(listVisits(1)[0]).toMatchObject({
         legacyQprRating: 'D',
         comment: 'Historische Visite',
@@ -79,7 +80,7 @@ for (const [tag, mode] of [
       expect(backups()).toHaveLength(1);
       expect(
         getDb().prepare("SELECT value FROM settings WHERE key='schema_version'").get(),
-      ).toMatchObject({ value: '21' });
+      ).toMatchObject({ value: '22' });
     });
     it('leaves original file and old schema untouched after a migration failure, then retries', () => {
       const migration = migrations.find((m) => m.version === 20)!;
@@ -103,7 +104,7 @@ for (const [tag, mode] of [
   });
 }
 
-it('reopens the original 2.0.0 schema without changing records or creating a migration backup', () => {
+it('upgrades the 2.0.0 schema once, keeps every record and marks undecided people as service-derived', () => {
   runtime.root = fs.mkdtempSync(path.join(os.tmpdir(), 'cleardeck-v200-upgrade-'));
   setStorageMode('plain');
   setEncryptionKey(null);
@@ -112,8 +113,13 @@ it('reopens the original 2.0.0 schema without changing records or creating a mig
   old.exec(fs.readFileSync(path.join(__dirname, 'fixtures', 'v2.0.0.sql'), 'utf8'));
   const tables = ['employees', 'employment_periods', 'employee_competencies', 'competency_history',
     'employment_terms', 'employment_term_history', 'employee_instructions', 'patients', 'patient_visits'];
+  // v022 adds serviceScopeSource; every column that existed before must survive unchanged.
   const snapshot = (db: Pick<SqliteAdapter, 'prepare'>) => tables.map(table =>
-    db.prepare(`SELECT * FROM ${table} ORDER BY id`).all());
+    (db.prepare(`SELECT * FROM ${table} ORDER BY id`).all() as Array<Record<string, unknown>>).map((row) => {
+      const copy = { ...row };
+      delete copy.serviceScopeSource;
+      return copy;
+    }));
   const before = snapshot(old);
   fs.writeFileSync(getWorkingDbPath(), old.serialize());
   fs.writeFileSync(path.join(getDataDir(), 'config.json'), '{}');
@@ -122,8 +128,11 @@ it('reopens the original 2.0.0 schema without changing records or creating a mig
     for (let start = 0; start < 2; start++) {
       openDatabase();
       expect(snapshot(getDb() as unknown as SqliteAdapter)).toEqual(before);
+      expect(
+        getDb().prepare('SELECT serviceScope, serviceScopeSource FROM patients ORDER BY id').all(),
+      ).toEqual([{ serviceScope: 'unknown', serviceScopeSource: 'services' }]);
       const backupDir = path.join(getDataDir(), 'backups');
-      expect(fs.existsSync(backupDir) ? fs.readdirSync(backupDir).filter(name => name.startsWith('before-migration-')) : []).toEqual([]);
+      expect(fs.existsSync(backupDir) ? fs.readdirSync(backupDir).filter(name => name.startsWith('before-migration-')) : []).toHaveLength(1);
       closeDb();
     }
   } finally {

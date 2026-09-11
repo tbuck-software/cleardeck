@@ -24,6 +24,8 @@ export const emptyPatientModal = (): PatientModalState => ({
   hkpCode: null,
   intensiveCare: null,
   careLevel: null,
+  serviceDefinitionIds: [],
+  serviceScopeSource: 'services',
 });
 
 export const emptyVisitModal = (patientId = 0): VisitModalState => ({
@@ -94,8 +96,9 @@ const usePatients = ({ handleError, setLoading, setToast, confirmAction }: UsePa
     }
     setLoading(true);
     try {
+      const { serviceDefinitionIds, serviceScopeSource, ...modalFields } = patientModal;
       const updated = await api.patients.save({
-        ...patientModal,
+        ...modalFields,
         id: patientModal.id,
         name: patientModal.name,
         birthDate: patientModal.birthDate || null,
@@ -108,6 +111,12 @@ const usePatients = ({ handleError, setLoading, setToast, confirmAction }: UsePa
         hkpCode: patientModal.hkpCode,
         intensiveCare: patientModal.intensiveCare,
         careLevel: patientModal.careLevel,
+        ...(serviceScopeSource === 'legacy' && patientModal.id
+          ? { serviceScopeSource: 'legacy' as const }
+          : {
+              serviceDefinitionIds: serviceDefinitionIds ?? [],
+              serviceScopeSource: 'services' as const,
+            }),
       });
       setPatients(updated);
       // Update selectedPatient if we edited the currently selected patient
@@ -263,6 +272,8 @@ const usePatients = ({ handleError, setLoading, setToast, confirmAction }: UsePa
       hkpCode: patient.hkpCode ?? null,
       intensiveCare: patient.intensiveCare ?? null,
       careLevel: patient.careLevel ?? null,
+      serviceDefinitionIds: patient.serviceDefinitionIds ?? [],
+      serviceScopeSource: patient.serviceScopeSource ?? 'legacy',
     });
   }, []);
 

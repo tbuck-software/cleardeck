@@ -43,7 +43,7 @@ const WorkingTimeModal = ({ entry, employee, baseHours, onSaved, onClose, typeSe
       await onSaved();
       onClose();
     } catch (err) {
-      setError(userFacingErrorMessage(err));
+      setError(userFacingErrorMessage(err, 'Speichern fehlgeschlagen.'));
     } finally {
       setSaving(false);
     }
