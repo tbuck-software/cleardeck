@@ -644,6 +644,9 @@
 
 .cd-service-picker > summary,
 .cd-service-choice-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   cursor: pointer;
   list-style: none;
 }
@@ -654,35 +657,24 @@
 }
 
 .cd-service-picker > summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 12px;
   padding: 11px 13px;
   font-weight: 600;
 }
 
-.cd-service-picker > summary::before,
-.cd-service-choice-group > summary::before {
-  content: '⌄';
-  color: var(--color-neutral-600);
-  margin-right: 7px;
-  transition: transform 0.15s ease;
-}
-
-.cd-service-picker[open] > summary::before,
-.cd-service-choice-group[open] > summary::before {
-  transform: rotate(180deg);
+.cd-service-choice-group > summary {
+  gap: 8px;
+  padding: 4px 0;
+  color: var(--color-neutral-800);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .cd-service-picker > summary > span:first-child {
   display: flex;
   align-items: center;
+  flex: 1;
   min-width: 0;
-}
-
-.cd-service-picker > summary > span:first-child::after {
-  content: '';
 }
 
 .cd-service-summary {
@@ -707,17 +699,6 @@
   max-height: 230px;
   overflow-y: auto;
   padding-right: 4px;
-}
-
-.cd-service-choice-group > summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 4px 0;
-  color: var(--color-neutral-800);
-  font-size: 13px;
-  font-weight: 700;
 }
 
 .cd-recovery-key {
@@ -949,8 +930,12 @@
   display: none;
 }
 
-.cd-disclosure > summary::before {
+/* One chevron for every <details> disclosure; the gap spaces it. */
+.cd-disclosure > summary::before,
+.cd-service-picker > summary::before,
+.cd-service-choice-group > summary::before {
   content: '';
+  flex: none;
   width: 0;
   height: 0;
   border-left: 5px solid currentColor;
@@ -959,7 +944,9 @@
   transition: transform 0.15s ease;
 }
 
-.cd-disclosure[open] > summary::before {
+.cd-disclosure[open] > summary::before,
+.cd-service-picker[open] > summary::before,
+.cd-service-choice-group[open] > summary::before {
   transform: rotate(90deg);
 }
 
