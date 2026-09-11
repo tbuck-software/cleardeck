@@ -1470,10 +1470,6 @@ const App = () => {
                   });
               }
             }}
-            assignLabel="Zuordnen"
-            onAssign={page === 'instrs' ? openAssignInstructionModal : undefined}
-            onToggleActive={page === 'services' ? toggleServiceDefinition : undefined}
-            toggleActiveLabel={(active) => (active ? 'Deaktivieren' : 'Aktivieren')}
             onReorder={(id, targetIndex) => {
               if (page === 'quals')
                 reorderTo(
