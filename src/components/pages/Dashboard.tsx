@@ -4,6 +4,7 @@ import Segmented from '../ui/Segmented';
 import Icon from '../ui/Icon';
 import ListPanel from '../ui/ListPanel';
 import TaskRow from '../ui/TaskRow';
+import Timeline from '../ui/Timeline';
 import type { UnifiedEvent, YearDataset } from '../../shared/types';
 import type { DashboardTask, DataQualityCheck, TaskTarget } from '../../utils/dashboardTasks';
 
@@ -260,54 +261,42 @@ const Dashboard = ({
               Kalender
             </button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {upcoming.length === 0 && (
-              <div className="cd-empty">Keine Termine in den nächsten 30 Tagen.</div>
-            )}
-            {upcoming.map((event) => {
+          <Timeline
+            compact
+            empty="Keine Termine in den nächsten 30 Tagen."
+            items={upcoming.map((event) => {
               const days = Math.round(
                 (new Date(`${event.date}T00:00:00`).getTime() -
                   new Date(`${today}T00:00:00`).getTime()) /
                   86400000,
               );
               const soon = days <= 3;
-              return (
-                <button
-                  key={event.id}
-                  type="button"
-                  className="cd-item"
-                  style={{ padding: '10px 8px' }}
-                  onClick={() => onOpenEvent(event)}
-                >
-                  <div
+              const name = event.employeeName ?? event.patientName ?? event.title;
+              return {
+                key: event.id,
+                date: (
+                  <span
                     className="cd-daychip"
                     style={{ color: soon ? 'var(--color-accent-700)' : 'var(--color-text)' }}
                   >
                     {event.date.slice(8, 10)}
-                    <div className="cd-daychip-mon">
+                    <span className="cd-daychip-mon">
                       {MONTHS_SHORT[Number(event.date.slice(5, 7)) - 1]}
-                    </div>
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600 }}>
-                      {event.employeeName ?? event.patientName ?? event.title}
-                    </div>
-                    <div className="cd-muted-13">{event.title}</div>
-                  </div>
-                  <span
-                    style={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      flex: 'none',
-                      color: soon ? 'var(--color-accent-700)' : 'var(--color-text)',
-                    }}
-                  >
-                    {days === 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} T.`}
+                    </span>
                   </span>
-                </button>
-              );
+                ),
+                title: name,
+                subline: event.title,
+                tag: (
+                  <span className={`tag ${soon ? 'tag-accent' : 'tag-neutral'}`}>
+                    {days === 0 ? 'heute' : days === 1 ? 'morgen' : `in ${days} Tagen`}
+                  </span>
+                ),
+                ariaLabel: `${name} öffnen`,
+                onOpen: () => onOpenEvent(event),
+              };
             })}
-          </div>
+          />
         </section>
       </div>
 

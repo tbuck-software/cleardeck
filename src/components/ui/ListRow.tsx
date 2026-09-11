@@ -1,6 +1,13 @@
 import React from 'react';
 import Icon from './Icon';
 
+export type ListRowDrag = {
+  dragging?: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDrop: () => void;
+};
+
 export type ListRowProps = {
   /** Drag handle, checkbox, status dot, code chip or avatar — stays outside the
       clickable area so interactive handles keep working. */
@@ -14,6 +21,8 @@ export type ListRowProps = {
   /** Click only picks the row: button without chevron, for selection lists. */
   onSelect?: () => void;
   selected?: boolean;
+  /** Reorder by dragging the whole row; the visible handle belongs in `leading`. */
+  drag?: ListRowDrag;
   ariaLabel?: string;
   className?: string;
   style?: React.CSSProperties;
@@ -28,6 +37,7 @@ const ListRow = ({
   onOpen,
   onSelect,
   selected,
+  drag,
   ariaLabel,
   className,
   style,
@@ -48,6 +58,19 @@ const ListRow = ({
     <div
       className={`cd-listrow${className ? ` ${className}` : ''}`}
       data-selected={selected ? 'true' : undefined}
+      data-dragging={drag?.dragging ? 'true' : undefined}
+      draggable={drag ? true : undefined}
+      onDragStart={drag?.onDragStart}
+      onDragEnd={drag?.onDragEnd}
+      onDragOver={drag ? (event) => event.preventDefault() : undefined}
+      onDrop={
+        drag
+          ? (event) => {
+              event.preventDefault();
+              drag.onDrop();
+            }
+          : undefined
+      }
       style={style}
     >
       {leading != null && leading !== false && <div className="cd-listrow-lead">{leading}</div>}
