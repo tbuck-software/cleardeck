@@ -265,3 +265,17 @@ it('collapses only redundant boundary events and keeps notes or custom titles', 
   expect(section).toHaveTextContent('Rückkehr aus Elternzeit');
   expect(screen.getByRole('button', { name: 'Beschäftigungsperiode ab 01.01.2024 bearbeiten' })).toBeInTheDocument();
 });
+
+it('zeigt unbekannte Arbeitszeit im Kopf als Gedankenstrich', () => {
+  renderDetail({
+    employee: { ...employee, weeklyHours: null, fte: 0, hoursMissing: true },
+  });
+
+  const facts = document.querySelector('.cd-facts')!;
+  const value = (label: string): string | null =>
+    Array.from(facts.querySelectorAll('.cd-fact-label'))
+      .find((node) => node.textContent?.startsWith(label))
+      ?.previousElementSibling?.textContent ?? null;
+  expect(value('Wochenstunden')).toBe('— h');
+  expect(value('VZÄ')).toBe('—');
+});
