@@ -107,8 +107,18 @@ const DataTable = <Row, Key extends string>({
       <span className="cd-person">
         <Avatar name={name} />
         <span className="cd-person-copy">
-          <span className="cd-person-name">{name}</span>
-          {subline != null && subline !== '' && <span className="cd-person-sub">{subline}</span>}
+          <span className="cd-person-name" title={name}>
+            {name}
+          </span>
+          {/* Die Unterzeile bleibt einzeilig; der volle Text steht im Titel. */}
+          {subline != null && subline !== '' && (
+            <span
+              className="cd-person-sub"
+              title={typeof subline === 'string' ? subline : undefined}
+            >
+              {subline}
+            </span>
+          )}
         </span>
       </span>
     );
