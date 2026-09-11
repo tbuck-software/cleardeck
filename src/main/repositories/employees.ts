@@ -20,7 +20,12 @@ import { saveEvent } from './events';
 import { daysBetween } from '../../utils/qpr';
 import { localDate, requireDate, shiftDays } from '../../utils/calendarDate';
 import { contiguousEmploymentStart } from '../../utils/employment';
-import { assertReportYear, findPeriodConflict, updateEmployeeCache } from './employmentCore';
+import {
+  assertNoStrandedTerms,
+  assertReportYear,
+  findPeriodConflict,
+  updateEmployeeCache,
+} from './employmentCore';
 
 /**
  * Compute employee status for a given year
@@ -394,8 +399,10 @@ export const saveEmployee = (input: {
     );
     if (overlap)
       throw new Error(
-        'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren.',
+        'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren oder „Qualifikation wechseln“ verwenden.',
       );
+    // Same rule as the recorded departure: shortening must not orphan terms.
+    if (periodId && input.endDate) assertNoStrandedTerms(periodId, input.endDate);
     if (periodId) {
       db.prepare(
         'UPDATE employment_periods SET startDate=?,endDate=?,qualification=? WHERE id=?',
