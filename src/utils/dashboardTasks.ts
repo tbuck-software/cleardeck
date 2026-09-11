@@ -119,6 +119,16 @@ export const buildDashboardTasks = ({
         weight: 2,
         target,
       });
+    else if (patient.serviceScopeSource === 'legacy')
+      tasks.push({
+        id: `patient-legacy-scope-${patient.id}`,
+        title: `${patient.name} · Leistungen nachtragen`,
+        sub: 'Die Einordnung stammt noch aus der früheren Erfassung, nicht aus erbrachten Leistungen',
+        tag: 'Stammdaten',
+        tagClass: 'tag-neutral',
+        weight: 5,
+        target,
+      });
     if (due.overdue) {
       tasks.push({
         id: `patient-visit-${patient.id}`,

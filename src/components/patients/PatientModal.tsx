@@ -52,18 +52,18 @@ const PatientModal = ({
     (definition) => definition.id != null && selectedServiceIds.includes(definition.id),
   );
   const serviceSource = modal.serviceScopeSource ?? 'services';
-  const serviceDecision =
-    serviceSource === 'legacy' && selectedServiceIds.length === 0
-      ? serviceScopeOf({ serviceScope: modal.serviceScope, serviceScopeSource: 'legacy' })
-      : serviceScopeOf({
-          serviceScope: 'unknown',
-          serviceScopeSource: 'services',
-          services: selectedServices.map((definition) => ({
-            serviceDefinitionId: definition.id as number,
-            label: definition.name,
-            serviceType: definition.serviceType,
-          })),
-        });
+  const hasLegacyDecision = serviceSource === 'legacy' && selectedServiceIds.length === 0;
+  const serviceDecision = hasLegacyDecision
+    ? serviceScopeOf({ serviceScope: modal.serviceScope, serviceScopeSource: 'legacy' })
+    : serviceScopeOf({
+        serviceScope: 'unknown',
+        serviceScopeSource: 'services',
+        services: selectedServices.map((definition) => ({
+          serviceDefinitionId: definition.id as number,
+          label: definition.name,
+          serviceType: definition.serviceType,
+        })),
+      });
   const activeDefinitions = serviceDefinitions.filter(
     (definition) => definition.active !== false || selectedServiceIds.includes(definition.id ?? -1),
   );
@@ -103,9 +103,9 @@ const PatientModal = ({
   }, [autoOpenKey]);
   const selectedSummary =
     selectedServices.length === 0
-      ? serviceSource === 'services'
-        ? 'Noch nicht erfasst'
-        : 'Übernommene Entscheidung'
+      ? hasLegacyDecision
+        ? 'Übernommene Entscheidung'
+        : 'Noch nicht erfasst'
       : `${selectedServices
           .slice(0, 2)
           .map((service) => service.name)
@@ -249,13 +249,21 @@ const PatientModal = ({
                     </p>
                   ) : null}
                 </div>
+                {hasLegacyDecision && (
+                  <p className="cd-muted-13" style={{ margin: '8px 0 0' }}>
+                    Es gilt noch eine übernommene Entscheidung. Sie wird verworfen, sobald
+                    Leistungen ausgewählt oder als unbekannt geführt werden.
+                  </p>
+                )}
                 <button
                   type="button"
-                  className={`btn btn-secondary${serviceSource === 'services' && selectedServiceIds.length === 0 ? ' is-active' : ''}`}
-                  aria-pressed={serviceSource === 'services' && selectedServiceIds.length === 0}
+                  className="btn btn-secondary"
+                  aria-pressed={!hasLegacyDecision && selectedServiceIds.length === 0}
                   onClick={clearServicesAsUnknown}
                 >
-                  Leistungen noch unbekannt
+                  {hasLegacyDecision
+                    ? 'Übernommene Entscheidung verwerfen'
+                    : 'Leistungen noch unbekannt'}
                 </button>
               </div>
             </details>
