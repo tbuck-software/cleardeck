@@ -3,7 +3,7 @@
 import { act, renderHook } from '@testing-library/react';
 import useEmploymentActions from '../useEmploymentActions';
 import api from '../../services/api';
-import type { EmployeeWithPeriod, YearDataset } from '../../shared/types';
+import type { EmployeeWithPeriod, EmploymentPeriod, YearDataset } from '../../shared/types';
 import type { FormState } from '../../types/ui';
 
 vi.mock('../../services/api', () => ({
@@ -11,6 +11,7 @@ vi.mock('../../services/api', () => ({
   default: {
     employees: {
       list: vi.fn(),
+      listPeriods: vi.fn(),
       recordDeparture: vi.fn(),
       switchQualification: vi.fn(),
     },
@@ -42,6 +43,13 @@ const switchedPeriod: EmployeeWithPeriod = {
   qualification: 'Einarbeitung',
   startDate: '2022-06-01',
 };
+const periodRecord = (employee: EmployeeWithPeriod): EmploymentPeriod => ({
+  id: employee.periodId,
+  employeeId: employee.id,
+  startDate: employee.startDate,
+  endDate: employee.endDate,
+  qualification: employee.qualification,
+});
 
 const dataset = (employees: EmployeeWithPeriod[], reportMode: YearDataset['reportMode']): YearDataset => ({
   employees,
@@ -73,9 +81,13 @@ beforeEach(() => vi.clearAllMocks());
 
 it('keeps the year dataset canonical and the departed historical period selected', async () => {
   const yearResult = dataset([], 'year');
-  const directoryResult = dataset([laterReentry, sourcePeriod], 'directory');
+  const directoryResult = dataset([laterReentry], 'directory');
   vi.mocked(api.employees.recordDeparture).mockResolvedValue(yearResult);
   vi.mocked(api.employees.list).mockResolvedValue(directoryResult);
+  vi.mocked(api.employees.listPeriods).mockResolvedValue([
+    periodRecord(laterReentry),
+    periodRecord(sourcePeriod),
+  ]);
   const { result, setDataset, setSelectedEmployee } = createHook();
 
   await act(async () => {
@@ -84,14 +96,19 @@ it('keeps the year dataset canonical and the departed historical period selected
 
   expect(setDataset).toHaveBeenCalledWith(yearResult);
   expect(api.employees.list).toHaveBeenCalledWith(2024, 'directory');
+  expect(api.employees.listPeriods).toHaveBeenCalledWith(7);
   expect(setSelectedEmployee).toHaveBeenCalledWith(sourcePeriod);
 });
 
 it('selects the newly created qualification period instead of a later reentry', async () => {
   const yearResult = dataset([laterReentry], 'year');
-  const directoryResult = dataset([laterReentry, switchedPeriod], 'directory');
+  const directoryResult = dataset([laterReentry], 'directory');
   vi.mocked(api.employees.switchQualification).mockResolvedValue(yearResult);
   vi.mocked(api.employees.list).mockResolvedValue(directoryResult);
+  vi.mocked(api.employees.listPeriods).mockResolvedValue([
+    periodRecord(laterReentry),
+    periodRecord(switchedPeriod),
+  ]);
   const { result, setDataset, setSelectedEmployee } = createHook();
 
   await act(async () => {
@@ -104,5 +121,6 @@ it('selects the newly created qualification period instead of a later reentry', 
   });
 
   expect(setDataset).toHaveBeenCalledWith(yearResult);
+  expect(api.employees.listPeriods).toHaveBeenCalledWith(7);
   expect(setSelectedEmployee).toHaveBeenCalledWith(switchedPeriod);
 });
