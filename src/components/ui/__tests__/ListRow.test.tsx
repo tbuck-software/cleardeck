@@ -103,6 +103,26 @@ describe('ListRow', () => {
     expect(onOpen).not.toHaveBeenCalled();
   });
 
+  it('sortiert per Ziehen über die ganze Zeile', () => {
+    const onDragStart = vi.fn();
+    const onDrop = vi.fn();
+    const { container } = render(
+      <ListRow
+        title="Brandschutz"
+        drag={{ dragging: true, onDragStart, onDragEnd: vi.fn(), onDrop }}
+      />,
+    );
+    const row = container.querySelector('.cd-listrow') as HTMLElement;
+
+    expect(row).toHaveAttribute('draggable', 'true');
+    expect(row).toHaveAttribute('data-dragging', 'true');
+
+    fireEvent.dragStart(row);
+    fireEvent.drop(row);
+    expect(onDragStart).toHaveBeenCalledTimes(1);
+    expect(onDrop).toHaveBeenCalledTimes(1);
+  });
+
   it('nutzt ein eigenes aria-label für die Zeile', () => {
     render(<ListRow title="12.11.2025" ariaLabel="Prüfung vom 12.11.2025 öffnen" onOpen={vi.fn()} />);
 
