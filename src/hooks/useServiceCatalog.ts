@@ -24,9 +24,11 @@ type Params = {
     action: () => Promise<void> | void,
     options?: ConfirmActionOptions,
   ) => void;
+  /** Patients carry catalogue labels and order, so they follow every change. */
+  refreshPatients: () => Promise<void> | void;
 };
 
-const useServiceCatalog = ({ handleError, setToast, confirmAction }: Params) => {
+const useServiceCatalog = ({ handleError, setToast, confirmAction, refreshPatients }: Params) => {
   const [serviceDefinitions, setServiceDefinitions] = useState<ServiceDefinition[]>([]);
   const [serviceDefinitionModal, setServiceDefinitionModal] = useState<ServiceDefinitionModalState>(
     emptyServiceDefinitionModal(),
@@ -54,11 +56,12 @@ const useServiceCatalog = ({ handleError, setToast, confirmAction }: Params) => 
           });
       setServiceDefinitions(list);
       setServiceDefinitionModal(emptyServiceDefinitionModal());
+      await refreshPatients();
       setToast('Leistung gespeichert.');
     } catch (error) {
       handleError(error);
     }
-  }, [handleError, serviceDefinitionModal, setToast]);
+  }, [handleError, refreshPatients, serviceDefinitionModal, setToast]);
 
   const toggleServiceDefinition = useCallback(
     (id: number, active: boolean) => {
@@ -67,6 +70,7 @@ const useServiceCatalog = ({ handleError, setToast, confirmAction }: Params) => 
         async () => {
           try {
             setServiceDefinitions(await api.services.setActive(id, active));
+            await refreshPatients();
             setToast(active ? 'Leistung aktiviert.' : 'Leistung deaktiviert.');
           } catch (error) {
             handleError(error);
@@ -75,18 +79,19 @@ const useServiceCatalog = ({ handleError, setToast, confirmAction }: Params) => 
         { confirmLabel: active ? 'Aktivieren' : 'Deaktivieren', danger: !active },
       );
     },
-    [confirmAction, handleError, setToast],
+    [confirmAction, handleError, refreshPatients, setToast],
   );
 
   const reorderServiceDefinitions = useCallback(
     async (ids: number[]) => {
       try {
         setServiceDefinitions(await api.services.reorder(ids));
+        await refreshPatients();
       } catch (error) {
         handleError(error);
       }
     },
-    [handleError],
+    [handleError, refreshPatients],
   );
 
   return {

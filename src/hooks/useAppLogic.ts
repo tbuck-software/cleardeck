@@ -151,6 +151,7 @@ const useAppLogic = () => {
     handleError,
     setToast: showToast,
     confirmAction,
+    refreshPatients: patientSlice.actions.refreshPatients,
   });
 
   // Store actions in refs to avoid dependency changes triggering the effect

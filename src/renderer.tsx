@@ -1281,7 +1281,6 @@ const App = () => {
             patient={selectedPatient}
             visits={patientVisits}
             visitIntervalDays={careSettings.visitIntervalDays}
-            serviceDefinitions={serviceDefinitions}
             onEdit={() => openEditPatientModal(selectedPatient)}
             onNewVisit={() => openVisitModal(selectedPatient.id as number)}
             onSelectVisit={(visit) => openVisitModal(selectedPatient.id as number, visit)}
