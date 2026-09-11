@@ -342,6 +342,7 @@ const useEventsPeriods = ({
 
   const displayStart = useMemo(() => {
     if (!selectedEmployee) return '';
+    if (selectedEmployee.employmentStartDate) return selectedEmployee.employmentStartDate;
     const joinDates = events
       .filter((ev) => ev.type === 'join')
       .map((ev) => ev.eventDate)

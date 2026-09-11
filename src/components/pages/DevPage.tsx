@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSync } from '@fortawesome/free-solid-svg-icons';
 import api from '../../services/api';
+import { userFacingErrorMessage } from '../../utils/errorMessage';
 
 type TableData = Record<string, Record<string, unknown>[]>;
 
@@ -24,7 +25,7 @@ const DevPage = () => {
         setActiveTable(tableNames.includes('employees') ? 'employees' : tableNames[0]);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
+      setError(userFacingErrorMessage(err));
     } finally {
       setLoading(false);
     }

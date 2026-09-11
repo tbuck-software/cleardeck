@@ -119,4 +119,15 @@ describe('EmployeeList', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.getByText('2 Personen')).toBeInTheDocument();
   });
+
+  it('zeigt den Beschäftigungsbeginn und kennzeichnet ausgeschiedene Zeilen', () => {
+    renderList({
+      filteredEmployees: employees.map((employee) =>
+        employee.id === 2 ? { ...employee, employmentStartDate: '2022-03-01' } : employee,
+      ),
+    });
+
+    expect(screen.getByText('01.03.2022')).toBeInTheDocument();
+    expect(screen.getByText('Bruno Beispiel').closest('tr')).toHaveClass('cd-row-departed');
+  });
 });

@@ -165,3 +165,79 @@ it('shows effective working-time sections in the existing timeline, without reco
   expect(rows[1]).toHaveTextContent('01.12.2024');
   expect(rows[2]).toHaveTextContent('01.09.2024');
 });
+
+it('shows the employment chain start separately from the selected qualification period', () => {
+  renderDetail({
+    tab: 'hist',
+    employee: { ...employee, periodId: 3, startDate: '2025-01-01' },
+    timelineItems: [
+      {
+        kind: 'period',
+        date: '2025-01-01',
+        record: { id: 3, startDate: '2025-01-01', endDate: null, qualification: 'Pflegekraft' },
+      },
+      {
+        kind: 'period',
+        date: '2024-01-01',
+        record: { id: 2, startDate: '2024-01-01', endDate: '2024-12-31', qualification: 'Pflegekraft' },
+      },
+      {
+        kind: 'period',
+        date: '2023-07-01',
+        record: { id: 1, startDate: '2023-07-01', endDate: '2023-12-31', qualification: 'Fachkraft' },
+      },
+    ],
+  });
+
+  expect(screen.getByText(/Abschnitt seit 01\.01\.2025/)).toBeInTheDocument();
+  expect(document.querySelector('.cd-detail-employment-start')).toHaveTextContent(
+    'Beschäftigt seit 01.07.2023',
+  );
+});
+
+it('collapses only redundant boundary events and keeps notes or custom titles', () => {
+  renderDetail({
+    tab: 'hist',
+    timelineItems: [
+      {
+        kind: 'period',
+        date: '2024-01-01',
+        record: { id: 1, startDate: '2024-01-01', endDate: '2024-12-31', qualification: 'Pflegekraft' },
+      },
+      {
+        kind: 'event',
+        date: '2024-01-01',
+        record: { id: 2, eventDate: '2024-01-01', type: 'join', title: 'Eintritt' },
+      },
+      {
+        kind: 'event',
+        date: '2024-01-01',
+        record: {
+          id: 5,
+          eventDate: '2024-01-01',
+          type: 'join',
+          title: 'Eintritt',
+          details: 'Startdatum: 2024-01-01',
+        },
+      },
+      {
+        kind: 'event',
+        date: '2024-12-31',
+        record: { id: 3, eventDate: '2024-12-31', type: 'leave', title: 'Austritt', details: 'Vertrag bis Jahresende.' },
+      },
+      {
+        kind: 'event',
+        date: '2024-01-01',
+        record: { id: 4, eventDate: '2024-01-01', type: 'join', title: 'Rückkehr aus Elternzeit' },
+      },
+    ],
+  });
+
+  const section = screen.getByRole('heading', { name: 'Historie' }).closest('section')!;
+  expect(section).not.toHaveTextContent('Eintritt');
+  expect(section).not.toHaveTextContent('Startdatum: 2024-01-01');
+  expect(section).toHaveTextContent('Austritt');
+  expect(section).toHaveTextContent('Vertrag bis Jahresende.');
+  expect(section).toHaveTextContent('Rückkehr aus Elternzeit');
+  expect(screen.getByRole('button', { name: 'Beschäftigungsperiode ab 01.01.2024 bearbeiten' })).toBeInTheDocument();
+});
