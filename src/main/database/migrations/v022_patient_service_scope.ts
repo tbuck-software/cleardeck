@@ -55,7 +55,7 @@ export const v022_patient_service_scope: Migration = {
       ['Selbstständige Nahrungsaufnahme', 's36-care'],
       ['Pflegerische Betreuung nach § 36 SGB XI', 's36-support'],
       ['Verhinderungspflege nach § 39 SGB XI', 's39-prevention'],
-      ['Behandlungspflege nach § 37 SGB V', 's37-hkp'],
+      ['Sonstige Behandlungspflege nach § 37 SGB V', 's37-hkp'],
       ['Medizinische Kompressionsstrümpfe anziehen', 's37-hkp'],
       ['Medizinische Kompressionsstrümpfe ausziehen', 's37-hkp'],
       ['Medikamente richten / Medikamentenbox stellen', 's37-hkp'],

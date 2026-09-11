@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { CURRENT_SCHEMA_VERSION } from '../database/migrations';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -80,7 +81,7 @@ for (const [tag, mode] of [
       expect(backups()).toHaveLength(1);
       expect(
         getDb().prepare("SELECT value FROM settings WHERE key='schema_version'").get(),
-      ).toMatchObject({ value: '22' });
+      ).toMatchObject({ value: String(CURRENT_SCHEMA_VERSION) });
     });
     it('leaves original file and old schema untouched after a migration failure, then retries', () => {
       const migration = migrations.find((m) => m.version === 20)!;
