@@ -1,5 +1,5 @@
 import Checkbox from '../ui/Checkbox';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Dialog from '../ui/Dialog';
 import Segmented from '../ui/Segmented';
 import BirthDateInput from '../ui/BirthDateInput';
@@ -13,7 +13,7 @@ import {
   TEILGRUPPE_LABEL,
   teilgruppeOf,
 } from '../../utils/qpr';
-import type { HkpCode, IntensiveCare, ServiceDefinition } from '../../shared/types';
+import type { HkpCode, IntensiveCare, ServiceDefinition, ServiceType } from '../../shared/types';
 import { SERVICE_TYPE_LABEL, SERVICE_TYPES } from '../../shared/services';
 import type { PatientModalState } from '../../types/ui';
 import {
@@ -46,6 +46,7 @@ const PatientModal = ({
   const group = teilgruppeOf(modal.cognitionImpaired, modal.mobilityImpaired);
   const [servicesExpanded, setServicesExpanded] = useState(false);
   const [serviceSearch, setServiceSearch] = useState('');
+  const [openGroups, setOpenGroups] = useState<ServiceType[]>([]);
   const selectedServiceIds = modal.serviceDefinitionIds ?? [];
   const selectedServices = serviceDefinitions.filter(
     (definition) => definition.id != null && selectedServiceIds.includes(definition.id),
@@ -70,6 +71,36 @@ const PatientModal = ({
   const filteredDefinitions = activeDefinitions.filter(
     (entry) => !normalizedSearch || entry.name.toLocaleLowerCase().includes(normalizedSearch),
   );
+  const groupsWithSelection = SERVICE_TYPES.filter((serviceType) =>
+    activeDefinitions.some(
+      (entry) =>
+        entry.serviceType === serviceType &&
+        entry.id != null &&
+        selectedServiceIds.includes(entry.id),
+    ),
+  );
+  const autoOpenGroups = SERVICE_TYPES.filter(
+    (serviceType) =>
+      groupsWithSelection.includes(serviceType) ||
+      (normalizedSearch.length > 0 &&
+        filteredDefinitions.some((entry) => entry.serviceType === serviceType)),
+  );
+  const autoOpenKey = autoOpenGroups.join(',');
+  // The dialog stays mounted, so the picker has to be emptied per patient.
+  useEffect(() => {
+    setServicesExpanded(false);
+    setServiceSearch('');
+    setOpenGroups(groupsWithSelection);
+  }, [modal.open, modal.id]);
+  // Groups open when they gain a selection or a search hit; a group the user
+  // closed stays closed until that set changes again.
+  useEffect(() => {
+    setOpenGroups((previous) =>
+      autoOpenGroups.every((serviceType) => previous.includes(serviceType))
+        ? previous
+        : [...new Set([...previous, ...autoOpenGroups])],
+    );
+  }, [autoOpenKey]);
   const selectedSummary =
     selectedServices.length === 0
       ? serviceSource === 'services'
@@ -176,14 +207,18 @@ const PatientModal = ({
                   {SERVICE_TYPES.map((serviceType) => {
                     const entries = filteredDefinitions.filter((entry) => entry.serviceType === serviceType);
                     if (!entries.length) return null;
-                    const hasSelected = entries.some(
-                      (entry) => entry.id != null && selectedServiceIds.includes(entry.id),
-                    );
                     return (
                       <details
                         key={serviceType}
                         className="cd-service-choice-group"
-                        open={hasSelected || normalizedSearch.length > 0}
+                        open={openGroups.includes(serviceType)}
+                        onToggle={(event) =>
+                          setOpenGroups((previous) =>
+                            event.currentTarget.open
+                              ? [...new Set([...previous, serviceType])]
+                              : previous.filter((current) => current !== serviceType),
+                          )
+                        }
                       >
                         <summary>
                           {serviceType === 's36-care'
