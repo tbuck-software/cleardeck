@@ -1,14 +1,18 @@
 import { requireDate } from '../utils/calendarDate';
 import { formatDateDE } from '../utils/dateFormat';
-import type { ReconcilePeriodsPreview, RepairRecordSummary } from '../shared/types';
+import { employmentMessages, hasReversedDates, periodsOverlap } from '../utils/employment';
+import type { ReconcilePeriodsPreview } from '../shared/types';
 import { getDb } from './database/connection';
 import {
+  PERIOD_COLUMNS,
+  PERIOD_TABLES,
   allRows,
   assertFresh,
   getPeriod,
-  overlaps,
+  periodRecordSummaries,
   recordRepairEvent,
   repairToken,
+  rowsEqual,
   type Db,
   type PeriodRow,
 } from './employmentRepairShared';
@@ -23,20 +27,8 @@ type TermRow = Record<string, unknown> & {
   sourceRef: string | null;
 };
 
-const periodRecords = (db: Db, periodId: number): RepairRecordSummary[] => {
-  const terms = allRows<{ id: number }>(db, 'SELECT id FROM employment_terms WHERE periodId=?', periodId);
-  const history = allRows<{ id: number }>(db, 'SELECT id FROM employment_term_history WHERE periodId=?', periodId);
-  return [
-    { table: 'employment_terms', ids: terms.map((row) => row.id), count: terms.length },
-    { table: 'employment_term_history', ids: history.map((row) => row.id), count: history.length },
-  ].filter((record) => record.count > 0);
-};
-
-const sameTerm = (left: TermRow, right: TermRow): boolean => {
-  const keys = [...new Set([...Object.keys(left), ...Object.keys(right)])]
-    .filter((key) => !['id', 'periodId', 'createdAt'].includes(key));
-  return keys.every((key) => (left[key] ?? null) === (right[key] ?? null));
-};
+const sameTerm = (left: TermRow, right: TermRow): boolean =>
+  rowsEqual(left, right, ['id', 'periodId', 'createdAt']);
 
 const validate = (
   db: Db,
@@ -47,7 +39,7 @@ const validate = (
     endDate: string | null;
   },
 ) => {
-  if (input.periodIds[0] === input.periodIds[1]) throw new Error('Bitte zwei verschiedene Abschnitte auswählen.');
+  if (input.periodIds[0] === input.periodIds[1]) throw new Error(employmentMessages.sameSection);
   if (!input.periodIds.includes(input.retainedPeriodId)) throw new Error('Der beibehaltene Abschnitt gehört nicht zur Auswahl.');
   const removedPeriodId = input.periodIds.find((id) => id !== input.retainedPeriodId)!;
   const retained = getPeriod(input.retainedPeriodId);
@@ -55,27 +47,30 @@ const validate = (
   const conflicts: string[] = [];
   requireDate(input.startDate, 'Beginn');
   if (input.endDate) requireDate(input.endDate, 'Ende');
-  if (input.endDate && input.endDate < input.startDate) conflicts.push('Das Ende liegt vor dem Beginn.');
-  if (retained.employeeId !== removed.employeeId) conflicts.push('Abschnitte gehören zu verschiedenen Personen.');
+  if (input.endDate && input.endDate < input.startDate) conflicts.push(employmentMessages.reversedInput);
+  if (retained.employeeId !== removed.employeeId) conflicts.push(employmentMessages.differentEmployees);
   if (retained.qualification !== removed.qualification) conflicts.push('Die Qualifikationen unterscheiden sich. Bitte die richtige Zielperiode auswählen.');
-  const retainedReversed = Boolean(retained.endDate && retained.startDate > retained.endDate);
-  const removedReversed = Boolean(removed.endDate && removed.startDate > removed.endDate);
+  const anyReversed = hasReversedDates(retained) || hasReversedDates(removed);
   const sameStart = retained.startDate === removed.startDate;
-  const validOverlap = !retainedReversed && !removedReversed && overlaps(retained, removed);
   if (retained.employeeId === removed.employeeId) {
-    const neighbors = allRows<PeriodRow>(db, 'SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods WHERE employeeId=? AND id NOT IN (?,?)', retained.employeeId, retained.id, removed.id);
-    neighbors.forEach((neighbor) => {
-      if (overlaps({ startDate: input.startDate, endDate: input.endDate }, neighbor)) conflicts.push(`Der korrigierte Zeitraum überschneidet sich mit einem weiteren Abschnitt. Bitte Zeitraum anhand des Belegs prüfen.`);
-    });
+    const neighbors = allRows<PeriodRow>(
+      db,
+      `SELECT ${PERIOD_COLUMNS} FROM employment_periods WHERE employeeId=? AND id NOT IN (?,?)`,
+      retained.employeeId,
+      retained.id,
+      removed.id,
+    );
+    if (neighbors.some((neighbor) => periodsOverlap({ startDate: input.startDate, endDate: input.endDate }, neighbor)))
+      conflicts.push(employmentMessages.overlap);
   }
   const targetTerms = allRows<TermRow>(db, 'SELECT * FROM employment_terms WHERE periodId=?', retained.id);
   const sourceTerms = allRows<TermRow>(db, 'SELECT * FROM employment_terms WHERE periodId=?', removed.id);
   const matchingMalformedDuplicate =
-    (retainedReversed || removedReversed) &&
+    anyReversed &&
     targetTerms.length > 0 &&
     targetTerms.length === sourceTerms.length &&
     targetTerms.every((targetTerm) => sourceTerms.some((sourceTerm) => sourceTerm.effectiveFrom === targetTerm.effectiveFrom && sameTerm(targetTerm, sourceTerm)));
-  if (!sameStart && !validOverlap && !matchingMalformedDuplicate)
+  if (!sameStart && !periodsOverlap(retained, removed) && !matchingMalformedDuplicate)
     conflicts.push('Die ausgewählten Zeiträume sind getrennte gültige Abschnitte. Eine Auflösung würde einen echten Zeitraum entfernen.');
   const outsideCorrectedRange = (term: TermRow): boolean =>
     term.effectiveFrom < input.startDate || (input.endDate != null && term.effectiveFrom > input.endDate);
@@ -100,7 +95,7 @@ export const previewReconcilePeriods = (input: {
   const validation = validate(db, input);
   return {
     kind: 'reconcile-periods',
-    token: repairToken(db, 'reconcile-periods', input),
+    token: repairToken(db, 'reconcile-periods', input, PERIOD_TABLES),
     employee: { id: validation.retained.employeeId, name: validation.retained.employeeName! },
     retained: {
       id: validation.retained.id,
@@ -108,7 +103,7 @@ export const previewReconcilePeriods = (input: {
       after: { startDate: input.startDate, endDate: input.endDate },
     },
     removed: { id: validation.removed.id, startDate: validation.removed.startDate, endDate: validation.removed.endDate },
-    affectedRecords: [...periodRecords(db, validation.retained.id), ...periodRecords(db, validation.removed.id)],
+    affectedRecords: [...periodRecordSummaries(db, validation.retained.id), ...periodRecordSummaries(db, validation.removed.id)],
     conflicts: validation.conflicts,
   };
 };
@@ -127,9 +122,8 @@ export const applyReconcilePeriods = (input: {
     startDate: input.startDate,
     endDate: input.endDate,
   };
-  assertFresh(db, input.previewToken, 'reconcile-periods', operation);
   db.transaction(() => {
-    assertFresh(db, input.previewToken, 'reconcile-periods', operation);
+    assertFresh(db, input.previewToken, 'reconcile-periods', operation, PERIOD_TABLES);
     const validation = validate(db, operation);
     if (validation.conflicts.length) throw new Error(validation.conflicts.join(' '));
     const { retained, removed, sourceTerms, targetTerms } = validation;
@@ -138,7 +132,6 @@ export const applyReconcilePeriods = (input: {
       return targetTerm && sameTerm(targetTerm, sourceTerm) ? [{ source: sourceTerm, target: targetTerm }] : [];
     });
     recordRepairEvent(
-      db,
       retained.employeeId,
       'Abschnittsauflösung – ursprünglicher Abschnitt erhalten',
       'Der ausgewählte doppelte Beschäftigungsabschnitt wurde aufgelöst. Seine ursprünglichen Daten bleiben hier als Nachweis erhalten.',

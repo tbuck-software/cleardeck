@@ -112,11 +112,9 @@ import { isUnlocked } from './auth';
 import {
   applyConsolidatePeriods,
   applyEmployeeMerge,
-  applyPeriodDateCorrection,
   getEmploymentIntegrityOverview,
   previewConsolidatePeriods,
   previewEmployeeMerge,
-  previewPeriodDateCorrection,
   applyReconcilePeriods,
   previewReconcilePeriods,
 } from '../employmentRepair';
@@ -216,14 +214,6 @@ export const registerDataHandlers = (): void => {
   handleData('employment:integrityOverview', () => {
     ensureDbReady();
     return getEmploymentIntegrityOverview();
-  });
-  handleData('employment:previewPeriodDate', (_event, input) => {
-    ensureDbReady();
-    return previewPeriodDateCorrection(input);
-  });
-  handleData('employment:applyPeriodDate', (_event, input) => {
-    ensureDbReady();
-    return applyPeriodDateCorrection(input);
   });
   handleData('employment:previewConsolidate', (_event, input) => {
     ensureDbReady();

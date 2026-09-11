@@ -1,16 +1,19 @@
 import { getDb } from './database/connection';
 import { formatDateDE } from '../utils/dateFormat';
+import { employmentMessages, hasReversedDates, periodsOverlap } from '../utils/employment';
 import type { EmployeeMergePreview, RepairRecordSummary } from '../shared/types';
+import { refreshEmployeeHoursCache } from './repositories/employees';
 import {
+  PERIOD_COLUMNS,
   allRows,
   assertFresh,
   employeeRelations,
   getEmployee,
   linkedRecordSummaries,
-  overlaps,
   quoteIdentifier,
   recordRepairEvent,
   repairToken,
+  rowsEqual,
   type Db,
   type EmployeeRow,
   type PeriodRow,
@@ -22,16 +25,14 @@ type CompetencyRow = Record<string, unknown> & {
   competencyDefinitionId: number;
 };
 
+/** A merge rewrites every table that points at an employee, so all of them are fingerprinted. */
+const mergeTables = (db: Db): string[] => ['employees', ...employeeRelations(db).map((relation) => relation.table)];
+
 const competencyRows = (db: Db, employeeId: number): CompetencyRow[] =>
   allRows<CompetencyRow>(db, 'SELECT * FROM employee_competencies WHERE employeeId=?', employeeId);
 
-const comparableCompetencyKeys = (row: CompetencyRow): string[] =>
-  Object.keys(row).filter((key) => !['id', 'employeeId', 'createdAt'].includes(key)).sort();
-
-const sameCompetency = (left: CompetencyRow, right: CompetencyRow): boolean => {
-  const keys = [...new Set([...comparableCompetencyKeys(left), ...comparableCompetencyKeys(right)])];
-  return keys.every((key) => (left[key] ?? null) === (right[key] ?? null));
-};
+const sameCompetency = (left: CompetencyRow, right: CompetencyRow): boolean =>
+  rowsEqual(left, right, ['id', 'employeeId', 'createdAt']);
 
 const competencyLabel = (db: Db, definitionId: number): string => {
   const row = db.prepare('SELECT name FROM competency_definitions WHERE id=?').get(definitionId) as { name?: string } | undefined;
@@ -45,22 +46,18 @@ const mergeConflicts = (db: Db, target: EmployeeRow, source: EmployeeRow): strin
   if (target.department && source.department && target.department !== source.department)
     conflicts.push(`Abteilungen unterscheiden sich (${target.department} / ${source.department}). Bitte vor der Zusammenführung klären.`);
 
-  const targetPeriods = allRows<PeriodRow>(db, 'SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods WHERE employeeId=?', target.id);
-  const sourcePeriods = allRows<PeriodRow>(db, 'SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods WHERE employeeId=?', source.id);
-  const allPeriods = [...targetPeriods, ...sourcePeriods];
+  const allPeriods = [target.id, source.id].flatMap((employeeId) =>
+    allRows<PeriodRow>(db, `SELECT ${PERIOD_COLUMNS} FROM employment_periods WHERE employeeId=?`, employeeId),
+  );
   allPeriods.forEach((period, index) => {
-    if (period.endDate && period.startDate > period.endDate)
-      conflicts.push('Ein Beschäftigungszeitraum hat umgekehrte Daten. Bitte zuerst Beginn und Ende prüfen.');
+    if (hasReversedDates(period)) conflicts.push(employmentMessages.reversedPeriod);
     for (let otherIndex = index + 1; otherIndex < allPeriods.length; otherIndex += 1) {
-      const other = allPeriods[otherIndex];
-      if (overlaps(period, other))
-        conflicts.push('Beschäftigungszeiträume überschneiden sich. Bitte die Zeiträume zuerst korrigieren.');
+      if (periodsOverlap(period, allPeriods[otherIndex])) conflicts.push(employmentMessages.overlap);
     }
   });
 
   const targetCompetencies = competencyRows(db, target.id);
-  const sourceCompetencies = competencyRows(db, source.id);
-  sourceCompetencies.forEach((sourceCompetency) => {
+  competencyRows(db, source.id).forEach((sourceCompetency) => {
     const targetCompetency = targetCompetencies.find(
       (candidate) => candidate.competencyDefinitionId === sourceCompetency.competencyDefinitionId,
     );
@@ -80,29 +77,14 @@ export const previewEmployeeMerge = (input: {
   const db = getDb();
   const target = getEmployee(input.targetEmployeeId);
   const source = getEmployee(input.sourceEmployeeId);
-  const sourceSnapshot = {
-    ...(db.prepare('SELECT * FROM employees WHERE id=?').get(source.id) as Record<string, unknown>),
-    currentCompetencies: competencyRows(db, source.id),
-  };
   return {
     kind: 'employee-merge',
-    token: repairToken(db, 'employee-merge', input),
+    token: repairToken(db, 'employee-merge', input, mergeTables(db)),
     target: { id: target.id, name: target.name },
     source: { id: source.id, name: source.name },
-    sourceSnapshot,
-    periods: {
-      target: Number((db.prepare('SELECT COUNT(*) AS count FROM employment_periods WHERE employeeId=?').get(target.id) as { count?: number } | undefined)?.count ?? 0),
-      source: Number((db.prepare('SELECT COUNT(*) AS count FROM employment_periods WHERE employeeId=?').get(source.id) as { count?: number } | undefined)?.count ?? 0),
-    },
     linkedRecords: linkedRecordSummaries(db, source.id) as RepairRecordSummary[],
     conflicts: mergeConflicts(db, target, source),
   };
-};
-
-const refreshEmployeeCache = (db: Db, employeeId: number): void => {
-  const current = db.prepare(`SELECT t.fte,t.weeklyHours FROM employment_terms t JOIN employment_periods p ON p.id=t.periodId
-    WHERE p.employeeId=? AND t.effectiveFrom<=date('now','localtime') ORDER BY t.effectiveFrom DESC,t.id DESC LIMIT 1`).get(employeeId) as { fte: number; weeklyHours: number | null } | undefined;
-  if (current) db.prepare('UPDATE employees SET fte=?,weeklyHours=? WHERE id=?').run(current.fte, current.weeklyHours, employeeId);
 };
 
 export const applyEmployeeMerge = (input: {
@@ -117,9 +99,8 @@ export const applyEmployeeMerge = (input: {
     targetEmployeeId: input.targetEmployeeId,
     sourceEmployeeId: input.sourceEmployeeId,
   };
-  assertFresh(db, input.previewToken, 'employee-merge', operation);
   db.transaction(() => {
-    assertFresh(db, input.previewToken, 'employee-merge', operation);
+    assertFresh(db, input.previewToken, 'employee-merge', operation, mergeTables(db));
     const target = getEmployee(input.targetEmployeeId);
     const source = getEmployee(input.sourceEmployeeId);
     const sourceCompetencies = competencyRows(db, source.id);
@@ -159,7 +140,6 @@ export const applyEmployeeMerge = (input: {
       db.prepare(`UPDATE ${quoteIdentifier(table)} SET ${quoteIdentifier(column)}=? WHERE ${quoteIdentifier(column)}=?`).run(target.id, source.id);
     });
     recordRepairEvent(
-      db,
       target.id,
       'Zusammenführung – Quelldaten erhalten',
       'Die ausgewählte Quellperson wurde zusammengeführt. Ihre ursprünglichen Personendaten bleiben hier als Nachweis erhalten.',
@@ -173,7 +153,7 @@ export const applyEmployeeMerge = (input: {
       source.name,
       target.name,
     );
-    refreshEmployeeCache(db, target.id);
+    refreshEmployeeHoursCache(db, target.id);
     db.prepare('DELETE FROM employees WHERE id=?').run(source.id);
     if ((db.pragma('foreign_key_check') as unknown[]).length)
       throw new Error('Zusammenführung würde ungültige Datenverknüpfungen erzeugen.');

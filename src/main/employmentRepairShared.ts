@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto';
 
+import { localDate } from '../utils/calendarDate';
+import type { RepairRecordSummary } from '../shared/types';
 import { getDb } from './database/connection';
+import { saveEvent } from './repositories/events';
 
 export type Db = ReturnType<typeof getDb>;
 
@@ -23,6 +26,9 @@ export interface EmployeeRow {
   fte: number | null;
   weeklyHours: number | null;
 }
+
+export const PERIOD_COLUMNS =
+  'id,employeeId,startDate,endDate,qualification,note';
 
 export const allRows = <T = any>(db: Db, sql: string, ...params: unknown[]): T[] =>
   db.prepare(sql).all(...params) as T[];
@@ -48,44 +54,60 @@ export const getPeriod = (id: number): PeriodRow => {
   return row;
 };
 
-export const overlaps = (
-  left: Pick<PeriodRow, 'startDate' | 'endDate'>,
-  right: Pick<PeriodRow, 'startDate' | 'endDate'>,
-): boolean => {
-  if ((left.endDate && left.startDate > left.endDate) || (right.endDate && right.startDate > right.endDate)) return false;
-  return left.startDate <= (right.endDate ?? '9999-12-31') && right.startDate <= (left.endDate ?? '9999-12-31');
+/** Two rows describe the same fact when every field outside `ignored` matches. */
+export const rowsEqual = (
+  left: Record<string, unknown>,
+  right: Record<string, unknown>,
+  ignored: string[],
+): boolean =>
+  [...new Set([...Object.keys(left), ...Object.keys(right)])]
+    .filter((key) => !ignored.includes(key))
+    .every((key) => (left[key] ?? null) === (right[key] ?? null));
+
+export const periodRecordSummaries = (db: Db, periodId: number): RepairRecordSummary[] => {
+  const terms = allRows<{ id: number }>(db, 'SELECT id FROM employment_terms WHERE periodId=?', periodId);
+  const history = allRows<{ id: number }>(db, 'SELECT id FROM employment_term_history WHERE periodId=?', periodId);
+  return [
+    { table: 'employment_terms', ids: terms.map((row) => row.id), count: terms.length },
+    { table: 'employment_term_history', ids: history.map((row) => row.id), count: history.length },
+  ].filter((record) => record.count > 0);
 };
+
+/** Tables a repair reads and rewrites; only these are fingerprinted for its preview. */
+export const PERIOD_TABLES = ['employment_periods', 'employment_terms', 'employment_term_history'];
 
 /**
- * Fingerprint the database state used by a repair preview. Backup bookkeeping
- * is deliberately omitted because a required backup updates its timestamp
- * immediately before the destructive operation; all schema and data rows
- * remain part of the fingerprint.
+ * Fingerprint the database state a repair preview was built from. Only the
+ * tables the operation touches are hashed, so unrelated bookkeeping such as
+ * backup timestamps cannot invalidate a preview.
  */
-export const snapshotToken = (db: Db): string => {
-  const schema = allRows<{ type: string; name: string; sql: string | null }>(
-    db,
-    "SELECT type,name,sql FROM sqlite_master WHERE name NOT LIKE 'sqlite_%' ORDER BY type,name",
-  );
-  const contents = schema
-    .filter((entry) => entry.type === 'table')
-    .map((entry) => ({
-      name: entry.name,
-      rows:
-        entry.name === 'settings'
-          ? allRows(db, "SELECT key,value FROM settings WHERE key NOT IN ('backupLastAt','backupLastError') ORDER BY key")
-          : allRows(db, `SELECT * FROM ${quoteIdentifier(entry.name)}`),
-    }));
-  return createHash('sha256').update(JSON.stringify({ schema, contents })).digest('hex');
+const snapshotToken = (db: Db, tables: string[]): string => {
+  const contents = [...new Set(tables)].sort().map((name) => ({
+    name,
+    schema: (db.prepare('SELECT sql FROM sqlite_master WHERE name=?').get(name) as { sql?: string } | undefined)?.sql ?? null,
+    rows: allRows(db, `SELECT * FROM ${quoteIdentifier(name)}`),
+  }));
+  return createHash('sha256').update(JSON.stringify(contents)).digest('hex');
 };
 
-export const repairToken = (db: Db, operation: string, input: unknown): string =>
+export const repairToken = (
+  db: Db,
+  operation: string,
+  input: unknown,
+  tables: string[],
+): string =>
   createHash('sha256')
-    .update(`${snapshotToken(db)}:${operation}:${JSON.stringify(input)}`)
+    .update(`${snapshotToken(db, tables)}:${operation}:${JSON.stringify(input)}`)
     .digest('hex');
 
-export const assertFresh = (db: Db, token: string, operation: string, input: unknown): void => {
-  if (repairToken(db, operation, input) !== token)
+export const assertFresh = (
+  db: Db,
+  token: string,
+  operation: string,
+  input: unknown,
+  tables: string[],
+): void => {
+  if (repairToken(db, operation, input, tables) !== token)
     throw new Error('Die Vorschau ist veraltet. Bitte Daten neu prüfen.');
 };
 
@@ -129,7 +151,6 @@ export const linkedRecordSummaries = (db: Db, sourceId: number) =>
     .filter((record) => record.count > 0);
 
 export const recordRepairEvent = (
-  db: Db,
   employeeId: number,
   title: string,
   details: string,
@@ -137,14 +158,14 @@ export const recordRepairEvent = (
   previousValue?: string | null,
   newValue?: string | null,
 ): void => {
-  db.prepare(`INSERT INTO employee_events
-    (employeeId,eventDate,type,title,details,meta,previousValue,newValue)
-    VALUES (?,date('now','localtime'),'custom',?,?,?,?,?)`).run(
+  saveEvent({
     employeeId,
+    eventDate: localDate(),
+    type: 'custom',
     title,
     details,
-    JSON.stringify(meta),
-    previousValue ?? null,
-    newValue ?? null,
-  );
+    meta,
+    previousValue: previousValue ?? null,
+    newValue: newValue ?? null,
+  });
 };

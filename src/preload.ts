@@ -41,7 +41,6 @@ import type {
   AuditWithDetails,
   StorageMode,
   EmploymentIntegrityOverview,
-  PeriodDatePreview,
   ConsolidatePreview,
   EmployeeMergePreview,
   ReconcilePeriodsPreview,
@@ -210,17 +209,6 @@ export type Api = {
   ) => Promise<{ imported: boolean; error?: string; backupPath?: string }>;
   deletePeriod: (periodId: number, year: number) => Promise<YearDataset>;
   getEmploymentIntegrityOverview: () => Promise<EmploymentIntegrityOverview>;
-  previewPeriodDateCorrection: (input: {
-    periodId: number;
-    startDate: string;
-    endDate: string | null;
-  }) => Promise<PeriodDatePreview>;
-  applyPeriodDateCorrection: (input: {
-    periodId: number;
-    startDate: string;
-    endDate: string | null;
-    previewToken: string;
-  }) => Promise<void>;
   previewConsolidatePeriods: (input: { periodIds: [number, number] }) => Promise<ConsolidatePreview>;
   applyConsolidatePeriods: (input: {
     periodIds: [number, number];
@@ -438,8 +426,6 @@ const api: Api = {
   importDatabase: (mode, recoveryKey) => ipcRenderer.invoke('db:import', { mode, recoveryKey }),
   deletePeriod: (periodId, year) => ipcRenderer.invoke('period:delete', { periodId, year }),
   getEmploymentIntegrityOverview: () => ipcRenderer.invoke('employment:integrityOverview'),
-  previewPeriodDateCorrection: (input) => ipcRenderer.invoke('employment:previewPeriodDate', input),
-  applyPeriodDateCorrection: (input) => ipcRenderer.invoke('employment:applyPeriodDate', input),
   previewConsolidatePeriods: (input) => ipcRenderer.invoke('employment:previewConsolidate', input),
   applyConsolidatePeriods: (input) => ipcRenderer.invoke('employment:applyConsolidate', input),
   previewEmployeeMerge: (input) => ipcRenderer.invoke('employment:previewMerge', input),

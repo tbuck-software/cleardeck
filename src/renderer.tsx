@@ -51,7 +51,6 @@ import { BackupExportModal, BackupRestoreModal } from './components/modals/Backu
 import AuditViewModal from './components/modals/AuditViewModal';
 import DayModal from './components/modals/DayModal';
 import ReportModal from './components/modals/ReportModal';
-import EmploymentIntegrityModal from './components/modals/EmploymentIntegrityModal';
 
 import api from './services/api';
 import useAppLogic from './hooks/useAppLogic';
@@ -323,7 +322,6 @@ const App = () => {
   const [exportOpen, setExportOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
-  const [employmentIntegrityOpen, setEmploymentIntegrityOpen] = useState(false);
 
   const historyIndexRef = useRef(0);
   const restoringHistoryRef = useRef(false);
@@ -1192,7 +1190,6 @@ const App = () => {
               setReportYear(year);
               setReportOpen(true);
             }}
-            onOpenIntegrity={() => setEmploymentIntegrityOpen(true)}
             onCreate={openCreateModal}
             onSelect={(employee) => void navigateToEmployee(employee)}
           />
@@ -1233,14 +1230,6 @@ const App = () => {
             }
           />
         )}
-
-        <EmploymentIntegrityModal
-          open={employmentIntegrityOpen}
-          employees={directoryDataset?.employees ?? dataset?.employees ?? []}
-          onClose={() => setEmploymentIntegrityOpen(false)}
-          onChanged={refreshAfterEmploymentRepair}
-          onError={handleError}
-        />
 
         {page === 'patients' && !selectedPatient && (
           <PatientList

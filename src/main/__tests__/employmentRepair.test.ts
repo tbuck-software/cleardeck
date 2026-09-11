@@ -8,14 +8,16 @@ import { saveEvent } from '../repositories/events';
 import {
   applyConsolidatePeriods,
   applyEmployeeMerge,
-  applyPeriodDateCorrection,
   getEmploymentIntegrityOverview,
   previewConsolidatePeriods,
   previewEmployeeMerge,
-  previewPeriodDateCorrection,
   applyReconcilePeriods,
   previewReconcilePeriods,
 } from '../employmentRepair';
+import type { IntegrityIssueKind } from '../../shared/types';
+
+const countIssues = (kind: IntegrityIssueKind): number =>
+  getEmploymentIntegrityOverview().issues.filter((issue) => issue.kind === kind).length;
 
 const state = vi.hoisted(() => ({ db: null as unknown }));
 vi.mock('../database/connection', () => ({ getDb: () => state.db }));
@@ -47,8 +49,9 @@ describe('employment repair previews and transactions', () => {
     person('Test Person', '2025-01-01');
     const before = db.serialize();
     const overview = getEmploymentIntegrityOverview();
-    expect(overview.counts['reversed-period']).toBe(1);
-    expect(overview.counts['same-name']).toBe(1);
+    expect(overview.issues.filter((issue) => issue.kind === 'reversed-period')).toHaveLength(1);
+    // One warning per person, so both pages offer the merge.
+    expect(overview.issues.filter((issue) => issue.kind === 'same-name')).toHaveLength(2);
     expect(overview.issues.find((issue) => issue.periodIds.includes(first.periodId!))).toMatchObject({
       severity: 'error',
     });
@@ -63,7 +66,7 @@ describe('employment repair previews and transactions', () => {
       '2024-06-01',
       first.qualification,
     );
-    expect(getEmploymentIntegrityOverview().counts['overlapping-periods']).toBe(1);
+    expect(countIssues('overlapping-periods')).toBe(1);
   });
 
   it('includes employees without periods when they still have repair evidence', () => {
@@ -75,16 +78,12 @@ describe('employment repair previews and transactions', () => {
 
     const overview = getEmploymentIntegrityOverview();
 
-    expect(overview.repairEmployees).toContainEqual({
+    expect(overview.employees).toContainEqual({
       id: orphanId,
       name: 'Nachweis ohne Zeitraum',
       birthDate: '1982-06-07',
-      startDate: null,
-      endDate: null,
-      qualification: null,
-      periodCount: 0,
     });
-    expect(overview.repairEmployees.find((employee) => employee.id === orphanId)?.periodCount).toBe(0);
+    expect(overview.periods.some((period) => period.employeeId === orphanId)).toBe(false);
     const preview = previewEmployeeMerge({ targetEmployeeId: target.id!, sourceEmployeeId: orphanId });
     expect(preview.conflicts).toEqual([]);
     expect(preview.source).toEqual({ id: orphanId, name: 'Nachweis ohne Zeitraum' });
@@ -94,32 +93,65 @@ describe('employment repair previews and transactions', () => {
     ]));
   });
 
-  it('repairs a reversed period only after preview validation', () => {
+  it('records the previous dates when the period editor corrects a reversed period', () => {
     const first = person('Reparatur Test', '2024-05-01');
     db.prepare('UPDATE employment_periods SET endDate=? WHERE id=?').run('2024-01-31', first.periodId);
-    const preview = previewPeriodDateCorrection({
-      periodId: first.periodId!,
+    saveEmployee({
+      id: first.id,
+      periodId: first.periodId,
+      name: 'Reparatur Test',
+      qualification: first.qualification,
       startDate: '2024-05-01',
       endDate: '2024-06-30',
-    });
-    expect(preview.period.before).toEqual({ startDate: '2024-05-01', endDate: '2024-01-31' });
-    expect(preview.period.after).toEqual({ startDate: '2024-05-01', endDate: '2024-06-30' });
-    applyPeriodDateCorrection({
-      periodId: first.periodId!,
-      startDate: '2024-05-01',
-      endDate: '2024-06-30',
-      previewToken: preview.token,
+      weeklyHours: 36,
+      fte: 1,
+      updateHours: false,
+      year: 2024,
     });
     expect(db.prepare('SELECT startDate,endDate FROM employment_periods WHERE id=?').get(first.periodId)).toEqual({
       startDate: '2024-05-01',
       endDate: '2024-06-30',
     });
-    const correctionAudit = db.prepare("SELECT meta FROM employee_events WHERE title='Zeitraum korrigiert – ursprüngliche Daten erhalten'").get() as { meta: string };
+    expect(countIssues('reversed-period')).toBe(0);
+    const correctionAudit = db.prepare("SELECT meta,previousValue,newValue FROM employee_events WHERE title='Zeitraum korrigiert – ursprüngliche Daten erhalten'").get() as { meta: string; previousValue: string; newValue: string };
     expect(JSON.parse(correctionAudit.meta)).toMatchObject({
       kind: 'employment-period-date-correction',
       period: { id: first.periodId, startDate: '2024-05-01', endDate: '2024-01-31' },
       correctedDates: { startDate: '2024-05-01', endDate: '2024-06-30' },
     });
+    expect(correctionAudit).toMatchObject({
+      previousValue: '2024-05-01 – 2024-01-31',
+      newValue: '2024-05-01 – 2024-06-30',
+    });
+  });
+
+  it('refuses a period edit that would leave a working-time record outside the section', () => {
+    const employee = person('Arbeitszeit Grenze', '2024-01-01', '2024-12-31');
+    expect(() =>
+      saveEmployee({
+        id: employee.id,
+        periodId: employee.periodId,
+        name: 'Arbeitszeit Grenze',
+        qualification: employee.qualification,
+        startDate: '2024-03-01',
+        endDate: '2024-12-31',
+        weeklyHours: 36,
+        fte: 1,
+        updateHours: false,
+        year: 2024,
+      }),
+    ).toThrow(/außerhalb des neuen Zeitraums/);
+  });
+
+  it('only warns about a migrated section while the migration note is still there', () => {
+    const employee = person('Übernahme Notiz', '2024-01-01');
+    db.prepare('UPDATE employment_periods SET note=? WHERE id=?').run(
+      'Aus bisherigem Eintrittsereignis übernommen. Qualifikation und Stunden prüfen.',
+      employee.periodId,
+    );
+    expect(countIssues('suspicious-period')).toBe(1);
+    db.prepare('UPDATE employment_periods SET note=? WHERE id=?').run('Vertrag prüfen', employee.periodId);
+    expect(countIssues('suspicious-period')).toBe(0);
   });
 
   it('resolves an explicit malformed duplicate section without guessing its dates', () => {
@@ -215,7 +247,6 @@ describe('employment repair previews and transactions', () => {
     const followUpId = Number(db.prepare('INSERT INTO employee_instructions(employeeId,instructionDefinitionId,dueDate,previousInstructionId) VALUES (?,?,?,?)').run(source.id, instructionDefinitionId, '2027-03-01', instructionId).lastInsertRowid);
     const merge = previewEmployeeMerge({ targetEmployeeId: target.id!, sourceEmployeeId: source.id! });
     expect(merge.conflicts).toEqual([]);
-    expect(merge.sourceSnapshot).toMatchObject({ id: source.id, name: 'Merge Quelle', note: 'synthetic source metadata', department: 'synthetic department' });
     applyEmployeeMerge({ targetEmployeeId: target.id!, sourceEmployeeId: source.id!, previewToken: merge.token });
 
     expect(db.prepare('SELECT id FROM employees WHERE id=?').get(source.id!)).toBeUndefined();
