@@ -9,8 +9,13 @@ export const v022_patient_service_scope: Migration = {
   description: 'Record service choices and preserve legacy Anlage-7 decisions',
   up: (db) => {
     const columns = db.prepare("PRAGMA table_info('patients')").all() as Array<{ name: string }>;
-    if (!columns.some((column) => column.name === 'serviceScopeSource'))
+    if (!columns.some((column) => column.name === 'serviceScopeSource')) {
       db.exec("ALTER TABLE patients ADD COLUMN serviceScopeSource TEXT NOT NULL DEFAULT 'legacy'");
+      // Only an explicit eligible/excluded choice is a decision worth preserving.
+      db.exec(
+        "UPDATE patients SET serviceScopeSource='services' WHERE serviceScope IS NULL OR serviceScope='unknown'",
+      );
+    }
     db.exec(`
       CREATE TABLE IF NOT EXISTS service_definitions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
