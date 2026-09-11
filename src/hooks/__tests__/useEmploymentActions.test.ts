@@ -100,7 +100,6 @@ const createHook = (selectedEmployee: EmployeeWithPeriod = sourcePeriod) => {
   const setSelectedEmployee = vi.fn();
   const setForm = vi.fn<(updater: (previous: FormState) => FormState) => void>();
   const loadHistory = vi.fn().mockResolvedValue(undefined);
-  const setLoading = vi.fn();
   const setToast = vi.fn();
   const hook = renderHook(() => useEmploymentActions({
     year: 2024,
@@ -109,10 +108,9 @@ const createHook = (selectedEmployee: EmployeeWithPeriod = sourcePeriod) => {
     setSelectedEmployee,
     setForm,
     loadHistory,
-    setLoading,
     setToast,
   }));
-  return { ...hook, setDataset, setSelectedEmployee, setForm, loadHistory, setLoading, setToast };
+  return { ...hook, setDataset, setSelectedEmployee, setForm, loadHistory, setToast };
 };
 
 beforeEach(() => vi.clearAllMocks());
@@ -164,4 +162,15 @@ it('selects the newly created qualification period instead of a later reentry', 
   expect(api.employees.listPeriods).toHaveBeenCalledWith(7);
   expect(api.employees.getEmployeePeriod).toHaveBeenCalledWith(7, 30, 2024);
   expect(setSelectedEmployee).toHaveBeenCalledWith(mappedSwitchedPeriod);
+});
+
+it('reports a failing history reload instead of confirming the action', async () => {
+  vi.mocked(api.employees.recordDeparture).mockResolvedValue(dataset([sourcePeriod], 'year'));
+  const { result, loadHistory, setToast } = createHook();
+  loadHistory.mockRejectedValue(new Error('Historie nicht lesbar.'));
+
+  await expect(
+    result.current.actions.save({ mode: 'departure', periodId: 10, endDate: '2023-12-31' }),
+  ).rejects.toThrow('Historie nicht lesbar.');
+  expect(setToast).not.toHaveBeenCalled();
 });

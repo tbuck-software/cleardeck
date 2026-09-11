@@ -62,6 +62,7 @@ import { buildDashboardTasks, buildDataQuality, type TaskTarget } from './utils/
 import { groupOfEvent, type EventGroup } from './utils/eventStyle';
 import { matchesQualificationRelevance } from './utils/qualificationRelevance';
 import { userFacingErrorMessage } from './utils/errorMessage';
+import { reselectEmployee } from './utils/selectedEmployee';
 import { unifyEvents } from './utils/unifyEvents';
 import {
   buildNavigationSnapshot,
@@ -91,7 +92,6 @@ const emptyAuditModal = (): AuditModalState => ({
 });
 
 const App = () => {
-  const [directoryMode, setDirectoryMode] = useState(false);
   const {
     constants: { fteHelp },
     state: {
@@ -287,6 +287,7 @@ const App = () => {
   }, [reportOpen, reportYear, reportMode, appReady.unlocked, dataset, handleError]);
   const [staffImport, setStaffImport] = useState<StaffImportPreview | null>(null);
   const [staffImportBusy, setStaffImportBusy] = useState(false);
+  const [directoryMode, setDirectoryMode] = useState(false);
   const [directoryDataset, setDirectoryDataset] = useState<YearDataset | null>(null);
   const [currentDataset, setCurrentDataset] = useState<YearDataset | null>(null);
   useEffect(() => {
@@ -668,6 +669,23 @@ const App = () => {
     },
     [handleSelect, pushHistorySnapshot],
   );
+
+  /** Working-time saves change the effective term, so re-read the selected period. */
+  const reloadSelectedEmployee = useCallback(async () => {
+    const employeeId = selectedEmployee?.id;
+    if (!employeeId) return;
+    const updated = await api.employees.list(year);
+    setDataset(updated);
+    const refreshed = await reselectEmployee(
+      updated,
+      (person) => person.id === employeeId,
+      async () =>
+        (await api.employees.list(year, 'directory')).employees.find(
+          (person) => person.id === employeeId,
+        ),
+    );
+    if (refreshed) await handleSelect(refreshed);
+  }, [handleSelect, selectedEmployee?.id, setDataset, year]);
 
   const navigateToPatient = useCallback(
     async (patient: PatientWithLatestVisit) => {
@@ -1204,13 +1222,7 @@ const App = () => {
             availableInstructionCount={availableInstructionDefinitions.length}
             onTabChange={setDetailTab}
             onEdit={openEditModal}
-            onWorkingTimeSaved={async () => {
-              const updated = await api.employees.list(year);
-              setDataset(updated);
-              const refreshed = updated.employees.find(person => person.id === selectedEmployee.id)
-                ?? (await api.employees.list(year, 'directory')).employees.find(person => person.id === selectedEmployee.id);
-              if (refreshed) await handleSelect(refreshed);
-            }}
+            onWorkingTimeSaved={reloadSelectedEmployee}
             onCompetenciesSaved={setEmployeeCompetencies}
             onAddCompetency={openNewEmployeeCompetencyModal}
             onAddInstruction={openNewEmployeeInstructionModal}
@@ -1607,13 +1619,7 @@ const App = () => {
         <EventModal
           employee={selectedEmployee}
           baseHours={baseHours}
-          onWorkingTimeSaved={async () => {
-              const updated = await api.employees.list(year);
-              setDataset(updated);
-              const refreshed = updated.employees.find(person => person.id === selectedEmployee.id)
-                ?? (await api.employees.list(year, 'directory')).employees.find(person => person.id === selectedEmployee.id);
-              if (refreshed) await handleSelect(refreshed);
-            }}
+          onWorkingTimeSaved={reloadSelectedEmployee}
           state={eventModal}
           periodForm={addPeriodForm}
           qualifications={qualifications}
