@@ -247,7 +247,7 @@ const App = () => {
       openVisitModal,
       closeVisitModal,
     },
-  } = useAppLogic({ datasetMode: directoryMode ? 'directory' : 'year' });
+  } = useAppLogic();
 
   const { wideSidebar, wideTable } = useViewport();
   const {

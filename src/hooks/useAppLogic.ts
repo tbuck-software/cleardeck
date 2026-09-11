@@ -16,7 +16,7 @@ import usePatients from './usePatients';
 import usePatientDashboard from './usePatientDashboard';
 import { userFacingErrorMessage } from '../utils/errorMessage';
 
-const useAppLogic = ({ datasetMode = 'year' }: { datasetMode?: 'year' | 'directory' } = {}) => {
+const useAppLogic = () => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
   const [year, setYear] = useState<number>(currentYear);
   const [toast, setToast] = useState<string | null>(null);
@@ -71,7 +71,6 @@ const useAppLogic = ({ datasetMode = 'year' }: { datasetMode?: 'year' | 'directo
     loadHistory: eventSlice.actions.loadHistory,
     setLoading,
     setToast: showToast,
-    datasetMode,
   });
 
   const {
