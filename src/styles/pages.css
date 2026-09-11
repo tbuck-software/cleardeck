@@ -386,6 +386,21 @@
   color: var(--color-neutral-700);
 }
 
+.cd-callout {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  background: var(--color-neutral-50);
+  font-size: 13px;
+}
+
+.cd-callout-error {
+  border-color: var(--bad-300, #e5a5a5);
+  background: var(--bad-50, #fff5f5);
+}
+
 .cd-field-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

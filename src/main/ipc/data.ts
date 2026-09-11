@@ -109,6 +109,17 @@ import type { SavePatientInput } from '../repositories/patients';
 import { AUDIT_SECTIONS, deleteAudit, listAudits, saveAudit } from '../repositories/audits';
 import { exportDatabase, importDatabase, exportData, exportPersonList } from '../export';
 import { isUnlocked } from './auth';
+import {
+  applyConsolidatePeriods,
+  applyEmployeeMerge,
+  applyPeriodDateCorrection,
+  getEmploymentIntegrityOverview,
+  previewConsolidatePeriods,
+  previewEmployeeMerge,
+  previewPeriodDateCorrection,
+  applyReconcilePeriods,
+  previewReconcilePeriods,
+} from '../employmentRepair';
 
 /**
  * Ensure database is ready for operations
@@ -200,6 +211,43 @@ export const registerDataHandlers = (): void => {
   handleData('period:delete', (_event, { periodId, year }: { periodId: number; year: number }) => {
     ensureDbReady();
     return deletePeriod(periodId, year);
+  });
+
+  handleData('employment:integrityOverview', () => {
+    ensureDbReady();
+    return getEmploymentIntegrityOverview();
+  });
+  handleData('employment:previewPeriodDate', (_event, input) => {
+    ensureDbReady();
+    return previewPeriodDateCorrection(input);
+  });
+  handleData('employment:applyPeriodDate', (_event, input) => {
+    ensureDbReady();
+    return applyPeriodDateCorrection(input);
+  });
+  handleData('employment:previewConsolidate', (_event, input) => {
+    ensureDbReady();
+    return previewConsolidatePeriods(input);
+  });
+  handleData('employment:applyConsolidate', (_event, input) => {
+    ensureDbReady();
+    return applyConsolidatePeriods(input);
+  });
+  handleData('employment:previewMerge', (_event, input) => {
+    ensureDbReady();
+    return previewEmployeeMerge(input);
+  });
+  handleData('employment:applyMerge', (_event, input) => {
+    ensureDbReady();
+    return applyEmployeeMerge(input);
+  });
+  handleData('employment:previewReconcile', (_event, input) => {
+    ensureDbReady();
+    return previewReconcilePeriods(input);
+  });
+  handleData('employment:applyReconcile', (_event, input) => {
+    ensureDbReady();
+    return applyReconcilePeriods(input);
   });
 
   // Qualifications
