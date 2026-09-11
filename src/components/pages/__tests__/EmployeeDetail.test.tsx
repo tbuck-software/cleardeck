@@ -78,6 +78,7 @@ const renderDetail = (
       onSelectInstruction={noop}
       onStartNewPeriod={noop}
       onSelectTimelineItem={noop}
+      onOpenEmploymentAction={noop}
       {...overrides}
     />,
   );
@@ -131,6 +132,16 @@ describe('EmployeeDetail', () => {
     renderDetail({ availableCompetencyCount: 0 });
     expect(screen.getByText('Kompetenz hinzufügen').closest('button')).toBeDisabled();
     expect(screen.getByText('Alle Kompetenzen des Katalogs sind zugeordnet.')).toBeInTheDocument();
+  });
+
+  it('offers employment changes from one discoverable action menu', () => {
+    const onOpenEmploymentAction = vi.fn();
+    renderDetail({ onOpenEmploymentAction });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aktion' }));
+    expect(screen.getByRole('menuitem', { name: 'Austritt erfassen' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Qualifikation wechseln' }));
+    expect(onOpenEmploymentAction).toHaveBeenCalledWith('qualification');
   });
 });
 

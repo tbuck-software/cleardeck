@@ -20,6 +20,13 @@ import { saveEvent } from './events';
 import { daysBetween } from '../../utils/qpr';
 import { localDate, requireDate, shiftDays } from '../../utils/calendarDate';
 import { contiguousEmploymentStart } from '../../utils/employment';
+import {
+  assertNoStrandedTerms,
+  assertReportYear,
+  findPeriodConflict,
+  loadPeriod,
+  updateEmployeeCache,
+} from './employmentCore';
 
 /**
  * Compute employee status for a given year
@@ -54,6 +61,89 @@ const buildAggregation = (employees: EmployeeWithPeriod[]): Aggregation => {
   };
 };
 
+type EmployeePeriodRow = {
+  employeeId: number;
+  name: string;
+  note: string | null;
+  createdAt: string;
+  birthDate: string | null;
+  periodId: number;
+  startDate: string;
+  endDate: string | null;
+  qualification: string;
+  periodNote: string | null;
+};
+
+type PeriodWithEmployeeId = EmploymentPeriod & { employeeId: number };
+
+type EmploymentTermSnapshot = {
+  weeklyHours: number | null;
+  fte: number;
+  verified: number;
+  effectiveFrom: string;
+  sourceRef: string | null;
+};
+
+const buildEmploymentStartByPeriod = (allPeriods: PeriodWithEmployeeId[]) => {
+  const periodsByEmployee = new Map<number, EmploymentPeriod[]>();
+  allPeriods.forEach((period) => {
+    const employeePeriods = periodsByEmployee.get(period.employeeId) ?? [];
+    employeePeriods.push(period);
+    periodsByEmployee.set(period.employeeId, employeePeriods);
+  });
+  const employmentStartByPeriod = new Map<number, string>();
+  allPeriods.forEach((period) => {
+    if (period.id == null) return;
+    const start = contiguousEmploymentStart(
+      periodsByEmployee.get(period.employeeId) ?? [],
+      period.id,
+      period.startDate,
+    );
+    if (start) employmentStartByPeriod.set(period.id, start);
+  });
+  return employmentStartByPeriod;
+};
+
+const mapEmployeePeriod = (
+  db: ReturnType<typeof getDb>,
+  row: EmployeePeriodRow,
+  year: number,
+  endIso: string,
+  employmentStartByPeriod: Map<number, string>,
+): EmployeeWithPeriod => {
+  const reference = row.endDate && row.endDate < endIso ? row.endDate : endIso;
+  const terms = db
+    .prepare(
+      'SELECT weeklyHours,fte,verified,effectiveFrom,sourceRef FROM employment_terms WHERE periodId=? AND effectiveFrom<=? ORDER BY effectiveFrom DESC LIMIT 1',
+    )
+    .get(row.periodId, reference) as EmploymentTermSnapshot | undefined;
+  return {
+    id: row.employeeId,
+    periodId: row.periodId,
+    name: row.name,
+    qualification: row.qualification,
+    startDate: row.startDate,
+    endDate: row.endDate,
+    employmentStartDate: employmentStartByPeriod.get(row.periodId) ?? row.startDate,
+    birthDate: row.birthDate,
+    note: row.periodNote ?? row.note,
+    weeklyHours: terms?.weeklyHours ?? null,
+    fte: terms?.fte ?? 0,
+    sourceRef: terms?.sourceRef ?? null,
+    workingTimes: listWorkingTimes(row.employeeId),
+    hoursHistory: db
+      .prepare(
+        `SELECT h.id,h.effectiveFrom,h.weeklyHours,h.fte,h.verified,h.sourceRef,h.changedAt FROM employment_term_history h JOIN employment_periods p ON p.id=h.periodId WHERE p.employeeId=? ORDER BY h.id DESC`,
+      )
+      .all(row.employeeId) as EmployeeWithPeriod['hoursHistory'],
+    hoursVerified: terms?.verified === 1,
+    hoursMissing: !terms,
+    hoursEffectiveFrom: terms?.effectiveFrom,
+    status: computeStatus(row.endDate ?? null, year),
+    createdAt: row.createdAt,
+  };
+};
+
 /**
  * Get all employees with their current period for a given year
  */
@@ -61,8 +151,7 @@ export const getYearDataset = (
   year: number,
   mode: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory' = 'year',
 ): YearDataset => {
-  if (!Number.isInteger(year) || year < 1900 || year > 2200)
-    throw new Error('Ungültiges Berichtsjahr.');
+  assertReportYear(year);
   const db = getDb();
   const startIso = mode === 'directory' ? '1900-01-01' : `${year}-01-01`;
   const endIso =
@@ -93,26 +182,11 @@ export const getYearDataset = (
     .all(
       endIso,
       mode === 'stichtag' || mode === 'current' ? endIso : startIso,
-    ) as (EmployeeWithPeriod & { employeeId: number; periodNote: string | null })[];
+    ) as EmployeePeriodRow[];
   const allPeriods = db
     .prepare('SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods ORDER BY employeeId,startDate,id')
-    .all() as (EmploymentPeriod & { employeeId: number })[];
-  const periodsByEmployee = new Map<number, EmploymentPeriod[]>();
-  allPeriods.forEach((period) => {
-    const employeePeriods = periodsByEmployee.get(period.employeeId) ?? [];
-    employeePeriods.push(period);
-    periodsByEmployee.set(period.employeeId, employeePeriods);
-  });
-  const employmentStartByPeriod = new Map<number, string>();
-  allPeriods.forEach((period) => {
-    if (period.id == null) return;
-    const start = contiguousEmploymentStart(
-      periodsByEmployee.get(period.employeeId) ?? [],
-      period.id,
-      period.startDate,
-    );
-    if (start) employmentStartByPeriod.set(period.id, start);
-  });
+    .all() as PeriodWithEmployeeId[];
+  const employmentStartByPeriod = buildEmploymentStartByPeriod(allPeriods);
   if (mode === 'year-average') {
     const employees: EmployeeWithPeriod[] = [];
     const yearDays = daysBetween(startIso, endIso) + 1;
@@ -183,45 +257,7 @@ export const getYearDataset = (
   for (const row of rows) {
     if (seen.has(row.employeeId)) continue;
     seen.add(row.employeeId);
-    const reference = row.endDate && row.endDate < endIso ? row.endDate : endIso;
-    const terms = db
-      .prepare(
-        'SELECT weeklyHours,fte,verified,effectiveFrom,sourceRef FROM employment_terms WHERE periodId=? AND effectiveFrom<=? ORDER BY effectiveFrom DESC LIMIT 1',
-      )
-      .get(row.periodId, reference) as
-      | {
-          weeklyHours: number | null;
-          fte: number;
-          verified: number;
-          effectiveFrom: string;
-          sourceRef: string | null;
-        }
-      | undefined;
-    employees.push({
-      id: row.employeeId,
-      periodId: row.periodId,
-      name: row.name,
-      qualification: row.qualification,
-      startDate: row.startDate,
-      endDate: row.endDate,
-      employmentStartDate: employmentStartByPeriod.get(row.periodId) ?? row.startDate,
-      birthDate: row.birthDate,
-      note: row.periodNote ?? row.note,
-      weeklyHours: terms?.weeklyHours ?? null,
-      fte: terms?.fte ?? 0,
-      sourceRef: terms?.sourceRef ?? null,
-      workingTimes: listWorkingTimes(row.employeeId),
-      hoursHistory: db
-        .prepare(
-          `SELECT h.id,h.effectiveFrom,h.weeklyHours,h.fte,h.verified,h.sourceRef,h.changedAt FROM employment_term_history h JOIN employment_periods p ON p.id=h.periodId WHERE p.employeeId=? ORDER BY h.id DESC`,
-        )
-        .all(row.employeeId) as EmployeeWithPeriod['hoursHistory'],
-      hoursVerified: terms?.verified === 1,
-      hoursMissing: !terms,
-      hoursEffectiveFrom: terms?.effectiveFrom,
-      status: computeStatus(row.endDate ?? null, year),
-      createdAt: row.createdAt,
-    });
+    employees.push(mapEmployeePeriod(db, row, year, endIso, employmentStartByPeriod));
   }
   employees.sort((a, b) => a.name.localeCompare(b.name, 'de'));
   return {
@@ -251,6 +287,36 @@ export const listPeriods = (employeeId: number): EmploymentPeriod[] => {
     )
     .all(employeeId) as EmploymentPeriod[];
   return rows;
+};
+
+/** Get one period with the same effective working-time mapping used by reports. */
+export const getEmployeePeriod = (
+  employeeId: number,
+  periodId: number,
+  year: number,
+): EmployeeWithPeriod => {
+  assertReportYear(year);
+  const db = getDb();
+  const row = db
+    .prepare(
+      `SELECT e.id AS employeeId,e.name,e.note,e.createdAt,e.birthDate,
+       p.id AS periodId,p.startDate,p.endDate,p.qualification,p.note AS periodNote
+       FROM employees e JOIN employment_periods p ON p.employeeId=e.id
+       WHERE e.id=? AND p.id=?`,
+    )
+    .get(employeeId, periodId) as EmployeePeriodRow | undefined;
+  if (!row) throw new Error('Beschäftigungsperiode nicht gefunden.');
+  const employeePeriods = db
+    .prepare('SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods WHERE employeeId=? ORDER BY startDate,id')
+    .all(employeeId) as PeriodWithEmployeeId[];
+  // Same reference date as the year dataset, so both map the same term.
+  return mapEmployeePeriod(
+    db,
+    row,
+    year,
+    `${year}-12-31`,
+    buildEmploymentStartByPeriod(employeePeriods),
+  );
 };
 
 /**
@@ -320,29 +386,26 @@ export const saveEmployee = (input: {
           ).lastInsertRowid,
       );
     }
-    const existingPeriod = periodId
-      ? (db
-          .prepare('SELECT id,startDate,endDate FROM employment_periods WHERE id=? AND employeeId=?')
-          .get(periodId, employeeId) as
-          | { id: number; startDate: string; endDate: string | null }
-          | undefined)
-      : undefined;
-    if (periodId && !existingPeriod) throw new Error('Beschäftigungsperiode nicht gefunden.');
+    const existingPeriod = periodId ? loadPeriod(employeeId, periodId) : undefined;
+    // A value-only correction leaves the dates alone; unrelated legacy overlaps must not block it.
     const periodDatesUnchanged = Boolean(
       existingPeriod &&
         existingPeriod.startDate === input.startDate &&
         (existingPeriod.endDate ?? null) === (input.endDate || null),
     );
     if (!periodDatesUnchanged) {
-      const overlap = db
-        .prepare(
-          "SELECT id FROM employment_periods WHERE employeeId=? AND id<>? AND startDate<=? AND COALESCE(endDate,'9999-12-31')>=?",
-        )
-        .get(employeeId, periodId ?? -1, input.endDate || '9999-12-31', input.startDate);
+      const overlap = findPeriodConflict(
+        employeeId,
+        periodId,
+        input.startDate,
+        input.endDate || null,
+      );
       if (overlap)
         throw new Error(
-          'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren.',
+          'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren oder „Qualifikation wechseln“ verwenden.',
         );
+      // Same rule as the recorded departure: shortening must not orphan terms.
+      if (periodId && input.endDate) assertNoStrandedTerms(periodId, input.endDate);
     }
     if (periodId) {
       db.prepare(
@@ -417,18 +480,7 @@ export const saveEmployee = (input: {
           eventDate: effective,
         }).forEach((event) => saveEvent({ employeeId, ...event }));
     }
-    // Retain legacy columns as a current-value cache; reports only use terms.
-    const current = db
-      .prepare(
-        'SELECT t.fte,t.weeklyHours FROM employment_terms t JOIN employment_periods p ON p.id=t.periodId WHERE p.employeeId=? AND t.effectiveFrom<=? ORDER BY t.effectiveFrom DESC LIMIT 1',
-      )
-      .get(employeeId, localDate()) as { fte: number; weeklyHours: number | null } | undefined;
-    if (current)
-      db.prepare('UPDATE employees SET fte=?,weeklyHours=? WHERE id=?').run(
-        current.fte,
-        current.weeklyHours,
-        employeeId,
-      );
+    updateEmployeeCache(employeeId);
   })();
   return getYearDataset(input.year);
 };
