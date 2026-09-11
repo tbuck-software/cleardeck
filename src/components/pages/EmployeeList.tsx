@@ -129,11 +129,6 @@ const EmployeeList = ({
           </p>
         </div>
         <div className="cd-actions">
-          {onImport && (
-            <button className="btn btn-secondary" type="button" onClick={onImport}>
-              Mitarbeiterliste übernehmen (Excel / CSV)
-            </button>
-          )}
           <button
             type="button"
             className="btn btn-secondary btn-icon"
@@ -160,6 +155,17 @@ const EmployeeList = ({
                 >
                   Jahresnachweis erstellen…
                 </button>
+                {onImport && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      onImport();
+                    }}
+                  >
+                    Mitarbeiterliste übernehmen (Excel / CSV)…
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
