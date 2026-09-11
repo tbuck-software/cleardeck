@@ -38,6 +38,7 @@ import type {
   IntensiveCare,
   ServiceDefinition,
   ServiceScope,
+  ServiceScopeSource,
   ServiceType,
   AuditResult,
   AuditSectionDefinition,
@@ -263,6 +264,8 @@ export type Api = {
     serviceStatus?: 'active' | 'ended';
     serviceEndDate?: string | null;
     serviceScope?: ServiceScope;
+    serviceDefinitionIds?: number[];
+    serviceScopeSource?: ServiceScopeSource;
     representativeStatus?: 'present' | 'none' | 'unknown';
     hkpCodes?: HkpCode[];
     assessmentSource?: 'report' | 'own' | 'unknown';
