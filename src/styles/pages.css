@@ -1252,7 +1252,7 @@ button.cd-listrow-main {
   align-items: center;
   justify-content: flex-end;
   gap: 14px;
-  max-width: 240px;
+  max-width: 340px;
   font-size: 13px;
   color: var(--color-neutral-700);
   text-align: right;
