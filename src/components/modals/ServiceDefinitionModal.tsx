@@ -16,7 +16,7 @@ const ServiceDefinitionModal = ({ state, onChange, onClose, onSave }: Props) => 
     open={state.open}
     width={520}
     title={state.id ? 'Leistung bearbeiten' : 'Neue Leistung'}
-    subtitle="Leistungen bleiben bei bestehenden Zuordnungen nachvollziehbar. Deaktiviere sie, wenn sie nicht mehr angeboten werden."
+    subtitle="Leistungen bleiben bei bestehenden Zuordnungen nachvollziehbar. Nicht mehr angebotene Leistungen lassen sich deaktivieren."
     primaryLabel="Speichern"
     primaryDisabled={!state.name.trim()}
     onPrimary={onSave}
