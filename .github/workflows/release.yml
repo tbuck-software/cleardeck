@@ -71,7 +71,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      # 2.1.0 platform plan: no new Mac binary. Keep the previous
+      # 2.2.0 platform plan: no new Mac binary. Keep the previous
       # channel bytes so old Mac clients do not lose their shared GitHub feed.
       - run: node scripts/retain-mac-feed.cjs retained-mac
         env:
@@ -88,7 +88,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        old-version: ['1.7.1', '1.8.0', '2.0.0']
+        old-version: ['1.7.1', '1.8.0', '2.0.0', '2.1.0']
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
