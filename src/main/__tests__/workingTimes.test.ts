@@ -63,6 +63,8 @@ describe('working-time corrections', () => {
 
     expect(getYearDataset(2024, 'stichtag').aggregation.totalFte).toBe(0);
     expect(getYearDataset(2025, 'stichtag').aggregation.totalFte).toBe(1);
+    expect(getYearDataset(2024, 'year-average').aggregation.totalFte).toBe(0);
+    expect(getYearDataset(2025, 'year-average').aggregation.totalFte).toBe(1);
   });
 
   it('resolves the employment section by date when crossing a qualification change', () => {
@@ -129,5 +131,21 @@ describe('working-time corrections', () => {
       });
     expect(db.prepare('SELECT effectiveFrom,weeklyHours,fte FROM employment_term_history WHERE periodId=? ORDER BY id DESC LIMIT 1')
       .get(firstPeriod)).toEqual({ effectiveFrom: '2025-01-01', weeklyHours: 20, fte: 0 });
+
+    const beforeAmbiguousChanges = db.serialize();
+    expect(() => saveWorkingTime({
+      id: firstTerm.id,
+      employeeId: person.id!,
+      effectiveFrom: '2025-06-01',
+      weeklyHours: 20,
+      fte: 0,
+    })).toThrow(/Beschäftigungsperiode/);
+    expect(() => saveWorkingTime({
+      employeeId: person.id!,
+      effectiveFrom: '2025-06-01',
+      weeklyHours: 20,
+      fte: 0,
+    })).toThrow(/Beschäftigungsperiode/);
+    expect(db.serialize()).toEqual(beforeAmbiguousChanges);
   });
 });
