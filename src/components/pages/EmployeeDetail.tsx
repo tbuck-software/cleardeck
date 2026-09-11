@@ -319,19 +319,15 @@ const EmployeeDetail = ({
                 : isWorkingTime
                   ? `${item.record.weeklyHours ?? '—'} Std./Woche · ${fte2(item.record.fte)} VZÄ${item.record.effectiveUntil ? ` · bis ${formatDateDE(item.record.effectiveUntil)}` : ''}`
                   : (item.record.details ?? '');
+              // Nur Zeiträume gelten ab einem Datum, einmalige Ereignisse am Datum.
+              const dateLabel = `${isPeriod || isWorkingTime ? 'ab' : 'am'} ${formatDateDE(item.date)}`;
               return (
                 <button
                   key={`${item.kind}-${item.record.id ?? index}`}
                   type="button"
-                  className="cd-timeline-row cd-row cd-history-row"
-                  aria-label={`${title} ab ${formatDateDE(item.date)} bearbeiten`}
+                  className="cd-timeline-row cd-row cd-button-reset"
+                  aria-label={`${title} ${dateLabel}${detail ? ` · ${detail}` : ''} bearbeiten`}
                   onClick={() => (isWorkingTime ? setWorkingTimeEdit(item.record) : onSelectTimelineItem(item))}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'Enter' && event.key !== ' ') return;
-                    event.preventDefault();
-                    if (isWorkingTime) setWorkingTimeEdit(item.record);
-                    else onSelectTimelineItem(item);
-                  }}
                 >
                   <div className="cd-timeline-date">{formatDateDE(item.date)}</div>
                   <div className="cd-timeline-rail">
