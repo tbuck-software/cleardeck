@@ -60,7 +60,8 @@ jobs:
           name: release-${{ runner.os }}
           path: out/make/**
           if-no-files-found: error
-          retention-days: 7
+          # Only needed within this run; published files live in the release.
+          retention-days: 1
 
   retained-mac-feed:
     runs-on: ubuntu-latest
@@ -81,7 +82,7 @@ jobs:
           name: release-mac-retained
           path: retained-mac/*
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 1
 
   windows-upgrade:
     needs: build
