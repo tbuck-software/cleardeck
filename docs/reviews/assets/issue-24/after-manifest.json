@@ -1,0 +1,60 @@
+{
+  "issue": 24,
+  "kind": "after",
+  "capturedAt": "2026-09-11T15:27:05+02:00",
+  "repository": "employee-db",
+  "branch": "fix/visual-evidence",
+  "captureHead": "30873d46791c7f70dde0d2f519837a0bfde364bf",
+  "baselineSha": "0a1ce1c2302176d02d54a04dc83fdcd79fa6ff6d",
+  "productionCommit": "30873d4",
+  "runtime": {
+    "command": "CLEARDECK_DEMO_DEBUG=1 npm run demo",
+    "title": "ClearDeck Demo · synthetische Daten",
+    "cdp": "http://127.0.0.1:19375",
+    "profile": ".cache/cleardeck-demo-profile/dev-ClearDeck",
+    "viewportCss": "1440x1000"
+  },
+  "fixture": {
+    "employeeId": 1,
+    "name": "Demo Historienfall",
+    "syntheticOnly": true,
+    "malformedSections": [
+      {
+        "periodIdsBefore": [4, 5],
+        "startDate": "2019-01-01",
+        "endDate": "2019-12-31",
+        "qualification": "1-jährig examiniert",
+        "weeklyHours": 24,
+        "termRowsBefore": 2,
+        "sourceRef": "synthetic-duplicate"
+      }
+    ],
+    "retainedPeriodAfter": {
+      "periodId": 4,
+      "startDate": "2019-01-01",
+      "endDate": "2019-12-31",
+      "weeklyHours": 24,
+      "currentTermRows": 1,
+      "historyRows": 1
+    }
+  },
+  "steps": [
+    "Seeded two synthetic same-date employment sections for Demo Historienfall directly in the demo database, with identical 1-jährig examiniert qualification and 24-hour working-time rows.",
+    "Opened Team → Weitere Aktionen → Daten prüfen and captured the read-only overview: three findings were shown, including the overlapping 01.01.2019–31.12.2019 sections and two migration provenance warnings.",
+    "Expanded Doppelte oder übernommene Abschnitte auflösen, selected the two identifiable 2019 sections, retained period 4, and captured the reconciliation preview. It showed before/after dates and Betroffene Nachweise: Arbeitszeitstände: 2.",
+    "Saved Auflösung speichern and captured the refreshed overview. The duplicate overlap was gone, leaving one provenance warning for the retained synthetic section.",
+    "Opened Demo Historienfall → Historie and captured the repair event, the single retained 2019 section, its 24-hour term, and the later employment history."
+  ],
+  "observations": [
+    "No dates, hours, qualification, or identity were inferred: the preview retained the explicitly supplied 2019 dates and 24 weekly hours.",
+    "The saved result retains one 2019 section and one current term. The duplicate term is preserved as one employment-term-history row, and the repair event records that the original section was retained.",
+    "After reconciliation, the overview decreased from three findings to one remaining provenance warning; the warning remains visible for explicit human review."
+  ],
+  "artifacts": [
+    "before-team-actions-menu.png",
+    "after-employment-repair-overview.png",
+    "after-employment-repair-reconcile-preview.png",
+    "after-employment-repair-reconcile-saved-overview.png",
+    "after-employment-repair-history.png"
+  ]
+}
