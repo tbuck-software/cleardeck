@@ -48,3 +48,65 @@ it('previews the closed previous period and new qualification start', async () =
     mode: 'qualification', periodId: 21, effectiveFrom: '2025-02-01', qualification: 'Pflegefachkraft',
   }));
 });
+
+it('keeps the draft and the saving state while the refreshed person arrives mid-save', async () => {
+  let release: () => void = () => undefined;
+  const onSave = vi.fn(() => new Promise<void>((resolve) => { release = resolve; }));
+  const onClose = vi.fn();
+  const period = { id: 21, employeeId: 11, startDate: '2024-01-01', endDate: '2025-12-31', qualification: 'Einarbeitung' };
+  const { rerender } = render(
+    <EmploymentActionModal
+      open
+      mode="qualification"
+      employee={employee}
+      periods={[period]}
+      qualifications={qualifications}
+      onClose={onClose}
+      onSave={onSave}
+    />,
+  );
+
+  fireEvent.change(screen.getByLabelText('Wechsel ab'), { target: { value: '2025-02-01' } });
+  fireEvent.change(screen.getByLabelText('Neue Qualifikation'), { target: { value: 'Pflegefachkraft' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+  await waitFor(() => expect(onSave).toHaveBeenCalledOnce());
+
+  // The hook selects the new period before the save promise resolves.
+  rerender(
+    <EmploymentActionModal
+      open
+      mode="qualification"
+      employee={{ ...employee, periodId: 22, qualification: 'Pflegefachkraft', startDate: '2025-02-01' }}
+      periods={[{ ...period, endDate: '2025-01-31' }, { id: 22, employeeId: 11, startDate: '2025-02-01', endDate: '2025-12-31', qualification: 'Pflegefachkraft' }]}
+      qualifications={qualifications}
+      onClose={onClose}
+      onSave={onSave}
+    />,
+  );
+
+  expect(screen.getByLabelText('Wechsel ab')).toHaveValue('2025-02-01');
+  expect(screen.getByLabelText('Neue Qualifikation')).toHaveValue('Pflegefachkraft');
+  expect(screen.getByRole('button', { name: 'Speichern…' })).toBeDisabled();
+  expect(onClose).not.toHaveBeenCalled();
+
+  release();
+  await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+  expect(onSave).toHaveBeenCalledOnce();
+});
+
+it('opens a future period on its start date instead of on an error', () => {
+  render(
+    <EmploymentActionModal
+      open
+      mode="departure"
+      employee={{ ...employee, startDate: '2099-01-01', endDate: null }}
+      periods={[{ id: 21, employeeId: 11, startDate: '2099-01-01', endDate: null, qualification: 'Einarbeitung' }]}
+      qualifications={qualifications}
+      onClose={vi.fn()}
+      onSave={vi.fn()}
+    />,
+  );
+
+  expect(screen.getByLabelText('Austritt')).toHaveValue('2099-01-01');
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});

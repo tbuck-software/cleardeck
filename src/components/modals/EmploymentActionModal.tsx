@@ -5,15 +5,10 @@ import type {
   EmploymentPeriod,
   QualificationType,
 } from '../../shared/types';
+import type { EmploymentActionInput, EmploymentActionMode } from '../../types/ui';
 import { localDate, shiftDays, validDate } from '../../utils/calendarDate';
 import { formatDateDE } from '../../utils/dateFormat';
 import { userFacingErrorMessage } from '../../utils/errorMessage';
-
-export type EmploymentActionMode = 'departure' | 'qualification';
-
-type EmploymentActionInput =
-  | { mode: 'departure'; periodId: number; endDate: string }
-  | { mode: 'qualification'; periodId: number; effectiveFrom: string; qualification: string };
 
 type Props = {
   open: boolean;
@@ -27,6 +22,16 @@ type Props = {
 
 const periodLabel = (period: EmploymentPeriod) =>
   `${formatDateDE(period.startDate)} bis ${period.endDate ? formatDateDE(period.endDate) : 'offen'}`;
+
+/** Start from a date the period can actually accept, so no dialog opens on an error. */
+const initialDate = (mode: EmploymentActionMode, period: EmploymentPeriod): string => {
+  const today = localDate();
+  if (mode === 'departure') return period.endDate ?? (today > period.startDate ? today : period.startDate);
+  const earliest = shiftDays(period.startDate, 1);
+  if (today < earliest) return earliest;
+  if (period.endDate && today > period.endDate) return period.endDate;
+  return today;
+};
 
 const EmploymentActionModal = ({
   open,
@@ -52,13 +57,15 @@ const EmploymentActionModal = ({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Only opening resets the draft. Saving refreshes the person, and reacting to
+  // that would clear the form under the user while the dialog is still open.
   useEffect(() => {
     if (!open) return;
-    setDate(mode === 'departure' ? employee.endDate ?? localDate() : localDate());
+    setDate(initialDate(mode, selectedPeriod));
     setQualification('');
     setError(null);
     setSaving(false);
-  }, [employee.endDate, employee.qualification, mode, open, qualifications]);
+  }, [mode, open]);
 
   const dateWithinSelectedPeriod = validDate(date) &&
     date >= selectedPeriod.startDate &&
@@ -71,23 +78,7 @@ const EmploymentActionModal = ({
   );
 
   const save = async () => {
-    if (!selectedPeriod.id) return;
-    if (!validDate(date)) {
-      setError(mode === 'departure' ? 'Bitte ein gültiges Austrittsdatum eintragen.' : 'Bitte ein gültiges Wechseldatum eintragen.');
-      return;
-    }
-    if (!dateWithinSelectedPeriod) {
-      setError('Das Datum muss innerhalb der ausgewählten Beschäftigungsperiode liegen.');
-      return;
-    }
-    if (mode === 'qualification' && date <= selectedPeriod.startDate) {
-      setError('Der Wechsel muss nach dem Beginn der bisherigen Periode liegen.');
-      return;
-    }
-    if (mode === 'qualification' && !qualificationChanged) {
-      setError('Bitte eine andere Qualifikation auswählen.');
-      return;
-    }
+    if (!canSave || saving || !selectedPeriod.id) return;
     setSaving(true);
     setError(null);
     try {
@@ -122,7 +113,11 @@ const EmploymentActionModal = ({
           </div>
           <div>
             <span className="cd-muted-13">Arbeitszeitstand </span>
-            <strong>Bleibt am Übergang erhalten. Die Aktion bestätigt keine Altdaten.</strong>
+            <strong>
+              {mode === 'departure'
+                ? 'Bleibt unverändert. Die Aktion bestätigt keine Altdaten.'
+                : 'Bleibt am Übergang erhalten. Die Aktion bestätigt keine Altdaten.'}
+            </strong>
           </div>
         </div>
       </div>
@@ -188,7 +183,7 @@ const EmploymentActionModal = ({
 
       {mode === 'departure' && (
         <p className="cd-muted-13">
-          Spätere Arbeitszeitstände blockieren eine Verkürzung. ClearDeck erklärt den Konflikt, damit keine historischen Angaben verloren gehen.
+          Liegt ein Arbeitszeitstand nach dem Austritt, diesen zuerst in der Historie korrigieren.
         </p>
       )}
       {error && <p role="alert" className="cd-danger-link">{error}</p>}
@@ -196,5 +191,4 @@ const EmploymentActionModal = ({
   );
 };
 
-export type { EmploymentActionInput };
 export default EmploymentActionModal;

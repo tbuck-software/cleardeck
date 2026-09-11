@@ -1,8 +1,7 @@
 import { useCallback, useState } from 'react';
 import api from '../services/api';
 import type { EmployeeWithPeriod, EmploymentPeriod, YearDataset } from '../shared/types';
-import type { FormState } from '../types/ui';
-import type { EmploymentActionInput, EmploymentActionMode } from '../components/modals/EmploymentActionModal';
+import type { EmploymentActionInput, EmploymentActionMode, FormState } from '../types/ui';
 
 type Params = {
   year: number;
