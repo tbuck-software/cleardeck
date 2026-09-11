@@ -73,6 +73,40 @@ it('adds a separate entry and derives the linked FTE from hours', async () => {
   }));
 });
 
+it('keeps historical qualification corrections editable', () => {
+  const onPeriodFormChange = vi.fn();
+  render(
+    <EventModal
+      state={{ open: true, type: 'period', eventDate: '2026-01-01', title: '', details: '' }}
+      employee={employee}
+      baseHours={36}
+      onWorkingTimeSaved={async () => undefined}
+      qualifications={[{ id: 1, name: 'Pflegekraft' }, { id: 2, name: 'Pflegefachkraft' }]}
+      periodForm={{
+        startDate: '2024-09-01',
+        endDate: '2025-12-31',
+        qualification: 'Pflegekraft',
+        periodId: 9,
+      }}
+      onStateChange={vi.fn()}
+      onPeriodFormChange={onPeriodFormChange}
+      onClose={vi.fn()}
+      onSaveEvent={vi.fn()}
+      onSavePeriod={vi.fn()}
+      onDeleteEvent={vi.fn()}
+      onDeletePeriod={vi.fn()}
+    />,
+  );
+
+  const qualification = screen.getByLabelText('Qualifikation');
+  expect(qualification).not.toBeDisabled();
+  fireEvent.change(qualification, { target: { value: 'Pflegefachkraft' } });
+  expect(onPeriodFormChange).toHaveBeenCalledWith(expect.objectContaining({
+    periodId: 9,
+    qualification: 'Pflegefachkraft',
+  }));
+});
+
 it.each(['Enter', ' '])('opens the focused row with the %s key', (key) => {
   showDetail(async () => undefined);
   const row = screen.getByRole('button', { name: 'Arbeitszeit ab 01.03.2025 bearbeiten' });
