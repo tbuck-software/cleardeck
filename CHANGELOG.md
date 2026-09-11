@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.
+
 ## [2.1.0]
 
 - Arbeitszeiten direkt in der Historie ergänzen und korrigieren.
