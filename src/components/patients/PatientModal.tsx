@@ -1,5 +1,5 @@
 import Checkbox from '../ui/Checkbox';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Dialog from '../ui/Dialog';
 import Segmented from '../ui/Segmented';
 import BirthDateInput from '../ui/BirthDateInput';
@@ -13,7 +13,7 @@ import {
   TEILGRUPPE_LABEL,
   teilgruppeOf,
 } from '../../utils/qpr';
-import type { HkpCode, IntensiveCare, ServiceDefinition, ServiceType } from '../../shared/types';
+import type { HkpCode, IntensiveCare, ServiceDefinition } from '../../shared/types';
 import { SERVICE_TYPE_LABEL, SERVICE_TYPES } from '../../shared/services';
 import type { PatientModalState } from '../../types/ui';
 import {
@@ -44,9 +44,6 @@ const PatientModal = ({
   onDelete,
 }: PatientModalProps) => {
   const group = teilgruppeOf(modal.cognitionImpaired, modal.mobilityImpaired);
-  const [servicesExpanded, setServicesExpanded] = useState(false);
-  const [serviceSearch, setServiceSearch] = useState('');
-  const [openGroups, setOpenGroups] = useState<ServiceType[]>([]);
   const selectedServiceIds = modal.serviceDefinitionIds ?? [];
   const selectedServices = serviceDefinitions.filter(
     (definition) => definition.id != null && selectedServiceIds.includes(definition.id),
@@ -67,49 +64,17 @@ const PatientModal = ({
   const activeDefinitions = serviceDefinitions.filter(
     (definition) => definition.active !== false || selectedServiceIds.includes(definition.id ?? -1),
   );
-  const normalizedSearch = serviceSearch.trim().toLocaleLowerCase();
-  const filteredDefinitions = activeDefinitions.filter(
-    (entry) => !normalizedSearch || entry.name.toLocaleLowerCase().includes(normalizedSearch),
-  );
-  const groupsWithSelection = SERVICE_TYPES.filter((serviceType) =>
-    activeDefinitions.some(
-      (entry) =>
-        entry.serviceType === serviceType &&
-        entry.id != null &&
-        selectedServiceIds.includes(entry.id),
-    ),
-  );
-  const autoOpenGroups = SERVICE_TYPES.filter(
-    (serviceType) =>
-      groupsWithSelection.includes(serviceType) ||
-      (normalizedSearch.length > 0 &&
-        filteredDefinitions.some((entry) => entry.serviceType === serviceType)),
-  );
-  const autoOpenKey = autoOpenGroups.join(',');
-  // The dialog stays mounted, so the picker has to be emptied per patient.
-  useEffect(() => {
-    setServicesExpanded(false);
-    setServiceSearch('');
-    setOpenGroups(groupsWithSelection);
-  }, [modal.open, modal.id]);
-  // Groups open when they gain a selection or a search hit; a group the user
-  // closed stays closed until that set changes again.
-  useEffect(() => {
-    setOpenGroups((previous) =>
-      autoOpenGroups.every((serviceType) => previous.includes(serviceType))
-        ? previous
-        : [...new Set([...previous, ...autoOpenGroups])],
-    );
-  }, [autoOpenKey]);
-  const selectedSummary =
-    selectedServices.length === 0
-      ? hasLegacyDecision
-        ? 'Übernommene Entscheidung'
-        : 'Noch nicht erfasst'
-      : `${selectedServices
-          .slice(0, 2)
-          .map((service) => service.name)
-          .join(', ')}${selectedServices.length > 2 ? ` + ${selectedServices.length - 2} weitere` : ''}`;
+  // Categories with one entry that only names the category are pooled, so the
+  // form shows a heading only where there is something to choose between.
+  const serviceGroups = SERVICE_TYPES.map((serviceType) => ({
+    serviceType,
+    entries: activeDefinitions.filter((entry) => entry.serviceType === serviceType),
+  })).filter((group) => group.entries.length > 0);
+  const headedGroups = serviceGroups.filter((group) => group.entries.length > 1);
+  const pooledEntries = serviceGroups
+    .filter((group) => group.entries.length === 1)
+    .flatMap((group) => group.entries);
+  const canClearServices = hasLegacyDecision || selectedServiceIds.length > 0;
   const toggleService = (id: number) => {
     const nextIds = selectedServiceIds.includes(id)
       ? selectedServiceIds.filter((current) => current !== id)
@@ -179,94 +144,58 @@ const PatientModal = ({
             />
           </label>
           <div className="field cd-field-wide">
-            <details
-              className="cd-service-picker"
-              open={servicesExpanded}
-              onToggle={(event) => setServicesExpanded(event.currentTarget.open)}
-            >
-              <summary>
-                <span>Welche Leistungen erbringt euer Dienst für diese Person?</span>
-                <span className="cd-service-summary" title={selectedSummary}>
-                  {selectedSummary}
-                </span>
-              </summary>
-              <div className="cd-service-picker-body">
-                <p className="cd-muted-13" style={{ margin: '0 0 8px' }}>
-                  Mehrere Leistungen auswählen. Die Einordnung für die MD-Personenliste ergibt sich
-                  daraus.
-                </p>
-                <input
-                  className="input cd-service-search"
-                  type="search"
-                  aria-label="Leistungen durchsuchen"
-                  placeholder="Leistungen durchsuchen"
-                  value={serviceSearch}
-                  onChange={(event) => setServiceSearch(event.target.value)}
-                />
-                <div className="cd-service-choice-list">
-                  {SERVICE_TYPES.map((serviceType) => {
-                    const entries = filteredDefinitions.filter((entry) => entry.serviceType === serviceType);
-                    if (!entries.length) return null;
-                    return (
-                      <details
-                        key={serviceType}
-                        className="cd-service-choice-group"
-                        open={openGroups.includes(serviceType)}
-                        onToggle={(event) => {
-                          // React clears currentTarget before a queued updater runs.
-                          const open = event.currentTarget.open;
-                          setOpenGroups((previous) =>
-                            open
-                              ? [...new Set([...previous, serviceType])]
-                              : previous.filter((current) => current !== serviceType),
-                          );
+            <label id="patient-services-label">Vereinbarte Leistungen</label>
+            <p className="cd-muted-13" style={{ margin: '0 0 10px' }}>
+              Welche Leistungen erbringt der Dienst für diese Person? Mehrfachauswahl; die
+              Einordnung für die MD-Personenliste ergibt sich daraus.
+            </p>
+            <div className="cd-service-list" role="group" aria-labelledby="patient-services-label">
+              {headedGroups.map((group) => (
+                <div className="cd-service-group" key={group.serviceType}>
+                  <p className="cd-service-group-label">{SERVICE_TYPE_LABEL[group.serviceType]}</p>
+                  <div className="cd-service-options">
+                    {group.entries.map((entry) => (
+                      <Checkbox
+                        key={entry.id}
+                        checked={entry.id != null && selectedServiceIds.includes(entry.id)}
+                        onChange={() => {
+                          if (entry.id != null) toggleService(entry.id);
                         }}
                       >
-                        <summary>
-                          {SERVICE_TYPE_LABEL[serviceType]}
-                          <span className="cd-muted-13">{entries.length}</span>
-                        </summary>
-                        <div className="cd-checkbox-group">
-                          {entries.map((entry) => (
-                            <Checkbox
-                              key={entry.id}
-                              checked={entry.id != null && selectedServiceIds.includes(entry.id)}
-                              onChange={() => {
-                                if (entry.id != null) toggleService(entry.id);
-                              }}
-                            >
-                              {entry.name}
-                              {entry.active === false ? ' (inaktiv)' : ''}
-                            </Checkbox>
-                          ))}
-                        </div>
-                      </details>
-                    );
-                  })}
-                  {normalizedSearch.length > 0 && filteredDefinitions.length === 0 ? (
-                    <p className="cd-muted-13" role="status">
-                      Keine Leistungen gefunden.
-                    </p>
-                  ) : null}
+                        {entry.name}
+                        {entry.active === false ? ' (inaktiv)' : ''}
+                      </Checkbox>
+                    ))}
+                  </div>
                 </div>
-                {hasLegacyDecision && (
-                  <p className="cd-muted-13" style={{ margin: '8px 0 0' }}>
-                    Es gilt noch eine übernommene Entscheidung. Sie wird verworfen, sobald
-                    Leistungen ausgewählt oder als unbekannt geführt werden.
-                  </p>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  aria-pressed={!hasLegacyDecision && selectedServiceIds.length === 0}
-                  onClick={clearServicesAsUnknown}
-                >
-                  {hasLegacyDecision
-                    ? 'Übernommene Entscheidung verwerfen'
-                    : 'Leistungen noch unbekannt'}
-                </button>
-              </div>
-            </details>
+              ))}
+              {pooledEntries.length > 0 && (
+                <div className="cd-service-group">
+                  {headedGroups.length > 0 && (
+                    <p className="cd-service-group-label">Weitere Leistungen</p>
+                  )}
+                  <div className="cd-service-options">
+                    {pooledEntries.map((entry) => (
+                      <Checkbox
+                        key={entry.id}
+                        checked={entry.id != null && selectedServiceIds.includes(entry.id)}
+                        onChange={() => {
+                          if (entry.id != null) toggleService(entry.id);
+                        }}
+                      >
+                        {entry.name}
+                        {entry.active === false ? ' (inaktiv)' : ''}
+                      </Checkbox>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {serviceGroups.length === 0 && (
+                <p className="cd-muted-13" style={{ margin: 0 }}>
+                  Noch keine Leistungen im Katalog. Unter Verwaltung → Leistungen anlegen.
+                </p>
+              )}
+            </div>
             <div className="cd-group-preview" role="status">
               <span
                 className={`tag ${serviceDecision.scope === 'eligible' ? 'tag-ok' : serviceDecision.scope === 'excluded' ? 'tag-neutral' : 'tag-accent'}`}
@@ -274,7 +203,17 @@ const PatientModal = ({
               >
                 {SERVICE_SCOPE_LABEL[serviceDecision.scope]}
               </span>
-              <span>{serviceDecision.reason}</span>
+              {canClearServices && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ marginLeft: 'auto' }}
+                  onClick={clearServicesAsUnknown}
+                >
+                  Als unbekannt führen
+                </button>
+              )}
+              <span className="cd-group-preview-text">{serviceDecision.reason}</span>
             </div>
           </div>
           <div className="field cd-field-wide">
