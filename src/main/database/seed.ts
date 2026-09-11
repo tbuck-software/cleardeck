@@ -912,7 +912,7 @@ export const seedDatabase = (db: DatabaseType): void => {
           eventDate: lastPeriod.endDate,
           type: 'leave',
           title: 'Austritt',
-          details: lastPeriod.note ?? 'Beschafftigungsverhaeltnis beendet.',
+          details: lastPeriod.note ?? 'Beschäftigungsverhältnis beendet.',
           meta: null,
           previousValue: null,
           newValue: null,

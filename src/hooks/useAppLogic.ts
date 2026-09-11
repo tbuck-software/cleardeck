@@ -352,7 +352,6 @@ const useAppLogic = () => {
       averageFte: employeeSlice.derived.averageFte,
       totalFte: employeeSlice.derived.totalFte,
       totalHeadcount: employeeSlice.derived.totalHeadcount,
-      displayStart: eventSlice.derived.displayStart,
       timelineItems: eventSlice.derived.timelineItems,
       crumbs: employeeSlice.derived.crumbs,
       sidebarPage: employeeSlice.derived.sidebarPage,

@@ -3,7 +3,7 @@
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import Dashboard from '../Dashboard';
-import type { UnifiedEvent, YearDataset } from '../../../shared/types';
+import type { EmployeeWithPeriod, UnifiedEvent, YearDataset } from '../../../shared/types';
 import type { DashboardTask, DataQualityCheck } from '../../../utils/dashboardTasks';
 
 const sampleDataset: YearDataset = {
@@ -171,6 +171,34 @@ describe('Dashboard', () => {
         'Keine weiteren Aufgaben in dieser Ansicht. Zurückgestellte Aufgaben und nicht erfasste Nachweise sind damit nicht fachlich erledigt.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('zählt als Eintritt nur den Beginn der zusammenhängenden Beschäftigung', () => {
+    const employees: EmployeeWithPeriod[] = [
+      {
+        id: 1,
+        name: 'Neu Eingestellt',
+        qualification: 'Pflegekraft',
+        startDate: '2026-02-01',
+        employmentStartDate: '2026-02-01',
+        endDate: null,
+        fte: 1,
+        status: 'active',
+      },
+      {
+        id: 2,
+        name: 'Neue Qualifikation',
+        qualification: 'Pflegefachkraft',
+        startDate: '2026-03-01',
+        employmentStartDate: '2019-05-01',
+        endDate: null,
+        fte: 1,
+        status: 'active',
+      },
+    ];
+    renderDashboard({ dataset: { ...sampleDataset, employees } });
+
+    expect(screen.getByText('Eintritte').previousSibling).toHaveTextContent('1');
   });
 
   it('zeigt Datenqualität mit Sprung zum Datensatz', () => {

@@ -28,6 +28,7 @@ const employee = (overrides: Partial<EmployeeWithPeriod> = {}): EmployeeWithPeri
   name: 'Anna Berger',
   qualification: '3-jährig examiniert',
   startDate: '2016-03-01',
+  employmentStartDate: '2016-03-01',
   endDate: null,
   fte: 1,
   weeklyHours: 36,

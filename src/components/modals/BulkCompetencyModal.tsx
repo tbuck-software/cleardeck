@@ -64,7 +64,7 @@ const BulkCompetencyModal = ({ employeeId, employeeName, entries, onSaved, onClo
       onSaved(updated);
       onClose();
     } catch (err) {
-      setError(userFacingErrorMessage(err));
+      setError(userFacingErrorMessage(err, 'Speichern fehlgeschlagen.'));
     } finally {
       saveInFlight.current = false;
       setSaving(false);
