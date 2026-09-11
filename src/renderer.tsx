@@ -79,10 +79,14 @@ import type {
   PatientWithLatestVisit,
 } from './shared/types';
 import { SERVICE_TYPE_LABEL } from './shared/services';
+import { describeInterval } from './utils/instructionSchedule';
 import { isActivePatient } from './utils/qpr';
 
 const patientCountLabel = (count: number): string =>
   count === 1 ? '1 aktive Person' : `${count} aktive Personen`;
+
+const personCountLabel = (count: number): string =>
+  count === 1 ? '1 Person' : `${count} Personen`;
 
 const emptyAuditModal = (): AuditModalState => ({
   open: false,
@@ -1030,7 +1034,11 @@ const App = () => {
             title: entry.name,
             note: entry.note ?? 'Ohne Notiz',
             tags: [] as string[],
-            usage: `${(dataset?.employees ?? []).filter((employee) => employee.qualification === entry.name).length} Personen`,
+            usage: personCountLabel(
+              (dataset?.employees ?? []).filter(
+                (employee) => employee.qualification === entry.name,
+              ).length,
+            ),
           })),
       };
     }
@@ -1088,7 +1096,11 @@ const App = () => {
           .map((entry) => ({
             id: entry.id as number,
             title: entry.topic,
-            note: entry.note ?? 'Nachweis als Unterschriftenliste',
+            note:
+              entry.note ??
+              (entry.intervalMonths != null
+                ? describeInterval(entry.intervalMonths, entry.intervalSource)
+                : undefined),
             tags: entry.legalBasis ? [entry.legalBasis] : [],
             usage: `${definitionUsage.instructions[entry.id as number] ?? 0} zugeordnet`,
           })),
