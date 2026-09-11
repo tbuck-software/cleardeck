@@ -100,6 +100,8 @@ describe('employment repair previews and transactions', () => {
     db.prepare('UPDATE employment_periods SET endDate=? WHERE id=?').run('2024-03-31', firstPeriodId);
     const secondPeriodId = Number(db.prepare('INSERT INTO employment_periods(employeeId,startDate,endDate,qualification,note) VALUES (?,?,?,?,?)').run(employee.id, '2025-01-01', null, employee.qualification, 'Übernommener Abschnitt prüfen').lastInsertRowid);
     db.prepare('INSERT INTO employment_terms(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) SELECT ?,effectiveFrom,weeklyHours,fte,verified,sourceRef FROM employment_terms WHERE periodId=?').run(secondPeriodId, firstPeriodId);
+    const removedTermId = Number((db.prepare('SELECT id FROM employment_terms WHERE periodId=?').get(firstPeriodId) as { id: number }).id);
+    const retainedTermId = Number((db.prepare('SELECT id FROM employment_terms WHERE periodId=?').get(secondPeriodId) as { id: number }).id);
     const preview = previewReconcilePeriods({
       periodIds: [firstPeriodId, secondPeriodId],
       retainedPeriodId: secondPeriodId,
@@ -122,7 +124,29 @@ describe('employment repair previews and transactions', () => {
     expect(JSON.parse(reconciliationAudit.meta)).toMatchObject({
       kind: 'employment-period-reconciliation',
       removedPeriod: { id: firstPeriodId, startDate: '2025-01-01', endDate: '2024-03-31' },
+      duplicateCurrentTerms: [{ source: { id: removedTermId, periodId: firstPeriodId }, target: { id: retainedTermId, periodId: secondPeriodId } }],
     });
+  });
+
+  it('blocks a corrected range that excludes a retained term and rolls back', () => {
+    const employee = person('Begrenzter Zeitraum Test', '2024-01-01', '2024-12-31');
+    const removedPeriodId = Number(db.prepare('INSERT INTO employment_periods(employeeId,startDate,endDate,qualification) VALUES (?,?,?,?)').run(employee.id, '2025-01-01', null, employee.qualification).lastInsertRowid);
+    const preview = previewReconcilePeriods({
+      periodIds: [employee.periodId!, removedPeriodId],
+      retainedPeriodId: employee.periodId!,
+      startDate: '2024-02-01',
+      endDate: '2024-12-31',
+    });
+    expect(preview.conflicts).toContain('Der Arbeitszeitstand vom 01.01.2024 läge außerhalb des korrigierten Zeitraums.');
+    const before = db.serialize();
+    expect(() => applyReconcilePeriods({
+      periodIds: [employee.periodId!, removedPeriodId],
+      retainedPeriodId: employee.periodId!,
+      startDate: '2024-02-01',
+      endDate: '2024-12-31',
+      previewToken: preview.token,
+    })).toThrow(/Arbeitszeitstand/);
+    expect(db.serialize()).toEqual(before);
   });
 
   it('retains every employee relation during an explicit merge', () => {
