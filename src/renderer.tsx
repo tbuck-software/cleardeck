@@ -136,6 +136,7 @@ const App = () => {
       hiddenEventTypes,
       calendar,
       dashboardWidgets,
+      employmentIntegrity,
       patients,
       selectedPatient,
       patientVisits,
@@ -451,6 +452,7 @@ const App = () => {
         instructionReminderDays: careSettings.instructionReminderDays,
         expiringTrainings: dashboardWidgets.expiringTrainings,
         visitIntervalDays: careSettings.visitIntervalDays,
+        employmentIntegrity,
       }),
     [
       today,
@@ -460,6 +462,7 @@ const App = () => {
       dashboardWidgets.expiringTrainings,
       careSettings.visitIntervalDays,
       careSettings.instructionReminderDays,
+      employmentIntegrity,
     ],
   );
 
