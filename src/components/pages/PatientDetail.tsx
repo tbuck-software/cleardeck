@@ -72,7 +72,10 @@ const PatientDetail = ({
       label: 'Eingeschätzt am',
       value: patient.assessmentDate ? formatDateDE(patient.assessmentDate) : missing,
     },
-    { label: 'Pflegegrad', value: careLevelLabel(patient.careLevel) },
+    {
+      label: 'Pflegegrad',
+      value: patient.careLevel == null ? missing : careLevelLabel(patient.careLevel),
+    },
     {
       label: 'Kognition (Modul 2)',
       value:

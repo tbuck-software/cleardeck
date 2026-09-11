@@ -215,6 +215,18 @@ describe('PatientList', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.getByText('Erika Mustermann')).toBeInTheDocument();
     expect(screen.getByText(/Kein Pflegegrad/)).toBeInTheDocument();
+  });
+
+  it('stellt in der schmalen Liste nicht zwei Lückenhinweise nebeneinander', () => {
+    renderList({ wideTable: false, patients: [patients[2]] });
+
+    expect(screen.getByText(/Gutachten-Daten fehlen/)).toBeInTheDocument();
+    expect(screen.queryByText(/Pflegegrad unbekannt/)).not.toBeInTheDocument();
+  });
+
+  it('nennt den unbekannten Pflegegrad, solange die Teilgruppe bekannt ist', () => {
+    renderList({ wideTable: false, patients: [{ ...patients[0], careLevel: null }] });
+
     expect(screen.getByText(/Pflegegrad unbekannt/)).toBeInTheDocument();
   });
 });

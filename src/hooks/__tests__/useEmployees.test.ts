@@ -63,7 +63,7 @@ describe('useEmployees.averageFte', () => {
 
 const employee: EmployeeWithPeriod = {
   id: 1, periodId: 10, name: 'Arbeitszeit Test', qualification: 'Pflegekraft',
-  startDate: '2025-03-01', endDate: null, weeklyHours: 36, fte: 1,
+  startDate: '2025-03-01', employmentStartDate: '2025-03-01', endDate: null, weeklyHours: 36, fte: 1,
   status: 'active', hoursEffectiveFrom: '2025-03-01', hoursVerified: false,
 };
 const datasetFor = (person: EmployeeWithPeriod): YearDataset => ({

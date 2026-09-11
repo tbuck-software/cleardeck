@@ -1,7 +1,5 @@
 import type { CareLevel } from '../shared/types';
 
-export type { CareLevel } from '../shared/types';
-
 /**
  * Pflegegrad values stored on a patient.
  *
@@ -17,16 +15,18 @@ export const CARE_LEVEL_LABELS: Record<CareLevel, string> = {
   5: 'PG 5',
 };
 
-export const UNKNOWN_CARE_LEVEL_LABEL = 'Nicht bekannt / noch nicht erfasst';
+/** In Bedienelementen steht der Bezug in der Beschriftung daneben. */
+export const UNKNOWN_CARE_LEVEL_LABEL = 'Unbekannt';
+/** In Listenzeilen ohne sichtbare Beschriftung. */
 export const UNKNOWN_CARE_LEVEL_SHORT_LABEL = 'Pflegegrad unbekannt';
 
 export const CARE_LEVEL_OPTIONS: { value: CareLevel; label: string }[] = [
   { value: 0, label: CARE_LEVEL_LABELS[0] },
-  { value: 1, label: '1' },
-  { value: 2, label: '2' },
-  { value: 3, label: '3' },
-  { value: 4, label: '4' },
-  { value: 5, label: '5' },
+  { value: 1, label: 'Pflegegrad 1' },
+  { value: 2, label: 'Pflegegrad 2' },
+  { value: 3, label: 'Pflegegrad 3' },
+  { value: 4, label: 'Pflegegrad 4' },
+  { value: 5, label: 'Pflegegrad 5' },
 ];
 
 export const isCareLevel = (value: unknown): value is CareLevel =>

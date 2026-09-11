@@ -37,7 +37,7 @@ const PatientModal = ({ modal, onChange, onClose, onSave, onDelete }: PatientMod
   const impairmentOptions = (current: boolean | null) => ({
     value: current == null ? NONE : current ? 'yes' : 'no',
     options: [
-      { value: NONE, label: 'unbekannt' },
+      { value: NONE, label: 'Unbekannt' },
       { value: 'no', label: 'nicht eingeschränkt' },
       { value: 'yes', label: 'eingeschränkt' },
     ],
@@ -230,11 +230,10 @@ const PatientModal = ({ modal, onChange, onClose, onSave, onDelete }: PatientMod
               aria-label="Pflegegrad"
               value={modal.careLevel == null ? UNKNOWN_CARE_LEVEL : String(modal.careLevel)}
               onChange={(event) => {
-                const value = event.target.value;
-                const parsed = Number(value);
+                const parsed = Number(event.target.value);
                 onChange({
                   ...modal,
-                  careLevel: value === UNKNOWN_CARE_LEVEL || !isCareLevel(parsed) ? null : parsed,
+                  careLevel: isCareLevel(parsed) ? parsed : null,
                 });
               }}
             >

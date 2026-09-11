@@ -68,7 +68,10 @@ const useAuth = ({
         configured: false,
         unlocked: false,
         storageMode: 'encrypted',
-      startupError: userFacingErrorMessage(err),
+        startupError: userFacingErrorMessage(
+          err,
+          'Der lokale Datenstatus kann nicht gelesen werden.',
+        ),
       });
       setAuthLoading(false);
       return;
