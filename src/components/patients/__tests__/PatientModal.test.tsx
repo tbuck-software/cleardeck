@@ -21,6 +21,9 @@ const modal: PatientModalState = {
   careLevel: null,
 };
 
+const optionValue = (label: string): string =>
+  (screen.getByRole('option', { name: label }) as HTMLOptionElement).value;
+
 describe('PatientModal Pflegegrad', () => {
   it('bietet unbekannt, keinen Pflegegrad und die Grade eins bis fünf an', () => {
     render(
@@ -33,11 +36,10 @@ describe('PatientModal Pflegegrad', () => {
     );
 
     const select = screen.getByRole('combobox', { name: 'Pflegegrad' });
-    expect(select).toHaveValue('__unknown_care_level__');
-    expect(screen.getByRole('option', { name: 'Nicht bekannt / noch nicht erfasst' })).toBeInTheDocument();
+    expect(select).toHaveDisplayValue('Unbekannt');
     expect(screen.getByRole('option', { name: 'Kein Pflegegrad' })).toBeInTheDocument();
-    for (const value of ['1', '2', '3', '4', '5']) {
-      expect(screen.getByRole('option', { name: value })).toBeInTheDocument();
+    for (const grade of [1, 2, 3, 4, 5]) {
+      expect(screen.getByRole('option', { name: `Pflegegrad ${grade}` })).toBeInTheDocument();
     }
   });
 
@@ -49,13 +51,13 @@ describe('PatientModal Pflegegrad', () => {
 
     const select = screen.getByRole('combobox', { name: 'Pflegegrad' });
 
-    fireEvent.change(select, { target: { value: '0' } });
+    fireEvent.change(select, { target: { value: optionValue('Kein Pflegegrad') } });
     expect(onChange).toHaveBeenLastCalledWith({ ...modal, careLevel: 0 });
 
-    fireEvent.change(select, { target: { value: '5' } });
+    fireEvent.change(select, { target: { value: optionValue('Pflegegrad 5') } });
     expect(onChange).toHaveBeenLastCalledWith({ ...modal, careLevel: 5 });
 
-    fireEvent.change(select, { target: { value: '__unknown_care_level__' } });
+    fireEvent.change(select, { target: { value: optionValue('Unbekannt') } });
     expect(onChange).toHaveBeenLastCalledWith({ ...modal, careLevel: null });
   });
 });

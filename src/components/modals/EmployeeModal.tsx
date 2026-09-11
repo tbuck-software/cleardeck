@@ -92,7 +92,7 @@ const EmployeeModal = ({
               </select>
             </div>
             <div className="field">
-              <label htmlFor="employee-start">Eintritt</label>
+              <label htmlFor="employee-start">Beginn der Periode</label>
               <input
                 id="employee-start"
                 className="input"
@@ -102,7 +102,7 @@ const EmployeeModal = ({
               />
             </div>
             <div className="field">
-              <label htmlFor="employee-end">Austritt</label>
+              <label htmlFor="employee-end">Ende der Periode</label>
               <input
                 id="employee-end"
                 className="input"

@@ -14,6 +14,7 @@ const employee: EmployeeWithPeriod = {
   name: 'Anna Beispiel',
   qualification: 'Pflegefachkraft',
   startDate: '2024-01-01',
+  employmentStartDate: '2024-01-01',
   endDate: '',
   fte: 0.8,
   weeklyHours: 30,
@@ -180,7 +181,12 @@ it('shows effective working-time sections in the existing timeline, without reco
 it('shows the employment chain start separately from the selected qualification period', () => {
   renderDetail({
     tab: 'hist',
-    employee: { ...employee, periodId: 3, startDate: '2025-01-01' },
+    employee: {
+      ...employee,
+      periodId: 3,
+      startDate: '2025-01-01',
+      employmentStartDate: '2023-07-01',
+    },
     timelineItems: [
       {
         kind: 'period',
@@ -200,10 +206,16 @@ it('shows the employment chain start separately from the selected qualification 
     ],
   });
 
-  expect(screen.getByText(/Abschnitt seit 01\.01\.2025/)).toBeInTheDocument();
-  expect(document.querySelector('.cd-detail-employment-start')).toHaveTextContent(
-    'Beschäftigt seit 01.07.2023',
-  );
+  expect(
+    screen.getByText(/Beschäftigt seit 01\.07\.2023 .* · Abschnitt seit 01\.01\.2025/),
+  ).toBeInTheDocument();
+});
+
+it('nennt nur den Beschäftigungsbeginn, wenn es nur einen Abschnitt gibt', () => {
+  renderDetail({ employee: { ...employee, startDate: '2024-01-01', employmentStartDate: '2024-01-01' } });
+
+  expect(screen.getByText(/Beschäftigt seit 01\.01\.2024/)).toBeInTheDocument();
+  expect(screen.queryByText(/Abschnitt seit/)).not.toBeInTheDocument();
 });
 
 it('collapses only redundant boundary events and keeps notes or custom titles', () => {
@@ -222,14 +234,8 @@ it('collapses only redundant boundary events and keeps notes or custom titles', 
       },
       {
         kind: 'event',
-        date: '2024-01-01',
-        record: {
-          id: 5,
-          eventDate: '2024-01-01',
-          type: 'join',
-          title: 'Eintritt',
-          details: 'Startdatum: 2024-01-01',
-        },
+        date: '2023-05-02',
+        record: { id: 5, eventDate: '2023-05-02', type: 'join', title: 'Eintritt' },
       },
       {
         kind: 'event',
@@ -239,8 +245,7 @@ it('collapses only redundant boundary events and keeps notes or custom titles', 
           eventDate: '2024-01-01',
           type: 'join',
           title: 'Eintritt',
-          details:
-            'Aus bisherigem Eintrittsereignis übernommen. Qualifikation und Stunden prüfen. Personalakte geprüft.',
+          details: 'Personalakte geprüft.',
         },
       },
       {
@@ -257,11 +262,20 @@ it('collapses only redundant boundary events and keeps notes or custom titles', 
   });
 
   const section = screen.getByRole('heading', { name: 'Historie' }).closest('section')!;
-  expect(section.querySelectorAll('.cd-timeline-row')).toHaveLength(4);
-  expect(section).not.toHaveTextContent('Startdatum: 2024-01-01');
+  // Nur der Eintritt ohne Notiz auf der Periodengrenze verschwindet.
+  expect(section.querySelectorAll('.cd-timeline-row')).toHaveLength(5);
+  expect(section).toHaveTextContent('02.05.2023');
   expect(section).toHaveTextContent('Personalakte geprüft.');
   expect(section).toHaveTextContent('Austritt');
   expect(section).toHaveTextContent('Vertrag bis Jahresende.');
   expect(section).toHaveTextContent('Rückkehr aus Elternzeit');
-  expect(screen.getByRole('button', { name: 'Beschäftigungsperiode ab 01.01.2024 bearbeiten' })).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', {
+      name: 'Beschäftigungsperiode ab 01.01.2024 · Pflegekraft · bis 31.12.2024 bearbeiten',
+    }),
+  ).toBeInTheDocument();
+  // Einmalige Ereignisse gelten am Datum und nennen ihre Notiz.
+  expect(
+    screen.getByRole('button', { name: 'Austritt am 31.12.2024 · Vertrag bis Jahresende. bearbeiten' }),
+  ).toBeInTheDocument();
 });
