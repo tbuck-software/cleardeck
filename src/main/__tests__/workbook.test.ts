@@ -5,8 +5,13 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import * as XLSX from 'xlsx';
-import { buildPersonListRows, buildPersonListWorkbook, writeWorkbook } from '../workbook';
-import type { Patient } from '../../shared/types';
+import {
+  buildEmployeeWorkbook,
+  buildPersonListRows,
+  buildPersonListWorkbook,
+  writeWorkbook,
+} from '../workbook';
+import type { Patient, YearDataset } from '../../shared/types';
 
 const patients: Patient[] = [
   {
@@ -101,5 +106,40 @@ describe('writeWorkbook', () => {
     expect(rows[0].Name).toBe('Erika Mustermann');
 
     fs.rmSync(path.dirname(target), { recursive: true, force: true });
+  });
+});
+
+describe('buildEmployeeWorkbook', () => {
+  const dataset: YearDataset = {
+    employees: [
+      {
+        id: 1,
+        periodId: 2,
+        name: 'Anna Beispiel',
+        qualification: 'Pflegefachkraft',
+        startDate: '2024-01-01',
+        employmentStartDate: '2022-07-01',
+        endDate: null,
+        weeklyHours: 36,
+        fte: 1,
+        status: 'active',
+      },
+    ],
+    aggregation: {
+      totalHeadcount: 1,
+      totalFte: 1,
+      categories: [{ qualification: 'Pflegefachkraft', headcount: 1, fte: 1 }],
+    },
+    baseHours: 36,
+  };
+
+  it('trennt den Eintritt vom Beginn des Abschnitts', () => {
+    const rows = XLSX.utils.sheet_to_json<Record<string, string>>(
+      buildEmployeeWorkbook(dataset, 2024).Sheets.Team,
+    );
+
+    expect(rows[0].Eintritt).toBe('2022-07-01');
+    expect(rows[0]['Beginn Abschnitt']).toBe('2024-01-01');
+    expect(Object.keys(rows[0])).not.toContain('Beginn');
   });
 });
