@@ -13,9 +13,15 @@ import {
 } from '../../utils/qpr';
 import type { HkpCode, IntensiveCare } from '../../shared/types';
 import type { PatientModalState } from '../../types/ui';
+import {
+  CARE_LEVEL_OPTIONS,
+  UNKNOWN_CARE_LEVEL_LABEL,
+  isCareLevel,
+} from '../../utils/careLevel';
 
-/** Segmented controls need a concrete value, so null is carried as a sentinel. */
+/** Form controls need a concrete value, so null is carried as a sentinel. */
 const NONE = '__none__';
+const UNKNOWN_CARE_LEVEL = '__unknown_care_level__';
 
 type PatientModalProps = {
   modal: PatientModalState;
@@ -217,15 +223,28 @@ const PatientModal = ({ modal, onChange, onClose, onSave, onDelete }: PatientMod
           )}
         </div>
         <div className="cd-field-grid">
-          <div className="field">
+          <div className="field cd-field-wide">
             <label>Pflegegrad</label>
-            <Segmented
-              fill
-              ariaLabel="Pflegegrad"
-              options={[1, 2, 3, 4, 5].map((value) => ({ value, label: String(value) }))}
-              value={modal.careLevel ?? 0}
-              onChange={(careLevel) => onChange({ ...modal, careLevel })}
-            />
+            <select
+              className="input"
+              aria-label="Pflegegrad"
+              value={modal.careLevel == null ? UNKNOWN_CARE_LEVEL : String(modal.careLevel)}
+              onChange={(event) => {
+                const value = event.target.value;
+                const parsed = Number(value);
+                onChange({
+                  ...modal,
+                  careLevel: value === UNKNOWN_CARE_LEVEL || !isCareLevel(parsed) ? null : parsed,
+                });
+              }}
+            >
+              <option value={UNKNOWN_CARE_LEVEL}>{UNKNOWN_CARE_LEVEL_LABEL}</option>
+              {CARE_LEVEL_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div className="field cd-field-wide">

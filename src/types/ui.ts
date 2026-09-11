@@ -5,6 +5,7 @@ import type {
   EmployeeEventType,
   HkpCode,
   IntensiveCare,
+  CareLevel,
   IntervalSource,
   RecoveryInfo,
   StorageMode,
@@ -246,7 +247,7 @@ export type PatientModalState = {
   mobilityImpaired: boolean | null;
   hkpCode: HkpCode | null;
   intensiveCare: IntensiveCare | null;
-  careLevel: number | null;
+  careLevel: CareLevel | null;
 };
 
 export type VisitModalState = {

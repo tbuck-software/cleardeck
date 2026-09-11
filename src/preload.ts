@@ -24,6 +24,7 @@ import type {
   EmployeeDashboardStats,
   OpenInstruction,
   CareSettings,
+  CareLevel,
   BackupState,
   DefinitionUsage,
   Patient,
@@ -274,7 +275,7 @@ export type Api = {
     mobilityImpaired?: boolean | null;
     hkpCode?: HkpCode | null;
     intensiveCare?: IntensiveCare | null;
-    careLevel?: number | null;
+    careLevel?: CareLevel | null;
   }) => Promise<PatientWithLatestVisit[]>;
   deletePatient: (id: number) => Promise<PatientWithLatestVisit[]>;
 
