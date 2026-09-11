@@ -570,6 +570,16 @@
   max-width: 900px;
 }
 
+.cd-fact-wide {
+  grid-column: span 2;
+}
+
+@media (max-width: 520px) {
+  .cd-fact-wide {
+    grid-column: auto;
+  }
+}
+
 .cd-drag {
   color: var(--color-neutral-500);
   cursor: grab;
@@ -606,6 +616,11 @@
   border-radius: var(--radius-md);
   padding: 10px 14px;
   font-size: 13px;
+}
+
+.cd-group-preview > .tag {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .cd-service-choice-group {

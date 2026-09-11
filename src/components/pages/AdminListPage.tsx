@@ -4,7 +4,7 @@ import Icon, { DragHandleIcon } from '../ui/Icon';
 export type AdminItem = {
   id: number;
   title: string;
-  note: string;
+  note?: string;
   tags: string[];
   usage: string;
   active?: boolean;
@@ -89,7 +89,7 @@ const AdminListPage = ({
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600 }}>{item.title}</div>
-              <div className="cd-muted-13">{item.note}</div>
+              {item.note ? <div className="cd-muted-13">{item.note}</div> : null}
             </div>
             <div className="cd-tag-row">
               {item.tags.filter(Boolean).map((tag) => (

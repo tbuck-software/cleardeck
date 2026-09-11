@@ -26,12 +26,12 @@ const cleanName = (name: string): string => {
 
 const nameKey = (name: string): string => cleanName(name).normalize('NFKC').toLocaleLowerCase('de-DE');
 
-const assertUniqueName = (id: number | undefined, name: string, serviceType: ServiceType): void => {
+const assertUniqueName = (id: number | undefined, name: string): void => {
   const duplicate = listServiceDefinitions().find(
     (entry) =>
-      entry.id !== id && entry.serviceType === serviceType && nameKey(entry.name) === nameKey(name),
+      entry.id !== id && nameKey(entry.name) === nameKey(name),
   );
-  if (duplicate) throw new Error('Diese Leistung gibt es in der Kategorie bereits.');
+  if (duplicate) throw new Error('Diese Leistung gibt es im Katalog bereits.');
 };
 
 const validateType = (serviceType: string): ServiceType => {
@@ -47,7 +47,7 @@ export const addServiceDefinition = (input: {
   const db = getDb();
   const name = cleanName(input.name);
   const serviceType = validateType(input.serviceType);
-  assertUniqueName(undefined, name, serviceType);
+  assertUniqueName(undefined, name);
   const maxSort = db.prepare('SELECT MAX(sortOrder) as mx FROM service_definitions').get() as {
     mx: number | null;
   };
@@ -75,7 +75,7 @@ export const updateServiceDefinition = (input: {
     .prepare('SELECT serviceType FROM service_definitions WHERE id=?')
     .get(input.id) as { serviceType?: ServiceType } | undefined;
   if (!old) throw new Error('Leistung nicht gefunden.');
-  assertUniqueName(input.id, name, serviceType);
+  assertUniqueName(input.id, name);
   if (old?.serviceType && old.serviceType !== serviceType) {
     const usage = db
       .prepare('SELECT COUNT(*) as count FROM patient_services WHERE serviceDefinitionId=?')

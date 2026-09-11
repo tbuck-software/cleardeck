@@ -46,6 +46,33 @@ describe('Leistungskatalog und Personenlistenzuordnung', () => {
     expect(patient.careLevel).toBeNull();
   });
 
+  it('seedet Behandlungspflege-Aufgaben und leitet daraus nur die Einschlussentscheidung ab', () => {
+    const catalog = listServiceDefinitions();
+    const taskNames = [
+      'Medizinische Kompressionsstrümpfe anziehen',
+      'Medizinische Kompressionsstrümpfe ausziehen',
+      'Medikamente richten / Medikamentenbox stellen',
+      'Medikamente verabreichen',
+    ];
+    const tasks = taskNames.map((name) => catalog.find((entry) => entry.name === name)!);
+    expect(tasks.every((entry) => entry.serviceType === 's37-hkp')).toBe(true);
+
+    const patient = savePatient({
+      name: 'Behandlungspflege Person',
+      serviceDefinitionIds: tasks.map((entry) => entry.id!),
+      careLevel: null,
+      cognitionImpaired: null,
+      mobilityImpaired: null,
+      hkpCodes: [],
+    }).find((entry) => entry.name === 'Behandlungspflege Person')!;
+
+    expect(patient.serviceScope).toBe('eligible');
+    expect(patient.careLevel).toBeNull();
+    expect(patient.cognitionImpaired).toBeNull();
+    expect(patient.mobilityImpaired).toBeNull();
+    expect(patient.hkpCodes).toEqual([]);
+  });
+
   it('lässt unbekannte Leistungen speichern und erhält alte Entscheidungen bis zur Bearbeitung', () => {
     const legacy = savePatient({
       name: 'Legacy Person',
@@ -93,6 +120,9 @@ describe('Leistungskatalog und Personenlistenzuordnung', () => {
     )!;
     expect(() => addServiceDefinition({ name: 'GROẞE HILFE', serviceType: 's36-care' })).toThrow(
       /bereits/,
+    );
+    expect(() => addServiceDefinition({ name: 'Große Hilfe', serviceType: 'household' })).toThrow(
+      /Katalog/,
     );
     const existing = savePatient({ name: 'Bestehende Auswahl', serviceDefinitionIds: [custom.id!] })[0];
     setServiceDefinitionActive(custom.id!, false);
