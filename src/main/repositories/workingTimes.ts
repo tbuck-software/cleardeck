@@ -1,6 +1,7 @@
 import { getDb } from '../database/connection';
-import { localDate, requireDate, shiftDays } from '../../utils/calendarDate';
+import { requireDate, shiftDays } from '../../utils/calendarDate';
 import type { SaveWorkingTimeInput, WorkingTime } from '../../shared/types';
+import { updateEmployeeCache } from './employmentCore';
 
 export const listWorkingTimes = (employeeId: number): WorkingTime[] => {
   const rows = getDb().prepare(`
@@ -62,11 +63,6 @@ export const saveWorkingTime = (input: SaveWorkingTimeInput): void => {
     }
     db.prepare(`INSERT INTO employment_term_history(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef)
       VALUES (?,?,?,?,1,?)`).run(periodId, input.effectiveFrom, input.weeklyHours, input.fte, previous?.sourceRef ?? null);
-    const current = db.prepare(`SELECT t.fte,t.weeklyHours FROM employment_terms t
-      JOIN employment_periods p ON p.id=t.periodId WHERE p.employeeId=? AND t.effectiveFrom<=?
-      ORDER BY t.effectiveFrom DESC LIMIT 1`).get(input.employeeId, localDate()) as
-      { fte: number; weeklyHours: number | null } | undefined;
-    if (current) db.prepare('UPDATE employees SET fte=?,weeklyHours=? WHERE id=?')
-      .run(current.fte, current.weeklyHours, input.employeeId);
+    updateEmployeeCache(input.employeeId);
   })();
 };

@@ -6,6 +6,7 @@ import useConfirmations from './useConfirmations';
 import useRecovery from './useRecovery';
 import useSettingsDb from './useSettingsDb';
 import useEventsPeriods from './useEventsPeriods';
+import useEmploymentActions from './useEmploymentActions';
 import useEmployees from './useEmployees';
 import useAuth from './useAuth';
 import useUpcomingEvents from './useUpcomingEvents';
@@ -60,6 +61,16 @@ const useAppLogic = () => {
     setLoading,
     setToast: showToast,
     confirmAction,
+  });
+
+  const employmentActionSlice = useEmploymentActions({
+    year,
+    selectedEmployee: employeeSlice.state.selectedEmployee,
+    setDataset: employeeSlice.setters.setDataset,
+    setSelectedEmployee: employeeSlice.setters.setSelectedEmployee,
+    setForm: employeeSlice.setters.setForm,
+    loadHistory: eventSlice.actions.loadHistory,
+    setToast: showToast,
   });
 
   const {
@@ -228,7 +239,11 @@ const useAppLogic = () => {
   const handleSelectWithHistory = async (emp: EmployeeWithPeriod) => {
     await employeeSlice.actions.handleSelect(emp);
     if (emp?.id) {
-      await eventSlice.actions.loadHistory(emp.id);
+      try {
+        await eventSlice.actions.loadHistory(emp.id);
+      } catch (err) {
+        handleError(err);
+      }
     }
     eventSlice.setters.setAddPeriodForm((prev) => ({
       ...prev,
@@ -254,7 +269,11 @@ const useAppLogic = () => {
     await employeeSlice.actions.handleEditModalSave();
     const id = employeeSlice.state.selectedEmployee?.id;
     if (id) {
-      await eventSlice.actions.loadHistory(id);
+      try {
+        await eventSlice.actions.loadHistory(id);
+      } catch (err) {
+        handleError(err);
+      }
     }
   };
 
@@ -308,6 +327,7 @@ const useAppLogic = () => {
       addPeriodForm: eventSlice.state.addPeriodForm,
       periodToDelete: eventSlice.state.periodToDelete,
       eventModal: eventSlice.state.eventModal,
+      employmentAction: employmentActionSlice.state,
       confirmState,
       recoveryKeyModal,
       recoveryReset,
@@ -424,6 +444,9 @@ const useAppLogic = () => {
       openNewPeriodModal: eventSlice.actions.openNewPeriodModal,
       openExistingPeriodModal: eventSlice.actions.openExistingPeriodModal,
       openEventModalForEvent: eventSlice.actions.openEventModalForEvent,
+      openEmploymentAction: employmentActionSlice.actions.open,
+      closeEmploymentAction: employmentActionSlice.actions.close,
+      saveEmploymentAction: employmentActionSlice.actions.save,
       openCreateModal: employeeSlice.actions.openCreateModal,
       openEditModal: employeeSlice.actions.openEditModal,
       handleEditModalSave: handleEditModalSaveWithHistory,
