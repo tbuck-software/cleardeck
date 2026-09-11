@@ -1,14 +1,8 @@
 import React from 'react';
 import Dialog from '../ui/Dialog';
-import { SERVICE_TYPE_LABEL } from '../../shared/services';
-import type { ServiceDefinition, ServiceType } from '../../shared/types';
-
-export type ServiceDefinitionModalState = {
-  open: boolean;
-  id?: number;
-  name: string;
-  serviceType: ServiceType;
-};
+import { SERVICE_TYPES, SERVICE_TYPE_LABEL } from '../../shared/services';
+import type { ServiceType } from '../../shared/types';
+import type { ServiceDefinitionModalState } from '../../types/ui';
 
 type Props = {
   state: ServiceDefinitionModalState;
@@ -16,17 +10,6 @@ type Props = {
   onClose: () => void;
   onSave: () => void;
 };
-
-const SERVICE_OPTIONS: ServiceType[] = [
-  's36-care',
-  's36-support',
-  's39-prevention',
-  's37-hkp',
-  's37c-aki',
-  'household',
-  'relief',
-  's37-consultation',
-];
 
 const ServiceDefinitionModal = ({ state, onChange, onClose, onSave }: Props) => (
   <Dialog
@@ -57,7 +40,7 @@ const ServiceDefinitionModal = ({ state, onChange, onClose, onSave }: Props) => 
         value={state.serviceType}
         onChange={(event) => onChange({ serviceType: event.target.value as ServiceType })}
       >
-        {SERVICE_OPTIONS.map((value) => (
+        {SERVICE_TYPES.map((value) => (
           <option key={value} value={value}>
             {SERVICE_TYPE_LABEL[value]}
           </option>
@@ -66,18 +49,5 @@ const ServiceDefinitionModal = ({ state, onChange, onClose, onSave }: Props) => 
     </div>
   </Dialog>
 );
-
-export const emptyServiceDefinitionModal = (): ServiceDefinitionModalState => ({
-  open: false,
-  name: '',
-  serviceType: 's36-care',
-});
-
-export const serviceDefinitionToModal = (entry: ServiceDefinition): ServiceDefinitionModalState => ({
-  open: true,
-  id: entry.id,
-  name: entry.name,
-  serviceType: entry.serviceType,
-});
 
 export default ServiceDefinitionModal;

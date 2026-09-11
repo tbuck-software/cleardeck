@@ -37,6 +37,7 @@ import type {
   HkpCode,
   IntensiveCare,
   ServiceDefinition,
+  ServiceScope,
   ServiceType,
   AuditResult,
   AuditSectionDefinition,
@@ -261,7 +262,7 @@ export type Api = {
   savePatient: (input: {
     serviceStatus?: 'active' | 'ended';
     serviceEndDate?: string | null;
-    serviceScope?: 'eligible' | 'excluded' | 'unknown';
+    serviceScope?: ServiceScope;
     representativeStatus?: 'present' | 'none' | 'unknown';
     hkpCodes?: HkpCode[];
     assessmentSource?: 'report' | 'own' | 'unknown';

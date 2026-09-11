@@ -1,9 +1,20 @@
 import { useCallback, useState } from 'react';
 import api from '../services/api';
-import type { ConfirmActionOptions } from '../types/ui';
+import type { ConfirmActionOptions, ServiceDefinitionModalState } from '../types/ui';
 import type { ServiceDefinition } from '../shared/types';
-import type { ServiceDefinitionModalState } from '../components/modals/ServiceDefinitionModal';
-import { emptyServiceDefinitionModal, serviceDefinitionToModal } from '../components/modals/ServiceDefinitionModal';
+
+export const emptyServiceDefinitionModal = (): ServiceDefinitionModalState => ({
+  open: false,
+  name: '',
+  serviceType: 's36-care',
+});
+
+const serviceDefinitionToModal = (entry: ServiceDefinition): ServiceDefinitionModalState => ({
+  open: true,
+  id: entry.id,
+  name: entry.name,
+  serviceType: entry.serviceType,
+});
 
 type Params = {
   handleError: (err: unknown) => void;

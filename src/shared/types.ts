@@ -390,6 +390,9 @@ export type ServiceType =
   | 'relief'
   | 's37-consultation';
 
+/** Whether a person belongs on the MD-Personenliste. */
+export type ServiceScope = 'eligible' | 'excluded' | 'unknown';
+
 /** How the current list conclusion was recorded. Legacy rows keep their old decision. */
 export type ServiceScopeSource = 'services' | 'legacy';
 
@@ -416,7 +419,7 @@ export interface Patient {
   legacyQprStatus?: string | null;
   serviceStatus?: 'active' | 'ended';
   serviceEndDate?: string | null;
-  serviceScope?: 'eligible' | 'excluded' | 'unknown';
+  serviceScope?: ServiceScope;
   serviceDefinitionIds?: number[];
   services?: PatientService[];
   serviceScopeSource?: ServiceScopeSource;
