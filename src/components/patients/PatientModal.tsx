@@ -31,12 +31,12 @@ type PatientModalProps = {
   onClose: () => void;
   onSave: () => void;
   onDelete?: () => void;
-  serviceDefinitions: ServiceDefinition[];
+  serviceDefinitions?: ServiceDefinition[];
 };
 
 const PatientModal = ({
   modal,
-  serviceDefinitions,
+  serviceDefinitions = [],
   onChange,
   onClose,
   onSave,
@@ -179,7 +179,11 @@ const PatientModal = ({
                       (entry) => entry.id != null && selectedServiceIds.includes(entry.id),
                     );
                     return (
-                      <details key={serviceType} className="cd-service-choice-group" open={hasSelected}>
+                      <details
+                        key={serviceType}
+                        className="cd-service-choice-group"
+                        open={hasSelected || normalizedSearch.length > 0}
+                      >
                         <summary>
                           {serviceType === 's36-care'
                             ? '§ 36 SGB XI · körperbezogene Pflege'
@@ -196,12 +200,18 @@ const PatientModal = ({
                               }}
                             >
                               {entry.name}
+                              {entry.active === false ? ' (inaktiv)' : ''}
                             </Checkbox>
                           ))}
                         </div>
                       </details>
                     );
                   })}
+                  {normalizedSearch.length > 0 && filteredDefinitions.length === 0 ? (
+                    <p className="cd-muted-13" role="status">
+                      Keine Leistungen gefunden.
+                    </p>
+                  ) : null}
                 </div>
                 <button
                   type="button"
