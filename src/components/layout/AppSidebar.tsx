@@ -17,7 +17,7 @@ const MAIN_NAV: NavEntry[] = [
 
 const ADMIN_NAV: NavEntry[] = [
   { key: 'quals', label: 'Qualifikationen', icon: 'qualifications' },
-  { key: 'services', label: 'Leistungen', icon: 'instructions' },
+  { key: 'services', label: 'Leistungen', icon: 'services' },
   { key: 'comps', label: 'Kompetenzen', icon: 'competencies' },
   { key: 'instrs', label: 'Einweisungen', icon: 'instructions' },
 ];

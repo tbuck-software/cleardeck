@@ -20,5 +20,5 @@ export const SERVICE_TYPE_LABEL: Record<ServiceType, string> = {
   's37c-aki': 'Außerklinische Intensivpflege nach § 37c SGB V',
   household: 'Hilfe bei der Haushaltsführung nach SGB XI',
   relief: 'Betreuung oder Entlastung nach § 45a/45b SGB XI',
-  's37-consultation': 'Nur Beratungsbesuch nach § 37 Abs. 3 SGB XI',
+  's37-consultation': 'Beratungsbesuch nach § 37 Abs. 3 SGB XI',
 };
