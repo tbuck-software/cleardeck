@@ -252,64 +252,6 @@
   position: relative;
 }
 
-.cd-action-menu {
-  position: relative;
-}
-
-.cd-action-menu summary {
-  list-style: none;
-  cursor: pointer;
-}
-
-.cd-action-menu summary::-webkit-details-marker {
-  display: none;
-}
-
-.cd-action-menu-popover {
-  position: absolute;
-  z-index: 5;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 220px;
-  padding: 6px;
-  border: 1px solid var(--color-neutral-300);
-  border-radius: var(--radius-md);
-  background: var(--color-bg);
-  box-shadow: var(--shadow-md);
-}
-
-.cd-action-menu-popover button {
-  display: block;
-  width: 100%;
-  padding: 9px 10px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.cd-action-menu-popover button:hover,
-.cd-action-menu-popover button:focus-visible {
-  background: var(--color-neutral-100);
-}
-
-.cd-action-context {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 18px;
-  padding: 12px 14px;
-  border: 1px solid var(--color-neutral-200);
-  border-radius: var(--radius-md);
-  background: var(--color-neutral-100);
-}
-
-.cd-action-context > div {
-  display: grid;
-  gap: 3px;
-}
-
 .cd-action-preview {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -491,6 +433,11 @@
   color: var(--color-accent-800);
 }
 
+.cd-notice-neutral {
+  background: var(--color-neutral-100);
+  color: inherit;
+}
+
 /* — logs — */
 
 .cd-log-console {
@@ -608,6 +555,11 @@
 }
 
 /* The menu closes on any outside click; the scrim catches it. */
+.cd-menu-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
 .cd-menu-scrim {
   position: fixed;
   inset: 0;

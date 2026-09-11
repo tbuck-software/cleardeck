@@ -5,6 +5,7 @@ import WorkingTimeModal from '../modals/WorkingTimeModal';
 import Icon from '../ui/Icon';
 import Avatar from '../ui/Avatar';
 import Segmented from '../ui/Segmented';
+import ActionMenu from '../ui/ActionMenu';
 import { formatDateDE } from '../../utils/dateFormat';
 import { daysBetween } from '../../utils/qpr';
 import { contiguousEmploymentStart } from '../../utils/employment';
@@ -65,7 +66,7 @@ type EmployeeDetailProps = {
   onSelectInstruction: (instruction: EmployeeInstruction) => void;
   onStartNewPeriod: () => void;
   onSelectTimelineItem: (item: TimelineItem) => void;
-  onOpenEmploymentAction?: (mode: EmploymentActionMode) => void;
+  onOpenEmploymentAction: (mode: EmploymentActionMode) => void;
 };
 
 const EmployeeDetail = ({
@@ -191,33 +192,17 @@ const EmployeeDetail = ({
           {employee.note && <p style={{ margin: '10px 0 0', fontSize: 14 }}>{employee.note}</p>}
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-          {onOpenEmploymentAction && (
-            <details className="cd-action-menu">
-              <summary className="btn btn-secondary">Beschäftigung bearbeiten</summary>
-              <div className="cd-action-menu-popover" role="menu">
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={(event) => {
-                    event.currentTarget.closest('details')?.removeAttribute('open');
-                    onOpenEmploymentAction('departure');
-                  }}
-                >
-                  Austritt erfassen
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={(event) => {
-                    event.currentTarget.closest('details')?.removeAttribute('open');
-                    onOpenEmploymentAction('qualification');
-                  }}
-                >
-                  Qualifikation wechseln
-                </button>
-              </div>
-            </details>
-          )}
+          <ActionMenu
+            items={[
+              { label: 'Austritt erfassen', onSelect: () => onOpenEmploymentAction('departure') },
+              {
+                label: 'Qualifikation wechseln',
+                onSelect: () => onOpenEmploymentAction('qualification'),
+              },
+            ]}
+          >
+            Aktion
+          </ActionMenu>
           <button type="button" className="btn btn-secondary" onClick={onEdit}>
             <Icon name="edit" size={16} />
             Bearbeiten
