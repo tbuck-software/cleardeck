@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import Icon, { DragHandleIcon } from '../ui/Icon';
+import ListPanel from '../ui/ListPanel';
+import ListRow from '../ui/ListRow';
 
 export type AdminItem = {
   id: number;
@@ -19,11 +21,6 @@ type AdminListPageProps = {
   onEdit: (id: number) => void;
   /** Moves the item to a new index; the caller persists the new sort order. */
   onReorder: (id: number, targetIndex: number) => void;
-  /** Optional per-row bulk action, e.g. assigning an instruction to many people. */
-  assignLabel?: string;
-  onAssign?: (id: number) => void;
-  toggleActiveLabel?: (active: boolean) => string;
-  onToggleActive?: (id: number, active: boolean) => void;
 };
 
 const AdminListPage = ({
@@ -34,10 +31,6 @@ const AdminListPage = ({
   onCreate,
   onEdit,
   onReorder,
-  assignLabel,
-  onAssign,
-  toggleActiveLabel,
-  onToggleActive,
 }: AdminListPageProps) => {
   const [draggingId, setDraggingId] = useState<number | null>(null);
 
@@ -58,77 +51,46 @@ const AdminListPage = ({
         </button>
       </header>
 
-      <div className="cd-panel">
+      <ListPanel>
         {items.length === 0 && <div className="cd-empty">{emptyLabel}</div>}
-        {items.map((item, index) => (
-          <div
-            key={item.id}
-            className={`cd-item${item.active === false ? ' cd-row-departed' : ''}`}
-            role="link"
-            tabIndex={0}
-            draggable
-            data-dragging={draggingId === item.id}
-            onDragStart={() => setDraggingId(item.id)}
-            onDragEnd={() => setDraggingId(null)}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={(event) => {
-              event.preventDefault();
-              if (draggingId != null && draggingId !== item.id) onReorder(draggingId, index);
-              setDraggingId(null);
-            }}
-            onClick={() => onEdit(item.id)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                onEdit(item.id);
-              }
-            }}
-          >
-            <span className="cd-drag" title="Ziehen zum Sortieren" aria-hidden="true">
-              <DragHandleIcon />
-            </span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600 }}>{item.title}</div>
-              {item.note ? <div className="cd-muted-13">{item.note}</div> : null}
-            </div>
-            <div className="cd-tag-row">
-              {item.tags.filter(Boolean).map((tag) => (
-                <span key={tag} className="tag tag-neutral">
-                  {tag}
+        {items.map((item, index) => {
+          const tags = item.tags.filter(Boolean);
+          return (
+            <ListRow
+              key={item.id}
+              className={item.active === false ? 'cd-row-departed' : undefined}
+              leading={
+                <span className="cd-drag" title="Ziehen zum Sortieren" aria-hidden="true">
+                  <DragHandleIcon />
                 </span>
-              ))}
-            </div>
-            <span className="cd-usage">{item.usage}</span>
-            {onAssign && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ flex: 'none' }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onAssign(item.id);
-                }}
-              >
-                {assignLabel ?? 'Zuordnen'}
-              </button>
-            )}
-            {onToggleActive && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ flex: 'none' }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onToggleActive(item.id, item.active === false);
-                }}
-              >
-                {toggleActiveLabel?.(item.active !== false) ?? 'Status ändern'}
-              </button>
-            )}
-            <span className="cd-arrow">→</span>
-          </div>
-        ))}
-      </div>
+              }
+              title={item.title}
+              subline={item.note}
+              meta={item.usage}
+              tag={
+                tags.length > 0
+                  ? tags.map((tag) => (
+                      <span key={tag} className="tag tag-neutral">
+                        {tag}
+                      </span>
+                    ))
+                  : undefined
+              }
+              ariaLabel={`${item.title} bearbeiten`}
+              onOpen={() => onEdit(item.id)}
+              drag={{
+                dragging: draggingId === item.id,
+                onDragStart: () => setDraggingId(item.id),
+                onDragEnd: () => setDraggingId(null),
+                onDrop: () => {
+                  if (draggingId != null && draggingId !== item.id) onReorder(draggingId, index);
+                  setDraggingId(null);
+                },
+              }}
+            />
+          );
+        })}
+      </ListPanel>
     </div>
   );
 };
