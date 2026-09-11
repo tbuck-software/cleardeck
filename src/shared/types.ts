@@ -127,7 +127,6 @@ export interface SwitchQualificationInput {
   periodId: number;
   effectiveFrom: string;
   qualification: string;
-  note?: string | null;
   year: number;
 }
 

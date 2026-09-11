@@ -20,6 +20,7 @@ import { saveEvent } from './events';
 import { daysBetween } from '../../utils/qpr';
 import { localDate, requireDate, shiftDays } from '../../utils/calendarDate';
 import { contiguousEmploymentStart } from '../../utils/employment';
+import { assertReportYear, findPeriodConflict, updateEmployeeCache } from './employmentCore';
 
 /**
  * Compute employee status for a given year
@@ -144,8 +145,7 @@ export const getYearDataset = (
   year: number,
   mode: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory' = 'year',
 ): YearDataset => {
-  if (!Number.isInteger(year) || year < 1900 || year > 2200)
-    throw new Error('Ungültiges Berichtsjahr.');
+  assertReportYear(year);
   const db = getDb();
   const startIso = mode === 'directory' ? '1900-01-01' : `${year}-01-01`;
   const endIso =
@@ -289,8 +289,7 @@ export const getEmployeePeriod = (
   periodId: number,
   year: number,
 ): EmployeeWithPeriod => {
-  if (!Number.isInteger(year) || year < 1900 || year > 2200)
-    throw new Error('Ungültiges Berichtsjahr.');
+  assertReportYear(year);
   const db = getDb();
   const row = db
     .prepare(
@@ -387,11 +386,12 @@ export const saveEmployee = (input: {
         .get(periodId, employeeId)
     )
       throw new Error('Beschäftigungsperiode nicht gefunden.');
-    const overlap = db
-      .prepare(
-        "SELECT id FROM employment_periods WHERE employeeId=? AND id<>? AND startDate<=? AND COALESCE(endDate,'9999-12-31')>=?",
-      )
-      .get(employeeId, periodId ?? -1, input.endDate || '9999-12-31', input.startDate);
+    const overlap = findPeriodConflict(
+      employeeId,
+      periodId,
+      input.startDate,
+      input.endDate || null,
+    );
     if (overlap)
       throw new Error(
         'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren.',
@@ -469,18 +469,7 @@ export const saveEmployee = (input: {
           eventDate: effective,
         }).forEach((event) => saveEvent({ employeeId, ...event }));
     }
-    // Retain legacy columns as a current-value cache; reports only use terms.
-    const current = db
-      .prepare(
-        'SELECT t.fte,t.weeklyHours FROM employment_terms t JOIN employment_periods p ON p.id=t.periodId WHERE p.employeeId=? AND t.effectiveFrom<=? ORDER BY t.effectiveFrom DESC LIMIT 1',
-      )
-      .get(employeeId, localDate()) as { fte: number; weeklyHours: number | null } | undefined;
-    if (current)
-      db.prepare('UPDATE employees SET fte=?,weeklyHours=? WHERE id=?').run(
-        current.fte,
-        current.weeklyHours,
-        employeeId,
-      );
+    updateEmployeeCache(employeeId);
   })();
   return getYearDataset(input.year);
 };
