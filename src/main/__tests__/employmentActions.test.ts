@@ -2,7 +2,7 @@
 
 import SqliteAdapter from './sqliteAdapter';
 import { runMigrations } from '../database/migrations';
-import { getYearDataset, saveEmployee } from '../repositories/employees';
+import { getEmployeePeriod, getYearDataset, saveEmployee } from '../repositories/employees';
 import { recordDeparture, switchQualification } from '../repositories/employmentActions';
 import { saveWorkingTime } from '../repositories/workingTimes';
 
@@ -57,6 +57,54 @@ describe('employment actions', () => {
     expect(() => recordDeparture({ employeeId: person.id!, periodId: person.periodId!, endDate: '2025-12-31', year: 2025 }))
       .toThrow(/Arbeitszeitstand/);
     expect(db.serialize()).toEqual(before);
+  });
+
+  it('maps a historical period with its effective terms despite a later reentry', () => {
+    const person = saveEmployee({
+      name: 'Synthetic Mapped Period',
+      qualification: 'Pflegekraft',
+      startDate: '2020-01-01',
+      endDate: '2024-12-31',
+      weeklyHours: 18,
+      fte: 0.5,
+      sourceRef: 'Historical Source',
+      hoursVerified: false,
+      year: 2024,
+    }).employees[0];
+    saveEmployee({
+      id: person.id,
+      name: person.name,
+      qualification: 'Pflegefachkraft',
+      startDate: '2025-01-01',
+      weeklyHours: 36,
+      fte: 1,
+      year: 2025,
+      birthDate: person.birthDate,
+    });
+
+    const mapped = getEmployeePeriod(person.id!, person.periodId!, 2025);
+
+    expect(mapped).toMatchObject({
+      id: person.id,
+      periodId: person.periodId,
+      weeklyHours: 18,
+      fte: 0.5,
+      sourceRef: 'Historical Source',
+      hoursVerified: false,
+      hoursMissing: false,
+      hoursEffectiveFrom: '2020-01-01',
+    });
+    expect(mapped.workingTimes?.find((entry) => entry.periodId === person.periodId)).toMatchObject({
+      weeklyHours: 18,
+      fte: 0.5,
+      effectiveUntil: '2024-12-31',
+    });
+    expect(mapped.hoursHistory?.find((entry) => entry.effectiveFrom === '2020-01-01')).toMatchObject({
+      weeklyHours: 18,
+      fte: 0.5,
+      verified: 0,
+      sourceRef: 'Historical Source',
+    });
   });
 
   it('splits a period, carries unverified terms forward, and keeps one employee', () => {

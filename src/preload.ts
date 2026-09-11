@@ -8,6 +8,7 @@ import type {
   AppState,
   AppInfo,
   EmploymentPeriod,
+  EmployeeWithPeriod,
   QualificationType,
   CompetencyDefinition,
   EmployeeCompetency,
@@ -66,6 +67,7 @@ export type Api = {
     mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory',
   ) => Promise<YearDataset>;
   listPeriods: (employeeId: number) => Promise<EmploymentPeriod[]>;
+  getEmployeePeriod: (employeeId: number, periodId: number, year: number) => Promise<EmployeeWithPeriod>;
   listEvents: (employeeId: number) => Promise<EmployeeEvent[]>;
   saveWorkingTime: (input: SaveWorkingTimeInput) => Promise<void>;
   recordDeparture: (input: RecordDepartureInput) => Promise<YearDataset>;
@@ -348,6 +350,8 @@ const api: Api = {
   commitStaffImport: (rows) => ipcRenderer.invoke('staff:commitImport', rows),
   listEmployees: (year, mode) => ipcRenderer.invoke('data:list', { year, mode }),
   listPeriods: (employeeId) => ipcRenderer.invoke('data:listPeriods', { employeeId }),
+  getEmployeePeriod: (employeeId, periodId, year) =>
+    ipcRenderer.invoke('data:getPeriod', { employeeId, periodId, year }),
   listEvents: (employeeId) => ipcRenderer.invoke('events:list', { employeeId }),
   saveEmployee: (input) => ipcRenderer.invoke('data:save', input),
   saveWorkingTime: (input) => ipcRenderer.invoke('data:saveWorkingTime', input),

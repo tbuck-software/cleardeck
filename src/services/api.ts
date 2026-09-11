@@ -53,6 +53,8 @@ export const api = {
     list: (year: number, mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory') =>
       call('listEmployees', baseApi.listEmployees, year, mode),
     listPeriods: (employeeId: number) => call('listPeriods', baseApi.listPeriods, employeeId),
+    getEmployeePeriod: (employeeId: number, periodId: number, year: number) =>
+      call('getEmployeePeriod', baseApi.getEmployeePeriod, employeeId, periodId, year),
     listEvents: (employeeId: number) => call('listEvents', baseApi.listEvents, employeeId),
     save: (input: Parameters<Api['saveEmployee']>[0]) =>
       call('saveEmployee', baseApi.saveEmployee, input),

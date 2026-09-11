@@ -65,25 +65,14 @@ const useEmploymentActions = ({
     target: SelectionTarget,
   ) => {
     const current = findSelectionTarget(updated, employee.id ?? 0, target);
-    let selected = current ?? findSelectionTarget(
-      await api.employees.list(year, 'directory'),
-      employee.id ?? 0,
-      target,
-    );
+    let selected = current;
     if (!selected) {
       const period = findPeriodTarget(
         await api.employees.listPeriods(employee.id ?? 0),
         target,
       );
-      if (period) {
-        selected = {
-          ...employee,
-          periodId: period.id,
-          qualification: period.qualification,
-          startDate: period.startDate,
-          endDate: period.endDate ?? null,
-          note: period.note ?? employee.note,
-        };
+      if (period?.id != null) {
+        selected = await api.employees.getEmployeePeriod(employee.id ?? 0, period.id, year);
       }
     }
     if (!selected) return;
