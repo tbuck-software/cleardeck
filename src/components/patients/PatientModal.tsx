@@ -221,9 +221,7 @@ const PatientModal = ({
                         }
                       >
                         <summary>
-                          {serviceType === 's36-care'
-                            ? '§ 36 SGB XI · körperbezogene Pflege'
-                            : SERVICE_TYPE_LABEL[serviceType]}
+                          {SERVICE_TYPE_LABEL[serviceType]}
                           <span className="cd-muted-13">{entries.length}</span>
                         </summary>
                         <div className="cd-checkbox-group">
