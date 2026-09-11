@@ -49,7 +49,12 @@ export const saveWorkingTime = (input: SaveWorkingTimeInput): void => {
       const periods = db.prepare(`SELECT id FROM employment_periods
         WHERE employeeId=? AND startDate<=? AND (endDate IS NULL OR endDate>=?)
       `).all(input.employeeId, input.effectiveFrom, input.effectiveFrom) as { id: number }[];
-      if (periods.length !== 1)
+      // More than one match is legacy overlap, not a date outside employment.
+      if (periods.length > 1)
+        throw new Error(
+          'An diesem Datum überschneiden sich mehrere Beschäftigungsperioden. Bitte zuerst die Perioden in der Historie korrigieren.',
+        );
+      if (periods.length === 0)
         throw new Error('Das Datum muss innerhalb einer Beschäftigungsperiode liegen.');
       periodId = periods[0].id;
     }
