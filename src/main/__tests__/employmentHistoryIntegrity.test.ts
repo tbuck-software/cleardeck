@@ -114,6 +114,74 @@ describe('effective employment and year reports', () => {
     expect(getYearDataset(2024).employees[0].name).toBe(base.name);
   });
 
+  it('does not inherit current hours when adding a historical period without an hours update', () => {
+    const person = saveEmployee({ ...base, startDate: '2026-09-01', year: 2026 }).employees[0];
+    saveEmployee({
+      ...base,
+      id: person.id,
+      periodId: undefined,
+      startDate: '2025-09-01',
+      endDate: '2026-08-31',
+      qualification: 'Pflegekraft/-helfer',
+      updateHours: false,
+      hoursVerified: false,
+      year: 2026,
+    });
+
+    expect(db.prepare(`
+      SELECT COUNT(*) AS count FROM employment_terms t
+      JOIN employment_periods p ON p.id=t.periodId
+      WHERE p.employeeId=? AND p.startDate='2025-09-01'
+    `).get(person.id)).toEqual({ count: 0 });
+    expect(getYearDataset(2025, 'stichtag').employees.find(row => row.startDate === '2025-09-01')).toMatchObject({
+      fte: 0,
+      hoursMissing: true,
+    });
+    expect(getYearDataset(2026, 'stichtag').employees.find(row => row.startDate === '2026-09-01')).toMatchObject({
+      fte: 1,
+      hoursMissing: false,
+    });
+  });
+
+  it('edits an existing period hours value despite an unrelated overlapping legacy period', () => {
+    const person = saveEmployee({
+      ...base, startDate: '2024-01-01', endDate: '2025-12-31', weeklyHours: 20, fte: 0.5, year: 2025,
+    }).employees[0];
+    const periodId = person.periodId!;
+    db.prepare(`
+      INSERT INTO employment_periods(employeeId,startDate,endDate,qualification)
+      VALUES (?,?,?,?)
+    `).run(person.id, '2025-01-01', null, 'Pflegefachkraft');
+    db.prepare(`
+      INSERT INTO employment_terms(periodId,effectiveFrom,weeklyHours,fte,verified)
+      SELECT id,'2025-01-01',36,1,1 FROM employment_periods
+      WHERE employeeId=? AND startDate='2025-01-01'
+    `).run(person.id);
+    db.prepare(`
+      INSERT INTO employment_terms(periodId,effectiveFrom,weeklyHours,fte,verified)
+      VALUES (?,?,?,?,1)
+    `).run(periodId, '2025-01-01', 20, 0.5);
+
+    expect(() => saveEmployee({
+      ...base,
+      id: person.id,
+      periodId,
+      startDate: '2024-01-01',
+      endDate: '2025-12-31',
+      fte: 0,
+      weeklyHours: 20,
+      hoursEffectiveFrom: '2025-01-01',
+      updateHours: true,
+      year: 2025,
+    })).not.toThrow();
+    expect(db.prepare(
+      'SELECT weeklyHours,fte FROM employment_terms WHERE periodId=? AND effectiveFrom=?',
+    ).get(periodId, '2025-01-01')).toEqual({ weeklyHours: 20, fte: 0 });
+    expect(db.prepare(
+      'SELECT weeklyHours,fte FROM employment_terms WHERE periodId<>? AND effectiveFrom=?',
+    ).get(periodId, '2025-01-01')).toEqual({ weeklyHours: 36, fte: 1 });
+  });
+
   it('does not allow event edits to silently override employment dates', () => {
     const person = saveEmployee(base).employees[0];
     expect(() =>

@@ -1,0 +1,59 @@
+{
+  "issue": 30,
+  "kind": "after",
+  "capturedAt": "2026-09-11T16:37:16+02:00",
+  "repository": "employee-db",
+  "branch": "fix/visual-evidence",
+  "sourceSha": "73fc6f398dca409f0843477a3fbdc835574b228c",
+  "finalBranchFollowup": "de0cf58",
+  "baselineSha": "b792f4f8960ccfd56c54707bd8db0b85f193345d",
+  "runtime": {
+    "command": "CLEARDECK_DEMO_DEBUG=1 npm run demo",
+    "title": "ClearDeck Demo · synthetische Daten",
+    "cdp": "http://127.0.0.1:19375",
+    "profile": ".cache/cleardeck-demo-profile/dev-ClearDeck",
+    "viewportCss": "1440x1000"
+  },
+  "fixtures": {
+    "departedCorrection": {
+      "employeeId": 3,
+      "name": "Demo FTE-Abgang",
+      "periods": [
+        { "id": 5, "startDate": "2024-01-01", "endDate": "2026-08-31", "weeklyHours": 36, "fteBefore": 1, "fteAfter": 1 },
+        { "id": 6, "startDate": "2025-01-01", "endDate": "2026-08-31", "weeklyHours": 36, "fteBefore": 1, "fteAfter": 0 }
+      ],
+      "editorAction": "Changed only VZÄ from 1 to 0 in the selected departed period; weekly hours remained 36 and the effective date remained 2025-01-01.",
+      "result": "The save succeeded despite the unrelated overlap. Team year 2026 shows the departed row at 0,00 VZÄ and total 1,00 VZÄ."
+    },
+    "historicalInitialization": {
+      "employeeId": 4,
+      "name": "Demo FTE-Verlauf",
+      "laterQualifiedPeriod": { "id": 7, "startDate": "2026-09-01", "endDate": null, "weeklyHours": 36, "fte": 1 },
+      "earlierTrainingPeriod": { "id": 8, "startDate": "2025-09-01", "endDate": "2026-08-31", "qualification": "1-jährig examiniert", "initialState": "unknown", "explicitState": { "weeklyHours": null, "fte": 0, "effectiveFrom": "2025-09-01" } }
+    }
+  },
+  "steps": [
+    "Seeded only synthetic overlapping legacy periods and a separate later-qualified employee in the isolated demo database.",
+    "Used the real general editor to change only the departed selected period's FTE to 0, then captured the saved detail and year-2026 Team total.",
+    "Added the earlier training period through the real Historie → Eintrag hinzufügen flow and captured its initial unknown Team state in year 2025.",
+    "Used the real editor for the earlier section to record explicit FTE 0 effective 2025-09-01, then captured its history and year-2026 Team state showing the later qualified period at 36 h / 1,00 VZÄ."
+  ],
+  "readOnlyDatabaseCheck": {
+    "departedSelectedTerm": { "periodId": 6, "effectiveFrom": "2025-01-01", "weeklyHours": 36, "fte": 0, "verified": 1 },
+    "laterQualifiedTerm": { "periodId": 7, "effectiveFrom": "2026-09-01", "weeklyHours": 36, "fte": 1, "verified": 1 },
+    "earlierTrainingTerm": { "periodId": 8, "effectiveFrom": "2025-09-01", "weeklyHours": null, "fte": 0, "verified": 1 }
+  },
+  "limitations": [
+    "The synthetic departed fixture ends on 2026-08-31; the baseline overlap screenshot intentionally uses the separate released-version future-end fixture documented in before-manifest.json.",
+    "Screenshots show the real Electron UI at 1440×1000; the database check is read-only verification after the UI actions."
+  ],
+  "artifacts": [
+    "issue-30-before-fte-overlap-error.png",
+    "issue-30-before-historical-inherited-fte.png",
+    "issue-30-after-fte-correction-detail.png",
+    "issue-30-after-fte-correction-team-total.png",
+    "issue-30-after-training-unknown-team.png",
+    "issue-30-after-training-explicit-zero-history.png",
+    "issue-30-after-training-later-qualified-team.png"
+  ]
+}

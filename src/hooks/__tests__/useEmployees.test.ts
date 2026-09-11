@@ -105,6 +105,28 @@ describe('working-time edits', () => {
     expect(api.employees.save).toHaveBeenCalledWith(expect.objectContaining({ updateHours: false }));
   });
 
+  it('opens a departed employee on its existing term date for an FTE correction', async () => {
+    const departed = {
+      ...employee,
+      startDate: '2024-01-01',
+      endDate: '2025-12-31',
+      weeklyHours: 20,
+      fte: 1,
+      hoursEffectiveFrom: '2025-01-01',
+    };
+    const { result } = createHook();
+    await act(() => result.current.actions.handleSelect(departed));
+    act(() => result.current.actions.openEditModal());
+    expect(result.current.state.editModal.hoursEffectiveFrom).toBe('2025-01-01');
+    expect(result.current.state.editModal.initialHoursEffectiveFrom).toBe('2025-01-01');
+
+    act(() => result.current.setters.setEditModal(prev => ({ ...prev, fteValue: '0' })));
+    await act(() => result.current.actions.handleEditModalSave());
+    expect(api.employees.save).toHaveBeenLastCalledWith(expect.objectContaining({
+      hoursEffectiveFrom: '2025-01-01', updateHours: true, fte: 0, weeklyHours: 20,
+    }));
+  });
+
   it.each([true, false])('uses the corrected boundary immediately (period in year dataset: %s)', async (inYear) => {
     const corrected = { ...employee, startDate: '2024-09-01' };
     vi.mocked(api.employees.save).mockResolvedValue(inYear ? datasetFor(corrected) : {
