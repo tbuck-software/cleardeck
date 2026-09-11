@@ -16,8 +16,13 @@ import type {
   PatientActionNeeded,
   PatientStats,
   CareLevel,
+  PatientService,
+  ServiceScope,
+  ServiceScopeSource,
+  ServiceType,
 } from '../../shared/types';
 import {
+  deriveServiceScope,
   isActivePatient,
   needsAssessment,
   hkpCodesOf,
@@ -42,7 +47,8 @@ const PATIENT_COLUMNS = `
   p.hkpCode,
   p.intensiveCare,
   p.careLevel, p.serviceStatus,p.serviceEndDate,p.serviceScope,p.representativeStatus,
-  p.hkpCodes,p.assessmentSource,p.assessmentDate,p.assessmentNote,p.akiSetting,p.phkpFirst,p.phkpStartDate
+  p.hkpCodes,p.assessmentSource,p.assessmentDate,p.assessmentNote,p.akiSetting,p.phkpFirst,p.phkpStartDate,
+  p.serviceScopeSource
 `;
 
 type PatientRow = Omit<
@@ -61,6 +67,16 @@ const toBool = (value: number | null | undefined): boolean | null =>
 const fromBool = (value: boolean | null | undefined): number | null =>
   value == null ? null : value ? 1 : 0;
 
+const servicesForPatient = (patientId: number): PatientService[] =>
+  getDb()
+    .prepare(
+      `SELECT ps.serviceDefinitionId, sd.name as label, ps.labelSnapshot, sd.serviceType
+       FROM patient_services ps
+       JOIN service_definitions sd ON sd.id=ps.serviceDefinitionId
+       WHERE ps.patientId=? ORDER BY sd.sortOrder, sd.id`,
+    )
+    .all(patientId) as PatientService[];
+
 const mapPatient = (row: PatientRow): Patient => ({
   ...(row as Omit<PatientRow, 'cognitionImpaired' | 'mobilityImpaired' | 'hkpCodes' | 'phkpFirst'>),
   hkpCodes: JSON.parse(row.hkpCodes || '[]'),
@@ -68,6 +84,15 @@ const mapPatient = (row: PatientRow): Patient => ({
   cognitionImpaired: toBool(row.cognitionImpaired),
   mobilityImpaired: toBool(row.mobilityImpaired),
 });
+
+const withServices = (patient: Patient): Patient => {
+  const services = patient.id ? servicesForPatient(patient.id) : [];
+  return {
+    ...patient,
+    services,
+    serviceDefinitionIds: services.map((service) => service.serviceDefinitionId),
+  };
+};
 
 /**
  * List all patients with their latest visit info
@@ -93,7 +118,7 @@ export const listPatients = (): PatientWithLatestVisit[] => {
   })[];
 
   return rows.map((row) => ({
-    ...mapPatient(row),
+    ...withServices(mapPatient(row)),
     latestActionNeeded: toBool(row.latestActionNeeded),
     ...(db
       .prepare(
@@ -113,13 +138,15 @@ export const getPatient = (id: number): Patient | null => {
   const row = db.prepare(`SELECT ${PATIENT_COLUMNS} FROM patients p WHERE p.id = ?`).get(id) as
     | PatientRow
     | undefined;
-  return row ? mapPatient(row) : null;
+  return row ? withServices(mapPatient(row)) : null;
 };
 
 export type SavePatientInput = {
   serviceStatus?: 'active' | 'ended';
   serviceEndDate?: string | null;
-  serviceScope?: 'eligible' | 'excluded' | 'unknown';
+  serviceScope?: ServiceScope;
+  serviceDefinitionIds?: number[];
+  serviceScopeSource?: ServiceScopeSource;
   representativeStatus?: 'present' | 'none' | 'unknown';
   hkpCodes?: HkpCode[];
   assessmentSource?: 'report' | 'own' | 'unknown';
@@ -176,6 +203,53 @@ export const savePatient = (input: SavePatientInput): PatientWithLatestVisit[] =
   ];
   if (codes.some((c) => !['6', '8', '29', '31a'].includes(c)))
     throw new Error('Ungültige HKP-Ziffer.');
+  const hasServiceRecord = input.serviceDefinitionIds !== undefined;
+  const serviceIds = hasServiceRecord
+    ? [...new Set(input.serviceDefinitionIds ?? [])]
+    : existing?.serviceDefinitionIds ?? [];
+  if (hasServiceRecord && serviceIds.some((id) => !Number.isInteger(id) || id <= 0))
+    throw new Error('Ungültige Leistung ausgewählt.');
+  let serviceTypes: ServiceType[] = [];
+  let selectedDefinitions: Array<{
+    id: number;
+    name: string;
+    active: number;
+    serviceType: ServiceType;
+  }> = [];
+  if (serviceIds.length) {
+    selectedDefinitions = db
+      .prepare(
+        'SELECT id,name,active,serviceType FROM service_definitions WHERE id IN (' +
+          serviceIds.map(() => '?').join(',') +
+          ')',
+      )
+      .all(...serviceIds) as Array<{
+      id: number;
+      name: string;
+      active: number;
+      serviceType: ServiceType;
+    }>;
+    if (selectedDefinitions.length !== serviceIds.length)
+      throw new Error('Unbekannte Leistung ausgewählt.');
+    const existingIds = new Set(existing?.serviceDefinitionIds ?? []);
+    if (
+      hasServiceRecord &&
+      selectedDefinitions.some(
+        (definition) => definition.active !== 1 && !existingIds.has(definition.id),
+      )
+    )
+      throw new Error('Inaktive Leistungen können nicht neu zugeordnet werden.');
+    serviceTypes = selectedDefinitions.map((row) => row.serviceType);
+  } else if (!hasServiceRecord) {
+    serviceTypes = (existing?.services ?? []).map((service) => service.serviceType);
+  }
+  const source = hasServiceRecord
+    ? 'services'
+    : input.serviceScopeSource ?? (input.id ? existing?.serviceScopeSource ?? 'legacy' : 'legacy');
+  const derivedScope =
+    source === 'services'
+      ? deriveServiceScope(serviceTypes).scope
+      : (input.serviceScope ?? merged.serviceScope ?? 'unknown');
   const params = {
     name: merged.name.trim(),
     birthDate: merged.birthDate ?? null,
@@ -191,7 +265,8 @@ export const savePatient = (input: SavePatientInput): PatientWithLatestVisit[] =
     careLevel: merged.careLevel ?? null,
     serviceStatus: merged.serviceStatus ?? 'active',
     serviceEndDate: merged.serviceEndDate ?? null,
-    serviceScope: merged.serviceScope ?? 'unknown',
+    serviceScope: derivedScope,
+    serviceScopeSource: source,
     representativeStatus:
       merged.representativeStatus ?? (merged.contact?.trim() ? 'present' : 'unknown'),
     assessmentSource: merged.assessmentSource ?? 'unknown',
@@ -205,20 +280,43 @@ export const savePatient = (input: SavePatientInput): PatientWithLatestVisit[] =
     !['active', 'ended'].includes(params.serviceStatus) ||
     !['eligible', 'excluded', 'unknown'].includes(params.serviceScope) ||
     !['report', 'own', 'unknown'].includes(params.assessmentSource) ||
+    !['services', 'legacy'].includes(params.serviceScopeSource) ||
     !['present', 'none', 'unknown'].includes(params.representativeStatus) ||
     (params.akiSetting && !['EV', 'MV'].includes(params.akiSetting))
   )
     throw new Error('Ungültiger Versorgungsstatus.');
   const keys = Object.keys(params);
-  if (input.id)
-    db.prepare(`UPDATE patients SET ${keys.map((k) => `${k}=@${k}`).join(',')} WHERE id=@id`).run({
-      ...params,
-      id: input.id,
-    });
-  else
-    db.prepare(
-      `INSERT INTO patients (${keys.join(',')}) VALUES (${keys.map((k) => `@${k}`).join(',')})`,
-    ).run(params);
+  const persist = db.transaction(() => {
+    let patientId = input.id;
+    if (input.id)
+      db.prepare(`UPDATE patients SET ${keys.map((k) => `${k}=@${k}`).join(',')} WHERE id=@id`).run({
+        ...params,
+        id: input.id,
+      });
+    else {
+      db.prepare(
+        `INSERT INTO patients (${keys.join(',')}) VALUES (${keys.map((k) => `@${k}`).join(',')})`,
+      ).run(params);
+      patientId = (db.prepare('SELECT last_insert_rowid() as id').get() as { id: number }).id;
+    }
+
+    if (hasServiceRecord && patientId) {
+      const currentIds = new Set(existing?.serviceDefinitionIds ?? []);
+      const nextIds = new Set(serviceIds);
+      const remove = [...currentIds].filter((id) => !nextIds.has(id));
+      const deleteAssignment = db.prepare(
+        'DELETE FROM patient_services WHERE patientId=? AND serviceDefinitionId=?',
+      );
+      remove.forEach((id) => deleteAssignment.run(patientId, id));
+      const insert = db.prepare(
+        'INSERT INTO patient_services(patientId,serviceDefinitionId,labelSnapshot) VALUES (?,?,?)',
+      );
+      selectedDefinitions
+        .filter((definition) => !currentIds.has(definition.id))
+        .forEach((definition) => insert.run(patientId, definition.id, definition.name));
+    }
+  });
+  persist();
 
   return listPatients();
 };

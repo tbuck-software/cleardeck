@@ -99,8 +99,10 @@ const Dashboard = ({
 
   const employees = dataset?.employees ?? [];
   const withHours = employees.filter((employee) => employee.weeklyHours != null);
+  // Eintritt ist der Beginn der zusammenhängenden Beschäftigung, nicht der
+  // Beginn eines neuen Abschnitts innerhalb des Jahres.
   const newHires = employees.filter((employee) =>
-    employee.startDate?.startsWith(String(year)),
+    employee.employmentStartDate.startsWith(String(year)),
   ).length;
   const leavers = employees.filter((employee) => employee.endDate?.startsWith(String(year))).length;
   const fullTime = employees.filter((employee) => (employee.fte ?? 0) >= 1).length;

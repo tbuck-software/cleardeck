@@ -3,11 +3,12 @@ import type { UpdateStatus } from '../shared/types';
 
 const baseApi: Api = (window as Window & { api: Api }).api;
 
+/** Die Meldung bleibt anzeigbar; der Aufruf steht im Namen und in cause. */
 const toError = (name: string, error: unknown) => {
   const message =
     error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unbekannter Fehler';
-  const wrapped = new Error(`API ${String(name)} failed: ${message}`);
-  wrapped.name = 'ApiError';
+  const wrapped = new Error(message);
+  wrapped.name = `ApiError(${String(name)})`;
   Object.defineProperty(wrapped, 'cause', { value: error, enumerable: false });
   return wrapped;
 };
@@ -85,6 +86,17 @@ export const api = {
       call('updateQualification', baseApi.updateQualification, id, name, note),
     delete: (id: number) => call('deleteQualification', baseApi.deleteQualification, id),
     reorder: (ids: number[]) => call('reorderQualifications', baseApi.reorderQualifications, ids),
+  },
+  services: {
+    list: () => call('listServiceDefinitions', baseApi.listServiceDefinitions),
+    add: (input: Parameters<Api['addServiceDefinition']>[0]) =>
+      call('addServiceDefinition', baseApi.addServiceDefinition, input),
+    update: (input: Parameters<Api['updateServiceDefinition']>[0]) =>
+      call('updateServiceDefinition', baseApi.updateServiceDefinition, input),
+    setActive: (id: number, active: boolean) =>
+      call('setServiceDefinitionActive', baseApi.setServiceDefinitionActive, id, active),
+    reorder: (ids: number[]) =>
+      call('reorderServiceDefinitions', baseApi.reorderServiceDefinitions, ids),
   },
   competencies: {
     listDefinitions: () => call('listCompetencyDefinitions', baseApi.listCompetencyDefinitions),

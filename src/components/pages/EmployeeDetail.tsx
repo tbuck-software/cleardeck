@@ -8,7 +8,6 @@ import Segmented from '../ui/Segmented';
 import ActionMenu from '../ui/ActionMenu';
 import { formatDateDE } from '../../utils/dateFormat';
 import { daysBetween } from '../../utils/qpr';
-import { contiguousEmploymentStart } from '../../utils/employment';
 import type {
   EmployeeCompetency,
   EmployeeInstruction,
@@ -40,6 +39,20 @@ const instructionState = (
   if (daysBetween(today, instruction.dueDate) <= reminderDays)
     return { label: 'bald fällig', tagClass: 'tag-accent' };
   return { label: 'offen', tagClass: 'tag-neutral' };
+};
+
+/** Ein- und Austrittsereignisse tragen sonst nur den Titel der Periodengrenze. */
+const GENERIC_BOUNDARY_TITLES = new Set(['eintritt', 'austritt']);
+
+const hasMeaningfulEventNote = (item: Extract<TimelineItem, { kind: 'event' }>): boolean => {
+  const { record } = item;
+  if (!GENERIC_BOUNDARY_TITLES.has(record.title.trim().toLocaleLowerCase('de-DE'))) return true;
+  return Boolean(
+    record.details?.trim() ||
+      record.previousValue?.trim() ||
+      record.newValue?.trim() ||
+      (record.meta && Object.keys(record.meta).length > 0),
+  );
 };
 
 type EmployeeDetailProps = {
@@ -96,40 +109,8 @@ const EmployeeDetail = ({
   const workingTimes = employee.workingTimes ?? [];
   const workingHistory = employee.hoursHistory ?? [];
   const periodItems = timelineItems.filter((item) => item.kind === 'period');
-  const derivedEmploymentStart = contiguousEmploymentStart(
-    periodItems.map((item) => item.record),
-    employee.periodId,
-    employee.startDate,
-  );
-  const employmentStartDate = employee.employmentStartDate ?? derivedEmploymentStart ?? employee.startDate;
+  const employmentStartDate = employee.employmentStartDate;
 
-  const hasMeaningfulEventNote = (item: Extract<TimelineItem, { kind: 'event' }>): boolean => {
-    const { record } = item;
-    const title = record.title.trim().toLocaleLowerCase('de-DE');
-    const genericBoundaryTitles = new Set([
-      'eintritt',
-      'austritt',
-      'einstieg',
-      'join',
-      'leave',
-      'entry',
-      'exit',
-    ]);
-    if (!genericBoundaryTitles.has(title)) return true;
-    const details = record.details?.trim() ?? '';
-    const generatedDetails =
-      /^Startdatum\s*:?\s*\d{4}-\d{2}-\d{2}$/i.test(details) ||
-      /^Enddatum\s*:?\s*\d{4}-\d{2}-\d{2}$/i.test(details) ||
-      details === 'Aus bisherigem Eintrittsereignis übernommen. Qualifikation und Stunden prüfen.' ||
-      details === 'Beschafftigungsverhaeltnis beendet.' ||
-      details === 'Beschäftigungsverhältnis beendet.';
-    return Boolean(
-      (details && !generatedDetails) ||
-        record.previousValue?.trim() ||
-        record.newValue?.trim() ||
-        (record.meta && Object.keys(record.meta).length > 0),
-    );
-  };
   const historyItems = [
     ...timelineItems.filter(item => !(item.kind === 'event' &&
       (item.record.type === 'fte-change' || item.record.type === 'weekly-hours-change') &&
@@ -167,9 +148,8 @@ const EmployeeDetail = ({
   const openCount = openCompetencies + openInstructions;
 
   const endForTenure = employee.endDate && employee.endDate < today ? employee.endDate : today;
-  const tenureYears = employmentStartDate
-    ? Math.floor(daysBetween(employmentStartDate, endForTenure) / 365)
-    : 0;
+  const tenureYears = Math.floor(daysBetween(employmentStartDate, endForTenure) / 365);
+  const periodDiffersFromEmployment = employee.startDate !== employmentStartDate;
 
   return (
     <div className="cd-page cd-detail">
@@ -183,10 +163,10 @@ const EmployeeDetail = ({
             <span className={`tag ${statusTag.tagClass}`}>{statusTag.label}</span>
           </div>
           <p className="cd-muted" style={{ margin: '6px 0 0' }}>
-            {employee.qualification} · Abschnitt seit {formatDateDE(employee.startDate)}
-            <span className="cd-detail-employment-start">
-              Beschäftigt seit {formatDateDE(employmentStartDate)} ({tenureYears} Jahre)
-            </span>
+            {employee.qualification} · Beschäftigt seit {formatDateDE(employmentStartDate)} (
+            {tenureYears} Jahre)
+            {periodDiffersFromEmployment &&
+              ` · Abschnitt seit ${formatDateDE(employee.startDate)}`}
           </p>
           {employee.note && <p style={{ margin: '10px 0 0', fontSize: 14 }}>{employee.note}</p>}
         </div>
@@ -353,19 +333,15 @@ const EmployeeDetail = ({
                 : isWorkingTime
                   ? `${item.record.weeklyHours ?? '—'} Std./Woche · ${fte2(item.record.fte)} VZÄ${item.record.effectiveUntil ? ` · bis ${formatDateDE(item.record.effectiveUntil)}` : ''}`
                   : (item.record.details ?? '');
+              // Nur Zeiträume gelten ab einem Datum, einmalige Ereignisse am Datum.
+              const dateLabel = `${isPeriod || isWorkingTime ? 'ab' : 'am'} ${formatDateDE(item.date)}`;
               return (
                 <button
                   key={`${item.kind}-${item.record.id ?? index}`}
                   type="button"
-                  className="cd-timeline-row cd-row cd-history-row"
-                  aria-label={`${title} ab ${formatDateDE(item.date)} bearbeiten`}
+                  className="cd-timeline-row cd-row cd-button-reset"
+                  aria-label={`${title} ${dateLabel}${detail ? ` · ${detail}` : ''} bearbeiten`}
                   onClick={() => (isWorkingTime ? setWorkingTimeEdit(item.record) : onSelectTimelineItem(item))}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'Enter' && event.key !== ' ') return;
-                    event.preventDefault();
-                    if (isWorkingTime) setWorkingTimeEdit(item.record);
-                    else onSelectTimelineItem(item);
-                  }}
                 >
                   <div className="cd-timeline-date">{formatDateDE(item.date)}</div>
                   <div className="cd-timeline-rail">

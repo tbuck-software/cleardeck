@@ -32,6 +32,7 @@ import ConfirmModal from './components/modals/ConfirmModal';
 import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
 import QualificationModal from './components/modals/QualificationModal';
+import ServiceDefinitionModal from './components/modals/ServiceDefinitionModal';
 import CompetencyModal from './components/modals/CompetencyModal';
 import InstructionModal from './components/modals/InstructionModal';
 import AssignInstructionModal, {
@@ -77,6 +78,11 @@ import type {
   EmployeeWithPeriod,
   PatientWithLatestVisit,
 } from './shared/types';
+import { SERVICE_TYPE_LABEL } from './shared/services';
+import { isActivePatient } from './utils/qpr';
+
+const patientCountLabel = (count: number): string =>
+  count === 1 ? '1 aktive Person' : `${count} aktive Personen`;
 
 const emptyAuditModal = (): AuditModalState => ({
   open: false,
@@ -147,6 +153,8 @@ const App = () => {
       patientSearch,
       patientGroupFilter,
       patientVisitModal,
+      serviceDefinitions,
+      serviceDefinitionModal,
     },
     setters: {
       setEmployeeCompetencies,
@@ -176,6 +184,7 @@ const App = () => {
       setPatientSearch,
       setPatientGroupFilter,
       setPatientVisitModal,
+      setServiceDefinitionModal,
     },
     derived: { filteredEmployees, totalFte, timelineItems, sidebarPage, filteredPatients },
     actions: {
@@ -246,6 +255,11 @@ const App = () => {
       closePatientModal,
       openVisitModal,
       closeVisitModal,
+      saveServiceDefinition,
+      toggleServiceDefinition,
+      reorderServiceDefinitions,
+      openCreateServiceDefinition,
+      openEditServiceDefinition,
     },
   } = useAppLogic();
 
@@ -545,7 +559,9 @@ const App = () => {
       setPasswordOpen(false);
       setToastMessage('Passwort geändert.');
     } catch (err) {
-      setPasswordError(userFacingErrorMessage(err));
+      setPasswordError(
+        userFacingErrorMessage(err, 'Das Passwort konnte nicht geändert werden.'),
+      );
     } finally {
       setPasswordBusy(false);
     }
@@ -976,10 +992,37 @@ const App = () => {
           })),
       };
     }
+    if (page === 'services') {
+      const activePatients = patients.filter((patient) => isActivePatient(patient));
+      return {
+        title: 'Leistungen für betreute Personen',
+        subtitle:
+          'Leistungskatalog für die Auswahl im Patientenformular; bestehende Zuordnungen bleiben nachvollziehbar.',
+        empty: 'Noch keine Leistung angelegt.',
+        items: serviceDefinitions
+          .filter((entry) => entry.id != null)
+          .map((entry) => ({
+            id: entry.id as number,
+            title: entry.name,
+            note:
+              entry.name === SERVICE_TYPE_LABEL[entry.serviceType]
+                ? ''
+                : SERVICE_TYPE_LABEL[entry.serviceType],
+            tags: entry.active === false ? ['deaktiviert'] : [],
+            usage: patientCountLabel(
+              activePatients.filter((patient) =>
+                patient.serviceDefinitionIds?.includes(entry.id as number),
+              ).length,
+            ),
+            active: entry.active,
+          })),
+      };
+    }
     if (page === 'comps') {
       return {
-        title: 'Kompetenzen',
-        subtitle: 'Fachthemen mit Kategorie und Relevanz — Grundlage der Kompetenzmatrix.',
+        title: 'Kompetenzen im Team',
+        subtitle:
+          'Fachliche Fähigkeiten und Nachweise der Mitarbeitenden. Grundlage der Kompetenzmatrix.',
         empty: 'Noch keine Kompetenz angelegt.',
         items: competencyDefinitions
           .filter((entry) => entry.id != null)
@@ -1311,6 +1354,7 @@ const App = () => {
             emptyLabel={admin.empty}
             onCreate={() => {
               if (page === 'quals') setQualificationModal({ open: true, value: '', note: '' });
+              if (page === 'services') openCreateServiceDefinition();
               if (page === 'comps')
                 setCompetencyModal({
                   open: true,
@@ -1340,6 +1384,10 @@ const App = () => {
                     value: entry.name,
                     note: entry.note ?? '',
                   });
+              }
+              if (page === 'services') {
+                const entry = serviceDefinitions.find((item) => item.id === id);
+                if (entry) openEditServiceDefinition(entry);
               }
               if (page === 'comps') {
                 const entry = competencyDefinitions.find((item) => item.id === id);
@@ -1371,6 +1419,8 @@ const App = () => {
             }}
             assignLabel="Zuordnen"
             onAssign={page === 'instrs' ? openAssignInstructionModal : undefined}
+            onToggleActive={page === 'services' ? toggleServiceDefinition : undefined}
+            toggleActiveLabel={(active) => (active ? 'Deaktivieren' : 'Aktivieren')}
             onReorder={(id, targetIndex) => {
               if (page === 'quals')
                 reorderTo(
@@ -1392,6 +1442,13 @@ const App = () => {
                   id,
                   targetIndex,
                   reorderInstructionDefinition,
+                );
+              if (page === 'services')
+                reorderTo(
+                  admin.items.map((item) => item.id),
+                  id,
+                  targetIndex,
+                  reorderServiceDefinitions,
                 );
             }}
           />
@@ -1502,6 +1559,12 @@ const App = () => {
         onClose={() => setQualificationModal({ open: false, value: '', note: '' })}
         onSave={handleSaveQualificationModal}
         onDelete={confirmDeleteQualification}
+      />
+      <ServiceDefinitionModal
+        state={serviceDefinitionModal}
+        onChange={(next) => setServiceDefinitionModal((prev) => ({ ...prev, ...next }))}
+        onClose={() => setServiceDefinitionModal({ ...serviceDefinitionModal, open: false })}
+        onSave={() => void saveServiceDefinition()}
       />
       <CompetencyModal
         state={competencyModal}
@@ -1647,6 +1710,7 @@ const App = () => {
 
       <PatientModal
         modal={patientModal}
+        serviceDefinitions={serviceDefinitions}
         onChange={setPatientModal}
         onClose={closePatientModal}
         onSave={handleSavePatient}

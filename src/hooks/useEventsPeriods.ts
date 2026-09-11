@@ -330,17 +330,6 @@ const useEventsPeriods = ({
     ],
   );
 
-  const displayStart = useMemo(() => {
-    if (!selectedEmployee) return '';
-    if (selectedEmployee.employmentStartDate) return selectedEmployee.employmentStartDate;
-    const joinDates = events
-      .filter((ev) => ev.type === 'join')
-      .map((ev) => ev.eventDate)
-      .sort();
-    if (joinDates.length > 0) return joinDates[0];
-    return selectedEmployee.createdAt ?? selectedEmployee.startDate;
-  }, [events, selectedEmployee]);
-
   const timelineItems: TimelineItem[] = useMemo(() => {
     const items: TimelineItem[] = [];
     periods.forEach((p) => items.push({ kind: 'period', date: p.startDate, record: p }));
@@ -362,7 +351,6 @@ const useEventsPeriods = ({
       setPeriodToDelete,
     },
     derived: {
-      displayStart,
       timelineItems,
     },
     actions: {

@@ -1,19 +1,29 @@
 import { userFacingErrorMessage } from '../errorMessage';
 
 describe('userFacingErrorMessage', () => {
-  it('removes transport prefixes and keeps the operation detail', () => {
-    expect(userFacingErrorMessage(new Error('API saveEmployee failed: Name ist erforderlich.'))).toBe(
-      'Name ist erforderlich.',
-    );
+  it('entfernt den Wrapper von Electron und behält die fachliche Meldung', () => {
     expect(
       userFacingErrorMessage(
         new Error("Error invoking remote method 'data:save': Beschäftigungsperiode überschneidet sich."),
       ),
     ).toBe('Beschäftigungsperiode überschneidet sich.');
+    expect(
+      userFacingErrorMessage(
+        new Error("Error invoking remote method 'data:save': Error: Name ist erforderlich."),
+      ),
+    ).toBe('Name ist erforderlich.');
   });
 
-  it('uses a stable fallback for empty errors', () => {
+  it('lässt eine bereits lesbare Meldung unverändert', () => {
+    expect(userFacingErrorMessage(new Error('Name ist erforderlich.'))).toBe(
+      'Name ist erforderlich.',
+    );
+  });
+
+  it('nutzt den Ersatztext nur ohne Meldung', () => {
+    expect(userFacingErrorMessage(new Error(''), 'Speichern fehlgeschlagen.')).toBe(
+      'Speichern fehlgeschlagen.',
+    );
     expect(userFacingErrorMessage(new Error(''))).toBe('Unbekannter Fehler');
   });
 });
-
