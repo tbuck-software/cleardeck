@@ -537,8 +537,11 @@ textarea.input {
 }
 
 .cd-th {
-  cursor: pointer;
   user-select: none;
+}
+
+.cd-sort-mark {
+  color: var(--color-accent);
 }
 
 .cd-sort-button {

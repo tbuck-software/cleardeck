@@ -2,8 +2,8 @@ import { localDate } from '../../utils/calendarDate';
 import React, { useMemo, useState } from 'react';
 import Icon, { MoreIcon } from '../ui/Icon';
 import Segmented from '../ui/Segmented';
-import Avatar from '../ui/Avatar';
 import ActionMenu from '../ui/ActionMenu';
+import DataTable, { type DataTableColumn } from '../ui/DataTable';
 import { formatDateDE } from '../../utils/dateFormat';
 import type { EmployeeWithPeriod, QualificationType } from '../../shared/types';
 
@@ -15,16 +15,6 @@ type SortKey =
   | 'weeklyHours'
   | 'fte'
   | 'status';
-
-const COLUMNS: { key: SortKey; label: string; align?: 'right' }[] = [
-  { key: 'name', label: 'Name' },
-  { key: 'qualification', label: 'Qualifikation' },
-  { key: 'startDate', label: 'Eintritt' },
-  { key: 'endDate', label: 'Austritt' },
-  { key: 'weeklyHours', label: 'Std./Wo.', align: 'right' },
-  { key: 'fte', label: 'VZÄ', align: 'right' },
-  { key: 'status', label: 'Status' },
-];
 
 const fte2 = (value: number | null | undefined) =>
   value == null ? '—' : value.toFixed(2).replace('.', ',');
@@ -108,6 +98,51 @@ const EmployeeList = ({
       return cmp * sort.dir;
     });
   }, [filteredEmployees, sort]);
+
+  const columns: DataTableColumn<EmployeeWithPeriod, SortKey>[] = [
+    {
+      key: 'qualification',
+      label: 'Qualifikation',
+      compact: true,
+      cell: (employee) => employee.qualification,
+    },
+    {
+      key: 'startDate',
+      label: 'Eintritt',
+      nowrap: true,
+      cell: (employee) => formatDateDE(employee.employmentStartDate),
+    },
+    {
+      key: 'endDate',
+      label: 'Austritt',
+      nowrap: true,
+      cell: (employee) =>
+        employee.endDate ? (
+          <span
+            style={{
+              color: employee.status === 'active' ? 'var(--color-accent-700)' : 'inherit',
+            }}
+          >
+            {formatDateDE(employee.endDate)}
+          </span>
+        ) : (
+          '—'
+        ),
+    },
+    {
+      key: 'weeklyHours',
+      label: 'Std./Wo.',
+      align: 'right',
+      cell: (employee) => employee.weeklyHours ?? '—',
+    },
+    {
+      key: 'fte',
+      label: 'VZÄ',
+      align: 'right',
+      compact: true,
+      cell: (employee) => <strong>{employee.hoursMissing ? '—' : fte2(employee.fte)}</strong>,
+    },
+  ];
 
   const totalHours = rows.reduce((sum, employee) => sum + (employee.weeklyHours ?? 0), 0);
   const shownFte = rows.reduce((sum, employee) => sum + (employee.fte ?? 0), 0);
@@ -209,125 +244,47 @@ const EmployeeList = ({
         </div>
       )}
 
-      {rows.length > 0 && !wideTable && (
-        <div className="cd-panel">
-          {rows.map((employee) => {
-            const [tagClass, label] = statusTag(employee, today);
-            return (
-              <button
-                key={employee.id}
-                type="button"
-                className={`cd-item${employee.status === 'left' ? ' cd-row-departed' : ''}`}
-                onClick={() => void onSelect(employee)}
-              >
-                <Avatar name={employee.name} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600 }}>{employee.name}</div>
-                  <div className="cd-muted-13">
-                    {employee.qualification} · {employee.weeklyHours ?? '—'} h · seit{' '}
-                    {formatDateDE(employee.employmentStartDate)}
-                  </div>
-                </div>
-                <span style={{ fontWeight: 700, flex: 'none' }}>
-                  {employee.hoursMissing ? '—' : fte2(employee.fte)}
-                </span>
-                <span className={`tag ${tagClass}`} style={{ flex: 'none' }}>
-                  {label}
-                </span>
-              </button>
-            );
-          })}
-          <div className="cd-panel-foot">
-            <span>{rows.length} Personen</span>
-            <strong>{directoryMode ? 'Letzter Stand je Person' : `${fte2(shownFte)} VZÄ`}</strong>
-          </div>
-        </div>
-      )}
-
-      {rows.length > 0 && wideTable && (
-        <div className="cd-table-wrap">
-          <table className="ds-table">
-            <thead>
-              <tr>
-                {COLUMNS.map((column) => (
-                  <th
-                    key={column.key}
-                    className="cd-th"
-                    style={{ textAlign: column.align ?? 'left' }}
-                    aria-sort={
-                      sort.key === column.key ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none'
-                    }
-                    onClick={() => toggleSort(column.key)}
-                  >
-                    {column.label}{' '}
-                    <span style={{ color: 'var(--color-accent)' }}>
-                      {sort.key === column.key ? (sort.dir > 0 ? '↑' : '↓') : ''}
-                    </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((employee) => {
-                const [tagClass, label] = statusTag(employee, today);
-                const leaving = employee.status === 'active' && employee.endDate;
-                return (
-                  <tr
-                    key={employee.id}
-                    className={`cd-row${employee.status === 'left' ? ' cd-row-departed' : ''}`}
-                    onClick={() => void onSelect(employee)}
-                  >
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <Avatar name={employee.name} />
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{employee.name}</div>
-                          <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>
-                            {employee.note || employee.qualification}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td>{employee.qualification}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {formatDateDE(employee.employmentStartDate)}
-                    </td>
-                    <td
-                      style={{
-                        whiteSpace: 'nowrap',
-                        color: leaving ? 'var(--color-accent-700)' : 'inherit',
-                      }}
-                    >
-                      {employee.endDate ? formatDateDE(employee.endDate) : '—'}
-                    </td>
-                    <td style={{ textAlign: 'right' }}>{employee.weeklyHours ?? '—'}</td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                      {employee.hoursMissing ? '—' : fte2(employee.fte)}
-                    </td>
-                    <td>
-                      <span className={`tag ${tagClass}`}>{label}</span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            {!directoryMode && (
-              <tfoot>
-                <tr>
-                  <td
-                    colSpan={4}
-                    style={{ padding: '14px 8px', fontSize: 13, color: 'var(--color-neutral-700)' }}
-                  >
-                    Summe über {rows.length} Personen
-                  </td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{totalHours || '—'}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 700 }}>{fte2(shownFte)}</td>
-                  <td />
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
+      {rows.length > 0 && (
+        <DataTable<EmployeeWithPeriod, SortKey>
+          rows={rows}
+          rowKey={(employee) => employee.id ?? employee.name}
+          rowClassName={(employee) => (employee.status === 'left' ? 'cd-row-departed' : undefined)}
+          person={{
+            key: 'name',
+            name: (employee) => employee.name,
+            subline: (employee) => employee.note,
+          }}
+          columns={columns}
+          status={{
+            key: 'status',
+            label: 'Status',
+            cell: (employee) => {
+              const [tagClass, label] = statusTag(employee, today);
+              return <span className={`tag ${tagClass}`}>{label}</span>;
+            },
+          }}
+          sort={sort}
+          onSort={toggleSort}
+          onOpen={(employee) => void onSelect(employee)}
+          compact={!wideTable}
+          footer={
+            directoryMode
+              ? undefined
+              : {
+                  label: `Summe über ${rows.length} Personen`,
+                  cells: {
+                    weeklyHours: <strong>{totalHours || '—'}</strong>,
+                    fte: <strong>{fte2(shownFte)}</strong>,
+                  },
+                }
+          }
+          compactFooter={
+            <>
+              <span>{rows.length} Personen</span>
+              <strong>{directoryMode ? 'Letzter Stand je Person' : `${fte2(shownFte)} VZÄ`}</strong>
+            </>
+          }
+        />
       )}
     </div>
   );
