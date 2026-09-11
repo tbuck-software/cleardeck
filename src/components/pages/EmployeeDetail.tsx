@@ -1,6 +1,7 @@
 import { localDate } from '../../utils/calendarDate';
 import React, { useState } from 'react';
 import EmployeeCompetencies from './EmployeeCompetencies';
+import EmploymentRepairPanel from '../employment/EmploymentRepairPanel';
 import WorkingTimeModal from '../modals/WorkingTimeModal';
 import Icon from '../ui/Icon';
 import Avatar from '../ui/Avatar';
@@ -12,6 +13,8 @@ import type {
   EmployeeCompetency,
   EmployeeInstruction,
   EmployeeWithPeriod,
+  EmploymentIntegrityOverview,
+  EmploymentPeriod,
   WorkingTime,
 } from '../../shared/types';
 import type { TimelineItem } from '../../types/ui';
@@ -49,6 +52,8 @@ type EmployeeDetailProps = {
   competencies: EmployeeCompetency[];
   instructions: EmployeeInstruction[];
   timelineItems: TimelineItem[];
+  employmentIntegrity: EmploymentIntegrityOverview;
+  backupFolder: string | null;
   suggestedCompetencyCount: number;
   /** 0 disables the add button and explains why, instead of leaving it dead. */
   availableCompetencyCount: number;
@@ -64,6 +69,9 @@ type EmployeeDetailProps = {
   onSelectInstruction: (instruction: EmployeeInstruction) => void;
   onStartNewPeriod: () => void;
   onSelectTimelineItem: (item: TimelineItem) => void;
+  onEditPeriod: (period: EmploymentPeriod) => void;
+  onOpenBackupSettings: () => void;
+  onEmploymentRepairApplied: (message: string) => void | Promise<void>;
 };
 
 const EmployeeDetail = ({
@@ -74,6 +82,8 @@ const EmployeeDetail = ({
   competencies,
   instructions,
   timelineItems,
+  employmentIntegrity,
+  backupFolder,
   suggestedCompetencyCount,
   availableCompetencyCount,
   availableInstructionCount,
@@ -88,6 +98,9 @@ const EmployeeDetail = ({
   onSelectInstruction,
   onStartNewPeriod,
   onSelectTimelineItem,
+  onEditPeriod,
+  onOpenBackupSettings,
+  onEmploymentRepairApplied,
 }: EmployeeDetailProps) => {
   const [workingTimeEdit, setWorkingTimeEdit] = useState<WorkingTime | null>();
   const workingTimes = employee.workingTimes ?? [];
@@ -314,6 +327,14 @@ const EmployeeDetail = ({
 
       {tab === 'hist' && (
         <section>
+          <EmploymentRepairPanel
+            employeeId={employee.id!}
+            overview={employmentIntegrity}
+            backupFolder={backupFolder}
+            onOpenBackupSettings={onOpenBackupSettings}
+            onOpenPeriod={onEditPeriod}
+            onApplied={onEmploymentRepairApplied}
+          />
           <div className="cd-section-head">
             <div>
               <h3 className="cd-h3">Historie</h3>

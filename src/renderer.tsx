@@ -1207,6 +1207,8 @@ const App = () => {
             competencies={employeeCompetencies}
             instructions={employeeInstructions}
             timelineItems={timelineItems}
+            employmentIntegrity={employmentIntegrity}
+            backupFolder={backup.folder}
             suggestedCompetencyCount={suggestedCompetencyDefinitions.length}
             availableCompetencyCount={availableCompetencyDefinitions.length}
             availableInstructionCount={availableInstructionDefinitions.length}
@@ -1231,6 +1233,12 @@ const App = () => {
                 ? openExistingPeriodModal(item.record)
                 : openEventModalForEvent(item.record)
             }
+            onEditPeriod={openExistingPeriodModal}
+            onOpenBackupSettings={() => navigateToPage('security')}
+            onEmploymentRepairApplied={async (message) => {
+              await refreshAfterEmploymentRepair();
+              setToastMessage(message);
+            }}
           />
         )}
 
