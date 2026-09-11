@@ -107,4 +107,28 @@ describe('Leistungskatalog und Personenlistenzuordnung', () => {
       updateServiceDefinition({ id: 999999, name: 'Nicht vorhanden', serviceType: 's36-care' }),
     ).toThrow(/nicht gefunden/);
   });
+
+  it('rollt Patient und Zuordnungen bei einem Fehler gemeinsam zurück', () => {
+    const entry = listServiceDefinitions().find((item) => item.name === 'Ganzwaschung')!;
+    const patient = savePatient({ name: 'Unveränderte Person' })[0];
+    db.exec(`
+      CREATE TRIGGER fail_patient_service_insert
+      BEFORE INSERT ON patient_services
+      BEGIN
+        SELECT RAISE(ABORT, 'synthetischer Zuordnungsfehler');
+      END;
+    `);
+
+    expect(() =>
+      savePatient({
+        id: patient.id,
+        name: 'Darf nicht gespeichert werden',
+        serviceDefinitionIds: [entry.id!],
+      }),
+    ).toThrow(/synthetischer Zuordnungsfehler/);
+    expect(getPatient(patient.id!)).toMatchObject({
+      name: 'Unveränderte Person',
+      serviceDefinitionIds: [],
+    });
+  });
 });
