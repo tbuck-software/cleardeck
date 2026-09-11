@@ -25,6 +25,7 @@ import {
   assertNoStrandedTerms,
   assertReportYear,
   findPeriodConflict,
+  loadPeriod,
   updateEmployeeCache,
 } from './employmentCore';
 
@@ -415,25 +416,25 @@ export const saveEmployee = (input: {
           ).lastInsertRowid,
       );
     }
-    if (
-      periodId &&
-      !db
-        .prepare('SELECT id FROM employment_periods WHERE id=? AND employeeId=?')
-        .get(periodId, employeeId)
-    )
-      throw new Error('Beschäftigungsperiode nicht gefunden.');
+    const existingPeriod = periodId ? loadPeriod(employeeId, periodId) : undefined;
     const bounds: PeriodBoundsInput = {
       startDate: input.startDate,
       endDate: input.endDate || null,
     };
-    if (findPeriodConflict(employeeId, periodId, bounds.startDate, bounds.endDate))
+    // A value-only correction leaves the dates alone; unrelated legacy overlaps must not block it.
+    const periodDatesUnchanged = Boolean(
+      existingPeriod &&
+        existingPeriod.startDate === bounds.startDate &&
+        (existingPeriod.endDate ?? null) === bounds.endDate,
+    );
+    if (!periodDatesUnchanged && findPeriodConflict(employeeId, periodId, bounds.startDate, bounds.endDate))
       throw new Error(employmentMessages.overlap);
     if (periodId) {
       const before = db
         .prepare('SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods WHERE id=?')
         .get(periodId) as EmploymentPeriod & { id: number; employeeId: number };
       // Same rule as the recorded departure: narrowing must not orphan terms.
-      assertNoStrandedTerms(periodId, bounds);
+      if (!periodDatesUnchanged) assertNoStrandedTerms(periodId, bounds);
       db.prepare(
         'UPDATE employment_periods SET startDate=?,endDate=?,qualification=? WHERE id=?',
       ).run(input.startDate, input.endDate || null, input.qualification, periodId);
@@ -480,7 +481,7 @@ export const saveEmployee = (input: {
       (existing?.verified !== 1 ||
         (input.hoursEffectiveFrom && input.hoursEffectiveFrom !== existing?.effectiveFrom) ||
         input.sourceRef !== existing?.sourceRef);
-    if (!existing || (input.updateHours !== false && (changed || confirming))) {
+    if (input.updateHours !== false && (!existing || changed || confirming)) {
       const effective = input.hoursEffectiveFrom || (existing ? localDate() : input.startDate);
       requireDate(effective, 'Stunden gültig ab');
       if (effective < input.startDate || (input.endDate && effective > input.endDate))

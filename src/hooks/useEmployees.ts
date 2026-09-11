@@ -852,11 +852,20 @@ const useEmployees = ({
         ? String(selectedEmployee.weeklyHours)
         : '';
     const today = localDate();
-    const effectiveFrom = today < selectedEmployee.startDate
+    const fallbackEffectiveFrom = today < selectedEmployee.startDate
       ? selectedEmployee.startDate
       : selectedEmployee.endDate && selectedEmployee.endDate < today
         ? selectedEmployee.endDate
         : today;
+    const departed = Boolean(selectedEmployee.endDate && selectedEmployee.endDate < today);
+    const existingEffectiveFrom = selectedEmployee.hoursEffectiveFrom &&
+      selectedEmployee.hoursEffectiveFrom >= selectedEmployee.startDate &&
+      (!selectedEmployee.endDate || selectedEmployee.hoursEffectiveFrom <= selectedEmployee.endDate)
+      ? selectedEmployee.hoursEffectiveFrom
+      : undefined;
+    const effectiveFrom = departed && existingEffectiveFrom
+      ? existingEffectiveFrom
+      : fallbackEffectiveFrom;
     setEditModal({
       open: true,
       mode: 'edit',
@@ -868,6 +877,7 @@ const useEmployees = ({
       birthDate: selectedEmployee.birthDate ?? '',
       hoursEffectiveFrom: effectiveFrom,
       initialHoursEffectiveFrom: effectiveFrom,
+      existingHoursEffectiveFrom: selectedEmployee.hoursEffectiveFrom,
       sourceRef: selectedEmployee.sourceRef ?? '',
     });
   }, [baseHours, selectedEmployee]);
