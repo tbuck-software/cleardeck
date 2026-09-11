@@ -119,8 +119,9 @@ const PatientList = ({
     {
       key: 'group',
       label: 'Teilgruppe',
+      nowrap: true,
       cell: ({ patient, group }) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span
             className={`tag ${group ? 'tag-accent-2' : 'tag-neutral'}`}
             style={{ fontWeight: 700 }}
