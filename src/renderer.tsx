@@ -964,9 +964,9 @@ const App = () => {
     }
     if (page === 'services') {
       return {
-        title: 'Leistungen',
+        title: 'Leistungen für betreute Personen',
         subtitle:
-          'Katalog der Leistungen, die im Patient:innenformular ausgewählt werden können. Deaktivierte Einträge bleiben bei bestehenden Zuordnungen sichtbar.',
+          'Leistungskatalog für die Auswahl im Patientenformular; bestehende Zuordnungen bleiben nachvollziehbar.',
         empty: 'Noch keine Leistung angelegt.',
         items: serviceDefinitions
           .filter((entry) => entry.id != null)
@@ -985,8 +985,9 @@ const App = () => {
     }
     if (page === 'comps') {
       return {
-        title: 'Kompetenzen',
-        subtitle: 'Fachthemen mit Kategorie und Relevanz — Grundlage der Kompetenzmatrix.',
+        title: 'Kompetenzen im Team',
+        subtitle:
+          'Fachliche Fähigkeiten und Nachweise der Mitarbeitenden. Grundlage der Kompetenzmatrix.',
         empty: 'Noch keine Kompetenz angelegt.',
         items: competencyDefinitions
           .filter((entry) => entry.id != null)
