@@ -13,6 +13,7 @@ import useCalendar from './useCalendar';
 import useDashboardWidgets from './useDashboardWidgets';
 import usePatients from './usePatients';
 import usePatientDashboard from './usePatientDashboard';
+import useServiceCatalog from './useServiceCatalog';
 import { userFacingErrorMessage } from '../utils/errorMessage';
 
 const useAppLogic = () => {
@@ -146,6 +147,11 @@ const useAppLogic = () => {
   });
 
   const patientDashboardSlice = usePatientDashboard({ handleError });
+  const serviceCatalogSlice = useServiceCatalog({
+    handleError,
+    setToast: showToast,
+    confirmAction,
+  });
 
   // Store actions in refs to avoid dependency changes triggering the effect
   const loadActionsRef = useRef({
@@ -155,6 +161,7 @@ const useAppLogic = () => {
     refreshPatients: patientSlice.actions.refreshPatients,
     loadPatientDashboard: patientDashboardSlice.actions.loadAll,
     loadCalendar: calendarSlice.actions.loadEvents,
+    loadServiceDefinitions: serviceCatalogSlice.actions.loadServiceDefinitions,
   });
   loadActionsRef.current = {
     loadHiddenEventTypes: upcomingEventsSlice.actions.loadHiddenEventTypes,
@@ -163,6 +170,7 @@ const useAppLogic = () => {
     refreshPatients: patientSlice.actions.refreshPatients,
     loadPatientDashboard: patientDashboardSlice.actions.loadAll,
     loadCalendar: calendarSlice.actions.loadEvents,
+    loadServiceDefinitions: serviceCatalogSlice.actions.loadServiceDefinitions,
   };
 
   // Load upcoming events and filters when app is unlocked
@@ -173,6 +181,7 @@ const useAppLogic = () => {
       loadActionsRef.current.loadDashboardWidgets();
       loadActionsRef.current.refreshPatients();
       loadActionsRef.current.loadPatientDashboard();
+      loadActionsRef.current.loadServiceDefinitions();
     }
   }, [authSlice.appReady.unlocked]);
 
@@ -314,6 +323,8 @@ const useAppLogic = () => {
       patientGroupFilter: patientSlice.state.groupFilter,
       patientVisitModal: patientSlice.state.visitModal,
       patientDashboard: patientDashboardSlice.state,
+      serviceDefinitions: serviceCatalogSlice.state.serviceDefinitions,
+      serviceDefinitionModal: serviceCatalogSlice.state.serviceDefinitionModal,
     },
     setters: {
       setEmployeeCompetencies: employeeSlice.setters.setEmployeeCompetencies,
@@ -346,6 +357,7 @@ const useAppLogic = () => {
       setPatientSearch: patientSlice.setters.setSearch,
       setPatientGroupFilter: patientSlice.setters.setGroupFilter,
       setPatientVisitModal: patientSlice.setters.setVisitModal,
+      setServiceDefinitionModal: serviceCatalogSlice.setters.setServiceDefinitionModal,
     },
     derived: {
       filteredEmployees: employeeSlice.derived.filteredEmployees,
@@ -435,6 +447,12 @@ const useAppLogic = () => {
       openVisitModal: patientSlice.actions.openVisitModal,
       closeVisitModal: patientSlice.actions.closeVisitModal,
       refreshPatients: patientSlice.actions.refreshPatients,
+      loadServiceDefinitions: serviceCatalogSlice.actions.loadServiceDefinitions,
+      saveServiceDefinition: serviceCatalogSlice.actions.saveServiceDefinition,
+      toggleServiceDefinition: serviceCatalogSlice.actions.toggleServiceDefinition,
+      reorderServiceDefinitions: serviceCatalogSlice.actions.reorderServiceDefinitions,
+      openCreateServiceDefinition: serviceCatalogSlice.actions.openCreate,
+      openEditServiceDefinition: serviceCatalogSlice.actions.openEdit,
     },
   };
 };

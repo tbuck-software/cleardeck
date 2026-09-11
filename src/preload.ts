@@ -36,6 +36,8 @@ import type {
   PatientVisitEvent,
   HkpCode,
   IntensiveCare,
+  ServiceDefinition,
+  ServiceType,
   AuditResult,
   AuditSectionDefinition,
   AuditWithDetails,
@@ -117,6 +119,11 @@ export type Api = {
   ) => Promise<QualificationType[]>;
   deleteQualification: (id: number) => Promise<QualificationType[]>;
   reorderQualifications: (ids: number[]) => Promise<QualificationType[]>;
+  listServiceDefinitions: () => Promise<ServiceDefinition[]>;
+  addServiceDefinition: (input: { name: string; serviceType: ServiceType }) => Promise<ServiceDefinition[]>;
+  updateServiceDefinition: (input: { id: number; name: string; serviceType: ServiceType }) => Promise<ServiceDefinition[]>;
+  setServiceDefinitionActive: (id: number, active: boolean) => Promise<ServiceDefinition[]>;
+  reorderServiceDefinitions: (ids: number[]) => Promise<ServiceDefinition[]>;
   listCompetencyDefinitions: () => Promise<CompetencyDefinition[]>;
   addCompetencyDefinition: (input: {
     code?: string | null;
@@ -362,6 +369,12 @@ const api: Api = {
     ipcRenderer.invoke('qualifications:update', { id, name, note }),
   deleteQualification: (id) => ipcRenderer.invoke('qualifications:delete', { id }),
   reorderQualifications: (ids) => ipcRenderer.invoke('qualifications:reorder', { ids }),
+  listServiceDefinitions: () => ipcRenderer.invoke('services:list'),
+  addServiceDefinition: (input) => ipcRenderer.invoke('services:add', input),
+  updateServiceDefinition: (input) => ipcRenderer.invoke('services:update', input),
+  setServiceDefinitionActive: (id, active) =>
+    ipcRenderer.invoke('services:setActive', { id, active }),
+  reorderServiceDefinitions: (ids) => ipcRenderer.invoke('services:reorder', { ids }),
   listCompetencyDefinitions: () => ipcRenderer.invoke('competencies:listDefinitions'),
   addCompetencyDefinition: (input) => ipcRenderer.invoke('competencies:addDefinition', input),
   updateCompetencyDefinition: (input) => ipcRenderer.invoke('competencies:updateDefinition', input),

@@ -12,6 +12,7 @@ import {
   hkpCodesOf,
   needsAssessment,
   intensiveCareForList,
+  serviceScopeOf,
   visitDue,
 } from '../../utils/qpr';
 import type { PatientVisit, PatientWithLatestVisit } from '../../shared/types';
@@ -56,9 +57,23 @@ const PatientDetail = ({
     visitIntervalDays,
   );
   const age = ageOf(patient.birthDate);
+  const serviceDecision = serviceScopeOf(patient);
+  const serviceLabels = patient.services?.length
+    ? patient.services.map((service) => service.label).join('; ')
+    : patient.serviceScopeSource === 'legacy'
+      ? 'Leistungen noch nicht erfasst (übernommene Entscheidung)'
+      : 'Leistungen noch nicht erfasst';
 
   const missing = 'fehlt';
   const facts: { label: string; value: string }[] = [
+    {
+      label: 'Erbrachte Leistungen',
+      value: serviceLabels,
+    },
+    {
+      label: 'MD-Personenliste',
+      value: `${serviceDecision.scope === 'eligible' ? 'Auf der Liste' : serviceDecision.scope === 'excluded' ? 'Nicht auf der Liste' : 'Ungeklärt'} · ${serviceDecision.reason}`,
+    },
     {
       label: 'Quelle',
       value:

@@ -79,7 +79,7 @@ for (const [tag, mode] of [
       expect(backups()).toHaveLength(1);
       expect(
         getDb().prepare("SELECT value FROM settings WHERE key='schema_version'").get(),
-      ).toMatchObject({ value: '21' });
+      ).toMatchObject({ value: '22' });
     });
     it('leaves original file and old schema untouched after a migration failure, then retries', () => {
       const migration = migrations.find((m) => m.version === 20)!;
@@ -113,7 +113,11 @@ it('reopens the original 2.0.0 schema without changing records or creating a mig
   const tables = ['employees', 'employment_periods', 'employee_competencies', 'competency_history',
     'employment_terms', 'employment_term_history', 'employee_instructions', 'patients', 'patient_visits'];
   const snapshot = (db: Pick<SqliteAdapter, 'prepare'>) => tables.map(table =>
-    db.prepare(`SELECT * FROM ${table} ORDER BY id`).all());
+    (db.prepare(`SELECT * FROM ${table} ORDER BY id`).all() as Array<Record<string, unknown>>).map((row) => {
+      const copy = { ...row };
+      delete copy.serviceScopeSource;
+      return copy;
+    }));
   const before = snapshot(old);
   fs.writeFileSync(getWorkingDbPath(), old.serialize());
   fs.writeFileSync(path.join(getDataDir(), 'config.json'), '{}');
@@ -123,7 +127,7 @@ it('reopens the original 2.0.0 schema without changing records or creating a mig
       openDatabase();
       expect(snapshot(getDb() as unknown as SqliteAdapter)).toEqual(before);
       const backupDir = path.join(getDataDir(), 'backups');
-      expect(fs.existsSync(backupDir) ? fs.readdirSync(backupDir).filter(name => name.startsWith('before-migration-')) : []).toEqual([]);
+      expect(fs.existsSync(backupDir) ? fs.readdirSync(backupDir).filter(name => name.startsWith('before-migration-')) : []).toHaveLength(1);
       closeDb();
     }
   } finally {
