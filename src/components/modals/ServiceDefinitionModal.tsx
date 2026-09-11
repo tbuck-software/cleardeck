@@ -6,7 +6,7 @@ import type { ServiceDefinitionModalState } from '../../types/ui';
 
 type Props = {
   state: ServiceDefinitionModalState;
-  /** Status der gespeicherten Leistung, nicht des Formulars. */
+  /** State of the saved service, not of the form. */
   active?: boolean;
   onChange: (next: Partial<ServiceDefinitionModalState>) => void;
   onClose: () => void;

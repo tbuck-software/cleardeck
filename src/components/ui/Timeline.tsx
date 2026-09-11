@@ -16,7 +16,7 @@ export type TimelineEntry = {
 type TimelineProps = {
   items: TimelineEntry[];
   empty?: React.ReactNode;
-  /** Kurze Vorschau ohne Linie: Datum, Text und Tag in einer Zeile. */
+  /** Short preview without the rail: date, copy and tag on one line. */
   compact?: boolean;
   className?: string;
 };
