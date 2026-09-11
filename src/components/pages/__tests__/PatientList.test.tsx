@@ -175,6 +175,13 @@ describe('PatientList', () => {
     renderList();
 
     expect(screen.getByText('Gutachten-Daten fehlen')).toBeInTheDocument();
+    expect(screen.getAllByText(/Pflegegrad unbekannt/).length).toBeGreaterThan(0);
+  });
+
+  it('zeigt einen expliziten fehlenden Pflegegrad getrennt vom unbekannten Wert', () => {
+    renderList({ patients: [{ ...patients[0], careLevel: 0 }] });
+
+    expect(screen.getByText(/Kein Pflegegrad/)).toBeInTheDocument();
   });
 
   it('markiert Handlungsbedarf aus der letzten Visite', () => {

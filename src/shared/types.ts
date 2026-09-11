@@ -374,6 +374,9 @@ export type HkpCode = '6' | '8' | '29' | '31a';
 /** Außerklinische Intensivpflege / psychiatrische HKP, incl. Erstverordnung. */
 export type IntensiveCare = 'AKI' | 'AKI-B' | 'pHKP' | 'pHKP-EV';
 
+/** Pflegegrad: null means unknown, zero means explicitly no Pflegegrad. */
+export type CareLevel = 0 | 1 | 2 | 3 | 4 | 5;
+
 export interface Patient {
   legacyQprStatus?: string | null;
   serviceStatus?: 'active' | 'ended';
@@ -403,7 +406,7 @@ export interface Patient {
   mobilityImpaired?: boolean | null;
   hkpCode?: HkpCode | null;
   intensiveCare?: IntensiveCare | null;
-  careLevel?: number | null;
+  careLevel?: CareLevel | null;
 }
 
 export interface PatientVisit {

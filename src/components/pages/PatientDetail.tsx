@@ -15,6 +15,7 @@ import {
   visitDue,
 } from '../../utils/qpr';
 import type { PatientVisit, PatientWithLatestVisit } from '../../shared/types';
+import { careLevelLabel } from '../../utils/careLevel';
 
 const ageOf = (birthDate?: string | null): string => {
   if (!birthDate || birthDate.startsWith('0000')) return '';
@@ -71,7 +72,7 @@ const PatientDetail = ({
       label: 'Eingeschätzt am',
       value: patient.assessmentDate ? formatDateDE(patient.assessmentDate) : missing,
     },
-    { label: 'Pflegegrad', value: patient.careLevel ? `PG ${patient.careLevel}` : missing },
+    { label: 'Pflegegrad', value: careLevelLabel(patient.careLevel) },
     {
       label: 'Kognition (Modul 2)',
       value:

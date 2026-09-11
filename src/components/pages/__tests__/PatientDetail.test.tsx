@@ -77,6 +77,15 @@ describe('PatientDetail', () => {
     expect(screen.getByText('Teilgruppe offen')).toBeInTheDocument();
   });
 
+  it('unterscheidet unbekannten Pflegegrad und keinen Pflegegrad', () => {
+    const { unmount } = renderDetail({ patient: { ...patient, careLevel: 0 } });
+    expect(screen.getByText('Kein Pflegegrad')).toBeInTheDocument();
+    unmount();
+
+    renderDetail({ patient: { ...patient, careLevel: null } });
+    expect(screen.getByText('Pflegegrad unbekannt')).toBeInTheDocument();
+  });
+
   it('nennt die nächste Visite als fällig oder überfällig', () => {
     renderDetail({ patient: { ...patient, latestVisitDate: '2026-01-01' } });
     expect(screen.getByText(/Nächste Pflegevisite überfällig seit/)).toBeInTheDocument();
