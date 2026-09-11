@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import api from '../services/api';
-import type { EmployeeWithPeriod, YearDataset } from '../shared/types';
+import type { EmployeeWithPeriod, EmploymentPeriod, YearDataset } from '../shared/types';
 import type { FormState } from '../types/ui';
 import type { EmploymentActionInput, EmploymentActionMode } from '../components/modals/EmploymentActionModal';
 
@@ -30,6 +30,15 @@ const findSelectionTarget = (
     return entry.startDate === target.effectiveFrom && entry.qualification === target.qualification;
   });
 
+const findPeriodTarget = (
+  periods: EmploymentPeriod[],
+  target: SelectionTarget,
+): EmploymentPeriod | undefined =>
+  periods.find((period) => {
+    if (target.mode === 'departure') return period.id === target.periodId;
+    return period.startDate === target.effectiveFrom && period.qualification === target.qualification;
+  });
+
 const useEmploymentActions = ({
   year,
   selectedEmployee,
@@ -56,11 +65,27 @@ const useEmploymentActions = ({
     target: SelectionTarget,
   ) => {
     const current = findSelectionTarget(updated, employee.id ?? 0, target);
-    const selected = current ?? findSelectionTarget(
+    let selected = current ?? findSelectionTarget(
       await api.employees.list(year, 'directory'),
       employee.id ?? 0,
       target,
     );
+    if (!selected) {
+      const period = findPeriodTarget(
+        await api.employees.listPeriods(employee.id ?? 0),
+        target,
+      );
+      if (period) {
+        selected = {
+          ...employee,
+          periodId: period.id,
+          qualification: period.qualification,
+          startDate: period.startDate,
+          endDate: period.endDate ?? null,
+          note: period.note ?? employee.note,
+        };
+      }
+    }
     if (!selected) return;
     setSelectedEmployee(selected);
     setForm((previous) => ({
