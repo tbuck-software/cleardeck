@@ -1,0 +1,51 @@
+{
+  "issue": 30,
+  "kind": "before",
+  "capturedAt": "2026-09-11T16:30:01+02:00",
+  "repository": "employee-db",
+  "branch": "fix/visual-evidence",
+  "sourceSha": "b792f4f8960ccfd56c54707bd8db0b85f193345d",
+  "sourceTag": "v2.1.0 baseline",
+  "latestMainReference": "3ac077f",
+  "limitations": [
+    "The overlap-error baseline fixture uses periods ending 2026-12-31, so its list state is a planned future departure relative to the 2026-09-11 capture date. The after fixture below uses a separate synthetic employee with an actual past departure on 2026-08-31.",
+    "The inherited-hours screenshot records the released behavior before the correction branch; no real-user media or data was used."
+  ],
+  "runtime": {
+    "command": "CLEARDECK_DEMO_DEBUG=1 npm run demo",
+    "title": "ClearDeck Demo · synthetische Daten",
+    "cdp": "http://127.0.0.1:19375",
+    "profile": ".cache/cleardeck-demo-profile/dev-ClearDeck",
+    "viewportCss": "1440x1000"
+  },
+  "fixtures": [
+    {
+      "employeeId": 1,
+      "name": "Demo FTE-Overlap",
+      "syntheticOnly": true,
+      "periods": [
+        { "startDate": "2024-01-01", "endDate": "2026-12-31", "qualification": "3-jährig examiniert", "weeklyHours": 36, "fte": 1 },
+        { "startDate": "2025-01-01", "endDate": "2026-12-31", "qualification": "3-jährig examiniert", "weeklyHours": 36, "fte": 1 }
+      ],
+      "action": "Opened the general Person bearbeiten editor, changed only VZÄ from 1 to 0, and attempted Speichern.",
+      "observedResult": "The released app keeps the editor open and shows Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren."
+    },
+    {
+      "employeeId": 2,
+      "name": "Demo FTE-Verlauf",
+      "syntheticOnly": true,
+      "laterPeriod": { "startDate": "2026-09-01", "endDate": null, "qualification": "3-jährig examiniert", "weeklyHours": 36, "fte": 1 },
+      "earlierPeriodAddedThroughUI": { "startDate": "2025-09-01", "endDate": "2026-08-31", "qualification": "1-jährig examiniert" },
+      "observedResult": "The year-2025 Team row shows the earlier training period with 36 h and 1,00 VZÄ. A read-only database check confirms the new period received a 36-hour, FTE-1 term marked unverified, plus a matching history snapshot."
+    }
+  ],
+  "steps": [
+    "Seeded only synthetic legacy records in the isolated demo database; no user photo, audio, names, or personal data were used.",
+    "Captured issue-30-before-fte-overlap-error.png from the real Electron general editor after the FTE-only save attempt.",
+    "Added the earlier training section through the real Historie → Eintrag hinzufügen flow, selected year 2025 in Team, and captured issue-30-before-historical-inherited-fte.png."
+  ],
+  "artifacts": [
+    "issue-30-before-fte-overlap-error.png",
+    "issue-30-before-historical-inherited-fte.png"
+  ]
+}
