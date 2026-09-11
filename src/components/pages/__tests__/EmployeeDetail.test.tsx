@@ -14,6 +14,7 @@ const employee: EmployeeWithPeriod = {
   name: 'Anna Beispiel',
   qualification: 'Pflegefachkraft',
   startDate: '2024-01-01',
+  employmentStartDate: '2024-01-01',
   endDate: '',
   fte: 0.8,
   weeklyHours: 30,
@@ -169,7 +170,12 @@ it('shows effective working-time sections in the existing timeline, without reco
 it('shows the employment chain start separately from the selected qualification period', () => {
   renderDetail({
     tab: 'hist',
-    employee: { ...employee, periodId: 3, startDate: '2025-01-01' },
+    employee: {
+      ...employee,
+      periodId: 3,
+      startDate: '2025-01-01',
+      employmentStartDate: '2023-07-01',
+    },
     timelineItems: [
       {
         kind: 'period',

@@ -8,7 +8,8 @@ import type { EmployeeWithPeriod } from '../../../shared/types';
 
 vi.mock('../../../services/api', () => ({ default: { workingTimes: { save: vi.fn() } } }));
 const employee: EmployeeWithPeriod = {
-  id: 7, name: 'Testperson', startDate: '2024-09-01', qualification: 'Pflegekraft',
+  id: 7, name: 'Testperson', startDate: '2024-09-01', employmentStartDate: '2024-09-01',
+  qualification: 'Pflegekraft',
   status: 'active', weeklyHours: 36, fte: 1,
   workingTimes: [{ id: 42, periodId: 9, effectiveFrom: '2025-03-01', effectiveUntil: null, weeklyHours: 36, fte: 1 }],
 };
