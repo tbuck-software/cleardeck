@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Checkbox from '../ui/Checkbox';
+import ListPanel from '../ui/ListPanel';
+import ListRow from '../ui/ListRow';
 import type { EmployeeCompetency } from '../../shared/types';
 import { COMPETENCY_LEVELS, LEGACY_COMPETENCY_LEVELS } from '../../utils/competencyLevels';
 import { formatDateDE } from '../../utils/dateFormat';
@@ -100,7 +102,7 @@ const EmployeeCompetencies = ({
           )}
         </div>
       )}
-      <div className="cd-competency-list">
+      <ListPanel>
         {competencies.length === 0 && (
           <div className="cd-empty">Noch keine Kompetenzen zugeordnet.</div>
         )}
@@ -111,52 +113,54 @@ const EmployeeCompetencies = ({
             : level === 6 && competency.stageScheme === 'practice-v1'
               ? 'tag-accent-2'
               : 'tag-accent';
+          const selectedRow = selectedIds.includes(competency.competencyDefinitionId);
+          const history = competency.stageHistory;
           return (
-            <div
+            <ListRow
               key={competency.id ?? competency.competencyDefinitionId}
-              className="cd-selectable-row"
-              data-selected={selectedIds.includes(competency.competencyDefinitionId)}
-            >
-              <Checkbox
-                className="cd-row-select"
-                aria-label={`${competency.competencyName} auswählen`}
-                checked={selectedIds.includes(competency.competencyDefinitionId)}
-                onChange={(event) =>
-                  setSelectedIds((ids) =>
-                    event.target.checked
-                      ? [...ids, competency.competencyDefinitionId]
-                      : ids.filter((id) => id !== competency.competencyDefinitionId),
-                  )
-                }
-              />
-              <button
-                type="button"
-                className="cd-item cd-competency-row"
-                onClick={() => onSelectCompetency(competency)}
-              >
-                <span className="cd-code">{competency.competencyCode ?? ''}</span>
-                <div className="cd-competency-copy">
-                  <div style={{ fontWeight: 600 }}>{competency.competencyName}</div>
-                  <div className="cd-muted-13">
-                    {competency.category ?? 'Ohne Kategorie'}
-                    {competency.stageScheme === 'legacy' ? ' · Altmodell' : ''} ·{' '}
-                    {competency.approvedAt
-                      ? `bestätigt ${formatDateDE(competency.approvedAt)}`
-                      : 'keine Bestätigung'}
-                  </div>
-                </div>
-                {competency.stageHistory?.length ? (
-                  <div className="cd-muted-13">
-                    {competency.stageHistory.length} dokumentierte Stände; zuletzt{' '}
-                    {competency.stageHistory[0].changedAt}
-                  </div>
-                ) : null}
-                <div
-                  className="cd-level-dots"
-                  aria-label={`Stufe ${level} von ${competency.stageScheme === 'legacy' ? 5 : 6}`}
-                >
-                  {(competency.stageScheme === 'legacy' ? [1, 2, 3, 4, 5] : [1, 2, 3, 4, 5, 6]).map(
-                    (step) => (
+              selected={selectedRow}
+              leading={
+                <>
+                  <Checkbox
+                    aria-label={`${competency.competencyName} auswählen`}
+                    checked={selectedRow}
+                    onChange={(event) =>
+                      setSelectedIds((ids) =>
+                        event.target.checked
+                          ? [...ids, competency.competencyDefinitionId]
+                          : ids.filter((id) => id !== competency.competencyDefinitionId),
+                      )
+                    }
+                  />
+                  <span className="cd-code">{competency.competencyCode ?? ''}</span>
+                </>
+              }
+              title={competency.competencyName}
+              subline={
+                <>
+                  {competency.category ?? 'Ohne Kategorie'}
+                  {competency.stageScheme === 'legacy' ? ' · Altmodell' : ''} ·{' '}
+                  {competency.approvedAt
+                    ? `bestätigt ${formatDateDE(competency.approvedAt)}`
+                    : 'keine Bestätigung'}
+                </>
+              }
+              meta={
+                <>
+                  {history?.length ? (
+                    <span>
+                      {history.length} dokumentierte Stände; zuletzt{' '}
+                      {formatDateDE(history[0].changedAt.slice(0, 10))}
+                    </span>
+                  ) : null}
+                  <span
+                    className="cd-level-dots"
+                    aria-label={`Stufe ${level} von ${competency.stageScheme === 'legacy' ? 5 : 6}`}
+                  >
+                    {(competency.stageScheme === 'legacy'
+                      ? [1, 2, 3, 4, 5]
+                      : [1, 2, 3, 4, 5, 6]
+                    ).map((step) => (
                       <span
                         key={step}
                         style={{
@@ -169,24 +173,24 @@ const EmployeeCompetencies = ({
                           border: `2px solid ${level && step <= level ? 'transparent' : 'var(--color-neutral-300)'}`,
                         }}
                       />
-                    ),
-                  )}
-                </div>
-                <span
-                  className={`tag ${tagClass}`}
-                  style={{ flex: 'none', minWidth: 110, justifyContent: 'center' }}
-                >
+                    ))}
+                  </span>
+                </>
+              }
+              tag={
+                <span className={`tag ${tagClass}`} style={{ minWidth: 110, justifyContent: 'center' }}>
                   {level
                     ? competency.stageScheme === 'legacy'
                       ? `${level} · ${LEGACY_COMPETENCY_LEVELS[level]}`
                       : COMPETENCY_LEVELS[level]
                     : 'Offen'}
                 </span>
-              </button>
-            </div>
+              }
+              onOpen={() => onSelectCompetency(competency)}
+            />
           );
         })}
-      </div>
+      </ListPanel>
       {editing && (
         <BulkCompetencyModal
           employeeId={employeeId}

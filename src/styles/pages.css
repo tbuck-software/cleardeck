@@ -300,14 +300,6 @@
   gap: 12px;
 }
 
-.cd-timeline-row {
-  display: grid;
-  grid-template-columns: 110px 24px 1fr;
-  gap: 12px;
-  align-items: start;
-}
-
-
 .cd-row-departed {
   background: color-mix(in srgb, var(--color-neutral-200) 42%, transparent);
 }
@@ -321,35 +313,6 @@
   color: var(--color-neutral-700);
 }
 
-
-.cd-timeline-date {
-  font-size: 13px;
-  color: var(--color-neutral-700);
-  padding-top: 4px;
-  text-align: right;
-}
-
-.cd-timeline-rail {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  align-self: stretch;
-}
-
-.cd-timeline-rail span:first-child {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  flex: none;
-  margin-top: 6px;
-}
-
-.cd-timeline-rail span:last-child {
-  flex: 1;
-  width: 2px;
-  background: var(--color-neutral-300);
-  margin-top: 4px;
-}
 
 .cd-level-dots {
   display: flex;
@@ -1190,39 +1153,227 @@
   min-height: 44px;
   padding-left: 10px;
 }
-.cd-selectable-row {
-  display: flex;
-  align-items: center;
-}
-.cd-selectable-row + .cd-selectable-row {
-  border-top: 1px solid var(--color-divider);
-}
-.cd-selectable-row:hover {
-  background: color-mix(in srgb, var(--color-text) 5%, transparent);
-}
-.cd-selectable-row[data-selected='true'] {
-  background: color-mix(in srgb, var(--color-accent) 7%, transparent);
-}
-/* The row itself carries hover and selection; the inner button stays flat. */
-.cd-selectable-row > .cd-item:hover {
-  background: transparent;
-}
-.cd-row-select {
-  min-height: 44px;
-  padding-left: 10px;
-  align-self: stretch;
-}
-.cd-competency-row { min-width: 0; flex: 1; }
-.cd-competency-row > .cd-muted-13 { max-width: 190px; }
-@media (max-width: 760px) {
-  .cd-competency-row { flex-wrap: wrap; gap: 8px; }
-  .cd-competency-row > .cd-level-dots { display: none; }
-  .cd-competency-row > .cd-muted-13 { display: none; }
-  .cd-competency-row > .tag { white-space: normal; }
-}
-.cd-competency-copy { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 760px) {
   .cd-competency-section > .cd-section-head,
   .cd-competency-section > .cd-section-head > div { flex-wrap: wrap; }
-  .cd-competency-copy { flex-basis: 160px; }
+}
+
+/* — Listenzeile (Zieltyp B) —
+   Eine Anatomie für Objektlisten: [Vorspann] [Titel + Unterzeile] [Meta] [Tag]
+   [Chevron]. Hover und Auswahl liegen eckig über der ganzen Zeile, damit sie
+   nicht mit den geraden Trennlinien kollidieren. */
+
+.cd-list {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.cd-list > * + * {
+  border-top: 1px solid var(--color-divider);
+}
+
+/* Der Abschluss „Alle Aufgaben anzeigen“ ist keine weitere Zeile. */
+.cd-list > .cd-more {
+  width: 100%;
+  margin: 0;
+  border-top: 0;
+  border-radius: 0;
+}
+
+.cd-listrow {
+  display: flex;
+  align-items: stretch;
+  min-height: 52px;
+}
+
+.cd-listrow:has(> button.cd-listrow-main):hover {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.cd-listrow[data-selected='true'] {
+  background: color-mix(in srgb, var(--color-accent) 7%, transparent);
+}
+
+.cd-listrow-lead {
+  flex: none;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-left: 14px;
+}
+
+/* Der Haken greift über die volle Zeilenhöhe. */
+.cd-listrow-lead > .cd-checkbox {
+  align-self: stretch;
+  align-items: center;
+}
+
+.cd-listrow-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.cd-listrow-main {
+  cursor: pointer;
+}
+
+.cd-listrow-copy {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cd-listrow-title {
+  display: block;
+  font-weight: 600;
+}
+
+.cd-listrow-sub {
+  display: block;
+  font-size: 13px;
+  color: var(--color-neutral-700);
+}
+
+.cd-listrow-meta {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  max-width: 340px;
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  text-align: right;
+}
+
+.cd-listrow-tag {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.cd-listrow-chevron {
+  flex: none;
+  color: var(--color-neutral-600);
+}
+
+/* Schmale Fenster: der Titel trägt die Zeile, die Meta-Spalte weicht. */
+@media (max-width: 760px) {
+  .cd-listrow-meta {
+    display: none;
+  }
+
+  .cd-listrow-tag > .tag {
+    white-space: normal;
+  }
+}
+
+/* — Zeitleiste (Zieltyp C) —
+   Datum in fester Spalte, Punkt mit Typfarbe auf der Linie, Titel mit
+   Unterzeile, Tag rechts. */
+
+.cd-timeline {
+  display: flex;
+  flex-direction: column;
+}
+
+.cd-timeline-row {
+  display: grid;
+  grid-template-columns: 110px 24px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  width: 100%;
+  padding: 4px 10px 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.cd-timeline-open {
+  cursor: pointer;
+}
+
+.cd-timeline-open:hover {
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
+}
+
+.cd-timeline-date {
+  font-size: 13px;
+  color: var(--color-neutral-700);
+  padding-top: 4px;
+  text-align: right;
+}
+
+.cd-timeline-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  align-self: stretch;
+}
+
+.cd-timeline-rail span:first-child {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex: none;
+  margin-top: 6px;
+}
+
+.cd-timeline-rail span:last-child {
+  flex: 1;
+  width: 2px;
+  background: var(--color-neutral-300);
+  margin-top: 4px;
+}
+
+/* Die Linie verbindet Einträge; nach dem letzten hat sie kein Ziel. */
+.cd-timeline-row:last-child .cd-timeline-rail span:last-child {
+  visibility: hidden;
+}
+
+.cd-timeline-copy {
+  display: block;
+  min-width: 0;
+  padding-bottom: 22px;
+  overflow-wrap: anywhere;
+}
+
+.cd-timeline-title {
+  display: block;
+  font-weight: 600;
+}
+
+.cd-timeline-sub {
+  display: block;
+  font-size: 14px;
+  color: var(--color-neutral-700);
+}
+
+/* Zusatzangaben einer Visite stehen unter der Beobachtung, nicht daneben. */
+.cd-visit-line {
+  display: block;
+}
+
+.cd-timeline-tag {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-top: 4px;
 }

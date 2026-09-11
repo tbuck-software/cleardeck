@@ -53,7 +53,7 @@ it('selects subsets independently from row editing and displays a mixed select-a
   expect(onSelect).not.toHaveBeenCalled();
   expect(screen.getByRole('status')).toHaveTextContent('1 ausgewählt');
   expect(screen.getByLabelText('Alle 3 Kompetenzen auswählen')).toBePartiallyChecked();
-  fireEvent.click(screen.getByText('Hygiene', { selector: 'div' }));
+  fireEvent.click(screen.getByText('Hygiene', { selector: '.cd-listrow-title' }));
   expect(onSelect).toHaveBeenCalledWith(entries[1]);
   expect(screen.getByLabelText('Hygiene auswählen')).toBeChecked();
   fireEvent.click(screen.getByLabelText('Alle 3 Kompetenzen auswählen'));
