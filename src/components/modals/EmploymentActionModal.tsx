@@ -114,14 +114,16 @@ const EmploymentActionModal = ({
       onPrimary={() => void save()}
       onClose={() => { if (!saving) onClose(); }}
     >
-      <div className="cd-action-context">
+      <div className="cd-notice cd-notice-neutral">
         <div>
-          <span className="cd-muted-13">Ausgewählte Periode</span>
-          <strong>{periodLabel(selectedPeriod)}</strong>
-        </div>
-        <div>
-          <span className="cd-muted-13">Arbeitszeitstand</span>
-          <strong>Bleibt am Übergang erhalten. Die Aktion bestätigt keine Altdaten.</strong>
+          <div>
+            <span className="cd-muted-13">Ausgewählte Periode </span>
+            <strong>{periodLabel(selectedPeriod)}</strong>
+          </div>
+          <div>
+            <span className="cd-muted-13">Arbeitszeitstand </span>
+            <strong>Bleibt am Übergang erhalten. Die Aktion bestätigt keine Altdaten.</strong>
+          </div>
         </div>
       </div>
 

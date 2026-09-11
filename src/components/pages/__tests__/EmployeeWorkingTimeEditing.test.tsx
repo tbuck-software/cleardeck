@@ -17,7 +17,8 @@ const showDetail = (onSaved: () => Promise<void>) => render(
     timelineItems={[]} suggestedCompetencyCount={0} availableCompetencyCount={0} availableInstructionCount={0}
     onTabChange={vi.fn()} onEdit={vi.fn()} onCompetenciesSaved={vi.fn()} onWorkingTimeSaved={onSaved} onAddCompetency={vi.fn()}
     onAddInstruction={vi.fn()} onOpenSuggestedCompetencies={vi.fn()} onSelectCompetency={vi.fn()}
-    onSelectInstruction={vi.fn()} onStartNewPeriod={vi.fn()} onSelectTimelineItem={vi.fn()} />,
+    onSelectInstruction={vi.fn()} onStartNewPeriod={vi.fn()} onSelectTimelineItem={vi.fn()}
+    onOpenEmploymentAction={vi.fn()} />,
 );
 beforeEach(() => vi.clearAllMocks());
 

@@ -78,6 +78,7 @@ const renderDetail = (
       onSelectInstruction={noop}
       onStartNewPeriod={noop}
       onSelectTimelineItem={noop}
+      onOpenEmploymentAction={noop}
       {...overrides}
     />,
   );
@@ -137,7 +138,7 @@ describe('EmployeeDetail', () => {
     const onOpenEmploymentAction = vi.fn();
     renderDetail({ onOpenEmploymentAction });
 
-    fireEvent.click(screen.getByText('Beschäftigung bearbeiten'));
+    fireEvent.click(screen.getByRole('button', { name: 'Aktion' }));
     expect(screen.getByRole('menuitem', { name: 'Austritt erfassen' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('menuitem', { name: 'Qualifikation wechseln' }));
     expect(onOpenEmploymentAction).toHaveBeenCalledWith('qualification');
