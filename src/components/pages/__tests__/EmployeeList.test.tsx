@@ -89,6 +89,23 @@ describe('EmployeeList', () => {
     expect(onExport).toHaveBeenCalledWith('xlsx');
   });
 
+  it('bietet die Mitarbeiterliste-Übernahme im Menü statt im Kopfbereich an', () => {
+    const onImport = vi.fn();
+    renderList({ onImport });
+
+    expect(screen.queryByText('Mitarbeiterliste übernehmen (Excel / CSV)')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Weitere Aktionen' }));
+    fireEvent.click(screen.getByText('Mitarbeiterliste übernehmen (Excel / CSV)…'));
+    expect(onImport).toHaveBeenCalledTimes(1);
+  });
+
+  it('zeigt im Kopfbereich nur die Hauptaktion und das Menü', () => {
+    renderList({ onImport: vi.fn() });
+
+    const actions = screen.getByRole('button', { name: 'Person anlegen' }).parentElement!;
+    expect(Array.from(actions.children).filter((node) => node.tagName === 'BUTTON')).toHaveLength(2);
+  });
+
   it('summiert Stunden und VZÄ in der Fußzeile', () => {
     renderList();
 
