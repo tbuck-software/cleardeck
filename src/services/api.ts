@@ -3,11 +3,12 @@ import type { UpdateStatus } from '../shared/types';
 
 const baseApi: Api = (window as Window & { api: Api }).api;
 
+/** Die Meldung bleibt anzeigbar; der Aufruf steht im Namen und in cause. */
 const toError = (name: string, error: unknown) => {
   const message =
     error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unbekannter Fehler';
-  const wrapped = new Error(`API ${String(name)} failed: ${message}`);
-  wrapped.name = 'ApiError';
+  const wrapped = new Error(message);
+  wrapped.name = `ApiError(${String(name)})`;
   Object.defineProperty(wrapped, 'cause', { value: error, enumerable: false });
   return wrapped;
 };

@@ -538,7 +538,9 @@ const App = () => {
       setPasswordOpen(false);
       setToastMessage('Passwort geändert.');
     } catch (err) {
-      setPasswordError(userFacingErrorMessage(err));
+      setPasswordError(
+        userFacingErrorMessage(err, 'Das Passwort konnte nicht geändert werden.'),
+      );
     } finally {
       setPasswordBusy(false);
     }
