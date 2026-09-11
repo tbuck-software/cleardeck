@@ -876,6 +876,7 @@ const useEmployees = ({
       birthDate: selectedEmployee.birthDate ?? '',
       hoursEffectiveFrom: effectiveFrom,
       initialHoursEffectiveFrom: effectiveFrom,
+      existingHoursEffectiveFrom: selectedEmployee.hoursEffectiveFrom,
       sourceRef: selectedEmployee.sourceRef ?? '',
     });
   }, [baseHours, selectedEmployee]);

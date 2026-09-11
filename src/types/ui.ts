@@ -152,6 +152,8 @@ export type EditModalState = {
   sourceRef?: string | null;
   hoursEffectiveFrom?: string;
   initialHoursEffectiveFrom?: string;
+  /** Effective date of the term already on record, so the dialog can say replace vs. add. */
+  existingHoursEffectiveFrom?: string;
   open: boolean;
   mode: 'edit' | 'create';
   name: string;
