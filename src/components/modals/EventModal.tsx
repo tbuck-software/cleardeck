@@ -13,7 +13,7 @@ const DERIVED_TYPES: EventModalType[] = [
 ];
 
 const TYPE_LABELS: { value: EventModalType; label: string }[] = [
-  { value: 'period', label: 'Qualifikation / Periode' },
+  { value: 'period', label: 'Beschäftigungsperiode' },
   { value: 'working-time', label: 'Arbeitszeit' },
   { value: 'care-visit', label: 'Pflegevisite' },
   { value: 'emergency-training', label: 'Notfallschulung' },

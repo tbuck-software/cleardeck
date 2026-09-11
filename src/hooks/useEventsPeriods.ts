@@ -18,6 +18,7 @@ import type {
   PeriodToDeleteState,
   TimelineItem,
 } from '../types/ui';
+import { applySelectedEmployee, reselectEmployee } from '../utils/selectedEmployee';
 
 const typeLabels: Record<Exclude<EventModalType, 'period' | 'working-time'>, string> = {
   join: 'Eintritt',
@@ -90,19 +91,11 @@ const useEventsPeriods = ({
   const [periodToDelete, setPeriodToDelete] = useState<PeriodToDeleteState>(null);
   const [eventModal, setEventModal] = useState<EventModalState>(initialEventModal());
 
-  const loadHistory = useCallback(
-    async (employeeId: number) => {
-      try {
-        const history = await api.employees.listPeriods(employeeId);
-        setPeriods(history);
-        const evs = await api.employees.listEvents(employeeId);
-        setEvents(evs);
-      } catch (err) {
-        handleError(err);
-      }
-    },
-    [handleError],
-  );
+  /** Throws on failure so a caller cannot report success on stale history. */
+  const loadHistory = useCallback(async (employeeId: number) => {
+    setPeriods(await api.employees.listPeriods(employeeId));
+    setEvents(await api.employees.listEvents(employeeId));
+  }, []);
 
   const syncSelectedFromDataset = useCallback(
     (data: YearDataset, id?: number) => {
@@ -174,28 +167,25 @@ const useEventsPeriods = ({
       const updated = await api.employees.save(payload);
       setDataset(updated);
       if (addPeriodForm.periodId && addPeriodForm.periodId === selectedEmployee.periodId) {
-        const refreshed = updated.employees.find((employee) =>
-          employee.id === selectedEmployee.id && employee.periodId === selectedEmployee.periodId,
-        ) ?? {
-          ...selectedEmployee,
-          startDate: payload.startDate,
-          endDate: payload.endDate,
-          qualification: payload.qualification,
-        };
-        setSelectedEmployee(refreshed);
-        setForm((prev) => ({
-          ...prev,
-          startDate: refreshed.startDate,
-          endDate: refreshed.endDate ?? '',
-          qualification: refreshed.qualification,
-          weeklyHours: refreshed.weeklyHours ?? null,
-          fte: refreshed.fte,
-        }));
+        const refreshed = await reselectEmployee(
+          updated,
+          (employee) =>
+            employee.id === selectedEmployee.id && employee.periodId === selectedEmployee.periodId,
+          async () => ({
+            ...selectedEmployee,
+            startDate: payload.startDate,
+            endDate: payload.endDate,
+            qualification: payload.qualification,
+          }),
+        );
+        if (refreshed) applySelectedEmployee(refreshed, setSelectedEmployee, setForm);
       }
       await loadHistory(selectedEmployee.id ?? 0);
       setEventModal((prev) => ({ ...prev, open: false }));
       setToast(
-        addPeriodForm.periodId ? 'Periode aktualisiert.' : 'Qualifikation/Periode hinzugefügt.',
+        addPeriodForm.periodId
+          ? 'Beschäftigungsperiode aktualisiert.'
+          : 'Beschäftigungsperiode hinzugefügt.',
       );
     } catch (err) {
       handleError(err);
@@ -340,17 +330,6 @@ const useEventsPeriods = ({
     ],
   );
 
-  const displayStart = useMemo(() => {
-    if (!selectedEmployee) return '';
-    if (selectedEmployee.employmentStartDate) return selectedEmployee.employmentStartDate;
-    const joinDates = events
-      .filter((ev) => ev.type === 'join')
-      .map((ev) => ev.eventDate)
-      .sort();
-    if (joinDates.length > 0) return joinDates[0];
-    return selectedEmployee.createdAt ?? selectedEmployee.startDate;
-  }, [events, selectedEmployee]);
-
   const timelineItems: TimelineItem[] = useMemo(() => {
     const items: TimelineItem[] = [];
     periods.forEach((p) => items.push({ kind: 'period', date: p.startDate, record: p }));
@@ -372,7 +351,6 @@ const useEventsPeriods = ({
       setPeriodToDelete,
     },
     derived: {
-      displayStart,
       timelineItems,
     },
     actions: {

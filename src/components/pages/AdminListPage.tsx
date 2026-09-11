@@ -4,9 +4,10 @@ import Icon, { DragHandleIcon } from '../ui/Icon';
 export type AdminItem = {
   id: number;
   title: string;
-  note: string;
+  note?: string;
   tags: string[];
   usage: string;
+  active?: boolean;
 };
 
 type AdminListPageProps = {
@@ -21,6 +22,8 @@ type AdminListPageProps = {
   /** Optional per-row bulk action, e.g. assigning an instruction to many people. */
   assignLabel?: string;
   onAssign?: (id: number) => void;
+  toggleActiveLabel?: (active: boolean) => string;
+  onToggleActive?: (id: number, active: boolean) => void;
 };
 
 const AdminListPage = ({
@@ -33,6 +36,8 @@ const AdminListPage = ({
   onReorder,
   assignLabel,
   onAssign,
+  toggleActiveLabel,
+  onToggleActive,
 }: AdminListPageProps) => {
   const [draggingId, setDraggingId] = useState<number | null>(null);
 
@@ -58,7 +63,7 @@ const AdminListPage = ({
         {items.map((item, index) => (
           <div
             key={item.id}
-            className="cd-item"
+            className={`cd-item${item.active === false ? ' cd-row-departed' : ''}`}
             role="link"
             tabIndex={0}
             draggable
@@ -84,7 +89,7 @@ const AdminListPage = ({
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600 }}>{item.title}</div>
-              <div className="cd-muted-13">{item.note}</div>
+              {item.note ? <div className="cd-muted-13">{item.note}</div> : null}
             </div>
             <div className="cd-tag-row">
               {item.tags.filter(Boolean).map((tag) => (
@@ -105,6 +110,19 @@ const AdminListPage = ({
                 }}
               >
                 {assignLabel ?? 'Zuordnen'}
+              </button>
+            )}
+            {onToggleActive && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ flex: 'none' }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onToggleActive(item.id, item.active === false);
+                }}
+              >
+                {toggleActiveLabel?.(item.active !== false) ?? 'Status ändern'}
               </button>
             )}
             <span className="cd-arrow">→</span>

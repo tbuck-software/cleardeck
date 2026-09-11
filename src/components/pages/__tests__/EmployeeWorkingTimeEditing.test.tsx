@@ -8,7 +8,8 @@ import type { EmployeeWithPeriod } from '../../../shared/types';
 
 vi.mock('../../../services/api', () => ({ default: { workingTimes: { save: vi.fn() } } }));
 const employee: EmployeeWithPeriod = {
-  id: 7, name: 'Testperson', startDate: '2024-09-01', qualification: 'Pflegekraft',
+  id: 7, name: 'Testperson', startDate: '2024-09-01', employmentStartDate: '2024-09-01',
+  qualification: 'Pflegekraft',
   status: 'active', weeklyHours: 36, fte: 1,
   workingTimes: [{ id: 42, periodId: 9, effectiveFrom: '2025-03-01', effectiveUntil: null, weeklyHours: 36, fte: 1 }],
 };
@@ -19,7 +20,8 @@ const showDetail = (onSaved: () => Promise<void>) => render(
     onTabChange={vi.fn()} onEdit={vi.fn()} onCompetenciesSaved={vi.fn()} onWorkingTimeSaved={onSaved} onAddCompetency={vi.fn()}
     onAddInstruction={vi.fn()} onOpenSuggestedCompetencies={vi.fn()} onSelectCompetency={vi.fn()}
     onSelectInstruction={vi.fn()} onStartNewPeriod={vi.fn()} onSelectTimelineItem={vi.fn()}
-    onEditPeriod={vi.fn()} onOpenBackupSettings={vi.fn()} onEmploymentRepairApplied={vi.fn()} />,
+    onEditPeriod={vi.fn()} onOpenBackupSettings={vi.fn()} onEmploymentRepairApplied={vi.fn()}
+    onOpenEmploymentAction={vi.fn()} />,
 );
 beforeEach(() => vi.clearAllMocks());
 
@@ -42,7 +44,11 @@ it('keeps the draft visible and shows a collision error without reporting succes
   const onSaved = vi.fn();
   vi.mocked(api.workingTimes.save).mockRejectedValue(new Error('Für dieses Datum gibt es bereits einen Arbeitszeitstand.'));
   showDetail(onSaved);
-  fireEvent.click(screen.getByRole('button', { name: 'Arbeitszeit ab 01.03.2025 bearbeiten' }));
+  fireEvent.click(
+    screen.getByRole('button', {
+      name: 'Arbeitszeit ab 01.03.2025 · 36 Std./Woche · 1,00 VZÄ bearbeiten',
+    }),
+  );
   fireEvent.change(screen.getByLabelText('Gültig ab'), { target: { value: '2024-09-01' } });
   fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('bereits');
@@ -75,10 +81,48 @@ it('adds a separate entry and derives the linked FTE from hours', async () => {
   }));
 });
 
-it.each(['Enter', ' '])('opens the focused row with the %s key', (key) => {
+it('keeps historical qualification corrections editable', () => {
+  const onPeriodFormChange = vi.fn();
+  render(
+    <EventModal
+      state={{ open: true, type: 'period', eventDate: '2026-01-01', title: '', details: '' }}
+      employee={employee}
+      baseHours={36}
+      onWorkingTimeSaved={async () => undefined}
+      qualifications={[{ id: 1, name: 'Pflegekraft' }, { id: 2, name: 'Pflegefachkraft' }]}
+      periodForm={{
+        startDate: '2024-09-01',
+        endDate: '2025-12-31',
+        qualification: 'Pflegekraft',
+        periodId: 9,
+      }}
+      onStateChange={vi.fn()}
+      onPeriodFormChange={onPeriodFormChange}
+      onClose={vi.fn()}
+      onSaveEvent={vi.fn()}
+      onSavePeriod={vi.fn()}
+      onDeleteEvent={vi.fn()}
+      onDeletePeriod={vi.fn()}
+    />,
+  );
+
+  const qualification = screen.getByLabelText('Qualifikation');
+  expect(qualification).not.toBeDisabled();
+  fireEvent.change(qualification, { target: { value: 'Pflegefachkraft' } });
+  expect(onPeriodFormChange).toHaveBeenCalledWith(expect.objectContaining({
+    periodId: 9,
+    qualification: 'Pflegefachkraft',
+  }));
+});
+
+it('reicht die Zeile als echten Button aus, damit die Tastaturbedienung greift', () => {
   showDetail(async () => undefined);
-  const row = screen.getByRole('button', { name: 'Arbeitszeit ab 01.03.2025 bearbeiten' });
+  const row = screen.getByRole('button', {
+    name: 'Arbeitszeit ab 01.03.2025 · 36 Std./Woche · 1,00 VZÄ bearbeiten',
+  });
+
+  expect(row.tagName).toBe('BUTTON');
+  expect(row).toHaveAttribute('type', 'button');
   row.focus();
-  fireEvent.keyDown(row, { key });
-  expect(screen.getByRole('dialog', { name: 'Arbeitszeit bearbeiten' })).toBeInTheDocument();
+  expect(row).toHaveFocus();
 });

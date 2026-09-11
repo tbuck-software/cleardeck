@@ -202,8 +202,10 @@ const PatientList = ({
                 <div style={{ fontWeight: 600 }}>{patient.name}</div>
                 <div className="cd-muted-13">
                   {patient.diagnosis || 'Ohne Diagnose'} ·{' '}
-                  {group ? TEILGRUPPE_SHORT[group] : 'Gutachten-Daten fehlen'} ·{' '}
-                  {careLevelLabel(patient.careLevel)}
+                  {group ? TEILGRUPPE_SHORT[group] : 'Gutachten-Daten fehlen'}
+                  {/* Zwei Lückenhinweise nebeneinander sagen nicht mehr als einer. */}
+                  {(group != null || patient.careLevel != null) &&
+                    ` · ${careLevelLabel(patient.careLevel)}`}
                 </div>
               </div>
               <span

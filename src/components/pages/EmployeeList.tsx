@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import Icon, { MoreIcon } from '../ui/Icon';
 import Segmented from '../ui/Segmented';
 import Avatar from '../ui/Avatar';
+import ActionMenu from '../ui/ActionMenu';
 import { formatDateDE } from '../../utils/dateFormat';
 import type { EmployeeWithPeriod, QualificationType } from '../../shared/types';
 
@@ -81,7 +82,6 @@ const EmployeeList = ({
   onCreate,
   onSelect,
 }: EmployeeListProps) => {
-  const [menuOpen, setMenuOpen] = useState(false);
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'name', dir: 1 });
   const today = localDate();
 
@@ -93,7 +93,7 @@ const EmployeeList = ({
         case 'weeklyHours':
           return employee.weeklyHours ?? -1;
         case 'startDate':
-          return employee.employmentStartDate ?? employee.startDate;
+          return employee.employmentStartDate;
         default:
           return String(employee[sort.key] ?? '');
       }
@@ -129,64 +129,24 @@ const EmployeeList = ({
           </p>
         </div>
         <div className="cd-actions">
-          <button
-            type="button"
-            className="btn btn-secondary btn-icon"
-            aria-label="Weitere Aktionen"
-            aria-expanded={menuOpen}
-            onClick={() => setMenuOpen((open) => !open)}
+          <ActionMenu
+            ariaLabel="Weitere Aktionen"
+            triggerClassName="btn btn-secondary btn-icon"
+            items={[
+              { label: 'Jahresnachweis erstellen…', onSelect: onOpenReport },
+              ...(onImport
+                ? [{ label: 'Mitarbeiterliste übernehmen (Excel / CSV)…', onSelect: onImport }]
+                : []),
+              { label: 'Als Excel exportieren', onSelect: () => void onExport('xlsx') },
+              { label: 'Als CSV exportieren', onSelect: () => void onExport('csv') },
+            ]}
           >
             <MoreIcon />
-          </button>
+          </ActionMenu>
           <button type="button" className="btn btn-primary" onClick={onCreate}>
             <Icon name="plus" size={16} />
             Person anlegen
           </button>
-          {menuOpen && (
-            <>
-              <div className="cd-menu-scrim" onClick={() => setMenuOpen(false)} />
-              <div className="cd-menu">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    onOpenReport();
-                  }}
-                >
-                  Jahresnachweis erstellen…
-                </button>
-                {onImport && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onImport();
-                    }}
-                  >
-                    Mitarbeiterliste übernehmen (Excel / CSV)…
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void onExport('xlsx');
-                  }}
-                >
-                  Als Excel exportieren
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMenuOpen(false);
-                    void onExport('csv');
-                  }}
-                >
-                  Als CSV exportieren
-                </button>
-              </div>
-            </>
-          )}
         </div>
       </header>
 
@@ -265,7 +225,7 @@ const EmployeeList = ({
                   <div style={{ fontWeight: 600 }}>{employee.name}</div>
                   <div className="cd-muted-13">
                     {employee.qualification} · {employee.weeklyHours ?? '—'} h · seit{' '}
-                    {formatDateDE(employee.employmentStartDate ?? employee.startDate)}
+                    {formatDateDE(employee.employmentStartDate)}
                   </div>
                 </div>
                 <span style={{ fontWeight: 700, flex: 'none' }}>
@@ -330,7 +290,7 @@ const EmployeeList = ({
                     </td>
                     <td>{employee.qualification}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      {formatDateDE(employee.employmentStartDate ?? employee.startDate)}
+                      {formatDateDE(employee.employmentStartDate)}
                     </td>
                     <td
                       style={{

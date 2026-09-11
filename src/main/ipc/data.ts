@@ -1,4 +1,5 @@
 import { saveWorkingTime } from '../repositories/workingTimes';
+import { recordDeparture, switchQualification } from '../repositories/employmentActions';
 import { chooseStaffImport, commitStaffImport } from '../staffImport';
 /**
  * Data IPC Handlers
@@ -28,6 +29,7 @@ import {
 } from '../database/connection';
 import {
   getYearDataset,
+  getEmployeePeriod,
   listPeriods,
   saveEmployee,
   deleteEmployee,
@@ -118,6 +120,13 @@ import {
   applyReconcilePeriods,
   previewReconcilePeriods,
 } from '../employmentRepair';
+import {
+  addServiceDefinition,
+  listServiceDefinitions,
+  reorderServiceDefinitions,
+  setServiceDefinitionActive,
+  updateServiceDefinition,
+} from '../repositories/services';
 
 /**
  * Ensure database is ready for operations
@@ -166,9 +175,27 @@ export const registerDataHandlers = (): void => {
     return listPeriods(employeeId);
   });
 
+  handleData(
+    'data:getPeriod',
+    (_event, { employeeId, periodId, year }: { employeeId: number; periodId: number; year: number }) => {
+      ensureDbReady();
+      return getEmployeePeriod(employeeId, periodId, year);
+    },
+  );
+
   handleData('data:saveWorkingTime', (_event, input) => {
     ensureDbReady();
     return saveWorkingTime(input);
+  });
+
+  handleData('employment:recordDeparture', (_event, input) => {
+    ensureDbReady();
+    return recordDeparture(input);
+  });
+
+  handleData('employment:switchQualification', (_event, input) => {
+    ensureDbReady();
+    return switchQualification(input);
   });
 
   handleData('data:save', (_event, input) => {
@@ -270,6 +297,34 @@ export const registerDataHandlers = (): void => {
   handleData('qualifications:reorder', (_event, { ids }: { ids: number[] }) => {
     ensureDbReady();
     return reorderQualifications(ids);
+  });
+
+  // Patient service catalogue
+  handleData('services:list', () => {
+    ensureDbReady();
+    return listServiceDefinitions();
+  });
+  handleData(
+    'services:add',
+    (_event, input: { name: string; serviceType: import('../../shared/types').ServiceType }) => {
+      ensureDbReady();
+      return addServiceDefinition(input);
+    },
+  );
+  handleData(
+    'services:update',
+    (_event, input: { id: number; name: string; serviceType: import('../../shared/types').ServiceType }) => {
+      ensureDbReady();
+      return updateServiceDefinition(input);
+    },
+  );
+  handleData('services:setActive', (_event, { id, active }: { id: number; active: boolean }) => {
+    ensureDbReady();
+    return setServiceDefinitionActive(id, active);
+  });
+  handleData('services:reorder', (_event, { ids }: { ids: number[] }) => {
+    ensureDbReady();
+    return reorderServiceDefinitions(ids);
   });
 
   // Competencies

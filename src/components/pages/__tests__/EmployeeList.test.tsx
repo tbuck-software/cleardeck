@@ -11,6 +11,7 @@ const employees: EmployeeWithPeriod[] = [
     name: 'Anna Beispiel',
     qualification: 'Pflegekraft',
     startDate: '2024-01-01',
+    employmentStartDate: '2024-01-01',
     endDate: '',
     fte: 0.8,
     weeklyHours: 30,
@@ -21,6 +22,7 @@ const employees: EmployeeWithPeriod[] = [
     name: 'Bruno Beispiel',
     qualification: 'Admin',
     startDate: '2024-01-01',
+    employmentStartDate: '2024-01-01',
     endDate: '2025-06-30',
     fte: 0.5,
     weeklyHours: 20,
@@ -103,7 +105,7 @@ describe('EmployeeList', () => {
     renderList({ onImport: vi.fn() });
 
     const actions = screen.getByRole('button', { name: 'Person anlegen' }).parentElement!;
-    expect(Array.from(actions.children).filter((node) => node.tagName === 'BUTTON')).toHaveLength(2);
+    expect(Array.from(actions.querySelectorAll('button'))).toHaveLength(2);
   });
 
   it('summiert Stunden und VZÄ in der Fußzeile', () => {

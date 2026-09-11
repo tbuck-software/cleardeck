@@ -8,6 +8,9 @@ import type {
   CareLevel,
   IntervalSource,
   RecoveryInfo,
+  ServiceScope,
+  ServiceScopeSource,
+  ServiceType,
   StorageMode,
 } from '../shared/types';
 
@@ -27,6 +30,7 @@ export type Page =
   | 'audit'
   | 'tasks'
   | 'quals'
+  | 'services'
   | 'comps'
   | 'instrs'
   | 'security'
@@ -44,6 +48,13 @@ export type CalendarView = 'month' | 'week' | 'year';
 
 export type EventModalType = EmployeeEventType | 'period' | 'working-time';
 
+export type EmploymentActionMode = 'departure' | 'qualification';
+
+/** One recorded employment event — never a free-form edit of the period. */
+export type EmploymentActionInput =
+  | { mode: 'departure'; periodId: number; endDate: string }
+  | { mode: 'qualification'; periodId: number; effectiveFrom: string; qualification: string };
+
 export type TimelineItem =
   | { kind: 'period'; date: string; record: EmploymentPeriod }
   | { kind: 'event'; date: string; record: EmployeeEvent };
@@ -59,6 +70,13 @@ export type FormState = {
   fte: number;
   weeklyHours?: number | null;
   linked?: boolean;
+};
+
+export type ServiceDefinitionModalState = {
+  open: boolean;
+  id?: number;
+  name: string;
+  serviceType: ServiceType;
 };
 
 export type QualificationModalState = {
@@ -223,7 +241,9 @@ export type PeriodToDeleteState = { periodId: number; label: string } | null;
 export type PatientModalState = {
   serviceStatus?: 'active' | 'ended';
   serviceEndDate?: string | null;
-  serviceScope?: 'eligible' | 'excluded' | 'unknown';
+  serviceScope?: ServiceScope;
+  serviceDefinitionIds?: number[];
+  serviceScopeSource?: ServiceScopeSource;
   representativeStatus?: 'present' | 'none' | 'unknown';
   hkpCodes?: HkpCode[];
   assessmentSource?: 'report' | 'own' | 'unknown';

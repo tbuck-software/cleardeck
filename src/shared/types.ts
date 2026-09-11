@@ -115,6 +115,21 @@ export interface SaveWorkingTimeInput {
   fte: number;
 }
 
+export interface RecordDepartureInput {
+  employeeId: number;
+  periodId: number;
+  endDate: string;
+  year: number;
+}
+
+export interface SwitchQualificationInput {
+  employeeId: number;
+  periodId: number;
+  effectiveFrom: string;
+  qualification: string;
+  year: number;
+}
+
 export interface EmployeeWithPeriod extends Employee {
   workingTimes?: WorkingTime[];
   sourceRef?: string | null;
@@ -136,7 +151,7 @@ export interface EmployeeWithPeriod extends Employee {
   startDate: string;
   endDate?: string | null;
   /** Derived display value for the contiguous employment chain. */
-  employmentStartDate?: string;
+  employmentStartDate: string;
   fte: number;
   status: 'active' | 'left';
   weeklyHours?: number | null;
@@ -376,6 +391,42 @@ export type HkpCode = '6' | '8' | '29' | '31a';
 /** Außerklinische Intensivpflege / psychiatrische HKP, incl. Erstverordnung. */
 export type IntensiveCare = 'AKI' | 'AKI-B' | 'pHKP' | 'pHKP-EV';
 
+/**
+ * Services used to decide whether a person belongs on the QPR person list.
+ * These are deliberately about the service delivered, never about Pflegegrad.
+ */
+export type ServiceType =
+  | 's36-care'
+  | 's36-support'
+  | 's39-prevention'
+  | 's37-hkp'
+  | 's37c-aki'
+  | 'household'
+  | 'relief'
+  | 's37-consultation';
+
+/** Whether a person belongs on the MD-Personenliste. */
+export type ServiceScope = 'eligible' | 'excluded' | 'unknown';
+
+/** How the current list conclusion was recorded. Legacy rows keep their old decision. */
+export type ServiceScopeSource = 'services' | 'legacy';
+
+export interface ServiceDefinition {
+  id?: number;
+  name: string;
+  serviceType: ServiceType;
+  active?: boolean;
+  sortOrder?: number;
+}
+
+export interface PatientService {
+  serviceDefinitionId: number;
+  label: string;
+  /** Original catalogue label at assignment time; the current label stays visible in the UI. */
+  labelSnapshot?: string;
+  serviceType: ServiceType;
+}
+
 /** Pflegegrad: null means unknown, zero means explicitly no Pflegegrad. */
 export type CareLevel = 0 | 1 | 2 | 3 | 4 | 5;
 
@@ -383,7 +434,10 @@ export interface Patient {
   legacyQprStatus?: string | null;
   serviceStatus?: 'active' | 'ended';
   serviceEndDate?: string | null;
-  serviceScope?: 'eligible' | 'excluded' | 'unknown';
+  serviceScope?: ServiceScope;
+  serviceDefinitionIds?: number[];
+  services?: PatientService[];
+  serviceScopeSource?: ServiceScopeSource;
   representativeStatus?: 'present' | 'none' | 'unknown';
   hkpCodes?: HkpCode[];
   assessmentSource?: 'report' | 'own' | 'unknown';

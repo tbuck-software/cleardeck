@@ -32,6 +32,7 @@ import ConfirmModal from './components/modals/ConfirmModal';
 import RecoveryKeyModal from './components/modals/RecoveryKeyModal';
 import RecoveryResetModal from './components/modals/RecoveryResetModal';
 import QualificationModal from './components/modals/QualificationModal';
+import ServiceDefinitionModal from './components/modals/ServiceDefinitionModal';
 import CompetencyModal from './components/modals/CompetencyModal';
 import InstructionModal from './components/modals/InstructionModal';
 import AssignInstructionModal, {
@@ -43,6 +44,7 @@ import EmployeeInstructionModal from './components/modals/EmployeeInstructionMod
 import RecommendedCompetenciesModal from './components/modals/RecommendedCompetenciesModal';
 import EmployeeModal from './components/modals/EmployeeModal';
 import EventModal from './components/modals/EventModal';
+import EmploymentActionModal from './components/modals/EmploymentActionModal';
 import PatientModal from './components/patients/PatientModal';
 import VisitModal from './components/patients/VisitModal';
 import AuditModal from './components/modals/AuditModal';
@@ -61,6 +63,7 @@ import { buildDashboardTasks, buildDataQuality, type TaskTarget } from './utils/
 import { groupOfEvent, type EventGroup } from './utils/eventStyle';
 import { matchesQualificationRelevance } from './utils/qualificationRelevance';
 import { userFacingErrorMessage } from './utils/errorMessage';
+import { reselectEmployee } from './utils/selectedEmployee';
 import { unifyEvents } from './utils/unifyEvents';
 import {
   buildNavigationSnapshot,
@@ -75,6 +78,11 @@ import type {
   EmployeeWithPeriod,
   PatientWithLatestVisit,
 } from './shared/types';
+import { SERVICE_TYPE_LABEL } from './shared/services';
+import { isActivePatient } from './utils/qpr';
+
+const patientCountLabel = (count: number): string =>
+  count === 1 ? '1 aktive Person' : `${count} aktive Personen`;
 
 const emptyAuditModal = (): AuditModalState => ({
   open: false,
@@ -127,8 +135,10 @@ const App = () => {
       employeeCompetencyModal,
       employeeInstructionModal,
       suggestedCompetencyModal,
+      periods,
       addPeriodForm,
       eventModal,
+      employmentAction,
       confirmState,
       recoveryKeyModal,
       recoveryReset,
@@ -144,6 +154,8 @@ const App = () => {
       patientSearch,
       patientGroupFilter,
       patientVisitModal,
+      serviceDefinitions,
+      serviceDefinitionModal,
     },
     setters: {
       setEmployeeCompetencies,
@@ -173,6 +185,7 @@ const App = () => {
       setPatientSearch,
       setPatientGroupFilter,
       setPatientVisitModal,
+      setServiceDefinitionModal,
     },
     derived: { filteredEmployees, totalFte, timelineItems, sidebarPage, filteredPatients },
     actions: {
@@ -224,6 +237,9 @@ const App = () => {
       openNewPeriodModal,
       openExistingPeriodModal,
       openEventModalForEvent,
+      openEmploymentAction,
+      closeEmploymentAction,
+      saveEmploymentAction,
       calendarActions,
       openCreateModal,
       openEditModal,
@@ -240,6 +256,11 @@ const App = () => {
       closePatientModal,
       openVisitModal,
       closeVisitModal,
+      saveServiceDefinition,
+      toggleServiceDefinition,
+      reorderServiceDefinitions,
+      openCreateServiceDefinition,
+      openEditServiceDefinition,
     },
   } = useAppLogic();
 
@@ -552,7 +573,9 @@ const App = () => {
       setPasswordOpen(false);
       setToastMessage('Passwort geändert.');
     } catch (err) {
-      setPasswordError(userFacingErrorMessage(err));
+      setPasswordError(
+        userFacingErrorMessage(err, 'Das Passwort konnte nicht geändert werden.'),
+      );
     } finally {
       setPasswordBusy(false);
     }
@@ -677,6 +700,23 @@ const App = () => {
     [handleSelect, pushHistorySnapshot],
   );
 
+  /** Working-time saves change the effective term, so re-read the selected period. */
+  const reloadSelectedEmployee = useCallback(async () => {
+    const employeeId = selectedEmployee?.id;
+    if (!employeeId) return;
+    const updated = await api.employees.list(year);
+    setDataset(updated);
+    const refreshed = await reselectEmployee(
+      updated,
+      (person) => person.id === employeeId,
+      async () =>
+        (await api.employees.list(year, 'directory')).employees.find(
+          (person) => person.id === employeeId,
+        ),
+    );
+    if (refreshed) await handleSelect(refreshed);
+  }, [handleSelect, selectedEmployee?.id, setDataset, year]);
+
   const navigateToPatient = useCallback(
     async (patient: PatientWithLatestVisit) => {
       if (!restoringHistoryRef.current) {
@@ -699,17 +739,18 @@ const App = () => {
           // A person without any employment period is in no reporting dataset,
           // yet still needs to be reachable to be merged or completed.
           (known
-            ? {
+            ? ({
                 id: known.id,
                 name: known.name,
                 birthDate: known.birthDate,
                 qualification: '',
                 startDate: '',
+                employmentStartDate: '',
                 endDate: null,
                 fte: null,
                 weeklyHours: null,
-                status: 'active' as const,
-              }
+                status: 'active',
+              } satisfies EmployeeWithPeriod)
             : undefined);
         if (employee) void navigateToEmployee(employee, target.tab ?? 'comp');
         return;
@@ -983,10 +1024,37 @@ const App = () => {
           })),
       };
     }
+    if (page === 'services') {
+      const activePatients = patients.filter((patient) => isActivePatient(patient));
+      return {
+        title: 'Leistungen für betreute Personen',
+        subtitle:
+          'Leistungskatalog für die Auswahl im Patientenformular; bestehende Zuordnungen bleiben nachvollziehbar.',
+        empty: 'Noch keine Leistung angelegt.',
+        items: serviceDefinitions
+          .filter((entry) => entry.id != null)
+          .map((entry) => ({
+            id: entry.id as number,
+            title: entry.name,
+            note:
+              entry.name === SERVICE_TYPE_LABEL[entry.serviceType]
+                ? ''
+                : SERVICE_TYPE_LABEL[entry.serviceType],
+            tags: entry.active === false ? ['deaktiviert'] : [],
+            usage: patientCountLabel(
+              activePatients.filter((patient) =>
+                patient.serviceDefinitionIds?.includes(entry.id as number),
+              ).length,
+            ),
+            active: entry.active,
+          })),
+      };
+    }
     if (page === 'comps') {
       return {
-        title: 'Kompetenzen',
-        subtitle: 'Fachthemen mit Kategorie und Relevanz — Grundlage der Kompetenzmatrix.',
+        title: 'Kompetenzen im Team',
+        subtitle:
+          'Fachliche Fähigkeiten und Nachweise der Mitarbeitenden. Grundlage der Kompetenzmatrix.',
         empty: 'Noch keine Kompetenz angelegt.',
         items: competencyDefinitions
           .filter((entry) => entry.id != null)
@@ -1231,13 +1299,7 @@ const App = () => {
             availableInstructionCount={availableInstructionDefinitions.length}
             onTabChange={setDetailTab}
             onEdit={openEditModal}
-            onWorkingTimeSaved={async () => {
-              const updated = await api.employees.list(year);
-              setDataset(updated);
-              const refreshed = updated.employees.find(person => person.id === selectedEmployee.id)
-                ?? (await api.employees.list(year, 'directory')).employees.find(person => person.id === selectedEmployee.id);
-              if (refreshed) await handleSelect(refreshed);
-            }}
+            onWorkingTimeSaved={reloadSelectedEmployee}
             onCompetenciesSaved={setEmployeeCompetencies}
             onAddCompetency={openNewEmployeeCompetencyModal}
             onAddInstruction={openNewEmployeeInstructionModal}
@@ -1245,6 +1307,7 @@ const App = () => {
             onSelectCompetency={openEmployeeCompetencyModal}
             onSelectInstruction={openEmployeeInstructionModal}
             onStartNewPeriod={openNewPeriodModal}
+            onOpenEmploymentAction={openEmploymentAction}
             onSelectTimelineItem={(item) =>
               item.kind === 'period'
                 ? openExistingPeriodModal(item.record)
@@ -1331,6 +1394,7 @@ const App = () => {
             emptyLabel={admin.empty}
             onCreate={() => {
               if (page === 'quals') setQualificationModal({ open: true, value: '', note: '' });
+              if (page === 'services') openCreateServiceDefinition();
               if (page === 'comps')
                 setCompetencyModal({
                   open: true,
@@ -1360,6 +1424,10 @@ const App = () => {
                     value: entry.name,
                     note: entry.note ?? '',
                   });
+              }
+              if (page === 'services') {
+                const entry = serviceDefinitions.find((item) => item.id === id);
+                if (entry) openEditServiceDefinition(entry);
               }
               if (page === 'comps') {
                 const entry = competencyDefinitions.find((item) => item.id === id);
@@ -1391,6 +1459,8 @@ const App = () => {
             }}
             assignLabel="Zuordnen"
             onAssign={page === 'instrs' ? openAssignInstructionModal : undefined}
+            onToggleActive={page === 'services' ? toggleServiceDefinition : undefined}
+            toggleActiveLabel={(active) => (active ? 'Deaktivieren' : 'Aktivieren')}
             onReorder={(id, targetIndex) => {
               if (page === 'quals')
                 reorderTo(
@@ -1412,6 +1482,13 @@ const App = () => {
                   id,
                   targetIndex,
                   reorderInstructionDefinition,
+                );
+              if (page === 'services')
+                reorderTo(
+                  admin.items.map((item) => item.id),
+                  id,
+                  targetIndex,
+                  reorderServiceDefinitions,
                 );
             }}
           />
@@ -1522,6 +1599,12 @@ const App = () => {
         onClose={() => setQualificationModal({ open: false, value: '', note: '' })}
         onSave={handleSaveQualificationModal}
         onDelete={confirmDeleteQualification}
+      />
+      <ServiceDefinitionModal
+        state={serviceDefinitionModal}
+        onChange={(next) => setServiceDefinitionModal((prev) => ({ ...prev, ...next }))}
+        onClose={() => setServiceDefinitionModal({ ...serviceDefinitionModal, open: false })}
+        onSave={() => void saveServiceDefinition()}
       />
       <CompetencyModal
         state={competencyModal}
@@ -1641,13 +1724,7 @@ const App = () => {
         <EventModal
           employee={selectedEmployee}
           baseHours={baseHours}
-          onWorkingTimeSaved={async () => {
-              const updated = await api.employees.list(year);
-              setDataset(updated);
-              const refreshed = updated.employees.find(person => person.id === selectedEmployee.id)
-                ?? (await api.employees.list(year, 'directory')).employees.find(person => person.id === selectedEmployee.id);
-              if (refreshed) await handleSelect(refreshed);
-            }}
+          onWorkingTimeSaved={reloadSelectedEmployee}
           state={eventModal}
           periodForm={addPeriodForm}
           qualifications={qualifications}
@@ -1661,8 +1738,21 @@ const App = () => {
         />
       )}
 
+      {selectedEmployee && (
+        <EmploymentActionModal
+          open={employmentAction.open}
+          mode={employmentAction.mode}
+          employee={selectedEmployee}
+          periods={periods}
+          qualifications={qualifications}
+          onClose={closeEmploymentAction}
+          onSave={saveEmploymentAction}
+        />
+      )}
+
       <PatientModal
         modal={patientModal}
+        serviceDefinitions={serviceDefinitions}
         onChange={setPatientModal}
         onClose={closePatientModal}
         onSave={handleSavePatient}

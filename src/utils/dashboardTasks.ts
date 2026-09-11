@@ -21,6 +21,7 @@ import {
   isActivePatient,
   needsAssessment,
   representativeMissing,
+  serviceScopeOf,
 } from './qpr';
 
 export type TaskTarget =
@@ -168,14 +169,24 @@ export const buildDashboardTasks = ({
         weight: 2,
         target,
       });
-    if (patient.serviceScope !== 'eligible' && patient.serviceScope !== 'excluded')
+    if (serviceScopeOf(patient).scope === 'unknown')
       tasks.push({
         id: `patient-scope-${patient.id}`,
-        title: `${patient.name} · Leistungsumfang klären`,
-        sub: 'Zugehörigkeit zur QPR-Personenliste bestätigen',
+        title: `${patient.name} · Leistungen erfassen`,
+        sub: 'Ohne erfasste Leistungen fehlt die Einordnung für die MD-Personenliste',
         tag: 'Stammdaten',
         tagClass: 'tag-accent',
         weight: 2,
+        target,
+      });
+    else if (patient.serviceScopeSource === 'legacy')
+      tasks.push({
+        id: `patient-legacy-scope-${patient.id}`,
+        title: `${patient.name} · Leistungen nachtragen`,
+        sub: 'Die Einordnung stammt noch aus der früheren Erfassung, nicht aus erbrachten Leistungen',
+        tag: 'Stammdaten',
+        tagClass: 'tag-neutral',
+        weight: 5,
         target,
       });
     if (due.overdue) {
