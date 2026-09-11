@@ -10,6 +10,7 @@ const employees: EmployeeWithPeriod[] = [
     name: 'Mara Beispiel',
     qualification: 'PFK',
     startDate: '2024-01-01',
+    employmentStartDate: '2024-01-01',
     endDate: null,
     fte: 1,
     status: 'active',

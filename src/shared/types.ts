@@ -136,7 +136,7 @@ export interface EmployeeWithPeriod extends Employee {
   startDate: string;
   endDate?: string | null;
   /** Derived display value for the contiguous employment chain. */
-  employmentStartDate?: string;
+  employmentStartDate: string;
   fte: number;
   status: 'active' | 'left';
   weeklyHours?: number | null;

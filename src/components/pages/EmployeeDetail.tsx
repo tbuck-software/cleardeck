@@ -7,7 +7,6 @@ import Avatar from '../ui/Avatar';
 import Segmented from '../ui/Segmented';
 import { formatDateDE } from '../../utils/dateFormat';
 import { daysBetween } from '../../utils/qpr';
-import { contiguousEmploymentStart } from '../../utils/employment';
 import type {
   EmployeeCompetency,
   EmployeeInstruction,
@@ -93,12 +92,7 @@ const EmployeeDetail = ({
   const workingTimes = employee.workingTimes ?? [];
   const workingHistory = employee.hoursHistory ?? [];
   const periodItems = timelineItems.filter((item) => item.kind === 'period');
-  const derivedEmploymentStart = contiguousEmploymentStart(
-    periodItems.map((item) => item.record),
-    employee.periodId,
-    employee.startDate,
-  );
-  const employmentStartDate = employee.employmentStartDate ?? derivedEmploymentStart ?? employee.startDate;
+  const employmentStartDate = employee.employmentStartDate;
 
   const hasMeaningfulEventNote = (item: Extract<TimelineItem, { kind: 'event' }>): boolean => {
     const { record } = item;
