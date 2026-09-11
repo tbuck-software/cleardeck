@@ -149,6 +149,27 @@ describe('employment repair previews and transactions', () => {
     expect(db.serialize()).toEqual(before);
   });
 
+  it('does not resolve two valid periods separated by a gap', () => {
+    const employee = person('Lücke Test', '2024-01-01', '2024-01-31');
+    const separatePeriodId = Number(db.prepare('INSERT INTO employment_periods(employeeId,startDate,endDate,qualification) VALUES (?,?,?,?)').run(employee.id, '2024-03-01', '2024-03-31', employee.qualification).lastInsertRowid);
+    const preview = previewReconcilePeriods({
+      periodIds: [employee.periodId!, separatePeriodId],
+      retainedPeriodId: employee.periodId!,
+      startDate: '2024-01-01',
+      endDate: '2024-01-31',
+    });
+    expect(preview.conflicts).toContain('Die ausgewählten Zeiträume sind getrennte gültige Abschnitte. Eine Auflösung würde einen echten Zeitraum entfernen.');
+    const before = db.serialize();
+    expect(() => applyReconcilePeriods({
+      periodIds: [employee.periodId!, separatePeriodId],
+      retainedPeriodId: employee.periodId!,
+      startDate: '2024-01-01',
+      endDate: '2024-01-31',
+      previewToken: preview.token,
+    })).toThrow(/getrennte gültige Abschnitte/);
+    expect(db.serialize()).toEqual(before);
+  });
+
   it('retains every employee relation during an explicit merge', () => {
     const target = person('Merge Ziel', '2024-01-01', '2024-12-31');
     const source = person('Merge Quelle', '2025-01-01');

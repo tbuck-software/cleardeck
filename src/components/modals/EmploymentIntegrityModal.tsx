@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Dialog from '../ui/Dialog';
 import { api } from '../../services/api';
 import { formatDateDE } from '../../utils/dateFormat';
+import { shiftDays } from '../../utils/calendarDate';
 import type {
   ConsolidatePreview,
   EmployeeMergePreview,
@@ -10,6 +11,7 @@ import type {
   EmploymentPeriod,
   PeriodDatePreview,
   ReconcilePeriodsPreview,
+  RepairRecordSummary,
 } from '../../shared/types';
 
 type EmploymentIntegrityModalProps = {
@@ -30,8 +32,8 @@ const EmploymentIntegrityModal = ({
   onError,
 }: EmploymentIntegrityModalProps) => {
   const [overview, setOverview] = useState<EmploymentIntegrityOverview | null>(null);
-  const [periods, setPeriods] = useState<Array<EmploymentPeriod & { employeeName: string }>>([]);
-  const [selectedPeriod, setSelectedPeriod] = useState<(EmploymentPeriod & { employeeName: string }) | null>(null);
+  const [periods, setPeriods] = useState<Array<EmploymentPeriod & { employeeId: number; employeeName: string }>>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<(EmploymentPeriod & { employeeId: number; employeeName: string }) | null>(null);
   const [periodDraft, setPeriodDraft] = useState({ startDate: '', endDate: '' });
   const [periodPreview, setPeriodPreview] = useState<PeriodDatePreview | null>(null);
   const [targetId, setTargetId] = useState('');
@@ -55,6 +57,7 @@ const EmploymentIntegrityModal = ({
         employees.filter((employee) => employee.id != null).map(async (employee) =>
           (await api.employees.listPeriods(employee.id!)).map((period) => ({
             ...period,
+            employeeId: employee.id!,
             employeeName: employee.name,
           })),
         ),
@@ -83,6 +86,67 @@ const EmploymentIntegrityModal = ({
   const consolidateReady = consolidatePreview != null && consolidatePreview.conflicts.length === 0;
   const reconcileReady = reconcilePreview != null && reconcilePreview.conflicts.length === 0;
   const periodOptions = useMemo(() => periods.filter((period) => period.id != null), [periods]);
+  const selectedFirstPeriod = periodOptions.find((period) => String(period.id) === firstPeriodId);
+  const selectedReconcileFirst = periodOptions.find((period) => String(period.id) === reconcileFirstId);
+  const isAdjacent = (left: typeof periodOptions[number], right: typeof periodOptions[number]): boolean => {
+    const first = left.startDate <= right.startDate ? left : right;
+    const second = first === left ? right : left;
+    return Boolean(first.endDate && first.startDate <= first.endDate && shiftDays(first.endDate, 1) === second.startDate);
+  };
+  const consolidationSecondOptions = selectedFirstPeriod
+    ? periodOptions.filter((period) =>
+        period.id !== selectedFirstPeriod.id &&
+        period.employeeId === selectedFirstPeriod.employeeId &&
+        period.qualification === selectedFirstPeriod.qualification &&
+        isAdjacent(selectedFirstPeriod, period),
+      )
+    : periodOptions;
+  const reconciliationSecondOptions = selectedReconcileFirst
+    ? periodOptions.filter((period) =>
+        period.id !== selectedReconcileFirst.id &&
+        period.employeeId === selectedReconcileFirst.employeeId &&
+        period.qualification === selectedReconcileFirst.qualification,
+      )
+    : periodOptions;
+  const employeeLabel = (employee: EmployeeWithPeriod): string => [
+    employee.name,
+    employee.birthDate ? `geb. ${formatDate(employee.birthDate)}` : null,
+    employee.qualification,
+    `${formatDate(employee.startDate)} – ${formatDate(employee.endDate)}`,
+  ].filter(Boolean).join(' · ');
+  const employeeLabelById = (id: number, fallbackName: string): string => {
+    const employee = employees.find((entry) => entry.id === id);
+    return employee ? employeeLabel(employee) : fallbackName;
+  };
+  const linkedRecordSummary = (records: EmployeeMergePreview['linkedRecords']): string => {
+    const labels: Array<[string, string]> = [
+      ['employee_events', 'Ereignisse'],
+      ['employment_periods', 'Beschäftigungsabschnitte'],
+      ['employment_terms', 'Arbeitszeitstände'],
+      ['employment_term_history', 'Arbeitszeit-Historie'],
+      ['employee_competencies', 'Qualifikationen'],
+      ['competency_history', 'Qualifikationshistorie'],
+      ['employee_instructions', 'Einweisungen'],
+    ];
+    const counts = new Map<string, number>();
+    records.forEach((record) => {
+      const label = labels.find(([table]) => table === record.table)?.[1] ?? 'Weitere Nachweise';
+      counts.set(label, (counts.get(label) ?? 0) + record.count);
+    });
+    return Array.from(counts, ([label, count]) => `${label}: ${count}`).join(' · ') || 'Keine verknüpften Nachweise';
+  };
+  const affectedRecordSummary = (records: RepairRecordSummary[]): string => {
+    const counts = new Map<string, number>();
+    records.forEach((record) => {
+      const label = record.table === 'employment_terms'
+        ? 'Arbeitszeitstände'
+        : record.table === 'employment_term_history'
+          ? 'Arbeitszeit-Historie'
+          : 'Weitere Nachweise';
+      counts.set(label, (counts.get(label) ?? 0) + record.count);
+    });
+    return Array.from(counts, ([label, count]) => `${label}: ${count}`).join(' · ') || 'Keine verknüpften Arbeitszeitstände';
+  };
 
   const choosePeriod = (periodId: number) => {
     const period = periods.find((entry) => entry.id === periodId);
@@ -303,8 +367,8 @@ const EmploymentIntegrityModal = ({
               <strong>{selectedPeriod.employeeName}</strong>
               <div className="cd-muted-13">Bisher: {formatDate(selectedPeriod.startDate)} – {formatDate(selectedPeriod.endDate)}</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                <label className="field"><span>Beginn</span><input className="input" type="date" value={periodDraft.startDate} onChange={(event) => setPeriodDraft((current) => ({ ...current, startDate: event.target.value }))} /></label>
-                <label className="field"><span>Ende</span><input className="input" type="date" value={periodDraft.endDate} onChange={(event) => setPeriodDraft((current) => ({ ...current, endDate: event.target.value }))} /></label>
+                <label className="field"><span>Beginn</span><input className="input" type="date" value={periodDraft.startDate} onChange={(event) => { setPeriodDraft((current) => ({ ...current, startDate: event.target.value })); setPeriodPreview(null); }} /></label>
+                <label className="field"><span>Ende</span><input className="input" type="date" value={periodDraft.endDate} onChange={(event) => { setPeriodDraft((current) => ({ ...current, endDate: event.target.value })); setPeriodPreview(null); }} /></label>
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" className="btn btn-secondary" onClick={() => void previewDates()} disabled={busy}>Vorschau</button>
@@ -314,6 +378,7 @@ const EmploymentIntegrityModal = ({
                 <div role="status" className={periodPreview.conflicts.length ? 'cd-callout cd-callout-error' : 'cd-callout'}>
                   <div><strong>Vorher:</strong> {formatDate(periodPreview.period.before.startDate)} – {formatDate(periodPreview.period.before.endDate)}</div>
                   <div><strong>Nachher:</strong> {formatDate(periodPreview.period.after.startDate)} – {formatDate(periodPreview.period.after.endDate)}</div>
+                  <div>Betroffene Nachweise: {affectedRecordSummary(periodPreview.affectedRecords)}</div>
                   {periodPreview.conflicts.map((conflict) => <div key={conflict}>{conflict}</div>)}
                 </div>
               )}
@@ -321,17 +386,18 @@ const EmploymentIntegrityModal = ({
           ) : <div className="cd-muted-14">Eine Auffälligkeit mit „Daten korrigieren“ auswählen.</div>}
         </section>
 
-        <section>
-          <h3 className="cd-h3">Doppelte oder übernommene Abschnitte auflösen</h3>
+        <details className="cd-disclosure">
+          <summary>Doppelte oder übernommene Abschnitte auflösen</summary>
+          <div className="cd-disclosure-body">
           <p className="cd-muted-14">Einen Abschnitt behalten und die nachweislich richtigen Daten eingeben. Gleiche Arbeitszeitstände werden als Historie erhalten; widersprüchliche Stände blockieren die Aktion.</p>
           <div style={{ display: 'grid', gap: 10 }}>
-            <select aria-label="Erster Abschnitt für Auflösung" className="input" value={reconcileFirstId} onChange={(event) => { setReconcileFirstId(event.target.value); setReconcilePreview(null); }}>
+            <select aria-label="Erster Abschnitt für Auflösung" className="input" value={reconcileFirstId} onChange={(event) => { setReconcileFirstId(event.target.value); setReconcileSecondId(''); setReconcileRetainedId(''); setReconcileDraft({ startDate: '', endDate: '' }); setReconcilePreview(null); }}>
               <option value="">Ersten Abschnitt auswählen</option>
               {periodOptions.map((period) => <option value={period.id} key={`reconcile-first-${period.id}`}>{period.employeeName} · {formatDate(period.startDate)} – {formatDate(period.endDate)}</option>)}
             </select>
-            <select aria-label="Zweiter Abschnitt für Auflösung" className="input" value={reconcileSecondId} onChange={(event) => { setReconcileSecondId(event.target.value); setReconcilePreview(null); }}>
+            <select aria-label="Zweiter Abschnitt für Auflösung" className="input" value={reconcileSecondId} onChange={(event) => { setReconcileSecondId(event.target.value); setReconcileRetainedId(''); setReconcileDraft({ startDate: '', endDate: '' }); setReconcilePreview(null); }}>
               <option value="">Zweiten Abschnitt auswählen</option>
-              {periodOptions.map((period) => <option value={period.id} key={`reconcile-second-${period.id}`}>{period.employeeName} · {formatDate(period.startDate)} – {formatDate(period.endDate)}</option>)}
+              {reconciliationSecondOptions.map((period) => <option value={period.id} key={`reconcile-second-${period.id}`}>{period.employeeName} · {formatDate(period.startDate)} – {formatDate(period.endDate)}</option>)}
             </select>
             <select aria-label="Beibehaltenen Abschnitt auswählen" className="input" value={reconcileRetainedId} onChange={(event) => { const value = event.target.value; setReconcileRetainedId(value); const period = periodOptions.find((entry) => String(entry.id) === value); setReconcileDraft({ startDate: period?.startDate ?? '', endDate: period?.endDate ?? '' }); setReconcilePreview(null); }}>
               <option value="">Beibehaltenen Abschnitt auswählen</option>
@@ -342,37 +408,42 @@ const EmploymentIntegrityModal = ({
               <label className="field"><span>Richtiges Ende</span><input className="input" type="date" value={reconcileDraft.endDate} onChange={(event) => { setReconcileDraft((current) => ({ ...current, endDate: event.target.value })); setReconcilePreview(null); }} /></label>
             </div>}
             <div style={{ display: 'flex', gap: 8 }}><button type="button" className="btn btn-secondary" onClick={() => void previewReconciliation()} disabled={busy || !reconcileFirstId || !reconcileSecondId || !reconcileRetainedId}>Vorschau</button>{reconcileReady && <button type="button" className="btn btn-primary" onClick={() => void applyReconciliation()} disabled={busy}>Auflösung speichern</button>}</div>
-            {reconcilePreview && <div role="status" className={reconcilePreview.conflicts.length ? 'cd-callout cd-callout-error' : 'cd-callout'}><div><strong>Beibehalten:</strong> {formatDate(reconcilePreview.retained.before.startDate)} – {formatDate(reconcilePreview.retained.before.endDate)} → {formatDate(reconcilePreview.retained.after.startDate)} – {formatDate(reconcilePreview.retained.after.endDate)}</div><div><strong>Zusammengeführt:</strong> {formatDate(reconcilePreview.removed.startDate)} – {formatDate(reconcilePreview.removed.endDate)}</div>{reconcilePreview.conflicts.map((conflict) => <div key={conflict}>{conflict}</div>)}</div>}
+            {reconcilePreview && <div role="status" className={reconcilePreview.conflicts.length ? 'cd-callout cd-callout-error' : 'cd-callout'}><div><strong>Beibehalten:</strong> {formatDate(reconcilePreview.retained.before.startDate)} – {formatDate(reconcilePreview.retained.before.endDate)} → {formatDate(reconcilePreview.retained.after.startDate)} – {formatDate(reconcilePreview.retained.after.endDate)}</div><div><strong>Zusammengeführt:</strong> {formatDate(reconcilePreview.removed.startDate)} – {formatDate(reconcilePreview.removed.endDate)}</div><div>Betroffene Nachweise: {affectedRecordSummary(reconcilePreview.affectedRecords)}</div>{reconcilePreview.conflicts.map((conflict) => <div key={conflict}>{conflict}</div>)}</div>}
           </div>
-        </section>
+          </div>
+        </details>
 
-        <section>
-          <h3 className="cd-h3">Angrenzende Abschnitte zusammenlegen</h3>
-          <p className="cd-muted-14">Nur gleiche Qualifikationen und unmittelbar angrenzende Zeiträume werden angeboten. Kollisionen blockieren das Speichern.</p>
+        <details className="cd-disclosure">
+          <summary>Angrenzende Abschnitte zusammenlegen</summary>
+          <div className="cd-disclosure-body">
+          <p className="cd-muted-14">Wählen Sie zwei gleiche Qualifikationen derselben Person mit unmittelbar angrenzenden Zeiträumen. Kollisionen blockieren das Speichern.</p>
           <div style={{ display: 'grid', gap: 10 }}>
-            <select aria-label="Erster Beschäftigungsabschnitt" className="input" value={firstPeriodId} onChange={(event) => { setFirstPeriodId(event.target.value); setConsolidatePreview(null); }}>
+            <select aria-label="Erster Beschäftigungsabschnitt" className="input" value={firstPeriodId} onChange={(event) => { setFirstPeriodId(event.target.value); setSecondPeriodId(''); setConsolidatePreview(null); }}>
               <option value="">Ersten Abschnitt auswählen</option>
               {periodOptions.map((period) => <option value={period.id} key={`first-${period.id}`}>{period.employeeName} · {formatDate(period.startDate)} – {formatDate(period.endDate)} · {period.qualification}</option>)}
             </select>
             <select aria-label="Zweiter Beschäftigungsabschnitt" className="input" value={secondPeriodId} onChange={(event) => { setSecondPeriodId(event.target.value); setConsolidatePreview(null); }}>
               <option value="">Zweiten Abschnitt auswählen</option>
-              {periodOptions.map((period) => <option value={period.id} key={`second-${period.id}`}>{period.employeeName} · {formatDate(period.startDate)} – {formatDate(period.endDate)} · {period.qualification}</option>)}
+              {consolidationSecondOptions.map((period) => <option value={period.id} key={`second-${period.id}`}>{period.employeeName} · {formatDate(period.startDate)} – {formatDate(period.endDate)} · {period.qualification}</option>)}
             </select>
             <div style={{ display: 'flex', gap: 8 }}><button type="button" className="btn btn-secondary" onClick={() => void previewConsolidation()} disabled={busy}>Vorschau</button>{consolidateReady && <button type="button" className="btn btn-primary" onClick={() => void applyConsolidation()} disabled={busy}>Zusammenlegung speichern</button>}</div>
-            {consolidatePreview && <div role="status" className={consolidatePreview.conflicts.length ? 'cd-callout cd-callout-error' : 'cd-callout'}><div><strong>Vorher:</strong> {consolidatePreview.before.map((period) => `${formatDate(period.startDate)} – ${formatDate(period.endDate)}`).join(' · ')}</div><div><strong>Nachher:</strong> {formatDate(consolidatePreview.after.startDate)} – {formatDate(consolidatePreview.after.endDate)}</div>{consolidatePreview.conflicts.map((conflict) => <div key={conflict}>{conflict}</div>)}</div>}
+            {consolidatePreview && <div role="status" className={consolidatePreview.conflicts.length ? 'cd-callout cd-callout-error' : 'cd-callout'}><div><strong>Vorher:</strong> {consolidatePreview.before.map((period) => `${formatDate(period.startDate)} – ${formatDate(period.endDate)}`).join(' · ')}</div><div><strong>Nachher:</strong> {formatDate(consolidatePreview.after.startDate)} – {formatDate(consolidatePreview.after.endDate)}</div><div>Betroffene Nachweise: {affectedRecordSummary(consolidatePreview.affectedRecords)}</div>{consolidatePreview.conflicts.map((conflict) => <div key={conflict}>{conflict}</div>)}</div>}
           </div>
-        </section>
+          </div>
+        </details>
 
-        <section>
-          <h3 className="cd-h3">Doppelte Person zusammenführen</h3>
+        <details className="cd-disclosure">
+          <summary>Doppelte Person zusammenführen</summary>
+          <div className="cd-disclosure-body">
           <p className="cd-muted-14">Gleiche Namen sind nur ein Hinweis. Ziel und Quelle ausdrücklich auswählen; alle verknüpften Nachweise werden geprüft.</p>
           <div style={{ display: 'grid', gap: 10 }}>
-            <select aria-label="Zielperson" className="input" value={targetId} onChange={(event) => { setTargetId(event.target.value); setMergePreview(null); }}><option value="">Zielperson auswählen</option>{employees.map((employee) => <option value={employee.id} key={`target-${employee.id}`}>{employee.name}</option>)}</select>
-            <select aria-label="Quellperson" className="input" value={sourceId} onChange={(event) => { setSourceId(event.target.value); setMergePreview(null); }}><option value="">Quellperson auswählen</option>{employees.map((employee) => <option value={employee.id} key={`source-${employee.id}`}>{employee.name}</option>)}</select>
+            <select aria-label="Zielperson" className="input" value={targetId} onChange={(event) => { setTargetId(event.target.value); setMergePreview(null); }}><option value="">Zielperson auswählen</option>{employees.map((employee) => <option value={employee.id} key={`target-${employee.id}`}>{employeeLabel(employee)}</option>)}</select>
+            <select aria-label="Quellperson" className="input" value={sourceId} onChange={(event) => { setSourceId(event.target.value); setMergePreview(null); }}><option value="">Quellperson auswählen</option>{employees.map((employee) => <option value={employee.id} key={`source-${employee.id}`}>{employeeLabel(employee)}</option>)}</select>
             <div style={{ display: 'flex', gap: 8 }}><button type="button" className="btn btn-secondary" onClick={() => void previewMerge()} disabled={busy || !targetId || !sourceId || targetId === sourceId}>Vorschau</button>{mergeReady && <button type="button" className="btn btn-primary" onClick={() => void applyMerge()} disabled={busy}>Zusammenführen</button>}</div>
-            {mergePreview && <div role="status" className={mergePreview.conflicts.length ? 'cd-callout cd-callout-error' : 'cd-callout'}><div><strong>Vorschau:</strong> {mergePreview.target.name} bleibt erhalten; Nachweise von {mergePreview.source.name} werden verknüpft.</div><div>{mergePreview.linkedRecords.reduce((sum, record) => sum + record.count, 0)} verknüpfte Datensätze geprüft. Diese Zusammenführung kann nicht automatisch rückgängig gemacht werden; vorher bei Bedarf ein Backup erstellen.</div>{mergePreview.conflicts.map((conflict) => <div key={conflict}>{conflict}</div>)}{mergeReady && <div>Bitte „Zusammenführen“ nur mit geprüfter Zielperson ausführen.</div>}</div>}
+            {mergePreview && <div role="status" className={mergePreview.conflicts.length ? 'cd-callout cd-callout-error' : 'cd-callout'}><div><strong>Vorschau:</strong> {employeeLabelById(mergePreview.target.id, mergePreview.target.name)} bleibt erhalten; Nachweise von {employeeLabelById(mergePreview.source.id, mergePreview.source.name)} werden verknüpft.</div><div>Geprüft: {linkedRecordSummary(mergePreview.linkedRecords)}. Diese Zusammenführung kann nicht automatisch rückgängig gemacht werden; vorher bei Bedarf ein Backup erstellen.</div>{mergePreview.conflicts.map((conflict) => <div key={conflict}>{conflict}</div>)}{mergeReady && <div>Bitte „Zusammenführen“ nur mit geprüfter Zielperson ausführen.</div>}</div>}
           </div>
-        </section>
+          </div>
+        </details>
       </div>
     </Dialog>
   );

@@ -58,6 +58,10 @@ const validate = (
   if (input.endDate && input.endDate < input.startDate) conflicts.push('Das Ende liegt vor dem Beginn.');
   if (retained.employeeId !== removed.employeeId) conflicts.push('Abschnitte gehören zu verschiedenen Personen.');
   if (retained.qualification !== removed.qualification) conflicts.push('Die Qualifikationen unterscheiden sich. Bitte die richtige Zielperiode auswählen.');
+  const retainedReversed = Boolean(retained.endDate && retained.startDate > retained.endDate);
+  const removedReversed = Boolean(removed.endDate && removed.startDate > removed.endDate);
+  const sameStart = retained.startDate === removed.startDate;
+  const validOverlap = !retainedReversed && !removedReversed && overlaps(retained, removed);
   if (retained.employeeId === removed.employeeId) {
     const neighbors = allRows<PeriodRow>(db, 'SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods WHERE employeeId=? AND id NOT IN (?,?)', retained.employeeId, retained.id, removed.id);
     neighbors.forEach((neighbor) => {
@@ -66,6 +70,13 @@ const validate = (
   }
   const targetTerms = allRows<TermRow>(db, 'SELECT * FROM employment_terms WHERE periodId=?', retained.id);
   const sourceTerms = allRows<TermRow>(db, 'SELECT * FROM employment_terms WHERE periodId=?', removed.id);
+  const matchingMalformedDuplicate =
+    (retainedReversed || removedReversed) &&
+    targetTerms.length > 0 &&
+    targetTerms.length === sourceTerms.length &&
+    targetTerms.every((targetTerm) => sourceTerms.some((sourceTerm) => sourceTerm.effectiveFrom === targetTerm.effectiveFrom && sameTerm(targetTerm, sourceTerm)));
+  if (!sameStart && !validOverlap && !matchingMalformedDuplicate)
+    conflicts.push('Die ausgewählten Zeiträume sind getrennte gültige Abschnitte. Eine Auflösung würde einen echten Zeitraum entfernen.');
   const outsideCorrectedRange = (term: TermRow): boolean =>
     term.effectiveFrom < input.startDate || (input.endDate != null && term.effectiveFrom > input.endDate);
   targetTerms.forEach((targetTerm) => {
