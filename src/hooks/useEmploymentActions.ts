@@ -13,8 +13,22 @@ type Params = {
   loadHistory: (employeeId: number) => Promise<void>;
   setLoading: (value: boolean) => void;
   setToast: (message: string | null, timeout?: number) => void;
-  datasetMode: 'year' | 'directory';
 };
+
+type SelectionTarget =
+  | { mode: 'departure'; periodId: number }
+  | { mode: 'qualification'; effectiveFrom: string; qualification: string };
+
+const findSelectionTarget = (
+  dataset: YearDataset,
+  employeeId: number,
+  target: SelectionTarget,
+): EmployeeWithPeriod | undefined =>
+  dataset.employees.find((entry) => {
+    if (entry.id !== employeeId) return false;
+    if (target.mode === 'departure') return entry.periodId === target.periodId;
+    return entry.startDate === target.effectiveFrom && entry.qualification === target.qualification;
+  });
 
 const useEmploymentActions = ({
   year,
@@ -25,7 +39,6 @@ const useEmploymentActions = ({
   loadHistory,
   setLoading,
   setToast,
-  datasetMode,
 }: Params) => {
   const [state, setState] = useState<{ open: boolean; mode: EmploymentActionMode }>({
     open: false,
@@ -37,23 +50,27 @@ const useEmploymentActions = ({
   }, []);
   const close = useCallback(() => setState((previous) => ({ ...previous, open: false })), []);
 
-  const refreshSelected = useCallback(async (updated: YearDataset, employee: EmployeeWithPeriod) => {
-    const current = updated.employees.find(
-      (entry) => entry.id === employee.id && entry.periodId === employee.periodId,
+  const refreshSelected = useCallback(async (
+    updated: YearDataset,
+    employee: EmployeeWithPeriod,
+    target: SelectionTarget,
+  ) => {
+    const current = findSelectionTarget(updated, employee.id ?? 0, target);
+    const selected = current ?? findSelectionTarget(
+      await api.employees.list(year, 'directory'),
+      employee.id ?? 0,
+      target,
     );
-    const directory = current ?? (await api.employees.list(year, 'directory')).employees.find(
-      (entry) => entry.id === employee.id,
-    );
-    if (!directory) return;
-    setSelectedEmployee(directory);
+    if (!selected) return;
+    setSelectedEmployee(selected);
     setForm((previous) => ({
       ...previous,
-      periodId: directory.periodId,
-      qualification: directory.qualification,
-      startDate: directory.startDate,
-      endDate: directory.endDate ?? '',
-      weeklyHours: directory.weeklyHours ?? null,
-      fte: directory.fte,
+      periodId: selected.periodId,
+      qualification: selected.qualification,
+      startDate: selected.startDate,
+      endDate: selected.endDate ?? '',
+      weeklyHours: selected.weeklyHours ?? null,
+      fte: selected.fte,
     }));
   }, [setForm, setSelectedEmployee, year]);
 
@@ -61,15 +78,16 @@ const useEmploymentActions = ({
     if (!selectedEmployee?.id) throw new Error('Person nicht gefunden.');
     setLoading(true);
     try {
+      let refreshedDataset: YearDataset;
       if (input.mode === 'departure') {
-        await api.employees.recordDeparture({
+        refreshedDataset = await api.employees.recordDeparture({
             employeeId: selectedEmployee.id,
             periodId: input.periodId,
             endDate: input.endDate,
             year,
           });
       } else {
-        await api.employees.switchQualification({
+        refreshedDataset = await api.employees.switchQualification({
             employeeId: selectedEmployee.id,
             periodId: input.periodId,
             effectiveFrom: input.effectiveFrom,
@@ -77,15 +95,24 @@ const useEmploymentActions = ({
             year,
           });
       }
-      const refreshedDataset = await api.employees.list(year, datasetMode);
       setDataset(refreshedDataset);
-      await refreshSelected(refreshedDataset, selectedEmployee);
+      await refreshSelected(
+        refreshedDataset,
+        selectedEmployee,
+        input.mode === 'departure'
+          ? { mode: input.mode, periodId: input.periodId }
+          : {
+              mode: input.mode,
+              effectiveFrom: input.effectiveFrom,
+              qualification: input.qualification.trim(),
+            },
+      );
       await loadHistory(selectedEmployee.id);
       setToast(input.mode === 'departure' ? 'Austritt erfasst.' : 'Qualifikation gewechselt.');
     } finally {
       setLoading(false);
     }
-  }, [datasetMode, loadHistory, refreshSelected, selectedEmployee, setDataset, setLoading, setToast, year]);
+  }, [loadHistory, refreshSelected, selectedEmployee, setDataset, setLoading, setToast, year]);
 
   return { state, actions: { open, close, save } };
 };
