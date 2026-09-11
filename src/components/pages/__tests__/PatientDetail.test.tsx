@@ -3,7 +3,7 @@
 
 import { fireEvent, render, screen } from '@testing-library/react';
 import PatientDetail from '../PatientDetail';
-import type { PatientVisit, PatientWithLatestVisit } from '../../../shared/types';
+import type { PatientVisit, PatientWithLatestVisit, ServiceDefinition } from '../../../shared/types';
 
 const patient: PatientWithLatestVisit = {
   id: 1,
@@ -84,6 +84,46 @@ describe('PatientDetail', () => {
 
     renderDetail({ patient: { ...patient, careLevel: null } });
     expect(screen.getByText('Pflegegrad unbekannt')).toBeInTheDocument();
+  });
+
+  it('zeigt nach einer Katalog-Umbenennung sofort das aktuelle Label', () => {
+    const assignedPatient: PatientWithLatestVisit = {
+      ...patient,
+      serviceScope: 'eligible',
+      serviceScopeSource: 'services',
+      serviceDefinitionIds: [17],
+      services: [
+        {
+          serviceDefinitionId: 17,
+          label: 'Ganzwaschung',
+          labelSnapshot: 'Ganzwaschung',
+          serviceType: 's36-care',
+        },
+      ],
+    };
+    const before: ServiceDefinition = {
+      id: 17,
+      name: 'Ganzwaschung',
+      serviceType: 's36-care',
+      active: true,
+    };
+    const after: ServiceDefinition = { ...before, name: 'Ganzkörperwäsche' };
+    const view = renderDetail({ patient: assignedPatient, serviceDefinitions: [before] });
+
+    expect(screen.getByText('Ganzwaschung')).toBeInTheDocument();
+    view.rerender(
+      <PatientDetail
+        patient={assignedPatient}
+        visits={visits}
+        visitIntervalDays={90}
+        serviceDefinitions={[after]}
+        onEdit={noop}
+        onNewVisit={noop}
+        onSelectVisit={noop}
+      />,
+    );
+    expect(screen.getByText('Ganzkörperwäsche')).toBeInTheDocument();
+    expect(screen.queryByText('Ganzwaschung')).not.toBeInTheDocument();
   });
 
   it('nennt die nächste Visite als fällig oder überfällig', () => {

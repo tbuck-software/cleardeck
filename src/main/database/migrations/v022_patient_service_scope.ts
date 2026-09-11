@@ -20,8 +20,9 @@ export const v022_patient_service_scope: Migration = {
         sortOrder INTEGER NOT NULL DEFAULT 0,
         createdAt TEXT DEFAULT (datetime('now'))
       );
+      DROP INDEX IF EXISTS idx_service_definitions_name;
       CREATE UNIQUE INDEX IF NOT EXISTS idx_service_definitions_name
-        ON service_definitions(serviceType, name COLLATE NOCASE);
+        ON service_definitions(name COLLATE NOCASE);
       CREATE INDEX IF NOT EXISTS idx_service_definitions_active
         ON service_definitions(active, sortOrder);
       CREATE TABLE IF NOT EXISTS patient_services (
@@ -49,7 +50,11 @@ export const v022_patient_service_scope: Migration = {
       ['Selbstständige Nahrungsaufnahme', 's36-care'],
       ['Pflegerische Betreuung nach § 36 SGB XI', 's36-support'],
       ['Verhinderungspflege nach § 39 SGB XI', 's39-prevention'],
-      ['Häusliche Krankenpflege nach § 37 SGB V', 's37-hkp'],
+      ['Behandlungspflege nach § 37 SGB V', 's37-hkp'],
+      ['Medizinische Kompressionsstrümpfe anziehen', 's37-hkp'],
+      ['Medizinische Kompressionsstrümpfe ausziehen', 's37-hkp'],
+      ['Medikamente richten / Medikamentenbox stellen', 's37-hkp'],
+      ['Medikamente verabreichen', 's37-hkp'],
       ['Außerklinische Intensivpflege nach § 37c SGB V', 's37c-aki'],
       ['Hilfe bei der Haushaltsführung nach SGB XI', 'household'],
       ['Betreuung oder Entlastung nach § 45a/45b SGB XI', 'relief'],

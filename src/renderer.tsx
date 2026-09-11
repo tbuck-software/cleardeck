@@ -973,7 +973,10 @@ const App = () => {
           .map((entry) => ({
             id: entry.id as number,
             title: entry.name,
-            note: SERVICE_TYPE_LABEL[entry.serviceType],
+            note:
+              entry.name === SERVICE_TYPE_LABEL[entry.serviceType]
+                ? ''
+                : SERVICE_TYPE_LABEL[entry.serviceType],
             tags: entry.active === false ? ['deaktiviert'] : [],
             usage: `${patients.reduce((count, patient) => count + (patient.serviceDefinitionIds?.includes(entry.id as number) ? 1 : 0), 0)} Personen`,
             active: entry.active,
@@ -1268,6 +1271,7 @@ const App = () => {
             patient={selectedPatient}
             visits={patientVisits}
             visitIntervalDays={careSettings.visitIntervalDays}
+            serviceDefinitions={serviceDefinitions}
             onEdit={() => openEditPatientModal(selectedPatient)}
             onNewVisit={() => openVisitModal(selectedPatient.id as number)}
             onSelectVisit={(visit) => openVisitModal(selectedPatient.id as number, visit)}

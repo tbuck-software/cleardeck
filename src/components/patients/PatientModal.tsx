@@ -377,6 +377,10 @@ const PatientModal = ({
           </div>
 
           <div className="field cd-field-wide">
+            <p className="cd-muted-13" style={{ margin: '0 0 8px' }}>
+              Besondere Merkmale für die MD-Stichprobe: vorhandene HKP-Ziffern separat auswählen;
+              aus den erbrachten Leistungen werden sie nicht abgeleitet.
+            </p>
             <label>Aufwändige HKP-Leistung (Ziffer)</label>
             <div className="cd-checkbox-group">
               {(['6', '8', '29', '31a'] as HkpCode[]).map((code) => (

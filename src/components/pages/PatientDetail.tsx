@@ -15,7 +15,7 @@ import {
   serviceScopeOf,
   visitDue,
 } from '../../utils/qpr';
-import type { PatientVisit, PatientWithLatestVisit } from '../../shared/types';
+import type { PatientVisit, PatientWithLatestVisit, ServiceDefinition } from '../../shared/types';
 import { careLevelLabel } from '../../utils/careLevel';
 
 const ageOf = (birthDate?: string | null): string => {
@@ -37,6 +37,8 @@ type PatientDetailProps = {
   onEdit: () => void;
   onNewVisit: () => void;
   onSelectVisit: (visit: PatientVisit) => void;
+  /** Current catalogue labels take precedence over the assignment snapshot. */
+  serviceDefinitions?: ServiceDefinition[];
 };
 
 const PatientDetail = ({
@@ -46,6 +48,7 @@ const PatientDetail = ({
   onEdit,
   onNewVisit,
   onSelectVisit,
+  serviceDefinitions = [],
 }: PatientDetailProps) => {
   const today = localDate();
   const group = needsAssessment(patient, today)
@@ -58,21 +61,51 @@ const PatientDetail = ({
   );
   const age = ageOf(patient.birthDate);
   const serviceDecision = serviceScopeOf(patient);
-  const serviceLabels = patient.services?.length
-    ? patient.services.map((service) => service.label).join('; ')
+  const currentServiceLabels = new Map(
+    serviceDefinitions
+      .filter((definition) => definition.id != null)
+      .map((definition) => [definition.id as number, definition.name]),
+  );
+  const serviceOrder = new Map(
+    serviceDefinitions
+      .filter((definition) => definition.id != null)
+      .map((definition, index) => [definition.id as number, index]),
+  );
+  const orderedServices = [...(patient.services ?? [])].sort(
+    (left, right) =>
+      (serviceOrder.get(left.serviceDefinitionId) ?? Number.MAX_SAFE_INTEGER) -
+      (serviceOrder.get(right.serviceDefinitionId) ?? Number.MAX_SAFE_INTEGER),
+  );
+  const serviceLabels = orderedServices.length
+    ? orderedServices
+        .map((service) => currentServiceLabels.get(service.serviceDefinitionId) ?? service.label)
+        .join('; ')
     : patient.serviceScopeSource === 'legacy'
       ? 'Leistungen noch nicht erfasst (übernommene Entscheidung)'
       : 'Leistungen noch nicht erfasst';
+  const serviceScopeLabel =
+    serviceDecision.scope === 'eligible'
+      ? 'Auf der Liste'
+      : serviceDecision.scope === 'excluded'
+        ? 'Nicht auf der Liste'
+        : 'Ungeklärt';
+  const serviceScopeReason = serviceDecision.reason.replace(
+    /^(Auf der Liste|Nicht auf der Liste), weil /,
+    '',
+  );
 
   const missing = 'fehlt';
-  const facts: { label: string; value: string }[] = [
+  const facts: { label: string; value: string; mutedValue?: string; wide?: boolean }[] = [
     {
       label: 'Erbrachte Leistungen',
       value: serviceLabels,
+      wide: true,
     },
     {
       label: 'MD-Personenliste',
-      value: `${serviceDecision.scope === 'eligible' ? 'Auf der Liste' : serviceDecision.scope === 'excluded' ? 'Nicht auf der Liste' : 'Ungeklärt'} · ${serviceDecision.reason}`,
+      value: serviceScopeLabel,
+      mutedValue: serviceScopeReason,
+      wide: true,
     },
     {
       label: 'Quelle',
@@ -204,7 +237,7 @@ const PatientDetail = ({
         </h3>
         <div className="cd-fact-grid">
           {facts.map((fact) => (
-            <div key={fact.label}>
+            <div key={fact.label} className={fact.wide ? 'cd-fact-wide' : undefined}>
               <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>{fact.label}</div>
               <div
                 style={{
@@ -214,6 +247,7 @@ const PatientDetail = ({
               >
                 {fact.value}
               </div>
+              {fact.mutedValue && <div className="cd-muted-13">{fact.mutedValue}</div>}
             </div>
           ))}
         </div>
