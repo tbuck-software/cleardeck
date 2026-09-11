@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
+import { userFacingErrorMessage } from '../utils/errorMessage';
 import type { AppInfo, AppState, StorageMode, UpdateStatus } from '../shared/types';
 import type { ConfirmActionOptions, EncryptionSetupState } from '../types/ui';
 
@@ -227,7 +228,7 @@ const useSettingsDb = ({
       releaseNotes: previous.releaseNotes,
       state: 'error',
       retry,
-      message: error instanceof Error ? error.message : String(error),
+      message: userFacingErrorMessage(error),
     }));
   }, []);
 

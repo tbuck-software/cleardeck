@@ -85,6 +85,24 @@ describe('effective employment and year reports', () => {
     expect(getYearDataset(2026).employees[0].startDate).toBe('2026-03-01');
   });
 
+  it('derives the display entry from adjacent periods while keeping the selected period start', () => {
+    const first = saveEmployee({ ...base, startDate: '2022-07-01', endDate: '2023-12-31', year: 2023 });
+    const person = first.employees[0];
+    saveEmployee({
+      ...base,
+      id: person.id,
+      periodId: undefined,
+      startDate: '2024-01-01',
+      endDate: undefined,
+      year: 2024,
+    });
+
+    expect(getYearDataset(2024).employees[0]).toMatchObject({
+      startDate: '2024-01-01',
+      employmentStartDate: '2022-07-01',
+    });
+  });
+
   it('rejects reversed, overlapping and negative data without partial writes', () => {
     expect(() => saveEmployee({ ...base, endDate: '2023-01-01' })).toThrow();
     expect(() => saveEmployee({ ...base, fte: -1 })).toThrow();

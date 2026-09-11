@@ -4,8 +4,12 @@ import type { UpdateStatus } from '../shared/types';
 const baseApi: Api = (window as Window & { api: Api }).api;
 
 const toError = (name: string, error: unknown) => {
-  const message = error instanceof Error ? error.message : 'Unbekannter Fehler';
-  return new Error(`API ${String(name)} failed: ${message}`);
+  const message =
+    error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unbekannter Fehler';
+  const wrapped = new Error(`API ${String(name)} failed: ${message}`);
+  wrapped.name = 'ApiError';
+  Object.defineProperty(wrapped, 'cause', { value: error, enumerable: false });
+  return wrapped;
 };
 
 async function call<T extends (...args: any[]) => any>(

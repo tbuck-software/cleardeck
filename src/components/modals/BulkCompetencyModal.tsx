@@ -3,6 +3,7 @@ import type { BulkCompetencyChange, EmployeeCompetency } from '../../shared/type
 import api from '../../services/api';
 import { LEGACY_COMPETENCY_LEVELS } from '../../utils/competencyLevels';
 import { localDate } from '../../utils/calendarDate';
+import { userFacingErrorMessage } from '../../utils/errorMessage';
 import Dialog from '../ui/Dialog';
 
 type Props = {
@@ -63,7 +64,7 @@ const BulkCompetencyModal = ({ employeeId, employeeName, entries, onSaved, onClo
       onSaved(updated);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.');
+      setError(userFacingErrorMessage(err));
     } finally {
       saveInFlight.current = false;
       setSaving(false);

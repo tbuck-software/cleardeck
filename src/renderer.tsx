@@ -60,6 +60,7 @@ import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte'
 import { buildDashboardTasks, buildDataQuality, type TaskTarget } from './utils/dashboardTasks';
 import { groupOfEvent, type EventGroup } from './utils/eventStyle';
 import { matchesQualificationRelevance } from './utils/qualificationRelevance';
+import { userFacingErrorMessage } from './utils/errorMessage';
 import { unifyEvents } from './utils/unifyEvents';
 import {
   buildNavigationSnapshot,
@@ -537,9 +538,7 @@ const App = () => {
       setPasswordOpen(false);
       setToastMessage('Passwort geändert.');
     } catch (err) {
-      setPasswordError(
-        err instanceof Error ? err.message : 'Das Passwort konnte nicht geändert werden.',
-      );
+      setPasswordError(userFacingErrorMessage(err));
     } finally {
       setPasswordBusy(false);
     }

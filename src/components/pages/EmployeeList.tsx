@@ -92,6 +92,8 @@ const EmployeeList = ({
           return employee.fte ?? -1;
         case 'weeklyHours':
           return employee.weeklyHours ?? -1;
+        case 'startDate':
+          return employee.employmentStartDate ?? employee.startDate;
         default:
           return String(employee[sort.key] ?? '');
       }
@@ -249,7 +251,7 @@ const EmployeeList = ({
               <button
                 key={employee.id}
                 type="button"
-                className="cd-item"
+                className={`cd-item${employee.status === 'left' ? ' cd-row-departed' : ''}`}
                 onClick={() => void onSelect(employee)}
               >
                 <Avatar name={employee.name} />
@@ -257,7 +259,7 @@ const EmployeeList = ({
                   <div style={{ fontWeight: 600 }}>{employee.name}</div>
                   <div className="cd-muted-13">
                     {employee.qualification} · {employee.weeklyHours ?? '—'} h · seit{' '}
-                    {formatDateDE(employee.startDate)}
+                    {formatDateDE(employee.employmentStartDate ?? employee.startDate)}
                   </div>
                 </div>
                 <span style={{ fontWeight: 700, flex: 'none' }}>
@@ -304,7 +306,11 @@ const EmployeeList = ({
                 const [tagClass, label] = statusTag(employee, today);
                 const leaving = employee.status === 'active' && employee.endDate;
                 return (
-                  <tr key={employee.id} className="cd-row" onClick={() => void onSelect(employee)}>
+                  <tr
+                    key={employee.id}
+                    className={`cd-row${employee.status === 'left' ? ' cd-row-departed' : ''}`}
+                    onClick={() => void onSelect(employee)}
+                  >
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <Avatar name={employee.name} />
@@ -317,7 +323,9 @@ const EmployeeList = ({
                       </div>
                     </td>
                     <td>{employee.qualification}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{formatDateDE(employee.startDate)}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      {formatDateDE(employee.employmentStartDate ?? employee.startDate)}
+                    </td>
                     <td
                       style={{
                         whiteSpace: 'nowrap',

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
+import { userFacingErrorMessage } from '../utils/errorMessage';
 import type {
   AppState,
   CompetencyDefinition,
@@ -67,8 +68,7 @@ const useAuth = ({
         configured: false,
         unlocked: false,
         storageMode: 'encrypted',
-        startupError:
-          err instanceof Error ? err.message : 'Der lokale Datenstatus kann nicht gelesen werden.',
+      startupError: userFacingErrorMessage(err),
       });
       setAuthLoading(false);
       return;

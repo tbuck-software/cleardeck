@@ -119,4 +119,31 @@ describe('EmployeeList', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.getByText('2 Personen')).toBeInTheDocument();
   });
+
+  it('zeigt den Beschäftigungsbeginn und kennzeichnet ausgeschiedene Zeilen', () => {
+    renderList({
+      filteredEmployees: employees.map((employee) =>
+        employee.id === 2 ? { ...employee, employmentStartDate: '2022-03-01' } : employee,
+      ),
+    });
+
+    expect(screen.getByText('01.03.2022')).toBeInTheDocument();
+    expect(screen.getByText('Bruno Beispiel').closest('tr')).toHaveClass('cd-row-departed');
+  });
+
+  it('sortiert den angezeigten Beschäftigungsbeginn statt des Abschnittsbeginns', () => {
+    renderList({
+      filteredEmployees: employees.map((employee) =>
+        employee.id === 1
+          ? { ...employee, employmentStartDate: '2025-01-01' }
+          : { ...employee, employmentStartDate: '2022-01-01' },
+      ),
+    });
+
+    fireEvent.click(screen.getByText('Eintritt').closest('th')!);
+    const names = Array.from(document.querySelectorAll('tbody tr')).map(
+      (row) => (row.textContent?.includes('Bruno') ? 'Bruno' : 'Anna'),
+    );
+    expect(names).toEqual(['Bruno', 'Anna']);
+  });
 });
