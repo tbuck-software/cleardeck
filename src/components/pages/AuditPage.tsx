@@ -2,6 +2,8 @@ import HelpPopover from '../ui/HelpPopover';
 import { localDate } from '../../utils/calendarDate';
 import React from 'react';
 import Icon from '../ui/Icon';
+import ListPanel from '../ui/ListPanel';
+import ListRow from '../ui/ListRow';
 import { formatDateDE } from '../../utils/dateFormat';
 import {
   TEILGRUPPE_TARGET,
@@ -203,32 +205,24 @@ const AuditPage = ({
         <h3 className="cd-h3" style={{ marginBottom: 12 }}>
           Vorbereitung
         </h3>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <ListPanel>
           {checks.map((check) => (
-            <button
+            <ListRow
               key={check.id}
-              type="button"
-              className="cd-item"
-              style={{ borderRadius: 'var(--radius-md)' }}
-              disabled={!check.go}
-              onClick={check.go}
-            >
-              <span className="cd-dot-lg" style={{ background: check.dot }} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600 }}>{check.title}</div>
-                {check.sub && <div className="cd-muted-13">{check.sub}</div>}
-              </div>
-              {check.go && <span className="cd-arrow">→</span>}
-            </button>
+              leading={<span className="cd-dot-lg" style={{ background: check.dot }} />}
+              title={check.title}
+              subline={check.sub}
+              onOpen={check.go}
+            />
           ))}
-        </div>
+        </ListPanel>
       </section>
 
       <section>
         <h3 className="cd-h3" style={{ marginBottom: 12 }}>
           Prüfungen
         </h3>
-        <div className="cd-panel">
+        <ListPanel>
           {audits.length === 0 && (
             <div className="cd-empty">
               Noch keine Prüfung erfasst. Ergebnisse aus dem Prüfbericht eintragen.
@@ -239,34 +233,32 @@ const AuditPage = ({
             const overall = audit.confirmed ? worstOf(graded) : null;
             const unmet = audit.results.filter((row) => row.result === 'no').length;
             return (
-              <button
+              <ListRow
                 key={audit.id}
-                type="button"
-                className="cd-item"
-                onClick={() => onOpenAudit(audit)}
-              >
-                <span
-                  className={`tag ${RESULT_TAG[overall ?? ''] ?? 'tag-neutral'}`}
-                  style={{ flex: 'none', fontWeight: 700, width: 34, justifyContent: 'center' }}
-                >
-                  {overall ?? '?'}
-                </span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600 }}>{formatDateDE(audit.auditDate)}</div>
-                  <div className="cd-muted-13">
+                leading={
+                  <span
+                    className={`tag ${RESULT_TAG[overall ?? ''] ?? 'tag-neutral'}`}
+                    style={{ fontWeight: 700, width: 34, justifyContent: 'center' }}
+                  >
+                    {overall ?? '?'}
+                  </span>
+                }
+                title={formatDateDE(audit.auditDate)}
+                subline={
+                  <>
                     {audit.inspector || 'Ohne Prüfstelle'} ·{' '}
                     {audit.confirmed
                       ? `Interne Zusammenfassung, höchste erfasste Defizitstufe ${overall ?? 'offen'}`
                       : 'Entwurf / unbestätigter Altstand'}
                     {unmet ? ` · ${unmet} Kriterium nicht erfüllt` : ''} · {audit.clientIds.length}{' '}
                     Klient:innen
-                  </div>
-                </div>
-                <span className="cd-arrow">→</span>
-              </button>
+                  </>
+                }
+                onOpen={() => onOpenAudit(audit)}
+              />
             );
           })}
-        </div>
+        </ListPanel>
       </section>
     </div>
   );

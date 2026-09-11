@@ -1173,6 +1173,14 @@
   border-top: 1px solid var(--color-divider);
 }
 
+/* Der Abschluss „Alle Aufgaben anzeigen“ ist keine weitere Zeile. */
+.cd-list > .cd-more {
+  width: 100%;
+  margin: 0;
+  border-top: 0;
+  border-radius: 0;
+}
+
 .cd-listrow {
   display: flex;
   align-items: stretch;
