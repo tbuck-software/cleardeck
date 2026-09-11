@@ -46,6 +46,27 @@ describe('working-time corrections', () => {
       .toEqual([expect.objectContaining({ weeklyHours: 27 }), expect.objectContaining({ weeklyHours: 18 })]);
   });
 
+  it('updates period-specific report totals while retaining a later full-time period', () => {
+    const person = saveEmployee({
+      ...base, startDate: '2024-01-01', endDate: '2024-12-31', weeklyHours: 20, fte: 0.5, year: 2024,
+    }).employees[0];
+    saveEmployee({
+      ...base, id: person.id, periodId: undefined, startDate: '2025-01-01', endDate: null,
+      weeklyHours: 36, fte: 1, year: 2025,
+    });
+    const historical = listWorkingTimes(person.id!).find(entry => entry.periodId === person.periodId)!;
+
+    saveWorkingTime({
+      id: historical.id, employeeId: person.id!, effectiveFrom: historical.effectiveFrom,
+      weeklyHours: 20, fte: 0,
+    });
+
+    expect(getYearDataset(2024, 'stichtag').aggregation.totalFte).toBe(0);
+    expect(getYearDataset(2025, 'stichtag').aggregation.totalFte).toBe(1);
+    expect(getYearDataset(2024, 'year-average').aggregation.totalFte).toBe(0);
+    expect(getYearDataset(2025, 'year-average').aggregation.totalFte).toBe(1);
+  });
+
   it('resolves the employment section by date when crossing a qualification change', () => {
     const person = saveEmployee({ ...base, endDate: '2024-12-31', year: 2024 }).employees[0];
     saveEmployee({ ...base, id: person.id, startDate: '2025-01-01', qualification: 'Pflegefachkraft', weeklyHours: 36, fte: 1 });
@@ -70,5 +91,78 @@ describe('working-time corrections', () => {
     expect(() => saveWorkingTime({ ...input, fte: 2 })).toThrow(/VZÄ/);
     expect(() => saveWorkingTime({ ...input, weeklyHours: -1 })).toThrow(/Wochenstunden/);
     expect(db.serialize()).toEqual(before);
+  });
+
+  it('corrects an existing term by id when unrelated legacy periods overlap its unchanged date', () => {
+    const person = saveEmployee({
+      ...base, startDate: '2024-01-01', endDate: '2025-12-31', weeklyHours: 20, fte: 0.5, year: 2025,
+    }).employees[0];
+    const firstPeriod = person.periodId!;
+    const secondPeriod = Number(db.prepare(`
+      INSERT INTO employment_periods(employeeId,startDate,endDate,qualification)
+      VALUES (?,?,?,?)
+    `).run(person.id, '2025-01-01', null, 'Pflegefachkraft').lastInsertRowid);
+    db.prepare(`
+      INSERT INTO employment_terms(periodId,effectiveFrom,weeklyHours,fte,verified)
+      VALUES (?,?,?,?,1)
+    `).run(firstPeriod, '2025-01-01', 20, 0.5);
+    db.prepare(`
+      INSERT INTO employment_terms(periodId,effectiveFrom,weeklyHours,fte,verified)
+      VALUES (?,?,?,?,1)
+    `).run(secondPeriod, '2025-01-01', 36, 1);
+    const firstTerm = db.prepare(
+      'SELECT id FROM employment_terms WHERE periodId=? AND effectiveFrom=?',
+    ).get(firstPeriod, '2025-01-01') as { id: number };
+
+    expect(() => saveWorkingTime({
+      id: firstTerm.id,
+      employeeId: person.id!,
+      effectiveFrom: '2025-01-01',
+      weeklyHours: 20,
+      fte: 0,
+    })).not.toThrow();
+    expect(db.prepare('SELECT periodId,effectiveFrom,weeklyHours,fte FROM employment_terms WHERE id=?')
+      .get(firstTerm.id)).toEqual({
+        periodId: firstPeriod, effectiveFrom: '2025-01-01', weeklyHours: 20, fte: 0,
+      });
+    expect(db.prepare('SELECT periodId,effectiveFrom,weeklyHours,fte FROM employment_terms WHERE periodId=? AND effectiveFrom=?')
+      .get(secondPeriod, '2025-01-01')).toEqual({
+        periodId: secondPeriod, effectiveFrom: '2025-01-01', weeklyHours: 36, fte: 1,
+      });
+    expect(db.prepare('SELECT effectiveFrom,weeklyHours,fte FROM employment_term_history WHERE periodId=? ORDER BY id DESC LIMIT 1')
+      .get(firstPeriod)).toEqual({ effectiveFrom: '2025-01-01', weeklyHours: 20, fte: 0 });
+
+    const beforeAmbiguousChanges = db.serialize();
+    expect(() => saveWorkingTime({
+      id: firstTerm.id,
+      employeeId: person.id!,
+      effectiveFrom: '2025-06-01',
+      weeklyHours: 20,
+      fte: 0,
+    })).toThrow(/Beschäftigungsperiode/);
+    expect(() => saveWorkingTime({
+      employeeId: person.id!,
+      effectiveFrom: '2025-06-01',
+      weeklyHours: 20,
+      fte: 0,
+    })).toThrow(/Beschäftigungsperiode/);
+    expect(db.serialize()).toEqual(beforeAmbiguousChanges);
+  });
+
+  it('names the overlap when several periods match and keeps the outside-employment message', () => {
+    const person = saveEmployee({
+      ...base, startDate: '2024-01-01', endDate: '2025-12-31', weeklyHours: 20, fte: 0.5, year: 2025,
+    }).employees[0];
+    db.prepare(`
+      INSERT INTO employment_periods(employeeId,startDate,endDate,qualification)
+      VALUES (?,?,?,?)
+    `).run(person.id, '2025-01-01', null, 'Pflegefachkraft');
+
+    expect(() => saveWorkingTime({
+      employeeId: person.id!, effectiveFrom: '2025-06-01', weeklyHours: 20, fte: 0.5,
+    })).toThrow('An diesem Datum überschneiden sich mehrere Beschäftigungsperioden. Bitte zuerst die Perioden in der Historie korrigieren.');
+    expect(() => saveWorkingTime({
+      employeeId: person.id!, effectiveFrom: '2023-06-01', weeklyHours: 20, fte: 0.5,
+    })).toThrow('Das Datum muss innerhalb einer Beschäftigungsperiode liegen.');
   });
 });
