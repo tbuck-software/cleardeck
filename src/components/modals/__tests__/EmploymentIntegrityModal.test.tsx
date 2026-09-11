@@ -4,12 +4,13 @@ import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import EmploymentIntegrityModal from '../EmploymentIntegrityModal';
-import type { EmployeeWithPeriod } from '../../../shared/types';
+import type { EmploymentRepairEmployee, EmployeeWithPeriod } from '../../../shared/types';
 
 const apiMock = vi.hoisted(() => ({
   employment: {
     integrityOverview: vi.fn(),
     previewPeriodDate: vi.fn(),
+    previewMerge: vi.fn(),
   },
   employees: {
     listPeriods: vi.fn(),
@@ -44,6 +45,7 @@ describe('EmploymentIntegrityModal', () => {
       }],
       counts: { 'reversed-period': 1, 'overlapping-periods': 0, 'suspicious-period': 0, 'same-name': 0 },
       checkedAt: '2026-09-11T00:00:00.000Z',
+      repairEmployees: [{ id: 1, name: 'Test Person', birthDate: null, startDate: '2024-02-01', endDate: '2024-01-31', qualification: 'Pflegekraft', periodCount: 1 }],
     });
     apiMock.employees.listPeriods.mockResolvedValue([{
       id: 1,
@@ -95,6 +97,10 @@ describe('EmploymentIntegrityModal', () => {
       issues: [],
       counts: { 'reversed-period': 0, 'overlapping-periods': 0, 'suspicious-period': 0, 'same-name': 0 },
       checkedAt: '2026-09-11T00:00:00.000Z',
+      repairEmployees: [
+        { id: 1, name: 'Test Person', birthDate: '1980-01-01', startDate: '2024-01-01', endDate: null, qualification: 'Pflegekraft', periodCount: 1 },
+        { id: 2, name: 'Test Person', birthDate: '1985-01-01', startDate: '2025-01-01', endDate: null, qualification: 'Pflegekraft', periodCount: 1 },
+      ],
     });
     apiMock.employees.listPeriods.mockImplementation((id: number) => Promise.resolve([{
       id,
@@ -118,5 +124,41 @@ describe('EmploymentIntegrityModal', () => {
     fireEvent.click(screen.getByText('Doppelte Person zusammenführen'));
     expect(screen.getAllByRole('option', { name: /geb\. 01\.01\.1980/ })).toHaveLength(2);
     expect(screen.getAllByRole('option', { name: /geb\. 01\.01\.1985/ })).toHaveLength(2);
+  });
+
+  it('bietet auch eine Person ohne Beschäftigungszeitraum für eine Vorschau an', async () => {
+    const repairEmployees: EmploymentRepairEmployee[] = [
+      { id: 10, name: 'Ohne Zeitraum', birthDate: '1975-02-03', startDate: null, endDate: null, qualification: null, periodCount: 0 },
+      { id: 11, name: 'Mit Nachweis', birthDate: '1976-04-05', startDate: null, endDate: null, qualification: null, periodCount: 0 },
+    ];
+    apiMock.employment.integrityOverview.mockResolvedValue({
+      issues: [],
+      counts: { 'reversed-period': 0, 'overlapping-periods': 0, 'suspicious-period': 0, 'same-name': 0 },
+      checkedAt: '2026-09-11T00:00:00.000Z',
+      repairEmployees,
+    });
+    apiMock.employment.previewMerge.mockResolvedValue({
+      kind: 'employee-merge',
+      token: 'merge-preview',
+      target: { id: 10, name: 'Ohne Zeitraum' },
+      source: { id: 11, name: 'Mit Nachweis' },
+      sourceSnapshot: { id: 11, name: 'Mit Nachweis' },
+      periods: { target: 0, source: 0 },
+      linkedRecords: [{ table: 'employee_events', ids: [99], count: 1 }],
+      conflicts: [],
+    });
+
+    render(<EmploymentIntegrityModal open employees={[]} onClose={vi.fn()} onChanged={vi.fn()} onError={vi.fn()} />);
+
+    await waitFor(() => expect(screen.getByText('Keine Auffälligkeit gefunden.')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Doppelte Person zusammenführen'));
+    expect(screen.getAllByRole('option', { name: /keine Beschäftigungsdaten/ })).toHaveLength(4);
+    fireEvent.change(screen.getByLabelText('Zielperson'), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('Quellperson'), { target: { value: '11' } });
+    const previewButtons = screen.getAllByRole('button', { name: 'Vorschau' });
+    fireEvent.click(previewButtons[previewButtons.length - 1]);
+
+    await waitFor(() => expect(apiMock.employment.previewMerge).toHaveBeenCalledWith({ targetEmployeeId: 10, sourceEmployeeId: 11 }));
+    expect(await screen.findByText(/Ereignisse: 1/)).toBeInTheDocument();
   });
 });

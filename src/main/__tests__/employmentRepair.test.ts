@@ -66,6 +66,34 @@ describe('employment repair previews and transactions', () => {
     expect(getEmploymentIntegrityOverview().counts['overlapping-periods']).toBe(1);
   });
 
+  it('includes employees without periods when they still have repair evidence', () => {
+    const target = person('Ziel mit Zeitraum', '2024-01-01', '2024-12-31');
+    const orphanId = Number(db.prepare('INSERT INTO employees(name,birthDate,note,weeklyHours,fte,department) VALUES (?,?,?,?,?,?)').run('Nachweis ohne Zeitraum', '1982-06-07', 'orphan evidence', null, null, 'Pflege').lastInsertRowid);
+    const competencyId = Number((db.prepare('SELECT id FROM competency_definitions LIMIT 1').get() as { id: number }).id);
+    saveEmployeeCompetency({ employeeId: orphanId, competencyDefinitionId: competencyId, level: 2, stageScheme: 'practice-v1' });
+    saveEvent({ employeeId: orphanId, eventDate: '2026-02-01', type: 'custom', title: 'Orphan Nachweis', meta: { source: 'synthetic' } });
+
+    const overview = getEmploymentIntegrityOverview();
+
+    expect(overview.repairEmployees).toContainEqual({
+      id: orphanId,
+      name: 'Nachweis ohne Zeitraum',
+      birthDate: '1982-06-07',
+      startDate: null,
+      endDate: null,
+      qualification: null,
+      periodCount: 0,
+    });
+    expect(overview.repairEmployees.find((employee) => employee.id === orphanId)?.periodCount).toBe(0);
+    const preview = previewEmployeeMerge({ targetEmployeeId: target.id!, sourceEmployeeId: orphanId });
+    expect(preview.conflicts).toEqual([]);
+    expect(preview.source).toEqual({ id: orphanId, name: 'Nachweis ohne Zeitraum' });
+    expect(preview.linkedRecords).toEqual(expect.arrayContaining([
+      expect.objectContaining({ table: 'employee_events', count: 1 }),
+      expect.objectContaining({ table: 'employee_competencies', count: 1 }),
+    ]));
+  });
+
   it('repairs a reversed period only after preview validation', () => {
     const first = person('Reparatur Test', '2024-05-01');
     db.prepare('UPDATE employment_periods SET endDate=? WHERE id=?').run('2024-01-31', first.periodId);
