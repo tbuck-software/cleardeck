@@ -8,3 +8,5 @@ Echte Electron-Aufnahmen mit synthetischen Demodaten, 1440 × 1000 CSS-Pixel.
 - Die späteren Korrekturen zur Aktualisierung historischer Abschnitte und ihrer Arbeitszeitstände wurden gegen echte Repository-Abfragen und Hook-Regressionsfälle geprüft.
 
 Die Bilder enthalten ausschließlich synthetische Personen. Die visuelle Prüfung erfolgte unter macOS.
+
+Ergänzende Aufnahmen auf dem finalen Implementierungsstand `fb22ad8` zeigen den historischen Qualifikationswechsel, den erhaltenen Verlauf sowie einen am Aufnahmetag bereits vergangenen Austritt zum 10.09.2026. Diese Dateien tragen das Präfix `after-historical-`.
