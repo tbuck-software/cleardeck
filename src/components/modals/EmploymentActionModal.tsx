@@ -26,7 +26,7 @@ const periodLabel = (period: EmploymentPeriod) =>
 /** Start from a date the period can actually accept, so no dialog opens on an error. */
 const initialDate = (mode: EmploymentActionMode, period: EmploymentPeriod): string => {
   const today = localDate();
-  if (mode === 'departure') return period.endDate ?? (today > period.startDate ? today : period.startDate);
+  if (mode === 'departure') return period.endDate || (today > period.startDate ? today : period.startDate);
   const earliest = shiftDays(period.startDate, 1);
   if (today < earliest) return earliest;
   if (period.endDate && today > period.endDate) return period.endDate;
