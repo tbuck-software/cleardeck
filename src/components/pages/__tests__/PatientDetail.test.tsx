@@ -89,6 +89,28 @@ describe('PatientDetail', () => {
     expect(screen.queryByText('Pflegegrad unbekannt')).not.toBeInTheDocument();
   });
 
+  it('zeigt die Leistungen mit dem Label aus dem Datensatz, nicht dem Schnappschuss', () => {
+    const assignedPatient: PatientWithLatestVisit = {
+      ...patient,
+      serviceScope: 'eligible',
+      serviceScopeSource: 'services',
+      serviceDefinitionIds: [17],
+      services: [
+        {
+          serviceDefinitionId: 17,
+          label: 'Ganzkörperwäsche',
+          labelSnapshot: 'Ganzwaschung',
+          serviceType: 's36-care',
+        },
+      ],
+    };
+    renderDetail({ patient: assignedPatient });
+
+    expect(screen.getByText('Ganzkörperwäsche')).toBeInTheDocument();
+    expect(screen.queryByText('Ganzwaschung')).not.toBeInTheDocument();
+    expect(screen.getByText('MD-Personenliste: ja')).toBeInTheDocument();
+  });
+
   it('nennt die nächste Visite als fällig oder überfällig', () => {
     renderDetail({ patient: { ...patient, latestVisitDate: '2026-01-01' } });
     expect(screen.getByText(/Nächste Pflegevisite überfällig seit/)).toBeInTheDocument();

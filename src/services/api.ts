@@ -81,6 +81,17 @@ export const api = {
     delete: (id: number) => call('deleteQualification', baseApi.deleteQualification, id),
     reorder: (ids: number[]) => call('reorderQualifications', baseApi.reorderQualifications, ids),
   },
+  services: {
+    list: () => call('listServiceDefinitions', baseApi.listServiceDefinitions),
+    add: (input: Parameters<Api['addServiceDefinition']>[0]) =>
+      call('addServiceDefinition', baseApi.addServiceDefinition, input),
+    update: (input: Parameters<Api['updateServiceDefinition']>[0]) =>
+      call('updateServiceDefinition', baseApi.updateServiceDefinition, input),
+    setActive: (id: number, active: boolean) =>
+      call('setServiceDefinitionActive', baseApi.setServiceDefinitionActive, id, active),
+    reorder: (ids: number[]) =>
+      call('reorderServiceDefinitions', baseApi.reorderServiceDefinitions, ids),
+  },
   competencies: {
     listDefinitions: () => call('listCompetencyDefinitions', baseApi.listCompetencyDefinitions),
     addDefinition: (input: Parameters<Api['addCompetencyDefinition']>[0]) =>

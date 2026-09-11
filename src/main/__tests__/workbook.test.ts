@@ -59,6 +59,38 @@ const patients: Patient[] = [
 ];
 
 describe('buildPersonListRows', () => {
+  it('bildet den Leistungsumfang aus den Zuordnungen statt aus dem Pflegegrad', () => {
+    const rows = buildPersonListRows([
+      {
+        ...patients[0],
+        name: 'Nur Haushalt',
+        careLevel: 5,
+        serviceScope: 'unknown',
+        serviceScopeSource: 'services',
+        services: [
+          {
+            serviceDefinitionId: 90,
+            label: 'Hilfe bei der Haushaltsführung',
+            serviceType: 'household',
+          },
+        ],
+      },
+      {
+        ...patients[0],
+        name: 'Körperpflege und Entlastung',
+        careLevel: null,
+        serviceScope: 'unknown',
+        serviceScopeSource: 'services',
+        services: [
+          { serviceDefinitionId: 91, label: 'Große Grundpflege', serviceType: 's36-care' },
+          { serviceDefinitionId: 92, label: 'Entlastung', serviceType: 'relief' },
+        ],
+      },
+    ]);
+
+    expect(rows.map((row) => row.Name)).toEqual(['Körperpflege und Entlastung']);
+  });
+
   it('sortiert alphabetisch, wie Anlage 7 es verlangt', () => {
     expect(buildPersonListRows(patients).map((row) => row.Name)).toEqual([
       'Erika Mustermann',

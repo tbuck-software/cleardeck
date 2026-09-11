@@ -18,6 +18,7 @@ import {
   intensiveCareForList,
   isActivePatient,
   needsAssessment,
+  serviceScopeOf,
 } from '../utils/qpr';
 
 /** Build the buffer ourselves and write it with Node's fs. */
@@ -40,7 +41,7 @@ export type PersonListRow = {
  */
 export const buildPersonListRows = (patients: Patient[]): PersonListRow[] =>
   [...patients]
-    .filter((p) => isActivePatient(p) && p.serviceScope !== 'excluded')
+    .filter((p) => isActivePatient(p) && serviceScopeOf(p).scope !== 'excluded')
     .sort((a, b) => a.name.localeCompare(b.name, 'de'))
     .map((patient) => {
       const group = needsAssessment(patient)
