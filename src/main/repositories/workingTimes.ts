@@ -42,12 +42,22 @@ export const saveWorkingTime = (input: SaveWorkingTimeInput): void => {
       fte: number; verified: number; sourceRef: string | null;
     } | undefined;
     if (input.id != null && !previous) throw new Error('Arbeitszeitstand nicht gefunden.');
-    const periods = db.prepare(`SELECT id FROM employment_periods
-      WHERE employeeId=? AND startDate<=? AND (endDate IS NULL OR endDate>=?)
-    `).all(input.employeeId, input.effectiveFrom, input.effectiveFrom) as { id: number }[];
-    if (periods.length !== 1)
-      throw new Error('Das Datum muss innerhalb einer Beschäftigungsperiode liegen.');
-    const periodId = periods[0].id;
+    let periodId: number;
+    if (previous && previous.effectiveFrom === input.effectiveFrom) {
+      periodId = previous.periodId;
+    } else {
+      const periods = db.prepare(`SELECT id FROM employment_periods
+        WHERE employeeId=? AND startDate<=? AND (endDate IS NULL OR endDate>=?)
+      `).all(input.employeeId, input.effectiveFrom, input.effectiveFrom) as { id: number }[];
+      // More than one match is legacy overlap, not a date outside employment.
+      if (periods.length > 1)
+        throw new Error(
+          'An diesem Datum überschneiden sich mehrere Beschäftigungsperioden. Bitte zuerst die Perioden in der Historie korrigieren.',
+        );
+      if (periods.length === 0)
+        throw new Error('Das Datum muss innerhalb einer Beschäftigungsperiode liegen.');
+      periodId = periods[0].id;
+    }
     const collision = db.prepare(`SELECT id FROM employment_terms
       WHERE periodId=? AND effectiveFrom=? AND id<>?
     `).get(periodId, input.effectiveFrom, input.id ?? -1);

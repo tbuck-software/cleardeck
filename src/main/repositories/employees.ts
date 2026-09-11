@@ -24,6 +24,7 @@ import {
   assertNoStrandedTerms,
   assertReportYear,
   findPeriodConflict,
+  loadPeriod,
   updateEmployeeCache,
 } from './employmentCore';
 
@@ -385,25 +386,27 @@ export const saveEmployee = (input: {
           ).lastInsertRowid,
       );
     }
-    if (
-      periodId &&
-      !db
-        .prepare('SELECT id FROM employment_periods WHERE id=? AND employeeId=?')
-        .get(periodId, employeeId)
-    )
-      throw new Error('Beschäftigungsperiode nicht gefunden.');
-    const overlap = findPeriodConflict(
-      employeeId,
-      periodId,
-      input.startDate,
-      input.endDate || null,
+    const existingPeriod = periodId ? loadPeriod(employeeId, periodId) : undefined;
+    // A value-only correction leaves the dates alone; unrelated legacy overlaps must not block it.
+    const periodDatesUnchanged = Boolean(
+      existingPeriod &&
+        existingPeriod.startDate === input.startDate &&
+        (existingPeriod.endDate ?? null) === (input.endDate || null),
     );
-    if (overlap)
-      throw new Error(
-        'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren oder „Qualifikation wechseln“ verwenden.',
+    if (!periodDatesUnchanged) {
+      const overlap = findPeriodConflict(
+        employeeId,
+        periodId,
+        input.startDate,
+        input.endDate || null,
       );
-    // Same rule as the recorded departure: shortening must not orphan terms.
-    if (periodId && input.endDate) assertNoStrandedTerms(periodId, input.endDate);
+      if (overlap)
+        throw new Error(
+          'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren oder „Qualifikation wechseln“ verwenden.',
+        );
+      // Same rule as the recorded departure: shortening must not orphan terms.
+      if (periodId && input.endDate) assertNoStrandedTerms(periodId, input.endDate);
+    }
     if (periodId) {
       db.prepare(
         'UPDATE employment_periods SET startDate=?,endDate=?,qualification=? WHERE id=?',
@@ -450,7 +453,7 @@ export const saveEmployee = (input: {
       (existing?.verified !== 1 ||
         (input.hoursEffectiveFrom && input.hoursEffectiveFrom !== existing?.effectiveFrom) ||
         input.sourceRef !== existing?.sourceRef);
-    if (!existing || (input.updateHours !== false && (changed || confirming))) {
+    if (input.updateHours !== false && (!existing || changed || confirming)) {
       const effective = input.hoursEffectiveFrom || (existing ? localDate() : input.startDate);
       requireDate(effective, 'Stunden gültig ab');
       if (effective < input.startDate || (input.endDate && effective > input.endDate))
