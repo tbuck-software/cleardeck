@@ -11,6 +11,7 @@ import {
   needsAssessment,
   hkpCodesOf,
   representativeMissing,
+  serviceScopeOf,
 } from '../../utils/qpr';
 import type { AuditResult, AuditWithDetails, PatientWithLatestVisit } from '../../shared/types';
 
@@ -59,10 +60,8 @@ const AuditPage = ({
   const today = localDate();
 
   const activePatients = allPatients.filter((p) => isActivePatient(p, today));
-  const unknownScope = activePatients.filter(
-    (p) => !p.serviceScope || p.serviceScope === 'unknown',
-  );
-  const patients = activePatients.filter((p) => p.serviceScope === 'eligible');
+  const unknownScope = activePatients.filter((p) => serviceScopeOf(p).scope === 'unknown');
+  const patients = activePatients.filter((p) => serviceScopeOf(p).scope === 'eligible');
   const unrated = patients.filter((patient) => needsAssessment(patient, today));
   const missingVisitDate = patients.filter(
     (patient) => visitDue(patient, today, visitIntervalDays).missingAnchor,
@@ -90,9 +89,11 @@ const AuditPage = ({
     {
       id: 'scope',
       title: unknownScope.length
-        ? `${unknownScope.length} aktive Personen mit ungeklärtem Leistungsumfang`
-        : 'Leistungsumfang der aktiven Personen geklärt',
-      sub: unknownScope.length ? nameList(unknownScope.map((p) => p.name)) : '',
+        ? `${unknownScope.length} aktive Personen ohne erfasste Leistungen`
+        : 'Leistungen aller aktiven Personen erfasst',
+      sub: unknownScope.length
+        ? `${nameList(unknownScope.map((p) => p.name))} · in den Stammdaten die erbrachten Leistungen auswählen`
+        : '',
       dot: unknownScope.length ? 'var(--bad-800)' : 'var(--ok-800)',
       go: onGoPatients,
     },

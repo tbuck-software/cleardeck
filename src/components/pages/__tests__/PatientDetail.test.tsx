@@ -80,10 +80,35 @@ describe('PatientDetail', () => {
   it('unterscheidet unbekannten Pflegegrad und keinen Pflegegrad', () => {
     const { unmount } = renderDetail({ patient: { ...patient, careLevel: 0 } });
     expect(screen.getByText('Kein Pflegegrad')).toBeInTheDocument();
+    expect(screen.queryByText('fehlt')).not.toBeInTheDocument();
     unmount();
 
+    // Der unbekannte Pflegegrad wird wie jede andere Lücke rot als „fehlt“ gezeigt.
     renderDetail({ patient: { ...patient, careLevel: null } });
-    expect(screen.getByText('Pflegegrad unbekannt')).toBeInTheDocument();
+    expect(screen.getByText('fehlt')).toBeInTheDocument();
+    expect(screen.queryByText('Pflegegrad unbekannt')).not.toBeInTheDocument();
+  });
+
+  it('zeigt die Leistungen mit dem Label aus dem Datensatz, nicht dem Schnappschuss', () => {
+    const assignedPatient: PatientWithLatestVisit = {
+      ...patient,
+      serviceScope: 'eligible',
+      serviceScopeSource: 'services',
+      serviceDefinitionIds: [17],
+      services: [
+        {
+          serviceDefinitionId: 17,
+          label: 'Ganzkörperwäsche',
+          labelSnapshot: 'Ganzwaschung',
+          serviceType: 's36-care',
+        },
+      ],
+    };
+    renderDetail({ patient: assignedPatient });
+
+    expect(screen.getByText('Ganzkörperwäsche')).toBeInTheDocument();
+    expect(screen.queryByText('Ganzwaschung')).not.toBeInTheDocument();
+    expect(screen.getByText('MD-Personenliste: ja')).toBeInTheDocument();
   });
 
   it('nennt die nächste Visite als fällig oder überfällig', () => {

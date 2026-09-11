@@ -25,6 +25,7 @@ const sourcePeriod: EmployeeWithPeriod = {
   name: 'Synthetic Directory Person',
   qualification: 'Pflegekraft',
   startDate: '2020-01-01',
+  employmentStartDate: '2020-01-01',
   endDate: '2024-12-31',
   fte: 1,
   weeklyHours: 36,
@@ -35,6 +36,7 @@ const laterReentry: EmployeeWithPeriod = {
   periodId: 20,
   qualification: 'Pflegefachkraft',
   startDate: '2025-01-01',
+  employmentStartDate: '2025-01-01',
   endDate: null,
   status: 'active',
 };
@@ -43,6 +45,7 @@ const switchedPeriod: EmployeeWithPeriod = {
   periodId: 30,
   qualification: 'Einarbeitung',
   startDate: '2022-06-01',
+  employmentStartDate: '2022-06-01',
 };
 const periodRecord = (employee: EmployeeWithPeriod): EmploymentPeriod => ({
   id: employee.periodId,

@@ -1,0 +1,77 @@
+{
+  "issue": 21,
+  "kind": "after",
+  "capturedAt": "2026-09-11T15:10:29+02:00",
+  "repository": "employee-db",
+  "branch": "fix/visual-evidence",
+  "captureHead": "aa03166dc47ffcfdd14799f986677a3f324c37bf",
+  "baselineSha": "0a1ce1c2302176d02d54a04dc83fdcd79fa6ff6d",
+  "productionCommits": [
+    "0f4ddf8",
+    "bfae9aa",
+    "8cc0373",
+    "7089733",
+    "7bca279"
+  ],
+  "runtime": {
+    "command": "CLEARDECK_DEMO_DEBUG=1 npm run demo",
+    "title": "ClearDeck Demo · synthetische Daten",
+    "cdp": "http://127.0.0.1:19375",
+    "profile": ".cache/cleardeck-demo-profile/dev-ClearDeck",
+    "viewportCss": "1440x1000",
+    "countsAtCapture": {
+      "employees": 26,
+      "patients": 73,
+      "activePatients": 70,
+      "serviceDefinitions": 25,
+      "activeServiceDefinitions": 24
+    }
+  },
+  "fixture": {
+    "patientId": 73,
+    "name": "Demo Pflegegrad Null",
+    "diagnosis": "Synthetischer Pflegegrad-Testfall",
+    "careLevel": 0,
+    "serviceDefinitionIds": [1, 2, 14],
+    "serviceLabelsAtCapture": [
+      "Synthetische Grundpflege A",
+      "Kleine Grundpflege",
+      "Pflegerische Betreuung nach § 36 SGB XI"
+    ],
+    "serviceLabelSnapshotForRenamedId1": "Große Grundpflege"
+  },
+  "manualProfileSetup": {
+    "required": true,
+    "reason": "The persisted demo profile had already run its service catalogue migration before the final four SGB V seed entries were added.",
+    "method": "Added through the real Leistungen > Neu UI/API flow in the synthetic demo profile.",
+    "addedServices": [
+      "Medizinische Kompressionsstrümpfe anziehen",
+      "Medizinische Kompressionsstrümpfe ausziehen",
+      "Medikamente richten / Medikamentenbox stellen",
+      "Medikamente verabreichen"
+    ],
+    "category": "Behandlungspflege nach § 37 SGB V"
+  },
+  "steps": [
+    "Opened Verwaltung > Leistungen and captured the catalog title, sidebar location, and active catalogue entries.",
+    "Added the four requested SGB V task entries through the real catalog flow; captured the task rows together with the inactive retained synthetic entry.",
+    "Renamed the assigned synthetic catalogue service from Große Grundpflege to Synthetische Grundpflege A.",
+    "Reopened Demo Pflegegrad Null without restarting the app, opened the compact service picker, and captured its collapsed summary and expanded top group with the selected services.",
+    "Saved the same patient with three selected services and reopened the patient detail. The current renamed label is shown, and the MD-Personenliste outcome is Auf der Liste with one explanatory reason."
+  ],
+  "observations": [
+    "The catalog is headed Leistungen für betreute Personen and is clearly separated from team Kompetenzen in the sidebar.",
+    "The SGB V catalogue includes separate compression-stocking and medication preparation/administration tasks.",
+    "The inactive Synthetische §36 Kombi Pflege entry remains visible with deaktiviert and Aktivieren, preserving catalogue history.",
+    "The expanded picker shows Synthetische Grundpflege A and Kleine Grundpflege selected at the top of the § 36 group; the third selected service remains represented in the grouped summary.",
+    "After the assigned service was renamed, the reopened detail uses the current catalogue label while retaining the original label snapshot in storage; no duplicate MD-person-list reason is shown."
+  ],
+  "artifacts": [
+    "after-services-catalog-top.png",
+    "after-services-catalog-sgbv-tasks.png",
+    "after-services-catalog-inactive-retained.png",
+    "after-patient-services-picker-collapsed.png",
+    "after-patient-services-picker-expanded.png",
+    "after-patient-services-renamed-detail.png"
+  ]
+}

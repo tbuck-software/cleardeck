@@ -13,3 +13,4 @@ export * from './competencies';
 export * from './patients';
 export * from './audits';
 export * from './employmentActions';
+export * from './services';

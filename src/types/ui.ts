@@ -8,6 +8,9 @@ import type {
   CareLevel,
   IntervalSource,
   RecoveryInfo,
+  ServiceScope,
+  ServiceScopeSource,
+  ServiceType,
   StorageMode,
 } from '../shared/types';
 
@@ -27,6 +30,7 @@ export type Page =
   | 'audit'
   | 'tasks'
   | 'quals'
+  | 'services'
   | 'comps'
   | 'instrs'
   | 'security'
@@ -66,6 +70,13 @@ export type FormState = {
   fte: number;
   weeklyHours?: number | null;
   linked?: boolean;
+};
+
+export type ServiceDefinitionModalState = {
+  open: boolean;
+  id?: number;
+  name: string;
+  serviceType: ServiceType;
 };
 
 export type QualificationModalState = {
@@ -232,7 +243,9 @@ export type PeriodToDeleteState = { periodId: number; label: string } | null;
 export type PatientModalState = {
   serviceStatus?: 'active' | 'ended';
   serviceEndDate?: string | null;
-  serviceScope?: 'eligible' | 'excluded' | 'unknown';
+  serviceScope?: ServiceScope;
+  serviceDefinitionIds?: number[];
+  serviceScopeSource?: ServiceScopeSource;
   representativeStatus?: 'present' | 'none' | 'unknown';
   hkpCodes?: HkpCode[];
   assessmentSource?: 'report' | 'own' | 'unknown';
