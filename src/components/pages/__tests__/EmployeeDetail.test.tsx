@@ -222,6 +222,18 @@ it('collapses only redundant boundary events and keeps notes or custom titles', 
       },
       {
         kind: 'event',
+        date: '2024-01-01',
+        record: {
+          id: 6,
+          eventDate: '2024-01-01',
+          type: 'join',
+          title: 'Eintritt',
+          details:
+            'Aus bisherigem Eintrittsereignis übernommen. Qualifikation und Stunden prüfen. Personalakte geprüft.',
+        },
+      },
+      {
+        kind: 'event',
         date: '2024-12-31',
         record: { id: 3, eventDate: '2024-12-31', type: 'leave', title: 'Austritt', details: 'Vertrag bis Jahresende.' },
       },
@@ -234,8 +246,9 @@ it('collapses only redundant boundary events and keeps notes or custom titles', 
   });
 
   const section = screen.getByRole('heading', { name: 'Historie' }).closest('section')!;
-  expect(section).not.toHaveTextContent('Eintritt');
+  expect(section.querySelectorAll('.cd-timeline-row')).toHaveLength(4);
   expect(section).not.toHaveTextContent('Startdatum: 2024-01-01');
+  expect(section).toHaveTextContent('Personalakte geprüft.');
   expect(section).toHaveTextContent('Austritt');
   expect(section).toHaveTextContent('Vertrag bis Jahresende.');
   expect(section).toHaveTextContent('Rückkehr aus Elternzeit');

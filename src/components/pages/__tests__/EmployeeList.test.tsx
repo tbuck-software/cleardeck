@@ -130,4 +130,20 @@ describe('EmployeeList', () => {
     expect(screen.getByText('01.03.2022')).toBeInTheDocument();
     expect(screen.getByText('Bruno Beispiel').closest('tr')).toHaveClass('cd-row-departed');
   });
+
+  it('sortiert den angezeigten Beschäftigungsbeginn statt des Abschnittsbeginns', () => {
+    renderList({
+      filteredEmployees: employees.map((employee) =>
+        employee.id === 1
+          ? { ...employee, employmentStartDate: '2025-01-01' }
+          : { ...employee, employmentStartDate: '2022-01-01' },
+      ),
+    });
+
+    fireEvent.click(screen.getByText('Eintritt').closest('th')!);
+    const names = Array.from(document.querySelectorAll('tbody tr')).map(
+      (row) => (row.textContent?.includes('Bruno') ? 'Bruno' : 'Anna'),
+    );
+    expect(names).toEqual(['Bruno', 'Anna']);
+  });
 });

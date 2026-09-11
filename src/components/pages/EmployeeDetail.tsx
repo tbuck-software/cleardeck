@@ -117,8 +117,9 @@ const EmployeeDetail = ({
     const generatedDetails =
       /^Startdatum\s*:?\s*\d{4}-\d{2}-\d{2}$/i.test(details) ||
       /^Enddatum\s*:?\s*\d{4}-\d{2}-\d{2}$/i.test(details) ||
-      /^Aus bisherigem Eintrittsereignis übernommen\./i.test(details) ||
-      /^Besch[aä]ftigungsverh(?:a|ä|ae)ltnis beendet\.$/i.test(details);
+      details === 'Aus bisherigem Eintrittsereignis übernommen. Qualifikation und Stunden prüfen.' ||
+      details === 'Beschafftigungsverhaeltnis beendet.' ||
+      details === 'Beschäftigungsverhältnis beendet.';
     return Boolean(
       (details && !generatedDetails) ||
         record.previousValue?.trim() ||

@@ -92,6 +92,8 @@ const EmployeeList = ({
           return employee.fte ?? -1;
         case 'weeklyHours':
           return employee.weeklyHours ?? -1;
+        case 'startDate':
+          return employee.employmentStartDate ?? employee.startDate;
         default:
           return String(employee[sort.key] ?? '');
       }
