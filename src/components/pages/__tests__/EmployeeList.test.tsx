@@ -146,4 +146,17 @@ describe('EmployeeList', () => {
     );
     expect(names).toEqual(['Bruno', 'Anna']);
   });
+
+  it('zeigt unbekannte Arbeitszeit als Gedankenstrich statt als null VZÄ', () => {
+    renderList({
+      filteredEmployees: [
+        { ...employees[0], endDate: '2026-06-30', weeklyHours: null, fte: 0, hoursMissing: true },
+      ],
+      totalFte: 0,
+    });
+
+    const cells = screen.getByText('Anna Beispiel').closest('tr')!.querySelectorAll('td');
+    expect(cells[4].textContent).toBe('—');
+    expect(cells[5].textContent).toBe('—');
+  });
 });
