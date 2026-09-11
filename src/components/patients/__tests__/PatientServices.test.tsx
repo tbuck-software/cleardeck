@@ -1,13 +1,14 @@
 /// <reference types="vitest/globals" />
 /// <reference types="@testing-library/jest-dom" />
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import PatientModal from '../PatientModal';
 import type { PatientModalState } from '../../../types/ui';
 import type { ServiceDefinition } from '../../../shared/types';
 
 const definitions: ServiceDefinition[] = [
   { id: 1, name: 'Große Grundpflege', serviceType: 's36-care', active: true },
+  { id: 5, name: 'Kleine Grundpflege', serviceType: 's36-care', active: true },
   { id: 2, name: 'Hilfe bei der Haushaltsführung', serviceType: 'household', active: true },
   { id: 3, name: 'Beratungsbesuch', serviceType: 's37-consultation', active: true },
   { id: 4, name: 'Historische Körperpflege', serviceType: 's36-care', active: false },
@@ -32,146 +33,75 @@ const modal = (overrides: Partial<PatientModalState> = {}): PatientModalState =>
   ...overrides,
 });
 
-describe('PatientModal Leistungsumfang', () => {
-  it('zeigt verständliche Mehrfachauswahl und leitet den Grund ab', () => {
-    const onChange = vi.fn();
-    render(
-      <PatientModal
-        modal={modal()}
-        serviceDefinitions={definitions}
-        onChange={onChange}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />,
-    );
+const renderModal = (state: PatientModalState, onChange = vi.fn()) => {
+  render(
+    <PatientModal
+      modal={state}
+      serviceDefinitions={definitions}
+      onChange={onChange}
+      onClose={vi.fn()}
+      onSave={vi.fn()}
+    />,
+  );
+  return onChange;
+};
 
-    expect(
-      screen.getByText('Welche Leistungen erbringt euer Dienst für diese Person?'),
-    ).toBeInTheDocument();
+describe('PatientModal Leistungsumfang', () => {
+  it('zeigt alle Leistungen flach als Checkboxen und leitet den Grund ab', () => {
+    const onChange = renderModal(modal());
+
+    const list = screen.getByRole('group', { name: 'Vereinbarte Leistungen' });
+    expect(list.querySelector('details')).toBeNull();
+    expect(within(list).queryByRole('searchbox')).toBeNull();
     fireEvent.click(screen.getByLabelText('Große Grundpflege'));
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ serviceDefinitionIds: [1], serviceScopeSource: 'services' }),
     );
   });
 
-  it('lässt Leistungen unbekannt und zeigt keinen erfundenen Einschluss', () => {
-    render(
-      <PatientModal
-        modal={modal()}
-        serviceDefinitions={definitions}
-        onChange={vi.fn()}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />,
-    );
+  it('überschreibt nur Kategorien mit mehreren Einträgen und bündelt den Rest', () => {
+    renderModal(modal());
+
+    expect(screen.getByText('Körperbezogene Pflege nach § 36 SGB XI')).toBeInTheDocument();
+    expect(screen.getByText('Weitere Leistungen')).toBeInTheDocument();
+    expect(screen.queryByText('Hilfe bei der Haushaltsführung nach SGB XI')).toBeNull();
+    expect(screen.queryByText('Beratungsbesuch nach § 37 Abs. 3 SGB XI')).toBeNull();
+    expect(screen.getByLabelText('Hilfe bei der Haushaltsführung')).toBeInTheDocument();
+  });
+
+  it('lässt Leistungen unbekannt, ohne einen Einschluss zu erfinden', () => {
+    renderModal(modal());
+
     expect(screen.getByText('MD-Personenliste: offen')).toBeInTheDocument();
     expect(screen.getByText('Leistungen sind noch nicht erfasst.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Leistungen noch unbekannt' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    expect(screen.queryByRole('button', { name: 'Als unbekannt führen' })).toBeNull();
   });
 
-  it('zeigt eine alte Auswahl als übernommene Entscheidung', () => {
-    render(
-      <PatientModal
-        modal={modal({ mode: 'edit', serviceScope: 'eligible', serviceScopeSource: 'legacy' })}
-        serviceDefinitions={definitions}
-        onChange={vi.fn()}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />,
-    );
+  it('bietet bei vorhandener Auswahl das Zurücksetzen auf unbekannt an', () => {
+    const onChange = renderModal(modal({ serviceDefinitionIds: [1, 5] }));
+
     expect(screen.getByText('MD-Personenliste: ja')).toBeInTheDocument();
-    expect(screen.getByText(/Übernommene Entscheidung aus der früheren Erfassung/)).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Übernommene Entscheidung verwerfen' }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Sie wird verworfen, sobald/)).toBeInTheDocument();
-  });
-
-  it('leert Suche und Gruppenzustand beim Wechsel der Person', () => {
-    const view = render(
-      <PatientModal
-        modal={modal({ mode: 'edit', id: 1 })}
-        serviceDefinitions={definitions}
-        onChange={vi.fn()}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />,
-    );
-
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Haushalt' } });
-    expect(screen.getByRole('searchbox')).toHaveValue('Haushalt');
-    expect(screen.getByLabelText('Hilfe bei der Haushaltsführung').closest('details')).toHaveAttribute(
-      'open',
-    );
-
-    view.rerender(
-      <PatientModal
-        modal={modal({ mode: 'edit', id: 2 })}
-        serviceDefinitions={definitions}
-        onChange={vi.fn()}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole('searchbox')).toHaveValue('');
-    expect(
-      screen.getByLabelText('Hilfe bei der Haushaltsführung').closest('details'),
-    ).not.toHaveAttribute('open');
-  });
-
-  it('hält Gruppen offen, wenn die letzte Auswahl entfällt oder die Suche geleert wird', () => {
-    const view = render(
-      <PatientModal
-        modal={modal({ mode: 'edit', id: 1, serviceDefinitionIds: [1] })}
-        serviceDefinitions={definitions}
-        onChange={vi.fn()}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByLabelText('Große Grundpflege').closest('details')).toHaveAttribute('open');
-    view.rerender(
-      <PatientModal
-        modal={modal({ mode: 'edit', id: 1, serviceDefinitionIds: [] })}
-        serviceDefinitions={definitions}
-        onChange={vi.fn()}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />,
-    );
-    expect(screen.getByLabelText('Große Grundpflege').closest('details')).toHaveAttribute('open');
-
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Haushalt' } });
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: '' } });
-    expect(screen.getByLabelText('Hilfe bei der Haushaltsführung').closest('details')).toHaveAttribute(
-      'open',
+    fireEvent.click(screen.getByRole('button', { name: 'Als unbekannt führen' }));
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({ serviceDefinitionIds: [], serviceScopeSource: 'services' }),
     );
   });
 
-  it('öffnet Treffer bei der Suche und erklärt inaktive historische Zuordnungen', () => {
-    render(
-      <PatientModal
-        modal={modal({ mode: 'edit', serviceDefinitionIds: [4] })}
-        serviceDefinitions={definitions}
-        onChange={vi.fn()}
-        onClose={vi.fn()}
-        onSave={vi.fn()}
-      />,
-    );
+  it('zeigt eine alte Auswahl einmal als übernommene Entscheidung', () => {
+    renderModal(modal({ mode: 'edit', serviceScope: 'eligible', serviceScopeSource: 'legacy' }));
 
-    expect(screen.getByText('Historische Körperpflege (inaktiv)')).toBeInTheDocument();
-    fireEvent.click(screen.getByText('Welche Leistungen erbringt euer Dienst für diese Person?'));
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Haushalt' } });
-    const householdGroup = screen
-      .getByLabelText('Hilfe bei der Haushaltsführung')
-      .closest('details');
-    expect(householdGroup).toHaveAttribute('open');
-    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'gibt es nicht' } });
-    expect(screen.getByText('Keine Leistungen gefunden.')).toBeInTheDocument();
+    expect(screen.getByText('MD-Personenliste: ja')).toBeInTheDocument();
+    expect(screen.getAllByText(/Übernommene Entscheidung/)).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Als unbekannt führen' })).toBeInTheDocument();
+  });
+
+  it('erklärt inaktive historische Zuordnungen und versteckt inaktive Einträge sonst', () => {
+    renderModal(modal({ mode: 'edit', serviceDefinitionIds: [4] }));
+    expect(screen.getByLabelText('Historische Körperpflege (inaktiv)')).toBeChecked();
+  });
+
+  it('blendet inaktive Einträge ohne Zuordnung aus', () => {
+    renderModal(modal());
+    expect(screen.queryByLabelText(/Historische Körperpflege/)).toBeNull();
   });
 });
