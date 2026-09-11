@@ -192,6 +192,7 @@
 }
 
 .cd-daychip-mon {
+  display: block;
   font: 600 10px/1.4 var(--font-body);
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -713,26 +714,6 @@
   flex: none;
   display: grid;
   place-items: center;
-}
-
-.cd-item[data-dragging='true'] {
-  opacity: 0.5;
-}
-
-.cd-tag-row {
-  display: flex;
-  gap: 6px;
-  flex: none;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.cd-usage {
-  font-size: 13px;
-  color: var(--color-neutral-700);
-  flex: none;
-  min-width: 88px;
-  text-align: right;
 }
 
 .cd-group-preview {
@@ -1275,6 +1256,15 @@
   background: color-mix(in srgb, var(--color-accent) 7%, transparent);
 }
 
+.cd-listrow[data-dragging='true'] {
+  opacity: 0.5;
+}
+
+/* Deaktivierte Katalogeinträge bleiben lesbar, treten aber auch im Hover zurück. */
+.cd-listrow.cd-row-departed:hover {
+  background: color-mix(in srgb, var(--color-neutral-300) 55%, transparent);
+}
+
 .cd-listrow-lead {
   flex: none;
   align-self: stretch;
@@ -1456,4 +1446,30 @@ button.cd-listrow-main {
   justify-content: flex-end;
   gap: 6px;
   padding-top: 4px;
+}
+
+/* Kompakte Zeitleiste: ohne Linie, deshalb ohne Spalte dafür und ohne Abstand
+   nach unten, der sonst die Linie trägt. */
+.cd-timeline-compact .cd-timeline-row {
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 10px 8px;
+  border-radius: calc(var(--radius-lg) - 6px);
+}
+
+.cd-timeline-compact .cd-timeline-date {
+  padding-top: 0;
+  text-align: center;
+}
+
+.cd-timeline-compact .cd-timeline-copy {
+  padding-bottom: 0;
+}
+
+.cd-timeline-compact .cd-timeline-sub {
+  font-size: 13px;
+}
+
+.cd-timeline-compact .cd-timeline-tag {
+  padding-top: 0;
 }

@@ -43,6 +43,14 @@ describe('Timeline', () => {
     expect(screen.getByText('Keine Einträge.')).toBeInTheDocument();
   });
 
+  it('lässt in der kompakten Form die Linie weg', () => {
+    const { container } = render(<Timeline compact items={items} />);
+
+    expect(container.querySelector('.cd-timeline')).toHaveClass('cd-timeline-compact');
+    expect(container.querySelector('.cd-timeline-rail')).toBeNull();
+    expect(container.querySelectorAll('.cd-timeline-row')).toHaveLength(2);
+  });
+
   it('macht nur Zeilen mit onOpen klickbar', () => {
     const onOpen = vi.fn();
     render(
