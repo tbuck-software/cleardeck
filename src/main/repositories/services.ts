@@ -57,7 +57,7 @@ export const addServiceDefinition = (input: {
     ).run(name, serviceType, (maxSort.mx ?? 0) + 1);
   } catch (error) {
     if (String(error).toLowerCase().includes('unique'))
-      throw new Error('Diese Leistung gibt es in der Kategorie bereits.');
+      throw new Error('Diese Leistung gibt es im Katalog bereits.');
     throw error;
   }
   return listServiceDefinitions();
@@ -93,7 +93,7 @@ export const updateServiceDefinition = (input: {
     );
   } catch (error) {
     if (String(error).toLowerCase().includes('unique'))
-      throw new Error('Diese Leistung gibt es in der Kategorie bereits.');
+      throw new Error('Diese Leistung gibt es im Katalog bereits.');
     throw error;
   }
   return listServiceDefinitions();
