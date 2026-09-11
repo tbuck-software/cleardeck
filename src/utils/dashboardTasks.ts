@@ -8,6 +8,9 @@
 
 import type {
   EmployeeWithPeriod,
+  EmploymentIntegrityOverview,
+  IntegrityIssue,
+  IntegrityIssueKind,
   OpenInstruction,
   PatientWithLatestVisit,
   ExpiringTraining,
@@ -47,6 +50,60 @@ type BuildInput = {
   leaveHorizonDays?: number;
   instructionReminderDays?: number;
   expiringTrainings?: ExpiringTraining[];
+  /** Findings of the employment scan; each one becomes a task on its person. */
+  employmentIntegrity?: EmploymentIntegrityOverview;
+};
+
+const employmentFindingCopy = (
+  kind: IntegrityIssueKind,
+  otherName: string,
+): { label: string; sub: string } => {
+  switch (kind) {
+    case 'overlapping-periods':
+      return {
+        label: 'Beschäftigungszeiträume überschneiden sich',
+        sub: 'Zwei Abschnitte decken dieselben Tage ab. Bitte unter Historie den richtigen Zeitraum prüfen.',
+      };
+    case 'reversed-period':
+      return {
+        label: 'Beginn liegt nach dem Ende',
+        sub: 'Der Abschnitt hat vertauschte Daten. Bitte unter Historie Beginn und Ende prüfen.',
+      };
+    case 'suspicious-period':
+      return {
+        label: 'Abschnitt vermutlich aus einer Übernahme',
+        sub: 'Datum, Qualifikation und Arbeitszeit bitte anhand des Belegs prüfen und die Notiz danach anpassen.',
+      };
+    case 'same-name':
+      return {
+        label: `Möglicherweise doppelt angelegt (${otherName})`,
+        sub: 'Gleicher Name ist kein Nachweis derselben Person. Bitte unter Historie prüfen und nur bei Gewissheit zusammenführen.',
+      };
+  }
+};
+
+/** One task per person and finding type, so a broken section is not reported twice. */
+const buildEmploymentTasks = (overview: EmploymentIntegrityOverview): DashboardTask[] => {
+  const nameOf = (id: number | null): string =>
+    overview.employees.find((employee) => employee.id === id)?.name ?? 'unbekannte Person';
+  const seen = new Set<string>();
+  return overview.issues.flatMap((issue: IntegrityIssue) => {
+    const id = `employment-${issue.kind}-${issue.employeeId}`;
+    if (seen.has(id)) return [];
+    seen.add(id);
+    const copy = employmentFindingCopy(issue.kind, nameOf(issue.relatedEmployeeId));
+    return [
+      {
+        id,
+        title: `${nameOf(issue.employeeId)} — ${copy.label}`,
+        sub: copy.sub,
+        tag: 'Daten',
+        tagClass: issue.severity === 'error' ? 'tag-bad' : 'tag-accent',
+        weight: issue.severity === 'error' ? 1 : 4,
+        target: { kind: 'employee' as const, id: issue.employeeId, tab: 'hist' as const },
+      },
+    ];
+  });
 };
 
 const formatDate = (iso: string): string =>
@@ -61,8 +118,11 @@ export const buildDashboardTasks = ({
   leaveHorizonDays = 60,
   instructionReminderDays = 30,
   expiringTrainings = [],
+  employmentIntegrity,
 }: BuildInput): DashboardTask[] => {
-  const tasks: DashboardTask[] = [];
+  const tasks: DashboardTask[] = employmentIntegrity
+    ? buildEmploymentTasks(employmentIntegrity)
+    : [];
 
   patients.forEach((patient) => {
     if (patient.id == null || !isActivePatient(patient, today)) return;

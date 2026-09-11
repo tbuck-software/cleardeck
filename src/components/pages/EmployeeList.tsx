@@ -129,16 +129,14 @@ const EmployeeList = ({
           </p>
         </div>
         <div className="cd-actions">
-          {onImport && (
-            <button className="btn btn-secondary" type="button" onClick={onImport}>
-              Mitarbeiterliste übernehmen (Excel / CSV)
-            </button>
-          )}
           <ActionMenu
             ariaLabel="Weitere Aktionen"
             triggerClassName="btn btn-secondary btn-icon"
             items={[
               { label: 'Jahresnachweis erstellen…', onSelect: onOpenReport },
+              ...(onImport
+                ? [{ label: 'Mitarbeiterliste übernehmen (Excel / CSV)…', onSelect: onImport }]
+                : []),
               { label: 'Als Excel exportieren', onSelect: () => void onExport('xlsx') },
               { label: 'Als CSV exportieren', onSelect: () => void onExport('csv') },
             ]}

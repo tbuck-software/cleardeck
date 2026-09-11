@@ -1,5 +1,6 @@
 import { getDb } from '../database/connection';
 import { requireDate, shiftDays } from '../../utils/calendarDate';
+import { employmentMessages } from '../../utils/employment';
 import type {
   RecordDepartureInput,
   SwitchQualificationInput,
@@ -39,17 +40,9 @@ export const recordDeparture = (input: RecordDepartureInput): YearDataset => {
 
     // A recorded departure may move in either direction as long as no later
     // period and no later working-time state would be stranded.
-    const conflict = findPeriodConflict(
-      input.employeeId,
-      period.id,
-      period.startDate,
-      input.endDate,
-    );
-    if (conflict)
-      throw new Error(
-        `Die Beschäftigungsperiode überschneidet sich mit dem bestehenden Zeitraum ab ${conflict.startDate}. Bitte den vorhandenen oder zukünftigen Zeitraum zuerst prüfen.`,
-      );
-    assertNoStrandedTerms(period.id, input.endDate);
+    if (findPeriodConflict(input.employeeId, period.id, period.startDate, input.endDate))
+      throw new Error(employmentMessages.overlap);
+    assertNoStrandedTerms(period.id, { endDate: input.endDate });
 
     db.prepare('UPDATE employment_periods SET endDate=? WHERE id=?').run(input.endDate, period.id);
     updateEmployeeCache(input.employeeId);

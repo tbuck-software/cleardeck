@@ -66,6 +66,8 @@ const renderDetail = (
       competencies={competencies}
       instructions={instructions}
       timelineItems={[]}
+      employmentIntegrity={{ issues: [], employees: [], periods: [] }}
+      backupFolder={null}
       suggestedCompetencyCount={2}
       availableCompetencyCount={3}
       availableInstructionCount={3}
@@ -79,6 +81,9 @@ const renderDetail = (
       onSelectInstruction={noop}
       onStartNewPeriod={noop}
       onSelectTimelineItem={noop}
+      onEditPeriod={noop}
+      onOpenBackupSettings={noop}
+      onEmploymentRepairApplied={noop}
       onOpenEmploymentAction={noop}
       {...overrides}
     />,
@@ -127,6 +132,40 @@ describe('EmployeeDetail', () => {
     renderDetail({ tab: 'hist' });
 
     expect(screen.getByText('Keine Einträge.')).toBeInTheDocument();
+    expect(screen.queryByText('Beschäftigungsdaten prüfen')).not.toBeInTheDocument();
+  });
+
+  it('zeigt den Hinweisbereich nur bei Befunden zu dieser Person', () => {
+    renderDetail({
+      tab: 'hist',
+      employmentIntegrity: {
+        issues: [
+          {
+            kind: 'reversed-period',
+            severity: 'error',
+            employeeId: 1,
+            relatedEmployeeId: null,
+            periodIds: [5],
+          },
+        ],
+        employees: [{ id: 1, name: 'Anna Beispiel', birthDate: '1985-06-12' }],
+        periods: [
+          {
+            id: 5,
+            employeeId: 1,
+            startDate: '2024-05-01',
+            endDate: '2024-01-31',
+            qualification: 'Pflegefachkraft',
+            note: null,
+            weeklyHours: 30,
+            fte: 0.8,
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText('Beschäftigungsdaten prüfen')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Zeiträume prüfen' })).toBeInTheDocument();
   });
 
   it('erklärt, warum "Kompetenz hinzufügen" gesperrt ist', () => {

@@ -86,7 +86,7 @@ describe('employment actions', () => {
     });
     const before = db.serialize();
     expect(() => recordDeparture({ employeeId: person.id!, periodId: person.periodId!, endDate: '2025-03-31', year: 2025 }))
-      .toThrow(/überschneidet sich/);
+      .toThrow(/überschneiden sich/);
     expect(db.serialize()).toEqual(before);
   });
 

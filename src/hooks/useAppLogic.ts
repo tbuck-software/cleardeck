@@ -12,6 +12,7 @@ import useAuth from './useAuth';
 import useUpcomingEvents from './useUpcomingEvents';
 import useCalendar from './useCalendar';
 import useDashboardWidgets from './useDashboardWidgets';
+import useEmploymentIntegrity from './useEmploymentIntegrity';
 import usePatients from './usePatients';
 import usePatientDashboard from './usePatientDashboard';
 import useServiceCatalog from './useServiceCatalog';
@@ -139,6 +140,12 @@ const useAppLogic = () => {
   });
 
   appReadySetterRef.current = authSlice.setAppReady;
+
+  const employmentIntegritySlice = useEmploymentIntegrity({
+    enabled: authSlice.appReady.unlocked,
+    dataVersion: employeeSlice.state.dataset,
+    handleError,
+  });
 
   const upcomingEventsSlice = useUpcomingEvents({ handleError });
 
@@ -335,6 +342,7 @@ const useAppLogic = () => {
       hiddenEventTypes: upcomingEventsSlice.state.hiddenEventTypes,
       calendar: calendarSlice.state,
       dashboardWidgets: dashboardWidgetsSlice.state,
+      employmentIntegrity: employmentIntegritySlice.overview,
       // Patient state
       patients: patientSlice.state.patients,
       selectedPatient: patientSlice.state.selectedPatient,
@@ -470,6 +478,7 @@ const useAppLogic = () => {
       openVisitModal: patientSlice.actions.openVisitModal,
       closeVisitModal: patientSlice.actions.closeVisitModal,
       refreshPatients: patientSlice.actions.refreshPatients,
+      refreshEmploymentIntegrity: employmentIntegritySlice.refresh,
       loadServiceDefinitions: serviceCatalogSlice.actions.loadServiceDefinitions,
       saveServiceDefinition: serviceCatalogSlice.actions.saveServiceDefinition,
       toggleServiceDefinition: serviceCatalogSlice.actions.toggleServiceDefinition,

@@ -19,7 +19,8 @@ import { buildEmployeeChangeEvents } from '../employeeHistory';
 import { saveEvent } from './events';
 import { daysBetween } from '../../utils/qpr';
 import { localDate, requireDate, shiftDays } from '../../utils/calendarDate';
-import { contiguousEmploymentStart } from '../../utils/employment';
+import { contiguousEmploymentStart, employmentMessages } from '../../utils/employment';
+import { recordRepairEvent } from '../employmentRepairShared';
 import {
   assertNoStrandedTerms,
   assertReportYear,
@@ -319,6 +320,35 @@ export const getEmployeePeriod = (
   );
 };
 
+type PeriodBoundsInput = { startDate: string; endDate: string | null };
+
+/** The single write path for period dates keeps the previous values as evidence. */
+const recordPeriodDateCorrection = (
+  before: EmploymentPeriod & { id: number; employeeId: number },
+  after: PeriodBoundsInput,
+): void => {
+  if (before.startDate === after.startDate && (before.endDate ?? null) === after.endDate) return;
+  recordRepairEvent(
+    before.employeeId,
+    'Zeitraum korrigiert – ursprüngliche Daten erhalten',
+    'Die Beschäftigungsdaten wurden ausdrücklich korrigiert. Die ursprünglichen Daten bleiben hier als Nachweis erhalten.',
+    {
+      kind: 'employment-period-date-correction',
+      period: {
+        id: before.id,
+        employeeId: before.employeeId,
+        startDate: before.startDate,
+        endDate: before.endDate ?? null,
+        qualification: before.qualification,
+        note: before.note ?? null,
+      },
+      correctedDates: { startDate: after.startDate, endDate: after.endDate },
+    },
+    `${before.startDate} – ${before.endDate ?? 'offen'}`,
+    `${after.startDate} – ${after.endDate ?? 'offen'}`,
+  );
+};
+
 /**
  * Save (create or update) an employee and their period
  */
@@ -387,27 +417,24 @@ export const saveEmployee = (input: {
       );
     }
     const existingPeriod = periodId ? loadPeriod(employeeId, periodId) : undefined;
+    const bounds: PeriodBoundsInput = {
+      startDate: input.startDate,
+      endDate: input.endDate || null,
+    };
     // A value-only correction leaves the dates alone; unrelated legacy overlaps must not block it.
     const periodDatesUnchanged = Boolean(
       existingPeriod &&
-        existingPeriod.startDate === input.startDate &&
-        (existingPeriod.endDate ?? null) === (input.endDate || null),
+        existingPeriod.startDate === bounds.startDate &&
+        (existingPeriod.endDate ?? null) === bounds.endDate,
     );
-    if (!periodDatesUnchanged) {
-      const overlap = findPeriodConflict(
-        employeeId,
-        periodId,
-        input.startDate,
-        input.endDate || null,
-      );
-      if (overlap)
-        throw new Error(
-          'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren oder „Qualifikation wechseln“ verwenden.',
-        );
-      // Same rule as the recorded departure: shortening must not orphan terms.
-      if (periodId && input.endDate) assertNoStrandedTerms(periodId, input.endDate);
-    }
+    if (!periodDatesUnchanged && findPeriodConflict(employeeId, periodId, bounds.startDate, bounds.endDate))
+      throw new Error(employmentMessages.overlap);
     if (periodId) {
+      const before = db
+        .prepare('SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods WHERE id=?')
+        .get(periodId) as EmploymentPeriod & { id: number; employeeId: number };
+      // Same rule as the recorded departure: narrowing must not orphan terms.
+      if (!periodDatesUnchanged) assertNoStrandedTerms(periodId, bounds);
       db.prepare(
         'UPDATE employment_periods SET startDate=?,endDate=?,qualification=? WHERE id=?',
       ).run(input.startDate, input.endDate || null, input.qualification, periodId);
@@ -416,6 +443,7 @@ export const saveEmployee = (input: {
           input.periodNote,
           periodId,
         );
+      recordPeriodDateCorrection(before, bounds);
     } else {
       periodId = Number(
         db

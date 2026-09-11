@@ -578,3 +578,90 @@ export type BulkCompetencyChange = {
   }[];
   completion?: { approvedAt: string; approvedBy: string };
 };
+
+export type IntegrityIssueKind =
+  | 'reversed-period'
+  | 'overlapping-periods'
+  | 'suspicious-period'
+  | 'same-name';
+
+/**
+ * A finding of the employment scan. It carries ids and a severity only; the
+ * wording lives in the renderer next to the action that clears it.
+ */
+export interface IntegrityIssue {
+  kind: IntegrityIssueKind;
+  severity: 'error' | 'warning';
+  employeeId: number;
+  /** The other person of a same-name pair. */
+  relatedEmployeeId: number | null;
+  periodIds: number[];
+}
+
+export interface IntegrityEmployee {
+  id: number;
+  name: string;
+  birthDate: string | null;
+}
+
+export interface IntegrityPeriod {
+  id: number;
+  employeeId: number;
+  startDate: string;
+  endDate: string | null;
+  qualification: string | null;
+  note: string | null;
+  weeklyHours: number | null;
+  fte: number | null;
+}
+
+export interface EmploymentIntegrityOverview {
+  issues: IntegrityIssue[];
+  /** Repair roster; unlike reporting datasets this also includes people without periods. */
+  employees: IntegrityEmployee[];
+  periods: IntegrityPeriod[];
+}
+
+export interface RepairRecordSummary {
+  table: string;
+  ids: number[];
+  count: number;
+}
+
+export interface ConsolidatePreview {
+  kind: 'consolidate-periods';
+  token: string;
+  employee: { id: number; name: string };
+  before: Array<{
+    id: number;
+    startDate: string;
+    endDate: string | null;
+    qualification: string | null;
+  }>;
+  after: { startDate: string; endDate: string | null; qualification: string | null };
+  affectedRecords: RepairRecordSummary[];
+  conflicts: string[];
+}
+
+export interface ReconcilePeriodsPreview {
+  kind: 'reconcile-periods';
+  token: string;
+  employee: { id: number; name: string };
+  retained: {
+    id: number;
+    before: { startDate: string; endDate: string | null };
+    after: { startDate: string; endDate: string | null };
+  };
+  removed: { id: number; startDate: string; endDate: string | null };
+  affectedRecords: RepairRecordSummary[];
+  conflicts: string[];
+}
+
+export interface EmployeeMergePreview {
+  kind: 'employee-merge';
+  token: string;
+  target: { id: number; name: string };
+  source: { id: number; name: string };
+  linkedRecords: RepairRecordSummary[];
+  conflicts: string[];
+}
