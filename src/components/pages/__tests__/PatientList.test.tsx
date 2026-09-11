@@ -175,6 +175,13 @@ describe('PatientList', () => {
     renderList();
 
     expect(screen.getByText('Gutachten-Daten fehlen')).toBeInTheDocument();
+    expect(screen.getAllByText(/Pflegegrad unbekannt/).length).toBeGreaterThan(0);
+  });
+
+  it('zeigt einen expliziten fehlenden Pflegegrad getrennt vom unbekannten Wert', () => {
+    renderList({ patients: [{ ...patients[0], careLevel: 0 }] });
+
+    expect(screen.getByText(/Kein Pflegegrad/)).toBeInTheDocument();
   });
 
   it('markiert Handlungsbedarf aus der letzten Visite', () => {
@@ -200,9 +207,14 @@ describe('PatientList', () => {
   });
 
   it('fällt in schmalen Fenstern auf eine Liste zurück', () => {
-    renderList({ wideTable: false });
+    renderList({
+      wideTable: false,
+      patients: [{ ...patients[0], careLevel: 0 }, patients[2]],
+    });
 
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.getByText('Erika Mustermann')).toBeInTheDocument();
+    expect(screen.getByText(/Kein Pflegegrad/)).toBeInTheDocument();
+    expect(screen.getByText(/Pflegegrad unbekannt/)).toBeInTheDocument();
   });
 });

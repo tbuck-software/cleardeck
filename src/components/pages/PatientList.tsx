@@ -13,6 +13,7 @@ import {
 } from '../../utils/qpr';
 import type { PatientVisit, PatientWithLatestVisit } from '../../shared/types';
 import type { TeilgruppeFilter } from '../../types/ui';
+import { careLevelLabel } from '../../utils/careLevel';
 
 type SortKey = 'name' | 'diagnosis' | 'group' | 'visits' | 'latest' | 'due';
 const COLUMNS: { key: SortKey; label: string }[] = [
@@ -201,7 +202,8 @@ const PatientList = ({
                 <div style={{ fontWeight: 600 }}>{patient.name}</div>
                 <div className="cd-muted-13">
                   {patient.diagnosis || 'Ohne Diagnose'} ·{' '}
-                  {group ? TEILGRUPPE_SHORT[group] : 'Gutachten-Daten fehlen'}
+                  {group ? TEILGRUPPE_SHORT[group] : 'Gutachten-Daten fehlen'} ·{' '}
+                  {careLevelLabel(patient.careLevel)}
                 </div>
               </div>
               <span
@@ -273,7 +275,7 @@ const PatientList = ({
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>
                         geb. {formatDateDE(patient.birthDate)}
-                        {patient.careLevel ? ` · PG ${patient.careLevel}` : ''}
+                        {` · ${careLevelLabel(patient.careLevel)}`}
                       </div>
                     </td>
                     <td>{patient.diagnosis || '—'}</td>
