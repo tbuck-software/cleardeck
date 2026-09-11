@@ -155,6 +155,20 @@ describe('Dashboard', () => {
     expect(onOpenTarget).not.toHaveBeenCalled();
   });
 
+  it('zeigt Termine als kompakte Zeitleiste mit Relativzeit', () => {
+    const onOpenEvent = vi.fn();
+    const { container } = renderDashboard({ onOpenEvent });
+
+    const row = screen.getByText('Max Mustermann').closest('.cd-timeline-row') as HTMLElement;
+    expect(container.querySelector('.cd-timeline-compact')).not.toBeNull();
+    expect(container.querySelector('.cd-timeline-rail')).toBeNull();
+    expect(row).toHaveTextContent('Pflegevisite');
+    expect(row).toHaveTextContent('heute');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Max Mustermann öffnen' }));
+    expect(onOpenEvent).toHaveBeenCalledWith(upcoming[0]);
+  });
+
   it('zeigt leeren Zustand ohne Qualifikationen und Termine', () => {
     renderDashboard({
       dataset: { employees: [], aggregation: { totalHeadcount: 0, totalFte: 0, categories: [] } },

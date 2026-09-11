@@ -79,10 +79,14 @@ import type {
   PatientWithLatestVisit,
 } from './shared/types';
 import { SERVICE_TYPE_LABEL } from './shared/services';
+import { describeInterval } from './utils/instructionSchedule';
 import { isActivePatient } from './utils/qpr';
 
 const patientCountLabel = (count: number): string =>
   count === 1 ? '1 aktive Person' : `${count} aktive Personen`;
+
+const personCountLabel = (count: number): string =>
+  count === 1 ? '1 Person' : `${count} Personen`;
 
 const emptyAuditModal = (): AuditModalState => ({
   open: false,
@@ -929,6 +933,16 @@ const App = () => {
   );
   const [assignAlreadyOpenIds, setAssignAlreadyOpenIds] = useState<number[]>([]);
 
+  const closeInstructionModal = () =>
+    setInstructionModal({
+      open: false,
+      topic: '',
+      legalBasis: '',
+      note: '',
+      intervalMonths: null,
+      intervalSource: 'betrieblich',
+    });
+
   const openAssignInstructionModal = async (definitionId: number) => {
     try {
       setAssignAlreadyOpenIds(await api.instructions.employeesWithOpen(definitionId));
@@ -1020,7 +1034,11 @@ const App = () => {
             title: entry.name,
             note: entry.note ?? 'Ohne Notiz',
             tags: [] as string[],
-            usage: `${(dataset?.employees ?? []).filter((employee) => employee.qualification === entry.name).length} Personen`,
+            usage: personCountLabel(
+              (dataset?.employees ?? []).filter(
+                (employee) => employee.qualification === entry.name,
+              ).length,
+            ),
           })),
       };
     }
@@ -1078,7 +1096,11 @@ const App = () => {
           .map((entry) => ({
             id: entry.id as number,
             title: entry.topic,
-            note: entry.note ?? 'Nachweis als Unterschriftenliste',
+            note:
+              entry.note ??
+              (entry.intervalMonths != null
+                ? describeInterval(entry.intervalMonths, entry.intervalSource)
+                : undefined),
             tags: entry.legalBasis ? [entry.legalBasis] : [],
             usage: `${definitionUsage.instructions[entry.id as number] ?? 0} zugeordnet`,
           })),
@@ -1151,6 +1173,9 @@ const App = () => {
   }
 
   const admin = adminPage();
+  const editedServiceDefinition = serviceDefinitions.find(
+    (entry) => entry.id === serviceDefinitionModal.id,
+  );
   const visibleCalendarEvents = Object.fromEntries(
     Object.entries(calendar.eventsByDate).map(([key, events]) => [
       key,
@@ -1457,10 +1482,6 @@ const App = () => {
                   });
               }
             }}
-            assignLabel="Zuordnen"
-            onAssign={page === 'instrs' ? openAssignInstructionModal : undefined}
-            onToggleActive={page === 'services' ? toggleServiceDefinition : undefined}
-            toggleActiveLabel={(active) => (active ? 'Deaktivieren' : 'Aktivieren')}
             onReorder={(id, targetIndex) => {
               if (page === 'quals')
                 reorderTo(
@@ -1602,9 +1623,19 @@ const App = () => {
       />
       <ServiceDefinitionModal
         state={serviceDefinitionModal}
+        active={editedServiceDefinition?.active !== false}
         onChange={(next) => setServiceDefinitionModal((prev) => ({ ...prev, ...next }))}
         onClose={() => setServiceDefinitionModal({ ...serviceDefinitionModal, open: false })}
         onSave={() => void saveServiceDefinition()}
+        onToggleActive={
+          editedServiceDefinition
+            ? () =>
+                toggleServiceDefinition(
+                  editedServiceDefinition.id as number,
+                  editedServiceDefinition.active === false,
+                )
+            : undefined
+        }
       />
       <CompetencyModal
         state={competencyModal}
@@ -1637,18 +1668,13 @@ const App = () => {
       <InstructionModal
         state={instructionModal}
         onChange={(next) => setInstructionModal((prev) => ({ ...prev, ...next }))}
-        onClose={() =>
-          setInstructionModal({
-            open: false,
-            topic: '',
-            legalBasis: '',
-            note: '',
-            intervalMonths: null,
-            intervalSource: 'betrieblich',
-          })
-        }
+        onClose={closeInstructionModal}
         onSave={handleSaveInstructionModal}
         onDelete={confirmDeleteInstructionDefinition}
+        onAssign={(id) => {
+          closeInstructionModal();
+          void openAssignInstructionModal(id);
+        }}
       />
 
       <EmployeeCompetencyModal

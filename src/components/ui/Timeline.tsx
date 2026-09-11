@@ -16,20 +16,26 @@ export type TimelineEntry = {
 type TimelineProps = {
   items: TimelineEntry[];
   empty?: React.ReactNode;
+  /** Short preview without the rail: date, copy and tag on one line. */
+  compact?: boolean;
   className?: string;
 };
 
-const Timeline = ({ items, empty, className }: TimelineProps) => (
-  <div className={`cd-timeline${className ? ` ${className}` : ''}`}>
+const Timeline = ({ items, empty, compact, className }: TimelineProps) => (
+  <div
+    className={`cd-timeline${compact ? ' cd-timeline-compact' : ''}${className ? ` ${className}` : ''}`}
+  >
     {items.length === 0 && empty != null && <div className="cd-empty">{empty}</div>}
     {items.map((item) => {
       const body = (
         <>
           <span className="cd-timeline-date">{item.date}</span>
-          <span className="cd-timeline-rail">
-            <span style={{ background: item.color ?? 'var(--color-accent-500)' }} />
-            <span />
-          </span>
+          {!compact && (
+            <span className="cd-timeline-rail">
+              <span style={{ background: item.color ?? 'var(--color-accent-500)' }} />
+              <span />
+            </span>
+          )}
           <span className="cd-timeline-copy">
             <span className="cd-timeline-title">{item.title}</span>
             {item.subline != null && item.subline !== '' && (
