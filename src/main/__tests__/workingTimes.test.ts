@@ -148,4 +148,21 @@ describe('working-time corrections', () => {
     })).toThrow(/Beschäftigungsperiode/);
     expect(db.serialize()).toEqual(beforeAmbiguousChanges);
   });
+
+  it('names the overlap when several periods match and keeps the outside-employment message', () => {
+    const person = saveEmployee({
+      ...base, startDate: '2024-01-01', endDate: '2025-12-31', weeklyHours: 20, fte: 0.5, year: 2025,
+    }).employees[0];
+    db.prepare(`
+      INSERT INTO employment_periods(employeeId,startDate,endDate,qualification)
+      VALUES (?,?,?,?)
+    `).run(person.id, '2025-01-01', null, 'Pflegefachkraft');
+
+    expect(() => saveWorkingTime({
+      employeeId: person.id!, effectiveFrom: '2025-06-01', weeklyHours: 20, fte: 0.5,
+    })).toThrow('An diesem Datum überschneiden sich mehrere Beschäftigungsperioden. Bitte zuerst die Perioden in der Historie korrigieren.');
+    expect(() => saveWorkingTime({
+      employeeId: person.id!, effectiveFrom: '2023-06-01', weeklyHours: 20, fte: 0.5,
+    })).toThrow('Das Datum muss innerhalb einer Beschäftigungsperiode liegen.');
+  });
 });
