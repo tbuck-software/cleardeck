@@ -1,4 +1,5 @@
 import { saveWorkingTime } from '../repositories/workingTimes';
+import { recordDeparture, switchQualification } from '../repositories/employmentActions';
 import { chooseStaffImport, commitStaffImport } from '../staffImport';
 /**
  * Data IPC Handlers
@@ -160,6 +161,16 @@ export const registerDataHandlers = (): void => {
   handleData('data:saveWorkingTime', (_event, input) => {
     ensureDbReady();
     return saveWorkingTime(input);
+  });
+
+  handleData('employment:recordDeparture', (_event, input) => {
+    ensureDbReady();
+    return recordDeparture(input);
+  });
+
+  handleData('employment:switchQualification', (_event, input) => {
+    ensureDbReady();
+    return switchQualification(input);
   });
 
   handleData('data:save', (_event, input) => {

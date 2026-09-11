@@ -15,6 +15,7 @@ import type {
   WorkingTime,
 } from '../../shared/types';
 import type { TimelineItem } from '../../types/ui';
+import type { EmploymentActionMode } from '../modals/EmploymentActionModal';
 
 export type DetailTab = 'comp' | 'instr' | 'hist';
 
@@ -64,6 +65,7 @@ type EmployeeDetailProps = {
   onSelectInstruction: (instruction: EmployeeInstruction) => void;
   onStartNewPeriod: () => void;
   onSelectTimelineItem: (item: TimelineItem) => void;
+  onOpenEmploymentAction?: (mode: EmploymentActionMode) => void;
 };
 
 const EmployeeDetail = ({
@@ -88,6 +90,7 @@ const EmployeeDetail = ({
   onSelectInstruction,
   onStartNewPeriod,
   onSelectTimelineItem,
+  onOpenEmploymentAction,
 }: EmployeeDetailProps) => {
   const [workingTimeEdit, setWorkingTimeEdit] = useState<WorkingTime | null>();
   const workingTimes = employee.workingTimes ?? [];
@@ -187,7 +190,34 @@ const EmployeeDetail = ({
           </p>
           {employee.note && <p style={{ margin: '10px 0 0', fontSize: 14 }}>{employee.note}</p>}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          {onOpenEmploymentAction && (
+            <details className="cd-action-menu">
+              <summary className="btn btn-secondary">Beschäftigung bearbeiten</summary>
+              <div className="cd-action-menu-popover" role="menu">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={(event) => {
+                    event.currentTarget.closest('details')?.removeAttribute('open');
+                    onOpenEmploymentAction('departure');
+                  }}
+                >
+                  Austritt erfassen
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={(event) => {
+                    event.currentTarget.closest('details')?.removeAttribute('open');
+                    onOpenEmploymentAction('qualification');
+                  }}
+                >
+                  Qualifikation wechseln
+                </button>
+              </div>
+            </details>
+          )}
           <button type="button" className="btn btn-secondary" onClick={onEdit}>
             <Icon name="edit" size={16} />
             Bearbeiten

@@ -115,6 +115,22 @@ export interface SaveWorkingTimeInput {
   fte: number;
 }
 
+export interface RecordDepartureInput {
+  employeeId: number;
+  periodId: number;
+  endDate: string;
+  year: number;
+}
+
+export interface SwitchQualificationInput {
+  employeeId: number;
+  periodId: number;
+  effectiveFrom: string;
+  qualification: string;
+  note?: string | null;
+  year: number;
+}
+
 export interface EmployeeWithPeriod extends Employee {
   workingTimes?: WorkingTime[];
   sourceRef?: string | null;
