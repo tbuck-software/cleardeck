@@ -82,7 +82,7 @@ describe('PatientList', () => {
     screen
       .getAllByRole('row')
       .slice(1)
-      .map((row) => row.querySelector('td > div')?.firstChild?.textContent);
+      .map((row) => row.querySelector('.cd-person-name')?.textContent);
 
   it('sortiert deutsche Namen in beide Richtungen ohne die Eingabeliste zu ändern', () => {
     const input = [
@@ -184,10 +184,26 @@ describe('PatientList', () => {
     expect(screen.getByText(/Kein Pflegegrad/)).toBeInTheDocument();
   });
 
-  it('markiert Handlungsbedarf aus der letzten Visite', () => {
+  it('markiert Handlungsbedarf in der Statusspalte statt neben dem Namen', () => {
     renderList();
 
-    expect(screen.getByText('Handlungsbedarf')).toBeInTheDocument();
+    const cells = screen.getByText('Erika Mustermann').closest('tr')!.querySelectorAll('td');
+    expect(cells[cells.length - 1].textContent).toBe('Handlungsbedarf');
+    expect(cells[0].textContent).not.toContain('Handlungsbedarf');
+  });
+
+  it('zeigt Initialen, Geburtsdatum und Pflegegrad in der Namensspalte', () => {
+    renderList();
+
+    const nameCell = screen.getByText('Erika Mustermann').closest('td')!;
+    expect(nameCell.textContent).toContain('EM');
+    expect(nameCell.querySelector('.cd-person-sub')).toHaveTextContent('geb. 02.03.1941 · PG 3');
+  });
+
+  it('nennt ein unbekanntes Geburtsdatum ohne Gedankenstrich', () => {
+    renderList({ patients: [patients[2]] });
+
+    expect(screen.getByText('geb. unbekannt · Pflegegrad unbekannt')).toBeInTheDocument();
   });
 
   it('nennt das eingestellte Intervall in der Hilfe', () => {
@@ -217,16 +233,9 @@ describe('PatientList', () => {
     expect(screen.getByText(/Kein Pflegegrad/)).toBeInTheDocument();
   });
 
-  it('stellt in der schmalen Liste nicht zwei Lückenhinweise nebeneinander', () => {
+  it('zeigt in der schmalen Liste dieselbe Unterzeile wie in der Tabelle', () => {
     renderList({ wideTable: false, patients: [patients[2]] });
 
-    expect(screen.getByText(/Gutachten-Daten fehlen/)).toBeInTheDocument();
-    expect(screen.queryByText(/Pflegegrad unbekannt/)).not.toBeInTheDocument();
-  });
-
-  it('nennt den unbekannten Pflegegrad, solange die Teilgruppe bekannt ist', () => {
-    renderList({ wideTable: false, patients: [{ ...patients[0], careLevel: null }] });
-
-    expect(screen.getByText(/Pflegegrad unbekannt/)).toBeInTheDocument();
+    expect(screen.getByText('geb. unbekannt · Pflegegrad unbekannt')).toBeInTheDocument();
   });
 });

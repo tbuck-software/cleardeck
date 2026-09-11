@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 import Icon from '../ui/Icon';
 import Segmented from '../ui/Segmented';
 import { formatDateDE } from '../../utils/dateFormat';
+import DataTable, { type DataTableColumn } from '../ui/DataTable';
 import {
   TEILGRUPPE_SHORT,
   teilgruppeOf,
@@ -11,19 +12,13 @@ import {
   needsAssessment,
   visitDue,
 } from '../../utils/qpr';
-import type { PatientVisit, PatientWithLatestVisit } from '../../shared/types';
+import type { VisitDue } from '../../utils/qpr';
+import type { PatientVisit, PatientWithLatestVisit, Teilgruppe } from '../../shared/types';
 import type { TeilgruppeFilter } from '../../types/ui';
 import { careLevelLabel } from '../../utils/careLevel';
 
-type SortKey = 'name' | 'diagnosis' | 'group' | 'visits' | 'latest' | 'due';
-const COLUMNS: { key: SortKey; label: string }[] = [
-  { key: 'name', label: 'Name' },
-  { key: 'diagnosis', label: 'Diagnose' },
-  { key: 'group', label: 'Teilgruppe' },
-  { key: 'visits', label: 'Visiten' },
-  { key: 'latest', label: 'Letzte Visite' },
-  { key: 'due', label: 'Nächste fällig' },
-];
+type SortKey = 'name' | 'diagnosis' | 'group' | 'visits' | 'latest' | 'due' | 'action';
+type PatientRow = { patient: PatientWithLatestVisit; group: Teilgruppe | null; due: VisitDue };
 const collator = new Intl.Collator('de', { sensitivity: 'base', numeric: true });
 
 export const dueColor = (daysUntilDue: number): string =>
@@ -32,6 +27,15 @@ export const dueColor = (daysUntilDue: number): string =>
     : daysUntilDue <= 14
       ? 'var(--color-accent-700)'
       : 'var(--color-neutral-700)';
+
+/** Ohne Geburtsdatum steht „unbekannt“ statt eines hängenden Strichs. */
+const personSubline = (patient: PatientWithLatestVisit): string => {
+  const born =
+    patient.birthDate && validDate(patient.birthDate)
+      ? `geb. ${formatDateDE(patient.birthDate)}`
+      : 'geb. unbekannt';
+  return `${born} · ${careLevelLabel(patient.careLevel)}`;
+};
 
 type PatientListProps = {
   search: string;
@@ -82,6 +86,7 @@ const PatientList = ({
             visits: patient.visitCount ?? visitTrends[patient.id ?? -1]?.length ?? null,
             latest: dateValue(patient.latestVisitDate),
             due: dateValue(due.dueDate),
+            action: patient.latestActionNeeded ? 'ja' : 'nein',
           };
           return { patient, group, due, value: values[sort.key] };
         })
@@ -103,6 +108,78 @@ const PatientList = ({
         }),
     [patients, visitTrends, today, visitIntervalDays, sort],
   );
+
+  const columns: DataTableColumn<PatientRow, SortKey>[] = [
+    {
+      key: 'diagnosis',
+      label: 'Diagnose',
+      compact: true,
+      cell: ({ patient }) => patient.diagnosis || '—',
+    },
+    {
+      key: 'group',
+      label: 'Teilgruppe',
+      cell: ({ patient, group }) => (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span
+            className={`tag ${group ? 'tag-accent-2' : 'tag-neutral'}`}
+            style={{ fontWeight: 700 }}
+          >
+            {group && group !== 'none' ? group : '–'}
+          </span>
+          <span style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>
+            {group ? TEILGRUPPE_SHORT[group] : 'Gutachten-Daten fehlen'}
+          </span>
+          {patient.hkpCode && (
+            <span className="tag tag-accent" style={{ fontSize: 10 }}>
+              HKP {hkpCodesOf(patient).join(', ')}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'visits',
+      label: 'Visiten',
+      title: 'Nach Anzahl erfasster Visiten sortieren',
+      cell: ({ patient }) => {
+        const trend = (visitTrends[patient.id ?? -1] ?? []).slice(-4);
+        return (
+          <div style={{ display: 'flex', gap: 4 }}>
+            {trend.map((visit) => (
+              <span
+                key={visit.id}
+                title={`${formatDateDE(visit.visitDate)}${visit.actionNeeded ? ' · Handlungsbedarf' : ''}`}
+                className="cd-trend-bar"
+                style={{
+                  background: visit.actionNeeded
+                    ? 'var(--color-accent-500)'
+                    : 'var(--color-accent-2-300)',
+                }}
+              />
+            ))}
+            {trend.length === 0 && <span className="cd-muted-13">—</span>}
+          </div>
+        );
+      },
+    },
+    {
+      key: 'latest',
+      label: 'Letzte Visite',
+      nowrap: true,
+      cell: ({ patient }) =>
+        patient.latestVisitDate ? formatDateDE(patient.latestVisitDate) : 'keine',
+    },
+    {
+      key: 'due',
+      label: 'Nächste fällig',
+      nowrap: true,
+      compact: true,
+      cell: ({ due }) => (
+        <span style={{ fontWeight: 600, color: dueColor(due.daysUntilDue) }}>{due.label}</span>
+      ),
+    },
+  ];
 
   const toggleSort = (key: SortKey) =>
     setSort((current) => ({ key, dir: current.key === key && current.dir === 1 ? -1 : 1 }));
@@ -183,159 +260,29 @@ const PatientList = ({
         </div>
       )}
 
-      {rows.length > 0 && !wideTable && (
-        <div className="cd-panel">
-          {rows.map(({ patient, group, due }) => (
-            <button
-              key={patient.id}
-              type="button"
-              className="cd-item"
-              onClick={() => void onSelect(patient)}
-            >
-              <span
-                className={`tag ${group ? 'tag-accent-2' : 'tag-neutral'}`}
-                style={{ flex: 'none', fontWeight: 700, width: 34, justifyContent: 'center' }}
-              >
-                {group && group !== 'none' ? group : '–'}
-              </span>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600 }}>{patient.name}</div>
-                <div className="cd-muted-13">
-                  {patient.diagnosis || 'Ohne Diagnose'} ·{' '}
-                  {group ? TEILGRUPPE_SHORT[group] : 'Gutachten-Daten fehlen'}
-                  {/* Zwei Lückenhinweise nebeneinander sagen nicht mehr als einer. */}
-                  {(group != null || patient.careLevel != null) &&
-                    ` · ${careLevelLabel(patient.careLevel)}`}
-                </div>
-              </div>
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  flex: 'none',
-                  color: dueColor(due.daysUntilDue),
-                }}
-              >
-                {due.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {rows.length > 0 && wideTable && (
-        <div className="cd-table-wrap">
-          <table className="ds-table">
-            <thead>
-              <tr>
-                {COLUMNS.map((column) => (
-                  <th
-                    key={column.key}
-                    className="cd-th"
-                    aria-sort={
-                      sort.key === column.key
-                        ? sort.dir === 1
-                          ? 'ascending'
-                          : 'descending'
-                        : 'none'
-                    }
-                  >
-                    <button
-                      type="button"
-                      className="cd-sort-button"
-                      onClick={() => toggleSort(column.key)}
-                      title={
-                        column.key === 'visits'
-                          ? 'Nach Anzahl erfasster Visiten sortieren'
-                          : undefined
-                      }
-                    >
-                      {column.label}{' '}
-                      <span aria-hidden="true" style={{ color: 'var(--color-accent)' }}>
-                        {sort.key === column.key ? (sort.dir === 1 ? '↑' : '↓') : ''}
-                      </span>
-                    </button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(({ patient, group, due }) => {
-                const trend = (visitTrends[patient.id ?? -1] ?? []).slice(-4);
-                return (
-                  <tr key={patient.id} className="cd-row" onClick={() => void onSelect(patient)}>
-                    <td>
-                      <div
-                        style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}
-                      >
-                        {patient.name}
-                        {patient.latestActionNeeded && (
-                          <span className="tag tag-accent" style={{ fontSize: 10 }}>
-                            Handlungsbedarf
-                          </span>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>
-                        geb. {formatDateDE(patient.birthDate)}
-                        {` · ${careLevelLabel(patient.careLevel)}`}
-                      </div>
-                    </td>
-                    <td>{patient.diagnosis || '—'}</td>
-                    <td>
-                      <div
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
-                      >
-                        <span
-                          className={`tag ${group ? 'tag-accent-2' : 'tag-neutral'}`}
-                          style={{ fontWeight: 700 }}
-                        >
-                          {group && group !== 'none' ? group : '–'}
-                        </span>
-                        <span style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>
-                          {group ? TEILGRUPPE_SHORT[group] : 'Gutachten-Daten fehlen'}
-                        </span>
-                        {patient.hkpCode && (
-                          <span className="tag tag-accent" style={{ fontSize: 10 }}>
-                            HKP {hkpCodesOf(patient).join(', ')}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
-                        {trend.map((visit) => (
-                          <span
-                            key={visit.id}
-                            title={`${formatDateDE(visit.visitDate)}${visit.actionNeeded ? ' · Handlungsbedarf' : ''}`}
-                            className="cd-trend-bar"
-                            style={{
-                              background: visit.actionNeeded
-                                ? 'var(--color-accent-500)'
-                                : 'var(--color-accent-2-300)',
-                            }}
-                          />
-                        ))}
-                        {trend.length === 0 && <span className="cd-muted-13">—</span>}
-                      </div>
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {patient.latestVisitDate ? formatDateDE(patient.latestVisitDate) : 'keine'}
-                    </td>
-                    <td
-                      style={{
-                        whiteSpace: 'nowrap',
-                        fontWeight: 600,
-                        color: dueColor(due.daysUntilDue),
-                      }}
-                    >
-                      {due.label}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+      {rows.length > 0 && (
+        <DataTable<PatientRow, SortKey>
+          rows={rows}
+          rowKey={({ patient }) => patient.id ?? patient.name}
+          person={{
+            key: 'name',
+            name: ({ patient }) => patient.name,
+            subline: ({ patient }) => personSubline(patient),
+          }}
+          columns={columns}
+          status={{
+            key: 'action',
+            label: 'Status',
+            cell: ({ patient }) =>
+              patient.latestActionNeeded ? (
+                <span className="tag tag-accent">Handlungsbedarf</span>
+              ) : null,
+          }}
+          sort={sort}
+          onSort={toggleSort}
+          onOpen={({ patient }) => void onSelect(patient)}
+          compact={!wideTable}
+        />
       )}
     </div>
   );
