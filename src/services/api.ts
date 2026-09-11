@@ -156,10 +156,6 @@ export const api = {
   employment: {
     integrityOverview: () =>
       call('getEmploymentIntegrityOverview', baseApi.getEmploymentIntegrityOverview),
-    previewPeriodDate: (input: Parameters<Api['previewPeriodDateCorrection']>[0]) =>
-      call('previewPeriodDateCorrection', baseApi.previewPeriodDateCorrection, input),
-    applyPeriodDate: (input: Parameters<Api['applyPeriodDateCorrection']>[0]) =>
-      call('applyPeriodDateCorrection', baseApi.applyPeriodDateCorrection, input),
     previewConsolidate: (input: Parameters<Api['previewConsolidatePeriods']>[0]) =>
       call('previewConsolidatePeriods', baseApi.previewConsolidatePeriods, input),
     applyConsolidate: (input: Parameters<Api['applyConsolidatePeriods']>[0]) =>

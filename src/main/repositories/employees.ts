@@ -19,7 +19,30 @@ import { buildEmployeeChangeEvents } from '../employeeHistory';
 import { saveEvent } from './events';
 import { daysBetween } from '../../utils/qpr';
 import { localDate, requireDate, shiftDays } from '../../utils/calendarDate';
-import { contiguousEmploymentStart } from '../../utils/employment';
+import {
+  contiguousEmploymentStart,
+  employmentMessages,
+  periodsOverlap,
+} from '../../utils/employment';
+import { recordRepairEvent } from '../employmentRepairShared';
+
+/** Legacy employees.fte/weeklyHours are a cache of the term effective today. */
+export const refreshEmployeeHoursCache = (
+  db: ReturnType<typeof getDb>,
+  employeeId: number,
+): void => {
+  const current = db
+    .prepare(
+      'SELECT t.fte,t.weeklyHours FROM employment_terms t JOIN employment_periods p ON p.id=t.periodId WHERE p.employeeId=? AND t.effectiveFrom<=? ORDER BY t.effectiveFrom DESC,t.id DESC LIMIT 1',
+    )
+    .get(employeeId, localDate()) as { fte: number; weeklyHours: number | null } | undefined;
+  if (current)
+    db.prepare('UPDATE employees SET fte=?,weeklyHours=? WHERE id=?').run(
+      current.fte,
+      current.weeklyHours,
+      employeeId,
+    );
+};
 
 /**
  * Compute employee status for a given year
@@ -253,6 +276,52 @@ export const listPeriods = (employeeId: number): EmploymentPeriod[] => {
   return rows;
 };
 
+type PeriodBoundsInput = { startDate: string; endDate: string | null };
+
+/** Shortening a period must not orphan a working-time record outside it. */
+const requireTermsInRange = (
+  db: ReturnType<typeof getDb>,
+  periodId: number,
+  bounds: PeriodBoundsInput,
+): void => {
+  const outside = db
+    .prepare(
+      'SELECT COUNT(*) AS count FROM employment_terms WHERE periodId=? AND (effectiveFrom<? OR (? IS NOT NULL AND effectiveFrom>?))',
+    )
+    .get(periodId, bounds.startDate, bounds.endDate, bounds.endDate) as { count: number };
+  if (Number(outside.count) > 0)
+    throw new Error(
+      `${outside.count} Arbeitszeitstand/-stände lägen außerhalb des neuen Zeitraums. Datum und Arbeitszeit bitte getrennt prüfen.`,
+    );
+};
+
+/** The single write path for period dates keeps the previous values as evidence. */
+const recordPeriodDateCorrection = (
+  before: EmploymentPeriod & { id: number; employeeId: number },
+  after: PeriodBoundsInput,
+): void => {
+  if (before.startDate === after.startDate && (before.endDate ?? null) === after.endDate) return;
+  recordRepairEvent(
+    before.employeeId,
+    'Zeitraum korrigiert – ursprüngliche Daten erhalten',
+    'Die Beschäftigungsdaten wurden ausdrücklich korrigiert. Die ursprünglichen Daten bleiben hier als Nachweis erhalten.',
+    {
+      kind: 'employment-period-date-correction',
+      period: {
+        id: before.id,
+        employeeId: before.employeeId,
+        startDate: before.startDate,
+        endDate: before.endDate ?? null,
+        qualification: before.qualification,
+        note: before.note ?? null,
+      },
+      correctedDates: { startDate: after.startDate, endDate: after.endDate },
+    },
+    `${before.startDate} – ${before.endDate ?? 'offen'}`,
+    `${after.startDate} – ${after.endDate ?? 'offen'}`,
+  );
+};
+
 /**
  * Save (create or update) an employee and their period
  */
@@ -327,16 +396,17 @@ export const saveEmployee = (input: {
         .get(periodId, employeeId)
     )
       throw new Error('Beschäftigungsperiode nicht gefunden.');
-    const overlap = db
-      .prepare(
-        "SELECT id FROM employment_periods WHERE employeeId=? AND id<>? AND startDate<=? AND COALESCE(endDate,'9999-12-31')>=?",
-      )
-      .get(employeeId, periodId ?? -1, input.endDate || '9999-12-31', input.startDate);
-    if (overlap)
-      throw new Error(
-        'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren.',
-      );
+    const siblings = db
+      .prepare('SELECT startDate,endDate FROM employment_periods WHERE employeeId=? AND id<>?')
+      .all(employeeId, periodId ?? -1) as { startDate: string; endDate: string | null }[];
+    const bounds = { startDate: input.startDate, endDate: input.endDate || null };
+    if (siblings.some((other) => periodsOverlap(bounds, other)))
+      throw new Error(employmentMessages.overlap);
     if (periodId) {
+      const before = db
+        .prepare('SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods WHERE id=?')
+        .get(periodId) as EmploymentPeriod & { id: number; employeeId: number };
+      requireTermsInRange(db, periodId, bounds);
       db.prepare(
         'UPDATE employment_periods SET startDate=?,endDate=?,qualification=? WHERE id=?',
       ).run(input.startDate, input.endDate || null, input.qualification, periodId);
@@ -345,6 +415,7 @@ export const saveEmployee = (input: {
           input.periodNote,
           periodId,
         );
+      recordPeriodDateCorrection(before, bounds);
     } else {
       periodId = Number(
         db
@@ -409,18 +480,7 @@ export const saveEmployee = (input: {
           eventDate: effective,
         }).forEach((event) => saveEvent({ employeeId, ...event }));
     }
-    // Retain legacy columns as a current-value cache; reports only use terms.
-    const current = db
-      .prepare(
-        'SELECT t.fte,t.weeklyHours FROM employment_terms t JOIN employment_periods p ON p.id=t.periodId WHERE p.employeeId=? AND t.effectiveFrom<=? ORDER BY t.effectiveFrom DESC LIMIT 1',
-      )
-      .get(employeeId, localDate()) as { fte: number; weeklyHours: number | null } | undefined;
-    if (current)
-      db.prepare('UPDATE employees SET fte=?,weeklyHours=? WHERE id=?').run(
-        current.fte,
-        current.weeklyHours,
-        employeeId,
-      );
+    refreshEmployeeHoursCache(db, employeeId);
   })();
   return getYearDataset(input.year);
 };

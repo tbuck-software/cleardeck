@@ -55,7 +55,6 @@ type EmployeeListProps = {
   onImport?: () => void;
   onExport: (format: 'csv' | 'xlsx') => void | Promise<void>;
   onOpenReport: () => void;
-  onOpenIntegrity?: () => void;
   onCreate: () => void;
   onSelect: (employee: EmployeeWithPeriod) => void | Promise<void>;
 };
@@ -79,7 +78,6 @@ const EmployeeList = ({
   onExport,
   onImport,
   onOpenReport,
-  onOpenIntegrity,
   onCreate,
   onSelect,
 }: EmployeeListProps) => {
@@ -180,17 +178,6 @@ const EmployeeList = ({
                 >
                   Als CSV exportieren
                 </button>
-                {onOpenIntegrity && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      onOpenIntegrity();
-                    }}
-                  >
-                    Daten prüfen
-                  </button>
-                )}
               </div>
             </>
           )}

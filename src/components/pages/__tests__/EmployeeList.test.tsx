@@ -89,15 +89,6 @@ describe('EmployeeList', () => {
     expect(onExport).toHaveBeenCalledWith('xlsx');
   });
 
-  it('bietet die Datenintegrität im bestehenden Team-Menü an', () => {
-    const onOpenIntegrity = vi.fn();
-    renderList({ onOpenIntegrity });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Weitere Aktionen' }));
-    fireEvent.click(screen.getByText('Daten prüfen'));
-    expect(onOpenIntegrity).toHaveBeenCalledTimes(1);
-  });
-
   it('summiert Stunden und VZÄ in der Fußzeile', () => {
     renderList();
 

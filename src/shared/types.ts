@@ -531,52 +531,47 @@ export type IntegrityIssueKind =
   | 'suspicious-period'
   | 'same-name';
 
+/**
+ * A finding of the employment scan. It carries ids and a severity only; the
+ * wording lives in the renderer next to the action that clears it.
+ */
 export interface IntegrityIssue {
   kind: IntegrityIssueKind;
   severity: 'error' | 'warning';
-  title: string;
-  detail: string;
-  employeeIds: number[];
+  employeeId: number;
+  /** The other person of a same-name pair. */
+  relatedEmployeeId: number | null;
   periodIds: number[];
+}
+
+export interface IntegrityEmployee {
+  id: number;
+  name: string;
+  birthDate: string | null;
+}
+
+export interface IntegrityPeriod {
+  id: number;
+  employeeId: number;
+  startDate: string;
+  endDate: string | null;
+  qualification: string | null;
+  note: string | null;
+  weeklyHours: number | null;
+  fte: number | null;
 }
 
 export interface EmploymentIntegrityOverview {
   issues: IntegrityIssue[];
-  counts: Record<IntegrityIssueKind, number>;
-  checkedAt: string;
-  /** Repair-only roster; unlike reporting datasets this also includes employees without periods. */
-  repairEmployees: EmploymentRepairEmployee[];
-}
-
-export interface EmploymentRepairEmployee {
-  id: number;
-  name: string;
-  birthDate: string | null;
-  startDate: string | null;
-  endDate: string | null;
-  qualification: string | null;
-  periodCount: number;
+  /** Repair roster; unlike reporting datasets this also includes people without periods. */
+  employees: IntegrityEmployee[];
+  periods: IntegrityPeriod[];
 }
 
 export interface RepairRecordSummary {
   table: string;
   ids: number[];
   count: number;
-}
-
-export interface PeriodDatePreview {
-  kind: 'period-date';
-  token: string;
-  period: {
-    id: number;
-    employeeId: number;
-    employeeName: string;
-    qualification: string | null;
-    before: { startDate: string; endDate: string | null };
-    after: { startDate: string; endDate: string | null };
-  };
-  affectedRecords: RepairRecordSummary[];
-  conflicts: string[];
 }
 
 export interface ConsolidatePreview {
@@ -613,9 +608,6 @@ export interface EmployeeMergePreview {
   token: string;
   target: { id: number; name: string };
   source: { id: number; name: string };
-  /** Full source row retained in the merge audit event before the source is removed. */
-  sourceSnapshot: Record<string, unknown>;
-  periods: { target: number; source: number };
   linkedRecords: RepairRecordSummary[];
   conflicts: string[];
 }
