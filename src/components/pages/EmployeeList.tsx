@@ -93,7 +93,7 @@ const EmployeeList = ({
         case 'weeklyHours':
           return employee.weeklyHours ?? -1;
         case 'startDate':
-          return employee.employmentStartDate ?? employee.startDate;
+          return employee.employmentStartDate;
         default:
           return String(employee[sort.key] ?? '');
       }
@@ -259,7 +259,7 @@ const EmployeeList = ({
                   <div style={{ fontWeight: 600 }}>{employee.name}</div>
                   <div className="cd-muted-13">
                     {employee.qualification} · {employee.weeklyHours ?? '—'} h · seit{' '}
-                    {formatDateDE(employee.employmentStartDate ?? employee.startDate)}
+                    {formatDateDE(employee.employmentStartDate)}
                   </div>
                 </div>
                 <span style={{ fontWeight: 700, flex: 'none' }}>
@@ -324,7 +324,7 @@ const EmployeeList = ({
                     </td>
                     <td>{employee.qualification}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      {formatDateDE(employee.employmentStartDate ?? employee.startDate)}
+                      {formatDateDE(employee.employmentStartDate)}
                     </td>
                     <td
                       style={{
