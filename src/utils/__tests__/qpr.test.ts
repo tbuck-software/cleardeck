@@ -10,6 +10,8 @@ import {
   visitDue,
   deriveServiceScope,
   serviceScopeOf,
+  SERVICE_SCOPE_LABEL,
+  SERVICES_NOT_RECORDED,
 } from '../qpr';
 
 describe('teilgruppeOf', () => {
@@ -118,5 +120,22 @@ describe('QPR-Leistungsumfang', () => {
     expect(
       serviceScopeOf({ serviceScope: 'eligible', serviceScopeSource: 'legacy' }),
     ).toMatchObject({ scope: 'eligible', reason: expect.stringContaining('Übernommene') });
+  });
+
+  it('begründet ohne das Ergebnis zu wiederholen und nennt die Liste im Label', () => {
+    expect(deriveServiceScope(['s36-care']).reason).toBe(
+      'Körperbezogene Pflege nach § 36 SGB XI gehört zum Versorgungsumfang.',
+    );
+    expect(deriveServiceScope(['s36-care']).reason).not.toMatch(/weil/);
+    expect(SERVICE_SCOPE_LABEL.eligible).toBe('MD-Personenliste: ja');
+    expect(SERVICE_SCOPE_LABEL.excluded).toBe('MD-Personenliste: nein');
+    expect(SERVICE_SCOPE_LABEL.unknown).toBe('MD-Personenliste: offen');
+  });
+
+  it('nennt den unbekannten Zustand überall gleich', () => {
+    expect(deriveServiceScope([]).reason).toBe(SERVICES_NOT_RECORDED);
+    expect(serviceScopeOf({ serviceScope: 'unknown', serviceScopeSource: 'legacy' }).reason).toBe(
+      SERVICES_NOT_RECORDED,
+    );
   });
 });

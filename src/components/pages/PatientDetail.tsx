@@ -13,6 +13,8 @@ import {
   needsAssessment,
   intensiveCareForList,
   serviceScopeOf,
+  SERVICE_SCOPE_LABEL,
+  SERVICES_NOT_RECORDED,
   visitDue,
 } from '../../utils/qpr';
 import type { PatientVisit, PatientWithLatestVisit, ServiceDefinition } from '../../shared/types';
@@ -80,19 +82,7 @@ const PatientDetail = ({
     ? orderedServices
         .map((service) => currentServiceLabels.get(service.serviceDefinitionId) ?? service.label)
         .join('; ')
-    : patient.serviceScopeSource === 'legacy'
-      ? 'Leistungen noch nicht erfasst (übernommene Entscheidung)'
-      : 'Leistungen noch nicht erfasst';
-  const serviceScopeLabel =
-    serviceDecision.scope === 'eligible'
-      ? 'Auf der Liste'
-      : serviceDecision.scope === 'excluded'
-        ? 'Nicht auf der Liste'
-        : 'Ungeklärt';
-  const serviceScopeReason = serviceDecision.reason.replace(
-    /^(Auf der Liste|Nicht auf der Liste), weil /,
-    '',
-  );
+    : SERVICES_NOT_RECORDED;
 
   const missing = 'fehlt';
   const facts: { label: string; value: string; mutedValue?: string; wide?: boolean }[] = [
@@ -102,9 +92,9 @@ const PatientDetail = ({
       wide: true,
     },
     {
-      label: 'MD-Personenliste',
-      value: serviceScopeLabel,
-      mutedValue: serviceScopeReason,
+      label: 'Einordnung',
+      value: SERVICE_SCOPE_LABEL[serviceDecision.scope],
+      mutedValue: serviceDecision.reason,
       wide: true,
     },
     {

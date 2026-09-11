@@ -89,10 +89,10 @@ const AuditPage = ({
     {
       id: 'scope',
       title: unknownScope.length
-        ? `${unknownScope.length} aktive Personen mit ungeklärtem Leistungsumfang`
-        : 'Leistungsumfang der aktiven Personen geklärt',
+        ? `${unknownScope.length} aktive Personen ohne erfasste Leistungen`
+        : 'Leistungen aller aktiven Personen erfasst',
       sub: unknownScope.length
-        ? `${nameList(unknownScope.map((p) => p.name))} · Stammdaten öffnen und erbrachte Leistungen auswählen`
+        ? `${nameList(unknownScope.map((p) => p.name))} · in den Stammdaten die erbrachten Leistungen auswählen`
         : '',
       dot: unknownScope.length ? 'var(--bad-800)' : 'var(--ok-800)',
       go: onGoPatients,

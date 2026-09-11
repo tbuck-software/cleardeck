@@ -64,8 +64,8 @@ describe('PatientModal Leistungsumfang', () => {
         onSave={vi.fn()}
       />,
     );
-    expect(screen.getAllByText('Ungeklärt')[0]).toBeInTheDocument();
-    expect(screen.getByText('Leistungen noch nicht erfasst.')).toBeInTheDocument();
+    expect(screen.getByText('MD-Personenliste: offen')).toBeInTheDocument();
+    expect(screen.getByText('Leistungen sind noch nicht erfasst.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Leistungen noch unbekannt' })).toHaveAttribute(
       'aria-pressed',
       'true',
@@ -82,7 +82,8 @@ describe('PatientModal Leistungsumfang', () => {
         onSave={vi.fn()}
       />,
     );
-    expect(screen.getByText(/Übernommene frühere Entscheidung/)).toBeInTheDocument();
+    expect(screen.getByText('MD-Personenliste: ja')).toBeInTheDocument();
+    expect(screen.getByText(/Übernommene Entscheidung aus der früheren Erfassung/)).toBeInTheDocument();
   });
 
   it('öffnet Treffer bei der Suche und erklärt inaktive historische Zuordnungen', () => {
