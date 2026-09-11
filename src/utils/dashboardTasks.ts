@@ -112,8 +112,8 @@ export const buildDashboardTasks = ({
     if (serviceScopeOf(patient).scope === 'unknown')
       tasks.push({
         id: `patient-scope-${patient.id}`,
-        title: `${patient.name} · Leistungsumfang klären`,
-        sub: 'Zugehörigkeit zur QPR-Personenliste bestätigen',
+        title: `${patient.name} · Leistungen erfassen`,
+        sub: 'Ohne erfasste Leistungen fehlt die Einordnung für die MD-Personenliste',
         tag: 'Stammdaten',
         tagClass: 'tag-accent',
         weight: 2,

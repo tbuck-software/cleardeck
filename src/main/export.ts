@@ -161,7 +161,7 @@ export const exportPersonList = async (): Promise<{
   if (unknown.length)
     return {
       saved: false,
-      error: `Leistungsumfang für ${unknown.length} aktive Personen ungeklärt. Öffne die Stammdaten und wähle die erbrachten Leistungen, bevor du die Anlage-7-Liste exportierst.`,
+      error: `Für ${unknown.length} aktive Personen sind die Leistungen noch nicht erfasst. In den Stammdaten die erbrachten Leistungen auswählen, bevor die Anlage-7-Liste exportiert wird.`,
     };
   const patients = active.filter((p) => serviceScopeOf(p).scope === 'eligible');
   const incomplete = patients.filter(

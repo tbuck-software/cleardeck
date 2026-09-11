@@ -9,6 +9,7 @@ import {
   needsAssessment,
   serviceScopeOf,
   INTENSIVE_CARE_LABEL,
+  SERVICE_SCOPE_LABEL,
   TEILGRUPPE_LABEL,
   teilgruppeOf,
 } from '../../utils/qpr';
@@ -72,8 +73,8 @@ const PatientModal = ({
   const selectedSummary =
     selectedServices.length === 0
       ? serviceSource === 'services'
-        ? 'Leistungen noch unbekannt'
-        : 'Keine Auswahl'
+        ? 'Noch nicht erfasst'
+        : 'Übernommene Entscheidung'
       : `${selectedServices
           .slice(0, 2)
           .map((service) => service.name)
@@ -228,11 +229,7 @@ const PatientModal = ({
                 className={`tag ${serviceDecision.scope === 'eligible' ? 'tag-ok' : serviceDecision.scope === 'excluded' ? 'tag-neutral' : 'tag-accent'}`}
                 style={{ fontWeight: 700 }}
               >
-                {serviceDecision.scope === 'eligible'
-                  ? 'Auf der Liste'
-                  : serviceDecision.scope === 'excluded'
-                    ? 'Nicht auf der Liste'
-                    : 'Ungeklärt'}
+                {SERVICE_SCOPE_LABEL[serviceDecision.scope]}
               </span>
               <span>{serviceDecision.reason}</span>
             </div>
