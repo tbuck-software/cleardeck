@@ -626,3 +626,91 @@ textarea.input {
     animation: none;
   }
 }
+
+/* — combobox —
+   Long catalogue pickers: a filter field with the hits in a .cd-menu below it. */
+
+.cd-combobox {
+  position: relative;
+}
+
+.cd-combobox-input {
+  padding-right: 34px;
+  text-overflow: ellipsis;
+}
+
+.cd-combobox-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-neutral-700);
+  cursor: pointer;
+}
+
+.cd-combobox-clear:hover {
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
+  color: var(--color-text);
+}
+
+.cd-combobox-menu {
+  left: 0;
+  right: 0;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.cd-combobox-group {
+  margin: 6px 0 2px;
+  padding: 0 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-neutral-600);
+}
+
+.cd-combobox-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: calc(var(--radius-lg) - 6px);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.cd-combobox-option.is-active {
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.cd-combobox-option[aria-selected='true'] .cd-combobox-label {
+  font-weight: 600;
+}
+
+.cd-combobox-option[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.cd-combobox-code {
+  flex: none;
+  min-width: 54px;
+  justify-content: center;
+}
+
+.cd-combobox-empty {
+  margin: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--color-neutral-700);
+}
