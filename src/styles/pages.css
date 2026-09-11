@@ -396,6 +396,14 @@
   grid-column: 1 / -1;
 }
 
+.cd-name-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 .cd-notice {
   display: flex;
   gap: 12px;

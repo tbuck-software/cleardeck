@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Dialog from '../ui/Dialog';
 import Icon from '../ui/Icon';
 import BirthDateInput from '../ui/BirthDateInput';
-import type { EmployeeWithPeriod, QualificationType } from '../../shared/types';
+import type { IntegrityEmployee, QualificationType } from '../../shared/types';
 import type { EditModalState, FormState } from '../../types/ui';
 
 type EmployeeModalProps = {
@@ -18,8 +18,9 @@ type EmployeeModalProps = {
   onClose: () => void;
   onSave: () => void;
   onDelete?: () => void;
-  existingEmployees?: EmployeeWithPeriod[];
-  onOpenExisting?: (employee: EmployeeWithPeriod) => void;
+  /** Full roster of the employment scan, so people without periods are visible too. */
+  existingEmployees?: IntegrityEmployee[];
+  onOpenExisting?: (employeeId: number) => void;
 };
 
 const EmployeeModal = ({
@@ -38,6 +39,7 @@ const EmployeeModal = ({
   existingEmployees = [],
   onOpenExisting,
 }: EmployeeModalProps) => {
+  const [pendingOpen, setPendingOpen] = useState<IntegrityEmployee | null>(null);
   const isCreate = state.mode === 'create';
   const matchingEmployees = isCreate
     ? existingEmployees.filter(
@@ -81,23 +83,40 @@ const EmployeeModal = ({
             value={state.name}
             onChange={(event) => onStateChange({ name: event.target.value })}
           />
-          {matchingEmployees.length > 0 && (
-            <div className="cd-muted-13" role="status" style={{ marginTop: 6 }}>
+          {matchingEmployees.length > 0 && !pendingOpen && (
+            <div className="cd-muted-13 cd-name-hint" role="status">
               Gleicher Name ist nur ein Hinweis. Bitte prüfen, ob eine vorhandene Person gemeint ist.
-              {onOpenExisting && matchingEmployees.map((employee) => (
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  key={employee.id}
-                  style={{ padding: '0 4px', marginLeft: 4 }}
-                  onClick={() => {
-                    onClose();
-                    onOpenExisting(employee);
-                  }}
-                >
-                  {employee.name} öffnen
-                </button>
-              ))}
+              {onOpenExisting &&
+                matchingEmployees.map((employee) => (
+                  <button
+                    type="button"
+                    className="cd-link"
+                    key={employee.id}
+                    onClick={() => setPendingOpen(employee)}
+                  >
+                    {employee.name} öffnen
+                  </button>
+                ))}
+            </div>
+          )}
+          {pendingOpen && (
+            <div className="cd-muted-13 cd-name-hint" role="status">
+              Die Eingaben werden verworfen. {pendingOpen.name} trotzdem öffnen?
+              <button
+                type="button"
+                className="cd-link"
+                onClick={() => {
+                  const target = pendingOpen.id;
+                  setPendingOpen(null);
+                  onClose();
+                  onOpenExisting?.(target);
+                }}
+              >
+                Öffnen
+              </button>
+              <button type="button" className="cd-link" onClick={() => setPendingOpen(null)}>
+                Abbrechen
+              </button>
             </div>
           )}
         </div>

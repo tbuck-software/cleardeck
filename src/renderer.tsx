@@ -691,10 +691,26 @@ const App = () => {
   const openTarget = useCallback(
     (target: TaskTarget) => {
       if (target.kind === 'employee') {
+        const known = employmentIntegrity.employees.find((entry) => entry.id === target.id);
         const employee =
           directoryDataset?.employees.find((entry) => entry.id === target.id) ??
           currentDataset?.employees.find((entry) => entry.id === target.id) ??
-          dataset?.employees.find((entry) => entry.id === target.id);
+          dataset?.employees.find((entry) => entry.id === target.id) ??
+          // A person without any employment period is in no reporting dataset,
+          // yet still needs to be reachable to be merged or completed.
+          (known
+            ? {
+                id: known.id,
+                name: known.name,
+                birthDate: known.birthDate,
+                qualification: '',
+                startDate: '',
+                endDate: null,
+                fte: null,
+                weeklyHours: null,
+                status: 'active' as const,
+              }
+            : undefined);
         if (employee) void navigateToEmployee(employee, target.tab ?? 'comp');
         return;
       }
@@ -705,6 +721,7 @@ const App = () => {
       dataset?.employees,
       currentDataset?.employees,
       directoryDataset?.employees,
+      employmentIntegrity.employees,
       patients,
       navigateToEmployee,
       navigateToPatient,
@@ -1616,8 +1633,8 @@ const App = () => {
         onClose={() => setEditModal((prev) => ({ ...prev, open: false }))}
         onSave={handleEditModalSave}
         onDelete={form.id ? () => confirmDeleteEmployee(form.id) : undefined}
-        existingEmployees={directoryDataset?.employees ?? []}
-        onOpenExisting={(employee) => void navigateToEmployee(employee)}
+        existingEmployees={employmentIntegrity.employees}
+        onOpenExisting={(employeeId) => openTarget({ kind: 'employee', id: employeeId })}
       />
 
       {eventModal.open && selectedEmployee && (
