@@ -2,7 +2,8 @@
 // @vitest-environment node
 
 import SqliteAdapter from './sqliteAdapter';
-import { runMigrations } from '../database/migrations';
+import { migrations, runMigrations } from '../database/migrations';
+import { v022_patient_service_scope } from '../database/migrations/v022_patient_service_scope';
 import {
   addServiceDefinition,
   listServiceDefinitions,
@@ -136,6 +137,25 @@ describe('Leistungskatalog und Personenlistenzuordnung', () => {
     expect(() =>
       updateServiceDefinition({ id: 999999, name: 'Nicht vorhanden', serviceType: 's36-care' }),
     ).toThrow(/nicht gefunden/);
+  });
+
+  it('behält nur ausdrückliche Alt-Entscheidungen als Altbestand', () => {
+    const before = new SqliteAdapter(':memory:');
+    migrations
+      .filter((migration) => migration.version < 22)
+      .forEach((migration) => migration.up(before as never));
+    before.exec(
+      "INSERT INTO patients (name, serviceScope) VALUES ('Noch offen','unknown'),('Auf der Liste','eligible'),('Ausgeschlossen','excluded')",
+    );
+
+    v022_patient_service_scope.up(before as never);
+
+    expect(before.prepare('SELECT name, serviceScopeSource FROM patients ORDER BY id').all()).toEqual([
+      { name: 'Noch offen', serviceScopeSource: 'services' },
+      { name: 'Auf der Liste', serviceScopeSource: 'legacy' },
+      { name: 'Ausgeschlossen', serviceScopeSource: 'legacy' },
+    ]);
+    before.close();
   });
 
   it('rollt Patient und Zuordnungen bei einem Fehler gemeinsam zurück', () => {
