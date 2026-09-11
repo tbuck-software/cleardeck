@@ -2,6 +2,7 @@ import { localDate } from '../../utils/calendarDate';
 import React from 'react';
 import Segmented from '../ui/Segmented';
 import Icon from '../ui/Icon';
+import ListPanel from '../ui/ListPanel';
 import TaskRow from '../ui/TaskRow';
 import type { UnifiedEvent, YearDataset } from '../../shared/types';
 import type { DashboardTask, DataQualityCheck, TaskTarget } from '../../utils/dashboardTasks';
@@ -177,7 +178,7 @@ const Dashboard = ({
             {openTaskCount} offen · automatisch aus Fristen, Visiten und Datenlücken
           </span>
         </div>
-        <div className="cd-panel">
+        <ListPanel>
           {openTasks.length === 0 && (
             <div className="cd-empty">
               Keine weiteren Aufgaben in dieser Ansicht. Zurückgestellte Aufgaben und nicht erfasste
@@ -199,7 +200,7 @@ const Dashboard = ({
               <Icon name="chevronRight" size={15} />
             </button>
           )}
-        </div>
+        </ListPanel>
       </section>
 
       <section className="cd-kpis">

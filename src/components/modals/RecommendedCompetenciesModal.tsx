@@ -1,5 +1,8 @@
 import React from 'react';
+import Checkbox from '../ui/Checkbox';
 import Dialog from '../ui/Dialog';
+import ListPanel from '../ui/ListPanel';
+import ListRow from '../ui/ListRow';
 import type { CompetencyDefinition } from '../../shared/types';
 import type { SuggestedCompetencyModalState } from '../../types/ui';
 
@@ -39,34 +42,36 @@ const RecommendedCompetenciesModal = ({
       </button>
     </div>
 
-    <div className="cd-panel" style={{ maxHeight: 360, overflowY: 'auto' }}>
+    <ListPanel style={{ maxHeight: 360, overflowY: 'auto' }}>
       {definitions.length === 0 && <div className="cd-empty">Keine passenden Vorschläge.</div>}
       {definitions.map((definition) => {
         const definitionId = definition.id as number;
         const checked = state.selectedDefinitionIds.includes(definitionId);
+        const label = `${definition.code ? `${definition.code} · ` : ''}${definition.name}`;
         return (
-          <label key={definitionId} className="cd-item" style={{ cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={checked}
-              onChange={() => onToggle(definitionId)}
-              style={{ width: 16, height: 16, flex: 'none', accentColor: 'var(--color-accent)' }}
-            />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600 }}>
-                {definition.code ? `${definition.code} · ` : ''}
-                {definition.name}
-              </div>
-              {definition.note && <div className="cd-muted-13">{definition.note}</div>}
-            </div>
-            <div className="cd-tag-row">
-              <span className="tag tag-neutral">{definition.category ?? 'Allgemein'}</span>
-              <span className="tag tag-neutral">{definition.relevance ?? 'Alle'}</span>
-            </div>
-          </label>
+          <ListRow
+            key={definitionId}
+            selected={checked}
+            leading={
+              <Checkbox
+                aria-label={`${label} auswählen`}
+                checked={checked}
+                onChange={() => onToggle(definitionId)}
+              />
+            }
+            title={label}
+            subline={definition.note}
+            tag={
+              <>
+                <span className="tag tag-neutral">{definition.category ?? 'Allgemein'}</span>
+                <span className="tag tag-neutral">{definition.relevance ?? 'Alle'}</span>
+              </>
+            }
+            onSelect={() => onToggle(definitionId)}
+          />
         );
       })}
-    </div>
+    </ListPanel>
   </Dialog>
 );
 

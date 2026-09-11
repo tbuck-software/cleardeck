@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import Segmented from '../ui/Segmented';
+import ListPanel from '../ui/ListPanel';
 import TaskRow from '../ui/TaskRow';
 import type { DashboardTask, TaskTarget } from '../../utils/dashboardTasks';
 
@@ -75,7 +76,7 @@ const TasksPage = ({ tasks, doneTaskIds, onToggleTask, onOpenTarget }: TasksPage
         )}
       </div>
 
-      <div className="cd-panel">
+      <ListPanel>
         {visible.length === 0 && (
           <div className="cd-empty">
             {openCount === 0
@@ -92,7 +93,7 @@ const TasksPage = ({ tasks, doneTaskIds, onToggleTask, onOpenTarget }: TasksPage
             onOpen={onOpenTarget}
           />
         ))}
-      </div>
+      </ListPanel>
     </div>
   );
 };

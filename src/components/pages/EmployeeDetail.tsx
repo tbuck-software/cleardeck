@@ -5,6 +5,9 @@ import EmploymentRepairPanel from '../employment/EmploymentRepairPanel';
 import WorkingTimeModal from '../modals/WorkingTimeModal';
 import Icon from '../ui/Icon';
 import Avatar from '../ui/Avatar';
+import ListPanel from '../ui/ListPanel';
+import ListRow from '../ui/ListRow';
+import Timeline from '../ui/Timeline';
 import Segmented from '../ui/Segmented';
 import ActionMenu from '../ui/ActionMenu';
 import { formatDateDE } from '../../utils/dateFormat';
@@ -279,43 +282,39 @@ const EmployeeDetail = ({
               </button>
             </div>
           </div>
-          <div className="cd-panel">
+          <ListPanel>
             {instructions.length === 0 && (
               <div className="cd-empty">Noch keine Einweisungen zugeordnet.</div>
             )}
             {instructions.map((instruction) => {
               const state = instructionState(instruction, today, instructionReminderDays);
               return (
-                <button
+                <ListRow
                   key={instruction.id ?? instruction.instructionDefinitionId}
-                  type="button"
-                  className="cd-item"
-                  onClick={() => onSelectInstruction(instruction)}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600 }}>{instruction.instructionName}</div>
-                    <div className="cd-muted-13">
-                      {instruction.legalBasis ?? 'Intern'} ·{' '}
-                      {instruction.completedAt
-                        ? `durchgeführt ${formatDateDE(instruction.completedAt)}`
-                        : 'noch offen'}
-                    </div>
-                  </div>
-                  <span className="cd-muted-13" style={{ flex: 'none' }}>
-                    {instruction.dueDate
+                  title={instruction.instructionName}
+                  subline={`${instruction.legalBasis ?? 'Intern'} · ${
+                    instruction.completedAt
+                      ? `durchgeführt ${formatDateDE(instruction.completedAt)}`
+                      : 'noch offen'
+                  }`}
+                  meta={
+                    instruction.dueDate
                       ? `fällig ${formatDateDE(instruction.dueDate)}`
-                      : 'ohne Frist'}
-                  </span>
-                  <span
-                    className={`tag ${state.tagClass}`}
-                    style={{ flex: 'none', minWidth: 90, justifyContent: 'center' }}
-                  >
-                    {state.label}
-                  </span>
-                </button>
+                      : 'ohne Frist'
+                  }
+                  tag={
+                    <span
+                      className={`tag ${state.tagClass}`}
+                      style={{ minWidth: 90, justifyContent: 'center' }}
+                    >
+                      {state.label}
+                    </span>
+                  }
+                  onOpen={() => onSelectInstruction(instruction)}
+                />
               );
             })}
-          </div>
+          </ListPanel>
         </section>
       )}
 
@@ -333,17 +332,16 @@ const EmployeeDetail = ({
             <div>
               <h3 className="cd-h3">Historie</h3>
               <p className="cd-muted-14" style={{ margin: '4px 0 0' }}>
-                Beschäftigungsabschnitte, Arbeitszeiten und Ereignisse. Zeilen öffnen den
-                Bearbeitungsdialog.
+                Beschäftigungsabschnitte, Arbeitszeiten und Ereignisse.
               </p>
             </div>
             <button type="button" className="btn btn-primary" onClick={onStartNewPeriod}>
               <Icon name="plus" size={16} /> Eintrag hinzufügen
             </button>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', paddingLeft: 8 }}>
-            {historyItems.length === 0 && <div className="cd-empty">Keine Einträge.</div>}
-            {historyItems.map((item, index) => {
+          <Timeline
+            empty="Keine Einträge."
+            items={historyItems.map((item, index) => {
               const isPeriod = item.kind === 'period';
               const isWorkingTime = item.kind === 'working-time';
               const title = isPeriod
@@ -356,33 +354,18 @@ const EmployeeDetail = ({
                   : (item.record.details ?? '');
               // Nur Zeiträume gelten ab einem Datum, einmalige Ereignisse am Datum.
               const dateLabel = `${isPeriod || isWorkingTime ? 'ab' : 'am'} ${formatDateDE(item.date)}`;
-              return (
-                <button
-                  key={`${item.kind}-${item.record.id ?? index}`}
-                  type="button"
-                  className="cd-timeline-row cd-row cd-button-reset"
-                  aria-label={`${title} ${dateLabel}${detail ? ` · ${detail}` : ''} bearbeiten`}
-                  onClick={() => (isWorkingTime ? setWorkingTimeEdit(item.record) : onSelectTimelineItem(item))}
-                >
-                  <div className="cd-timeline-date">{formatDateDE(item.date)}</div>
-                  <div className="cd-timeline-rail">
-                    <span
-                      style={{
-                        background: isPeriod
-                          ? 'var(--color-accent-2-500)'
-                          : 'var(--color-accent-500)',
-                      }}
-                    />
-                    <span />
-                  </div>
-                  <div style={{ paddingBottom: 22 }}>
-                    <div style={{ fontWeight: 600 }}>{title}</div>
-                    <div className="cd-muted-14">{detail}</div>
-                  </div>
-                </button>
-              );
+              return {
+                key: `${item.kind}-${item.record.id ?? index}`,
+                date: formatDateDE(item.date),
+                title,
+                subline: detail,
+                color: isPeriod ? 'var(--color-accent-2-500)' : 'var(--color-accent-500)',
+                ariaLabel: `${title} ${dateLabel}${detail ? ` · ${detail}` : ''} bearbeiten`,
+                onOpen: () =>
+                  isWorkingTime ? setWorkingTimeEdit(item.record) : onSelectTimelineItem(item),
+              };
             })}
-          </div>
+          />
         </section>
       )}
       {workingTimeEdit !== undefined && (
