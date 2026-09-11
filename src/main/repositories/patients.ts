@@ -17,6 +17,8 @@ import type {
   PatientStats,
   CareLevel,
   PatientService,
+  ServiceScope,
+  ServiceScopeSource,
   ServiceType,
 } from '../../shared/types';
 import {
@@ -142,9 +144,9 @@ export const getPatient = (id: number): Patient | null => {
 export type SavePatientInput = {
   serviceStatus?: 'active' | 'ended';
   serviceEndDate?: string | null;
-  serviceScope?: 'eligible' | 'excluded' | 'unknown';
+  serviceScope?: ServiceScope;
   serviceDefinitionIds?: number[];
-  serviceScopeSource?: 'services' | 'legacy';
+  serviceScopeSource?: ServiceScopeSource;
   representativeStatus?: 'present' | 'none' | 'unknown';
   hkpCodes?: HkpCode[];
   assessmentSource?: 'report' | 'own' | 'unknown';

@@ -9,12 +9,11 @@ import type {
   HkpCode,
   IntensiveCare,
   Patient,
+  ServiceScope,
   ServiceType,
   Teilgruppe,
 } from '../shared/types';
 import { SERVICE_TYPE_LABEL, SERVICE_TYPES } from '../shared/services';
-
-export type ServiceScope = 'eligible' | 'excluded' | 'unknown';
 
 export type ServiceScopeResult = {
   scope: ServiceScope;
