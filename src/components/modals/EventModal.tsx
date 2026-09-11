@@ -155,7 +155,6 @@ const EventModal = ({
                 id="period-qualification"
                 className="input"
                 value={periodForm.qualification}
-                disabled={Boolean(periodForm.periodId)}
                 onChange={(event) =>
                   onPeriodFormChange({ ...periodForm, qualification: event.target.value })
                 }
@@ -166,11 +165,6 @@ const EventModal = ({
                   </option>
                 ))}
               </select>
-              {periodForm.periodId && (
-                <p className="cd-muted-13" style={{ margin: '5px 0 0' }}>
-                  Für einen Qualifikationswechsel die Beschäftigungsaktion im Personenkopf verwenden.
-                </p>
-              )}
             </div>
           </div>
           <div className="field">

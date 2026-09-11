@@ -11,7 +11,7 @@ const employee: EmployeeWithPeriod = {
   name: 'Synthetic Action',
   qualification: 'Einarbeitung',
   startDate: '2024-01-01',
-  endDate: null,
+  endDate: '2025-12-31',
   weeklyHours: 18,
   fte: 0.5,
   hoursVerified: false,
@@ -29,7 +29,7 @@ it('previews the closed previous period and new qualification start', async () =
       open
       mode="qualification"
       employee={employee}
-      periods={[{ id: 21, employeeId: 11, startDate: '2024-01-01', endDate: null, qualification: 'Einarbeitung' }]}
+      periods={[{ id: 21, employeeId: 11, startDate: '2024-01-01', endDate: '2025-12-31', qualification: 'Einarbeitung' }]}
       qualifications={qualifications}
       onClose={vi.fn()}
       onSave={onSave}
@@ -40,6 +40,7 @@ it('previews the closed previous period and new qualification start', async () =
   fireEvent.change(screen.getByLabelText('Neue Qualifikation'), { target: { value: 'Pflegefachkraft' } });
   expect(screen.getByRole('status')).toHaveTextContent('bis 31.01.2025');
   expect(screen.getByRole('status')).toHaveTextContent('ab 01.02.2025');
+  expect(screen.getByRole('status')).toHaveTextContent('bis 31.12.2025');
   expect(screen.getByText(/bestätigt keine Altdaten/)).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));

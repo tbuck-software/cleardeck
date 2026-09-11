@@ -7,6 +7,7 @@ import type {
 } from '../../shared/types';
 import { localDate, shiftDays, validDate } from '../../utils/calendarDate';
 import { formatDateDE } from '../../utils/dateFormat';
+import { userFacingErrorMessage } from '../../utils/errorMessage';
 
 export type EmploymentActionMode = 'departure' | 'qualification';
 
@@ -25,7 +26,7 @@ type Props = {
 };
 
 const periodLabel = (period: EmploymentPeriod) =>
-  `${formatDateDE(period.startDate)} bis ${period.endDate ? formatDateDE(period.endDate) : 'heute'}`;
+  `${formatDateDE(period.startDate)} bis ${period.endDate ? formatDateDE(period.endDate) : 'offen'}`;
 
 const EmploymentActionModal = ({
   open,
@@ -95,8 +96,7 @@ const EmploymentActionModal = ({
         : { mode, periodId: selectedPeriod.id, effectiveFrom: date, qualification });
       onClose();
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Speichern fehlgeschlagen.';
-      setError(message.replace(/^API [^ ]+ failed: /, ''));
+      setError(userFacingErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -171,7 +171,12 @@ const EmploymentActionModal = ({
                 <span>{employee.qualification}</span>
                 <span>bis {previewEnd ? formatDateDE(previewEnd) : '—'}</span>
                 <span>{qualification || 'Neue Qualifikation'}</span>
-                <span>ab {date ? formatDateDE(date) : '—'}</span>
+                <span>
+                  ab {date ? formatDateDE(date) : '—'}
+                  {selectedPeriod.endDate
+                    ? ` bis ${formatDateDE(selectedPeriod.endDate)}`
+                    : ' · offen'}
+                </span>
               </div>
               <p>Beide Zeiträume werden gemeinsam gespeichert. Arbeitszeitdaten bleiben dabei unverändert.</p>
             </div>
