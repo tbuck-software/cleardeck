@@ -13,7 +13,7 @@ import {
   type PeriodRow,
 } from './employmentRepairShared';
 
-type TermRow = {
+type TermRow = Record<string, unknown> & {
   id: number;
   periodId: number;
   effectiveFrom: string;
@@ -32,11 +32,11 @@ const periodRecords = (db: Db, periodId: number): RepairRecordSummary[] => {
   ].filter((record) => record.count > 0);
 };
 
-const sameTerm = (left: TermRow, right: TermRow): boolean =>
-  left.weeklyHours === right.weeklyHours &&
-  left.fte === right.fte &&
-  left.verified === right.verified &&
-  (left.sourceRef ?? null) === (right.sourceRef ?? null);
+const sameTerm = (left: TermRow, right: TermRow): boolean => {
+  const keys = [...new Set([...Object.keys(left), ...Object.keys(right)])]
+    .filter((key) => !['id', 'periodId', 'createdAt'].includes(key));
+  return keys.every((key) => (left[key] ?? null) === (right[key] ?? null));
+};
 
 const validate = (
   db: Db,
@@ -64,12 +64,17 @@ const validate = (
       if (overlaps({ startDate: input.startDate, endDate: input.endDate }, neighbor)) conflicts.push(`Der korrigierte Zeitraum überschneidet sich mit einem weiteren Abschnitt. Bitte Zeitraum anhand des Belegs prüfen.`);
     });
   }
-  const targetTerms = allRows<TermRow>(db, 'SELECT id,periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef FROM employment_terms WHERE periodId=?', retained.id);
-  const sourceTerms = allRows<TermRow>(db, 'SELECT id,periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef FROM employment_terms WHERE periodId=?', removed.id);
+  const targetTerms = allRows<TermRow>(db, 'SELECT * FROM employment_terms WHERE periodId=?', retained.id);
+  const sourceTerms = allRows<TermRow>(db, 'SELECT * FROM employment_terms WHERE periodId=?', removed.id);
+  const outsideCorrectedRange = (term: TermRow): boolean =>
+    term.effectiveFrom < input.startDate || (input.endDate != null && term.effectiveFrom > input.endDate);
+  targetTerms.forEach((targetTerm) => {
+    if (outsideCorrectedRange(targetTerm)) conflicts.push(`Der Arbeitszeitstand vom ${formatDateDE(targetTerm.effectiveFrom)} läge außerhalb des korrigierten Zeitraums.`);
+  });
   sourceTerms.forEach((sourceTerm) => {
     const targetTerm = targetTerms.find((term) => term.effectiveFrom === sourceTerm.effectiveFrom);
     if (targetTerm && !sameTerm(targetTerm, sourceTerm)) conflicts.push(`Arbeitszeitstände am ${formatDateDE(sourceTerm.effectiveFrom)} unterscheiden sich. Bitte einen Stand auswählen.`);
-    if (!targetTerm && (sourceTerm.effectiveFrom < input.startDate || (input.endDate != null && sourceTerm.effectiveFrom > input.endDate))) conflicts.push(`Der Arbeitszeitstand vom ${formatDateDE(sourceTerm.effectiveFrom)} läge außerhalb des korrigierten Zeitraums.`);
+    if (!targetTerm && outsideCorrectedRange(sourceTerm)) conflicts.push(`Der Arbeitszeitstand vom ${formatDateDE(sourceTerm.effectiveFrom)} läge außerhalb des korrigierten Zeitraums.`);
   });
   return { retained, removed, sourceTerms, targetTerms, conflicts: [...new Set(conflicts)] };
 };
@@ -117,6 +122,10 @@ export const applyReconcilePeriods = (input: {
     const validation = validate(db, operation);
     if (validation.conflicts.length) throw new Error(validation.conflicts.join(' '));
     const { retained, removed, sourceTerms, targetTerms } = validation;
+    const duplicateCurrentTerms = sourceTerms.flatMap((sourceTerm) => {
+      const targetTerm = targetTerms.find((term) => term.effectiveFrom === sourceTerm.effectiveFrom);
+      return targetTerm && sameTerm(targetTerm, sourceTerm) ? [{ source: sourceTerm, target: targetTerm }] : [];
+    });
     recordRepairEvent(
       db,
       retained.employeeId,
@@ -127,6 +136,7 @@ export const applyReconcilePeriods = (input: {
         retainedPeriod: retained,
         removedPeriod: removed,
         correctedRetainedDates: { startDate: input.startDate, endDate: input.endDate },
+        duplicateCurrentTerms,
       },
     );
     sourceTerms.forEach((sourceTerm) => {
