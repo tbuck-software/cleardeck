@@ -320,22 +320,30 @@ export const saveEmployee = (input: {
           ).lastInsertRowid,
       );
     }
-    if (
-      periodId &&
-      !db
-        .prepare('SELECT id FROM employment_periods WHERE id=? AND employeeId=?')
-        .get(periodId, employeeId)
-    )
-      throw new Error('Beschäftigungsperiode nicht gefunden.');
-    const overlap = db
-      .prepare(
-        "SELECT id FROM employment_periods WHERE employeeId=? AND id<>? AND startDate<=? AND COALESCE(endDate,'9999-12-31')>=?",
-      )
-      .get(employeeId, periodId ?? -1, input.endDate || '9999-12-31', input.startDate);
-    if (overlap)
-      throw new Error(
-        'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren.',
-      );
+    const existingPeriod = periodId
+      ? (db
+          .prepare('SELECT id,startDate,endDate FROM employment_periods WHERE id=? AND employeeId=?')
+          .get(periodId, employeeId) as
+          | { id: number; startDate: string; endDate: string | null }
+          | undefined)
+      : undefined;
+    if (periodId && !existingPeriod) throw new Error('Beschäftigungsperiode nicht gefunden.');
+    const periodDatesUnchanged = Boolean(
+      existingPeriod &&
+        existingPeriod.startDate === input.startDate &&
+        (existingPeriod.endDate ?? null) === (input.endDate || null),
+    );
+    if (!periodDatesUnchanged) {
+      const overlap = db
+        .prepare(
+          "SELECT id FROM employment_periods WHERE employeeId=? AND id<>? AND startDate<=? AND COALESCE(endDate,'9999-12-31')>=?",
+        )
+        .get(employeeId, periodId ?? -1, input.endDate || '9999-12-31', input.startDate);
+      if (overlap)
+        throw new Error(
+          'Beschäftigungsperioden überschneiden sich. Bitte zuerst das Ende der bisherigen Periode korrigieren.',
+        );
+    }
     if (periodId) {
       db.prepare(
         'UPDATE employment_periods SET startDate=?,endDate=?,qualification=? WHERE id=?',
@@ -382,7 +390,7 @@ export const saveEmployee = (input: {
       (existing?.verified !== 1 ||
         (input.hoursEffectiveFrom && input.hoursEffectiveFrom !== existing?.effectiveFrom) ||
         input.sourceRef !== existing?.sourceRef);
-    if (!existing || (input.updateHours !== false && (changed || confirming))) {
+    if (input.updateHours !== false && (!existing || changed || confirming)) {
       const effective = input.hoursEffectiveFrom || (existing ? localDate() : input.startDate);
       requireDate(effective, 'Stunden gültig ab');
       if (effective < input.startDate || (input.endDate && effective > input.endDate))
