@@ -3,6 +3,7 @@ import type { EmployeeWithPeriod, WorkingTime } from '../../shared/types';
 import api from '../../services/api';
 import { localDate } from '../../utils/calendarDate';
 import { deriveFteFromWeeklyHours } from '../../utils/fte';
+import { userFacingErrorMessage } from '../../utils/errorMessage';
 import Dialog from '../ui/Dialog';
 import Icon from '../ui/Icon';
 
@@ -42,7 +43,7 @@ const WorkingTimeModal = ({ entry, employee, baseHours, onSaved, onClose, typeSe
       await onSaved();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Speichern fehlgeschlagen.');
+      setError(userFacingErrorMessage(err));
     } finally {
       setSaving(false);
     }

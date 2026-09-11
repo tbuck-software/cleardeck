@@ -13,6 +13,7 @@ import useCalendar from './useCalendar';
 import useDashboardWidgets from './useDashboardWidgets';
 import usePatients from './usePatients';
 import usePatientDashboard from './usePatientDashboard';
+import { userFacingErrorMessage } from '../utils/errorMessage';
 
 const useAppLogic = () => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
@@ -23,7 +24,7 @@ const useAppLogic = () => {
   const [baseHoursForEmployees, setBaseHoursForEmployees] = useState(36);
 
   const handleError = useCallback((err: unknown) => {
-    const message = err instanceof Error ? err.message : 'Unbekannter Fehler';
+    const message = userFacingErrorMessage(err);
     setError(message);
     setTimeout(() => setError(null), 3500);
   }, []);

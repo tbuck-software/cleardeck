@@ -294,6 +294,35 @@
   align-items: start;
 }
 
+.cd-history-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  padding: 0;
+}
+
+.cd-row-departed {
+  background: color-mix(in srgb, var(--color-neutral-200) 42%, transparent);
+}
+
+.cd-row-departed:hover {
+  background: color-mix(in srgb, var(--color-neutral-300) 55%, transparent);
+}
+
+.cd-row-departed .cd-muted-13,
+.cd-row-departed .cd-muted-14 {
+  color: var(--color-neutral-700);
+}
+
+.cd-detail-employment-start {
+  display: inline-block;
+  margin-left: 12px;
+  color: var(--color-neutral-800);
+}
+
 .cd-timeline-date {
   font-size: 13px;
   color: var(--color-neutral-700);

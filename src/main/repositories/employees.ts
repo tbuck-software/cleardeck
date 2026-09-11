@@ -19,6 +19,7 @@ import { buildEmployeeChangeEvents } from '../employeeHistory';
 import { saveEvent } from './events';
 import { daysBetween } from '../../utils/qpr';
 import { localDate, requireDate, shiftDays } from '../../utils/calendarDate';
+import { contiguousEmploymentStart } from '../../utils/employment';
 
 /**
  * Compute employee status for a given year
@@ -93,6 +94,25 @@ export const getYearDataset = (
       endIso,
       mode === 'stichtag' || mode === 'current' ? endIso : startIso,
     ) as (EmployeeWithPeriod & { employeeId: number; periodNote: string | null })[];
+  const allPeriods = db
+    .prepare('SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods ORDER BY employeeId,startDate,id')
+    .all() as (EmploymentPeriod & { employeeId: number })[];
+  const periodsByEmployee = new Map<number, EmploymentPeriod[]>();
+  allPeriods.forEach((period) => {
+    const employeePeriods = periodsByEmployee.get(period.employeeId) ?? [];
+    employeePeriods.push(period);
+    periodsByEmployee.set(period.employeeId, employeePeriods);
+  });
+  const employmentStartByPeriod = new Map<number, string>();
+  allPeriods.forEach((period) => {
+    if (period.id == null) return;
+    const start = contiguousEmploymentStart(
+      periodsByEmployee.get(period.employeeId) ?? [],
+      period.id,
+      period.startDate,
+    );
+    if (start) employmentStartByPeriod.set(period.id, start);
+  });
   if (mode === 'year-average') {
     const employees: EmployeeWithPeriod[] = [];
     const yearDays = daysBetween(startIso, endIso) + 1;
@@ -126,6 +146,7 @@ export const getYearDataset = (
           qualification: row.qualification,
           startDate: segmentStart,
           endDate: segmentEnd,
+          employmentStartDate: employmentStartByPeriod.get(row.periodId) ?? row.startDate,
           birthDate: row.birthDate,
           note: row.periodNote ?? row.note,
           sourceRef: term?.sourceRef ?? null,
@@ -183,6 +204,7 @@ export const getYearDataset = (
       qualification: row.qualification,
       startDate: row.startDate,
       endDate: row.endDate,
+      employmentStartDate: employmentStartByPeriod.get(row.periodId) ?? row.startDate,
       birthDate: row.birthDate,
       note: row.periodNote ?? row.note,
       weeklyHours: terms?.weeklyHours ?? null,
