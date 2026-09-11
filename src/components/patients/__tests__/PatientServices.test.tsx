@@ -10,6 +10,7 @@ const definitions: ServiceDefinition[] = [
   { id: 1, name: 'Große Grundpflege', serviceType: 's36-care', active: true },
   { id: 2, name: 'Hilfe bei der Haushaltsführung', serviceType: 'household', active: true },
   { id: 3, name: 'Beratungsbesuch', serviceType: 's37-consultation', active: true },
+  { id: 4, name: 'Historische Körperpflege', serviceType: 's36-care', active: false },
 ];
 
 const modal = (overrides: Partial<PatientModalState> = {}): PatientModalState => ({
@@ -82,5 +83,27 @@ describe('PatientModal Leistungsumfang', () => {
       />,
     );
     expect(screen.getByText(/Übernommene frühere Entscheidung/)).toBeInTheDocument();
+  });
+
+  it('öffnet Treffer bei der Suche und erklärt inaktive historische Zuordnungen', () => {
+    render(
+      <PatientModal
+        modal={modal({ mode: 'edit', serviceDefinitionIds: [4] })}
+        serviceDefinitions={definitions}
+        onChange={vi.fn()}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Historische Körperpflege (inaktiv)')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Welche Leistungen erbringt euer Dienst für diese Person?'));
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'Haushalt' } });
+    const householdGroup = screen
+      .getByLabelText('Hilfe bei der Haushaltsführung')
+      .closest('details');
+    expect(householdGroup).toHaveAttribute('open');
+    fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'gibt es nicht' } });
+    expect(screen.getByText('Keine Leistungen gefunden.')).toBeInTheDocument();
   });
 });
