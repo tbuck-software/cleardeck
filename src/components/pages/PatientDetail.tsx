@@ -17,7 +17,7 @@ import {
   SERVICES_NOT_RECORDED,
   visitDue,
 } from '../../utils/qpr';
-import type { PatientVisit, PatientWithLatestVisit, ServiceDefinition } from '../../shared/types';
+import type { PatientVisit, PatientWithLatestVisit } from '../../shared/types';
 import { careLevelLabel } from '../../utils/careLevel';
 
 const ageOf = (birthDate?: string | null): string => {
@@ -39,8 +39,6 @@ type PatientDetailProps = {
   onEdit: () => void;
   onNewVisit: () => void;
   onSelectVisit: (visit: PatientVisit) => void;
-  /** Current catalogue labels take precedence over the assignment snapshot. */
-  serviceDefinitions?: ServiceDefinition[];
 };
 
 const PatientDetail = ({
@@ -50,7 +48,6 @@ const PatientDetail = ({
   onEdit,
   onNewVisit,
   onSelectVisit,
-  serviceDefinitions = [],
 }: PatientDetailProps) => {
   const today = localDate();
   const group = needsAssessment(patient, today)
@@ -63,25 +60,9 @@ const PatientDetail = ({
   );
   const age = ageOf(patient.birthDate);
   const serviceDecision = serviceScopeOf(patient);
-  const currentServiceLabels = new Map(
-    serviceDefinitions
-      .filter((definition) => definition.id != null)
-      .map((definition) => [definition.id as number, definition.name]),
-  );
-  const serviceOrder = new Map(
-    serviceDefinitions
-      .filter((definition) => definition.id != null)
-      .map((definition, index) => [definition.id as number, index]),
-  );
-  const orderedServices = [...(patient.services ?? [])].sort(
-    (left, right) =>
-      (serviceOrder.get(left.serviceDefinitionId) ?? Number.MAX_SAFE_INTEGER) -
-      (serviceOrder.get(right.serviceDefinitionId) ?? Number.MAX_SAFE_INTEGER),
-  );
-  const serviceLabels = orderedServices.length
-    ? orderedServices
-        .map((service) => currentServiceLabels.get(service.serviceDefinitionId) ?? service.label)
-        .join('; ')
+  // Labels and order come from the catalogue with the record; see useServiceCatalog.
+  const serviceLabels = patient.services?.length
+    ? patient.services.map((service) => service.label).join('; ')
     : SERVICES_NOT_RECORDED;
 
   const missing = 'fehlt';
