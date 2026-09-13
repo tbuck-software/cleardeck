@@ -2,7 +2,7 @@ name: Windows update recovery
 
 on:
   push:
-    branches: ['fix/windows-update-recovery']
+    branches: ['feature/server-mode']
     tags: ['v2.2.1']
     paths-ignore: ['docs/**']
   workflow_dispatch:
@@ -98,6 +98,10 @@ jobs:
   upgrade:
     needs: [build, baseline]
     runs-on: windows-latest
+    # GitHub exposes draft releases only to callers with repository push
+    # access. The token is supplied solely to the original-baseline download.
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:

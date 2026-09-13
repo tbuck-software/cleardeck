@@ -7,7 +7,7 @@ const http = require('http');
 const https = require('https');
 const os = require('os');
 const path = require('path');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 const { URL } = require('url');
 const { parse } = require('yaml');
 const semver = require('semver');
@@ -169,11 +169,23 @@ function scanTextForToken(bytes, location) {
 }
 
 function extractZip(zipFile, destination) {
-  try {
-    execFileSync('unzip', ['-qq', '-o', zipFile, '-d', destination], { stdio: 'ignore' });
+  const unzipResult = spawnSync('unzip', ['-qq', '-o', zipFile, '-d', destination], {
+    encoding: 'utf8',
+  });
+  const stderr = String(unzipResult.stderr || '').replace(/\r\n/g, '\n');
+  const stdout = String(unzipResult.stdout || '');
+  const expectedBackslashWarning =
+    `warning:  ${zipFile} appears to use backslashes as path separators\n`;
+  if (!unzipResult.error && unzipResult.status === 0) {
+    if (stderr || stdout) throw new Error(`Cannot extract ${zipFile}: ${stderr || stdout}`);
     return;
-  } catch (unzipError) {
-    if (process.platform !== 'win32') throw new Error(`Cannot extract ${zipFile}: ${unzipError.message}`);
+  }
+  if (!unzipResult.error && unzipResult.status === 1 && !stdout && stderr === expectedBackslashWarning) return;
+
+  const commandUnavailable = unzipResult.error?.code === 'ENOENT';
+  if (process.platform !== 'win32' || !commandUnavailable) {
+    const reason = stderr || stdout || unzipResult.error?.message || `unzip exited with ${unzipResult.status}`;
+    throw new Error(`Cannot extract ${zipFile}: ${reason}`);
   }
 
   const powershellArchive = path.extname(zipFile).toLowerCase() === '.nupkg'
