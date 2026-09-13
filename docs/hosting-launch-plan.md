@@ -147,4 +147,4 @@ Der Draft-PR bleibt im privaten Repository. Vor der Veröffentlichung des Reposi
 - Die Server- und Datenschutzdokumentation mit dem tatsächlich ausgelieferten Compose-/Caddy-Setup abgleichen.
 - Einen Ansprechpartner, eine Sicherheitskontaktadresse und den Incident-Ablauf im privaten Betriebsplan festhalten.
 
-Erst wenn diese Nachweise vorliegen und die verantwortliche Person die Veröffentlichung ausdrücklich freigibt, darf das Repository öffentlich werden. Das ist der letzte Schritt und kein automatischer Teil eines Releases.
+Erst wenn diese Nachweise vorliegen, stellt Torben das Repository selbst öffentlich. Die Änderung der Sichtbarkeit bleibt ausschließlich bei ihm. Das ist der letzte Schritt und kein automatischer Teil eines Releases oder dieses Draft-PRs.
