@@ -4,6 +4,12 @@ Die App prüft beim Start, stündlich und beim Aktivieren des Fensters auf Updat
 
 Nach dem Download startet „Update installieren und neu starten“ die Installation. Die App zeigt währenddessen „Neustart wird vorbereitet“. Ein erneuter Klick löst keine zweite Installation aus. Fensterwechsel überschreiben weder einen laufenden Download noch eine bereitliegende Installation oder deren Fehler. Fehler bleiben mit kopierbaren Details und einem Knopf zum Wiederholen des fehlgeschlagenen Schritts sichtbar. Sidebar, Einstellungen und Anmeldebildschirm verwenden dieselbe Anzeige.
 
+## Private Feeds und pausierte Veröffentlichung
+
+Bei einem privaten GitHub-Feed liest der Hauptprozess `GH_TOKEN` erst zur Laufzeit. `UPDATE_FEED_URL` kann weiterhin einen eigenen generischen Feed vorgeben. Der Webpack-Build und `npm run make` erhalten kein Zugriffstoken; dadurch wird kein Token in JavaScript, `app.asar` oder einem Installer eingebettet. Ohne Laufzeittoken bleibt ein privater GitHub-Feed absichtlich nicht verfügbar und die App fordert zur manuellen Installation auf.
+
+Der Release-Workflow baut derzeit nur prüfbare Windows-/Linux-Kandidaten und scannt die Auslieferungsdateien auf bekannte GitHub-Tokenformate. Automatische Veröffentlichung und das Wiederverwenden des alten Mac-Feeds sind pausiert, bis ein neu gebautes, signiertes Mac-Paket und sein nativer Updateweg vollständig geprüft sind. Betroffene macOS-Installationen benötigen bis dahin eine manuelle Installation; ein automatisches Updateangebot für diesen Feed ist nicht zugesichert.
+
 ## Änderungen seit der installierten Version
 
 `CHANGELOG.md` enthält pro Release einen Abschnitt `## [1.8.0]`. `make release-patch`, `make release-minor` und `make release-major` übernehmen die Einträge aus `[Unreleased]` automatisch in den Abschnitt der neuen Paketversion und committen den Changelog mit. Bei manueller Versionierung erledigt `node scripts/release-notes.js --prepare` denselben Schritt. Die historischen Einträge wurden aus den Commit-Bereichen zwischen den Release-Tags rekonstruiert und auf Deutsch zusammengefasst.

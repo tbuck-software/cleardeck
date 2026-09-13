@@ -2,7 +2,6 @@ name: Release
 
 on:
   push:
-    tags: ['v*']
     branches: ['feat/update-download-flow']
   workflow_dispatch:
 
@@ -53,8 +52,36 @@ jobs:
         run: npm run make
         env:
           SKIP_FUSES: '1'
-          GH_TOKEN: ${{ secrets.UPDATE_TOKEN }}
       - run: node scripts/generate-update-yml.js
+      - name: Reject GitHub tokens in distributable files
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const path = require('path');
+          // Inspect unpacked bundles too: compressed ZIP/installer bytes alone
+          // cannot prove that their app.asar payload is free of credentials.
+          const roots = ['.webpack', 'out'].map((entry) => path.resolve(entry));
+          const tokenPattern = /(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{20,}/;
+          if (process.env.GH_TOKEN || process.env.UPDATE_TOKEN) {
+            console.error('Build scan refuses to run with an update token in its environment.');
+            process.exit(1);
+          }
+          const files = [];
+          const visit = (directory) => {
+            for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+              const file = path.join(directory, entry.name);
+              if (entry.isDirectory()) visit(file);
+              else files.push(file);
+            }
+          };
+          for (const root of roots) if (fs.existsSync(root)) visit(root);
+          const matches = files.filter((file) => tokenPattern.test(fs.readFileSync(file, 'latin1')));
+          if (matches.length) {
+            console.error(`Potential GitHub token found in: ${matches.map((file) => path.relative(process.cwd(), file)).join(', ')}`);
+            process.exit(1);
+          }
+          NODE
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ runner.os }}
@@ -63,98 +90,8 @@ jobs:
           # Only needed within this run; published files live in the release.
           retention-days: 1
 
-  retained-mac-feed:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      # 2.2.0 platform plan: no new Mac binary. Keep the previous
-      # channel bytes so old Mac clients do not lose their shared GitHub feed.
-      - run: node scripts/retain-mac-feed.cjs retained-mac
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - uses: actions/upload-artifact@v4
-        with:
-          name: release-mac-retained
-          path: retained-mac/*
-          if-no-files-found: error
-          retention-days: 1
-
-  windows-upgrade:
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        old-version: ['1.7.1', '1.8.0', '2.0.0', '2.1.0']
-    runs-on: windows-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - uses: actions/download-artifact@v4
-        with:
-          name: release-Windows
-          path: candidate
-      - name: Original installed app to candidate
-        shell: pwsh
-        run: ./scripts/test-windows-candidate.ps1 -OldVersion '${{ matrix.old-version }}' -Artifacts '${{ github.workspace }}/candidate'
-        env:
-          GH_TOKEN: ${{ github.token }}
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: upgrade-${{ matrix.old-version }}
-          path: |
-            ${{ runner.temp }}/cleardeck-candidate-result/*.json
-            ${{ runner.temp }}/cleardeck-candidate-result/*.png
-          retention-days: 7
-
-  verify:
-    needs: [build, retained-mac-feed]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: release-*
-          merge-multiple: true
-          path: release-assets
-      - run: node scripts/verify-release-artifacts.cjs release-assets 1.8.0
-
-  publish:
-    # Branch/manual runs only prepare a reviewable candidate. Push the version
-    # tag only after the platform plan and candidate have been accepted.
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [checks, build, retained-mac-feed, windows-upgrade, verify]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - uses: actions/download-artifact@v4
-        with:
-          pattern: release-*
-          merge-multiple: true
-          path: release-assets
-      - name: Upload draft, verify downloaded bytes, then publish
-        run: node scripts/publish-verified-release.cjs release-assets
-        env:
-          GH_TOKEN: ${{ github.token }}
+# Publishing and retained Mac-feed reuse are intentionally absent. The prior
+# baseline installers were withdrawn; native upgrade tests need a clean
+# baseline before publishing is restored. The prior path fetched an old Mac binary with a GitHub token and could publish a mixed
+# release. Restore those jobs only after a newly built, signed Mac package and
+# its native update path have been validated.
