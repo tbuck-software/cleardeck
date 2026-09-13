@@ -10,6 +10,12 @@ Stand: 13.09.2026, Branch `feature/server-mode`.
 
 Die neuen Tests prüfen unter anderem falsche Schlüssel und Passwörter, lokale Dateitrennung, explizite Erstübertragung, Reader-Schreibschutz, Revisionskonflikte, fehlgeschlagene Konfigurationsspeicherung sowie wartende Datenaktionen beim Wechsel oder Neuladen.
 
+## Überarbeitete Einstellungen
+
+Die Datenablage und Update-Quelle folgen den bestehenden Formularen ohne zusätzliche Karten oder Statusuntertitel. Beim Verbinden stehen vorhandener Serverbestand und lokale Erstübertragung als getrennte Optionen am Anfang. Abbrechen löscht die eingegebenen Geheimnisse und die Bestätigung zur Schlüsselsicherung. Der Rückwechsel zum lokalen Bestand erklärt vor der Bestätigung, dass Serveränderungen nicht übernommen werden.
+
+Für diese Überarbeitung sind TypeScript, Lint und 578 Desktoptests in 88 Dateien erfolgreich. Die Komponententests prüfen auch den direkten Formulareinstieg vom Anmeldebildschirm, das Zurücksetzen nach Abbruch, die Rückwechselbestätigung und bereinigte Fehlermeldungen beim Speichern der Update-Quelle.
+
 ## Laufender Electron-Client mit PostgreSQL
 
 Die Serverchecks liefen zusätzlich erfolgreich: neun HTTP-/Passworttests, der separat gestartete PostgreSQL-Integrationslauf, Docker-Image-Build und Caddy-Konfigurationsprüfung. Der Integrationslauf prüft konkurrierende Schreibvorgänge, Persistenz, Rollen, Widerruf und die Sperre alter Sitzungen nach Erneuerung der Instanz-ID. `npm audit --omit=dev` im Serverpaket meldete keine bekannten Schwachstellen.
