@@ -2,7 +2,6 @@ import React from 'react';
 import HelpPopover from '../../ui/HelpPopover';
 import type { AppInfo, UpdateStatus } from '../../../shared/types';
 import logoUrl from '../../../assets/logo.png';
-import UpdateSourceSettings from './UpdateSourceSettings';
 
 const CHECK_LABELS: Record<UpdateStatus['state'], string> = {
   idle: 'Noch nicht geprüft',
@@ -113,8 +112,6 @@ const SettingsAbout = ({
           Jetzt prüfen
         </button>
       </p>
-
-      <UpdateSourceSettings />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <button type="button" className="btn btn-primary" onClick={onContact}>

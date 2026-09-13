@@ -1,19 +1,20 @@
-.connection-settings { margin: 0; text-align: left; }
-.connection-label { font-size: 12px; color: var(--color-neutral-700); margin-bottom: 8px; }
-.connection-summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 24px; }
-.connection-fields { border: 0; padding: 0; margin: 16px 0 0; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.connection-section { display: flex; flex-direction: column; gap: 12px; }
+.connection-status { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; overflow-wrap: anywhere; }
+.connection-rows { display: flex; flex-direction: column; gap: 2px; margin: 0 -10px; }
+.connection-fields fieldset { width: 100%; border: 0; padding: 0; margin: 0; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
 .connection-fields .field { margin: 0; }
 .connection-fields .input { width: 100%; }
-.connection-fields label { line-height: 1.5; }
 .connection-fields p { margin: 8px 0 0; }
-.connection-fields input[type='checkbox'] { margin-right: 7px; }
-.connection-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
-.connection-current { display: flex; flex-direction: column; gap: 8px; overflow-wrap: anywhere; }
-.connection-current p { margin: 0; }
-.connection-current .connection-actions { margin-top: 8px; }
-.connection-transfer { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-.connection-key { overflow-wrap: anywhere; max-width: 100%; user-select: all; }
-.connection-error { color: var(--bad-800); line-height: 1.5; }
-.connection-auth { width: min(620px, calc(100vw - 40px)); max-width: 620px; }
-.connection-auth-option { margin-top: 20px; text-align: left; }
-.connection-auth-option summary { cursor: pointer; }
+.connection-label { font-size: 12px; margin-bottom: 5px; color: var(--color-neutral-700); }
+.connection-key {
+  font: 600 14px/1.6 ui-monospace, Menlo, monospace;
+  overflow-wrap: anywhere;
+  user-select: all;
+  background: var(--color-neutral-100);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+.connection-key-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.connection-consent { align-items: flex-start; line-height: 1.45; }
+.connection-consent .dot { margin-top: 2px; }
+.connection-auth-option { margin-top: 12px; }

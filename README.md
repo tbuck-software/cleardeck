@@ -8,7 +8,7 @@ Der lokale Betrieb bleibt Standard. Die App unterstützt eine verschlüsselte lo
 
 Der optionale Servermodus ist eine technische Vorschau für einen gemeinsamen Bestand auf mehreren Geräten. Er verwendet einen selbst betriebenen ClearDeck-Server mit PostgreSQL. Der Server speichert verschlüsselte Snapshots; der gemeinsame Datenschlüssel bleibt bei den Clients. Persönliche Konten erhalten Lese- oder Schreibrechte. Der Modus benötigt eine Verbindung zum Server und unterstützt Bestände bis 32 MiB.
 
-Unter **Einstellungen → Allgemein → Datenablage** lässt sich der Server verbinden. Eine Übertragung des lokalen Bestands muss ausdrücklich bestätigt werden. Beim Rückwechsel bleiben lokale Daten und Serverdaten getrennt.
+Unter **Einstellungen → Verbindungen** lässt sich der Server verbinden. Eine Übertragung des lokalen Bestands muss ausdrücklich bestätigt werden. Beim Rückwechsel bleiben lokale Daten und Serverdaten getrennt.
 
 - [Server einrichten und bedienen](docs/server-mode.md)
 - [Hosting und nächste Schritte](docs/hosting-launch-plan.md)
@@ -28,6 +28,8 @@ Für Aufnahmen und Bedienprüfungen gibt es ein getrenntes Profil mit vollständ
 ```sh
 npm run demo
 ```
+
+Mit `make dev-server` startet dasselbe Demo-Profil zusammen mit einem lokalen ClearDeck-Server (PostgreSQL in Docker). Adresse, Konten und Passwort stehen im Terminal. `make dev-server-reset` leert den Server, damit eine Erstübertragung wieder möglich ist.
 
 [Entwicklungsumgebung](docs/development.md) und [Demo-Profil](docs/betrieb/demo-profil.md) beschreiben Datenpfade, Start und Wiederverwendung.
 

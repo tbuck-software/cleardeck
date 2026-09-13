@@ -12,7 +12,7 @@ Die neuen Tests prüfen unter anderem falsche Schlüssel und Passwörter, lokale
 
 ## Überarbeitete Einstellungen
 
-Die Datenablage und Update-Quelle folgen den bestehenden Formularen ohne zusätzliche Karten oder Statusuntertitel. Beim Verbinden stehen vorhandener Serverbestand und lokale Erstübertragung als getrennte Optionen am Anfang. Abbrechen löscht die eingegebenen Geheimnisse und die Bestätigung zur Schlüsselsicherung. Der Rückwechsel zum lokalen Bestand erklärt vor der Bestätigung, dass Serveränderungen nicht übernommen werden.
+Datenablage und Update-Quelle stehen gemeinsam unter Einstellungen → Verbindungen. Wie unter Sicherheit & Backup öffnen Zeilen die Formulare als Dialog, auf schmalen Fenstern als Bottom Sheet. Vorhandenen Serverbestand öffnen und lokalen Bestand übertragen sind getrennte Dialoge; beim Übertragen wird der Datenschlüssel sofort erzeugt. Der Sperrbildschirm im Serverbetrieb zeigt die Anmeldung direkt. Abbrechen löscht die eingegebenen Geheimnisse und die Bestätigung zur Schlüsselsicherung. Der Rückwechsel zum lokalen Bestand erklärt vor der Bestätigung, dass Serveränderungen nicht übernommen werden.
 
 Für diese Überarbeitung sind TypeScript, Lint und 578 Desktoptests in 88 Dateien erfolgreich. Die Komponententests prüfen auch den direkten Formulareinstieg vom Anmeldebildschirm, das Zurücksetzen nach Abbruch, die Rückwechselbestätigung und bereinigte Fehlermeldungen beim Speichern der Update-Quelle.
 

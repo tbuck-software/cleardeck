@@ -102,7 +102,7 @@ Das Deaktivieren löscht die Sitzungen des Kontos. Es löscht weder Snapshots no
 
 Die Übertragung ist ein bewusster Schritt und funktioniert nur von einem geöffneten lokalen Bestand auf einen leeren Server:
 
-1. Den lokalen Bestand anmelden und unter `Einstellungen → Allgemein → Datenablage` den Server verbinden.
+1. Den lokalen Bestand anmelden und unter `Einstellungen → Verbindungen` `Lokalen Bestand auf Server übertragen…` wählen.
 2. `Lokalen Bestand übertragen` wählen. Für weitere Geräte stattdessen `Vorhandenen Bestand öffnen` verwenden.
 3. Serveradresse, Serverbenutzername und Serverpasswort eintragen.
 4. Den vorhandenen lokalen Recovery-Key verwenden oder einen neuen Datenschlüssel erzeugen. Den Schlüssel offline und getrennt vom Serverpasswort ablegen.
@@ -112,7 +112,7 @@ Der Server muss leer sein. Ein nichtleerer Server wird nicht überschrieben. Der
 
 ### Weitere Geräte anmelden
 
-Auf jedem Gerät dieselbe ClearDeck-Version oder eine kompatible Version installieren. Unter `Einstellungen → Allgemein → Datenablage` oder über `Vorhandenen Server verwenden` die Serveradresse und das zugewiesene Konto eingeben. Danach denselben 32-Byte-Datenschlüssel eingeben. Der Schlüssel wird nicht an den Server gesendet.
+Auf jedem Gerät dieselbe ClearDeck-Version oder eine kompatible Version installieren. Unter `Einstellungen → Verbindungen → Serverbestand öffnen…` oder über `Vorhandenen Server verwenden` auf dem Sperrbildschirm die Serveradresse und das zugewiesene Konto eingeben. Danach denselben 32-Byte-Datenschlüssel eingeben. Der Schlüssel wird nicht an den Server gesendet.
 
 Die Client-Konfiguration speichert nur die Serveradresse, den Benutzernamen und die technische Instanz-ID. Serverpasswort, Datenschlüssel und Sitzungstoken werden nicht gespeichert. Nach einem Neustart fragt die App die Zugangsdaten und den Datenschlüssel erneut ab.
 
@@ -134,7 +134,7 @@ Der Import und die Wiederherstellung bleiben im Serverbetrieb gesperrt. Auch der
 
 Die Internetverbindung wird während der Nutzung benötigt. Wenn der Server nicht erreichbar ist, weicht die App nicht automatisch auf den lokalen Bestand aus. Die geladene Datenbank liegt nur im Arbeitsspeicher des ClearDeck-Prozesses. Beim Sperren oder Beenden schließt die App sie und verwirft den Schlüssel aus dem Arbeitsspeicher.
 
-Jede Datenoperation prüft zuerst die geladene Serverrevision. Eine andere offene App kann zwischen zwei Bedienvorgängen speichern. Dann meldet ClearDeck einen Konflikt und speichert die lokale Änderung nicht. Unter `Einstellungen → Allgemein → Datenablage` `Serverbestand neu laden` wählen und die Eingabe danach erneut erfassen. Das Neuladen schließt offene Eingaben; bereits gespeicherte Änderungen bleiben erhalten.
+Jede Datenoperation prüft zuerst die geladene Serverrevision. Eine andere offene App kann zwischen zwei Bedienvorgängen speichern. Dann meldet ClearDeck einen Konflikt und speichert die lokale Änderung nicht. Unter `Einstellungen → Verbindungen` `Serverbestand neu laden` wählen und die Eingabe danach erneut erfassen. Das Neuladen schließt offene Eingaben; bereits gespeicherte Änderungen bleiben erhalten.
 
 Ein Leser erhält beim Speichern eine Berechtigungsfehlermeldung. Ein abgelaufenes oder widerrufenes Konto muss mit Serverpasswort und Datenschlüssel erneut verbunden werden. Ein falscher Datenschlüssel wird beim Entschlüsseln erkannt. Ein größerer Snapshot wird bei 32 MiB abgewiesen.
 

@@ -416,6 +416,71 @@
   padding: max(16px, min(6vh, 64px)) 16px;
 }
 
+/* Narrow windows: dialogs dock to the bottom as a sheet, actions stay reachable. */
+@media (max-width: 760px) {
+  .cd-dialog-backdrop {
+    align-items: end;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .cd-dialog-backdrop > .dialog {
+    max-height: 92vh;
+    overflow-y: auto;
+    padding-bottom: 0;
+    border-radius: calc(var(--radius-lg) * 1.15) calc(var(--radius-lg) * 1.15) 0 0;
+    animation: cd-sheet-in 180ms ease-out;
+  }
+
+  .cd-dialog-backdrop > .dialog::before {
+    content: '';
+    align-self: center;
+    width: 40px;
+    height: 4px;
+    margin: -6px 0 2px;
+    border-radius: 2px;
+    background: var(--color-neutral-300);
+  }
+
+  .cd-dialog-backdrop .dialog-actions {
+    position: sticky;
+    bottom: 0;
+    flex-wrap: wrap;
+    margin: var(--space-2) calc(-1 * var(--space-4)) 0;
+    padding: var(--space-3) var(--space-4) max(var(--space-4), env(safe-area-inset-bottom));
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-hairline);
+  }
+
+  .cd-dialog-backdrop .dialog-actions > div:last-child {
+    flex: 1;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 520px) {
+  .cd-dialog-backdrop .cd-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cd-dialog-backdrop .dialog-actions > div:last-child > .btn {
+    flex: 1;
+  }
+}
+
+@keyframes cd-sheet-in {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-dialog-backdrop > .dialog {
+    animation: none;
+  }
+}
+
 .cd-dialog-head {
   display: flex;
   align-items: center;

@@ -1,6 +1,7 @@
 import React from 'react';
 import Icon from '../../ui/Icon';
 import Segmented from '../../ui/Segmented';
+import SettingsRow from '../../ui/SettingsRow';
 import { formatDateDE } from '../../../utils/dateFormat';
 import type { EncryptionSetupState } from '../../../types/ui';
 import type { AutoBackupMode, BackupState, StorageMode } from '../../../shared/types';
@@ -20,23 +21,6 @@ const relativeDay = (iso: string | null): string => {
   if (days < 30) return `vor ${days} Tagen`;
   return formatDateDE(iso.slice(0, 10));
 };
-
-type RowProps = {
-  title: string;
-  note?: string;
-  disabled?: boolean;
-  onClick: () => void;
-};
-
-const Row = ({ title, note, disabled, onClick }: RowProps) => (
-  <button type="button" className="cd-item" disabled={disabled} onClick={onClick}>
-    <div style={{ flex: 1 }}>
-      <div style={{ fontWeight: 600 }}>{title}</div>
-      {note && <div className="cd-muted-13">{note}</div>}
-    </div>
-    <span className="cd-arrow">→</span>
-  </button>
-);
 
 type SettingsSecurityProps = {
   storageMode: StorageMode;
@@ -118,7 +102,7 @@ const SettingsSecurity = ({
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-        <Row
+        <SettingsRow
           title={backupBusy ? 'Backup läuft …' : 'Backup jetzt erstellen'}
           note={
             backup.folder
@@ -128,32 +112,32 @@ const SettingsSecurity = ({
           disabled={!backup.folder || backupBusy}
           onClick={onRunBackup}
         />
-        <Row
+        <SettingsRow
           title="Backup herunterladen…"
           note="Aktuellen Bestand verschlüsselt oder unverschlüsselt an einem Ort deiner Wahl ablegen"
           onClick={onOpenExport}
         />
-        <Row
+        <SettingsRow
           title="Backup wiederherstellen…"
           note="Ersetzt den lokalen Bestand vollständig"
           onClick={onOpenRestore}
         />
-        {encrypted && <Row title="Passwort ändern" onClick={onOpenPassword} />}
+        {encrypted && <SettingsRow title="Passwort ändern" onClick={onOpenPassword} />}
         {encrypted ? (
           <>
-            <Row
+            <SettingsRow
               title="Recovery-Key anzeigen"
               note="Offline aufbewahren — einziger Weg bei vergessenem Passwort"
               onClick={onOpenRecoveryKey}
             />
-            <Row
+            <SettingsRow
               title="Verschlüsselung deaktivieren"
               note="Die Datenbank liegt danach im Klartext auf diesem Gerät"
               onClick={() => void onDisableEncryption()}
             />
           </>
         ) : (
-          <Row
+          <SettingsRow
             title="Verschlüsselung aktivieren"
             note="Passwort setzen und Recovery-Key erzeugen"
             onClick={onOpenEnableEncryption}
