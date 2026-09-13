@@ -6,6 +6,7 @@ import type { StaffImportPreview, StaffImportRow } from '../shared/staffImport';
 import { requireDate, validDate } from '../utils/calendarDate';
 import { getDb, backupDatabase } from './database/connection';
 import { saveEmployee } from './repositories/employees';
+import { nextDeviceId } from './syncRecords';
 
 const normalize = (value: unknown): string =>
   String(value ?? '')
@@ -194,7 +195,8 @@ export const commitStaffImport = (
       if (
         !db.prepare('SELECT id FROM qualification_types WHERE name=?').get(row.qualification.trim())
       )
-        db.prepare('INSERT INTO qualification_types(name) VALUES (?)').run(
+        db.prepare('INSERT INTO qualification_types(id,name) VALUES (?,?)').run(
+          nextDeviceId(db, 'qualification_types'),
           row.qualification.trim(),
         );
     }

@@ -16,6 +16,7 @@ import {
   type Db,
   type PeriodRow,
 } from './employmentRepairShared';
+import { nextDeviceId } from './syncRecords';
 
 type TermRow = Record<string, unknown> & {
   id: number;
@@ -148,7 +149,7 @@ export const applyReconcilePeriods = (input: {
       if (targetTerm) {
         // Both current values are equal. Keep the duplicate as an auditable
         // historical snapshot before removing the duplicate current row.
-        db.prepare('INSERT INTO employment_term_history(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) VALUES (?,?,?,?,?,?)').run(retained.id, sourceTerm.effectiveFrom, sourceTerm.weeklyHours, sourceTerm.fte, sourceTerm.verified, sourceTerm.sourceRef);
+        db.prepare('INSERT INTO employment_term_history(id,periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) VALUES (?,?,?,?,?,?,?)').run(nextDeviceId(db, 'employment_term_history'), retained.id, sourceTerm.effectiveFrom, sourceTerm.weeklyHours, sourceTerm.fte, sourceTerm.verified, sourceTerm.sourceRef);
         db.prepare('DELETE FROM employment_terms WHERE id=?').run(sourceTerm.id);
       } else {
         db.prepare('UPDATE employment_terms SET periodId=? WHERE id=?').run(retained.id, sourceTerm.id);

@@ -7,6 +7,7 @@ import type {
   YearDataset,
 } from '../../shared/types';
 import { getYearDataset } from './employees';
+import { nextDeviceId } from '../syncRecords';
 import {
   assertNoStrandedTerms,
   assertReportYear,
@@ -106,18 +107,16 @@ export const switchQualification = (input: SwitchQualificationInput): YearDatase
       shiftDays(input.effectiveFrom, -1),
       period.id,
     );
-    const newPeriodId = Number(
-      db
-        .prepare(
-          'INSERT INTO employment_periods(employeeId,startDate,endDate,qualification,note) VALUES (?,?,?,?,?)',
-        )
-        .run(
-          input.employeeId,
-          input.effectiveFrom,
-          newEndDate,
-          input.qualification.trim(),
-          period.note,
-        ).lastInsertRowid,
+    const newPeriodId = nextDeviceId(db, 'employment_periods');
+    db.prepare(
+      'INSERT INTO employment_periods(id,employeeId,startDate,endDate,qualification,note) VALUES (?,?,?,?,?,?)',
+    ).run(
+      newPeriodId,
+      input.employeeId,
+      input.effectiveFrom,
+      newEndDate,
+      input.qualification.trim(),
+      period.note,
     );
 
     const transitionTerm = futureTerms.find((term) => term.effectiveFrom === input.effectiveFrom);
@@ -126,9 +125,10 @@ export const switchQualification = (input: SwitchQualificationInput): YearDatase
       : [...terms].reverse().find((term) => term.effectiveFrom < input.effectiveFrom);
     if (carry) {
       db.prepare(
-        `INSERT INTO employment_terms(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef)
-         VALUES (?,?,?,?,?,?)`,
+        `INSERT INTO employment_terms(id,periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef)
+         VALUES (?,?,?,?,?,?,?)`,
       ).run(
+        nextDeviceId(db, 'employment_terms'),
         newPeriodId,
         input.effectiveFrom,
         carry.weeklyHours,
@@ -137,9 +137,10 @@ export const switchQualification = (input: SwitchQualificationInput): YearDatase
         carry.sourceRef,
       );
       db.prepare(
-        `INSERT INTO employment_term_history(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef)
-         VALUES (?,?,?,?,?,?)`,
+        `INSERT INTO employment_term_history(id,periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef)
+         VALUES (?,?,?,?,?,?,?)`,
       ).run(
+        nextDeviceId(db, 'employment_term_history'),
         newPeriodId,
         input.effectiveFrom,
         carry.weeklyHours,
@@ -151,9 +152,10 @@ export const switchQualification = (input: SwitchQualificationInput): YearDatase
     for (const term of futureTerms) {
       db.prepare('UPDATE employment_terms SET periodId=? WHERE id=?').run(newPeriodId, term.id);
       db.prepare(
-        `INSERT INTO employment_term_history(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef)
-         VALUES (?,?,?,?,?,?)`,
+        `INSERT INTO employment_term_history(id,periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef)
+         VALUES (?,?,?,?,?,?,?)`,
       ).run(
+        nextDeviceId(db, 'employment_term_history'),
         newPeriodId,
         term.effectiveFrom,
         term.weeklyHours,

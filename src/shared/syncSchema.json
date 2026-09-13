@@ -1,0 +1,438 @@
+{
+  "schemaVersion": 23,
+  "settings": {
+    "sharedKeys": [
+      "baseHours",
+      "visitIntervalDays",
+      "instructionReminderDays"
+    ],
+    "localKeys": [
+      "hiddenEventTypes",
+      "backupFolder",
+      "backupAuto",
+      "backupKeep",
+      "backupLastAt",
+      "backupLastError",
+      "schema_version"
+    ],
+    "localPrefixes": [
+      "migration_"
+    ]
+  },
+  "tables": [
+    {
+      "name": "settings",
+      "columns": [
+        { "name": "key", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "value", "type": "TEXT", "notNull": false, "default": null }
+      ],
+      "primaryKey": ["key"],
+      "foreignKeys": [],
+      "uniqueConstraints": [],
+      "indexes": [],
+      "createSql": "CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT)"
+    },
+    {
+      "name": "qualification_types",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "name", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "sortOrder", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "note", "type": "TEXT", "notNull": false, "default": null }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [],
+      "uniqueConstraints": [["name"]],
+      "indexes": [
+        { "name": "idx_qualification_sort", "columns": ["sortOrder"], "unique": false, "sql": "CREATE INDEX idx_qualification_sort ON qualification_types(sortOrder)" }
+      ],
+      "createSql": "CREATE TABLE qualification_types (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, sortOrder INTEGER, note TEXT)"
+    },
+    {
+      "name": "employees",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "name", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "note", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "weeklyHours", "type": "REAL", "notNull": false, "default": null },
+        { "name": "fte", "type": "REAL", "notNull": false, "default": null },
+        { "name": "createdAt", "type": "TEXT", "notNull": false, "default": "datetime('now')" },
+        { "name": "birthDate", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "department", "type": "TEXT", "notNull": false, "default": null }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [],
+      "uniqueConstraints": [],
+      "indexes": [],
+      "createSql": "CREATE TABLE employees (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, note TEXT, weeklyHours REAL, fte REAL, createdAt TEXT DEFAULT (datetime('now')), birthDate TEXT, department TEXT)"
+    },
+    {
+      "name": "employment_periods",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "employeeId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "startDate", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "endDate", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "qualification", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "note", "type": "TEXT", "notNull": false, "default": null }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        { "columns": ["employeeId"], "table": "employees", "referencedColumns": ["id"], "onDelete": "CASCADE" }
+      ],
+      "uniqueConstraints": [],
+      "indexes": [
+        { "name": "idx_periods_employee", "columns": ["employeeId"], "unique": false, "sql": "CREATE INDEX idx_periods_employee ON employment_periods(employeeId)" },
+        { "name": "idx_periods_dates", "columns": ["startDate", "endDate"], "unique": false, "sql": "CREATE INDEX idx_periods_dates ON employment_periods(startDate, endDate)" }
+      ],
+      "createSql": "CREATE TABLE employment_periods (id INTEGER PRIMARY KEY AUTOINCREMENT, employeeId INTEGER NOT NULL, startDate TEXT NOT NULL, endDate TEXT, qualification TEXT, note TEXT, FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE)"
+    },
+    {
+      "name": "employee_events",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "employeeId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "eventDate", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "type", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "title", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "details", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "meta", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "previousValue", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "newValue", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "createdAt", "type": "TEXT", "notNull": false, "default": "datetime('now')" },
+        { "name": "expiresAt", "type": "TEXT", "notNull": false, "default": null }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        { "columns": ["employeeId"], "table": "employees", "referencedColumns": ["id"], "onDelete": "CASCADE" }
+      ],
+      "uniqueConstraints": [],
+      "indexes": [
+        { "name": "idx_events_employee", "columns": ["employeeId"], "unique": false, "sql": "CREATE INDEX idx_events_employee ON employee_events(employeeId)" },
+        { "name": "idx_events_date", "columns": ["eventDate"], "unique": false, "sql": "CREATE INDEX idx_events_date ON employee_events(eventDate)" },
+        { "name": "idx_events_expires", "columns": ["expiresAt"], "unique": false, "sql": "CREATE INDEX idx_events_expires ON employee_events(expiresAt)" }
+      ],
+      "createSql": "CREATE TABLE employee_events (id INTEGER PRIMARY KEY AUTOINCREMENT, employeeId INTEGER NOT NULL, eventDate TEXT NOT NULL, type TEXT NOT NULL, title TEXT NOT NULL, details TEXT, meta TEXT, previousValue TEXT, newValue TEXT, createdAt TEXT DEFAULT (datetime('now')), expiresAt TEXT, FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE)"
+    },
+    {
+      "name": "patients",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "name", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "birthDate", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "diagnosis", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "qprStatus", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "note", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "createdAt", "type": "TEXT", "notNull": false, "default": "datetime('now')" },
+        { "name": "contact", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "admissionDate", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "cognitionImpaired", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "mobilityImpaired", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "hkpCode", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "intensiveCare", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "careLevel", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "legacyQprStatus", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "serviceStatus", "type": "TEXT", "notNull": true, "default": "'active'" },
+        { "name": "serviceEndDate", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "serviceScope", "type": "TEXT", "notNull": true, "default": "'unknown'" },
+        { "name": "representativeStatus", "type": "TEXT", "notNull": true, "default": "'unknown'" },
+        { "name": "hkpCodes", "type": "TEXT", "notNull": true, "default": "'[]'" },
+        { "name": "assessmentSource", "type": "TEXT", "notNull": true, "default": "'unknown'" },
+        { "name": "assessmentDate", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "assessmentNote", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "akiSetting", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "phkpFirst", "type": "INTEGER", "notNull": true, "default": "0" },
+        { "name": "phkpStartDate", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "serviceScopeSource", "type": "TEXT", "notNull": true, "default": "'legacy'" }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [],
+      "uniqueConstraints": [],
+      "indexes": [
+        { "name": "idx_patients_name", "columns": ["name"], "unique": false, "sql": "CREATE INDEX idx_patients_name ON patients(name)" },
+        { "name": "idx_patients_qpr", "columns": ["qprStatus"], "unique": false, "sql": "CREATE INDEX idx_patients_qpr ON patients(qprStatus)" },
+        { "name": "idx_patients_hkp", "columns": ["hkpCode"], "unique": false, "sql": "CREATE INDEX idx_patients_hkp ON patients(hkpCode)" }
+      ],
+      "createSql": "CREATE TABLE patients (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, birthDate TEXT, diagnosis TEXT, qprStatus TEXT CHECK(qprStatus IN ('A', 'B', 'C', 'D')), note TEXT, createdAt TEXT DEFAULT (datetime('now')), contact TEXT, admissionDate TEXT, cognitionImpaired INTEGER, mobilityImpaired INTEGER, hkpCode TEXT, intensiveCare TEXT, careLevel INTEGER, legacyQprStatus TEXT, serviceStatus TEXT NOT NULL DEFAULT 'active', serviceEndDate TEXT, serviceScope TEXT NOT NULL DEFAULT 'unknown', representativeStatus TEXT NOT NULL DEFAULT 'unknown', hkpCodes TEXT NOT NULL DEFAULT '[]', assessmentSource TEXT NOT NULL DEFAULT 'unknown', assessmentDate TEXT, assessmentNote TEXT, akiSetting TEXT, phkpFirst INTEGER NOT NULL DEFAULT 0, phkpStartDate TEXT, serviceScopeSource TEXT NOT NULL DEFAULT 'legacy')"
+    },
+    {
+      "name": "patient_visits",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "patientId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "visitDate", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "actionNeeded", "type": "INTEGER", "notNull": true, "default": "0" },
+        { "name": "comment", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "legacyQprRating", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "createdAt", "type": "TEXT", "notNull": false, "default": "datetime('now')" },
+        { "name": "resolvedAt", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "status", "type": "TEXT", "notNull": true, "default": "'completed'" },
+        { "name": "assignedTo", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "actionDueDate", "type": "TEXT", "notNull": false, "default": null }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        { "columns": ["patientId"], "table": "patients", "referencedColumns": ["id"], "onDelete": "CASCADE" }
+      ],
+      "uniqueConstraints": [],
+      "indexes": [
+        { "name": "idx_visits_patient", "columns": ["patientId"], "unique": false, "sql": "CREATE INDEX idx_visits_patient ON patient_visits(patientId)" },
+        { "name": "idx_visits_date", "columns": ["visitDate"], "unique": false, "sql": "CREATE INDEX idx_visits_date ON patient_visits(visitDate)" },
+        { "name": "idx_visits_action", "columns": ["actionNeeded"], "unique": false, "sql": "CREATE INDEX idx_visits_action ON patient_visits(actionNeeded)" }
+      ],
+      "createSql": "CREATE TABLE patient_visits (id INTEGER PRIMARY KEY AUTOINCREMENT, patientId INTEGER NOT NULL, visitDate TEXT NOT NULL, actionNeeded INTEGER NOT NULL DEFAULT 0, comment TEXT, legacyQprRating TEXT, createdAt TEXT DEFAULT (datetime('now')), resolvedAt TEXT, status TEXT NOT NULL DEFAULT 'completed', assignedTo TEXT, actionDueDate TEXT, FOREIGN KEY (patientId) REFERENCES patients(id) ON DELETE CASCADE)"
+    },
+    {
+      "name": "competency_definitions",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "name", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "sortOrder", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "note", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "code", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "category", "type": "TEXT", "notNull": false, "default": "'Allgemein'" },
+        { "name": "relevance", "type": "TEXT", "notNull": false, "default": "'Alle'" }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [],
+      "uniqueConstraints": [["name"]],
+      "indexes": [
+        { "name": "idx_competency_definitions_sort", "columns": ["sortOrder"], "unique": false, "sql": "CREATE INDEX idx_competency_definitions_sort ON competency_definitions(sortOrder)" }
+      ],
+      "createSql": "CREATE TABLE competency_definitions (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, sortOrder INTEGER, note TEXT, code TEXT, category TEXT DEFAULT 'Allgemein', relevance TEXT DEFAULT 'Alle')"
+    },
+    {
+      "name": "employee_competencies",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "employeeId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "competencyDefinitionId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "status", "type": "TEXT", "notNull": true, "default": "'open'" },
+        { "name": "startedAt", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "completedAt", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "note", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "createdAt", "type": "TEXT", "notNull": false, "default": "datetime('now')" },
+        { "name": "level", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "approvedAt", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "approvedBy", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "stageScheme", "type": "TEXT", "notNull": true, "default": "'legacy'" }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        { "columns": ["employeeId"], "table": "employees", "referencedColumns": ["id"], "onDelete": "CASCADE" },
+        { "columns": ["competencyDefinitionId"], "table": "competency_definitions", "referencedColumns": ["id"], "onDelete": "CASCADE" }
+      ],
+      "uniqueConstraints": [["employeeId", "competencyDefinitionId"]],
+      "indexes": [
+        { "name": "idx_employee_competencies_employee", "columns": ["employeeId"], "unique": false, "sql": "CREATE INDEX idx_employee_competencies_employee ON employee_competencies(employeeId)" },
+        { "name": "idx_employee_competencies_definition", "columns": ["competencyDefinitionId"], "unique": false, "sql": "CREATE INDEX idx_employee_competencies_definition ON employee_competencies(competencyDefinitionId)" }
+      ],
+      "createSql": "CREATE TABLE employee_competencies (id INTEGER PRIMARY KEY AUTOINCREMENT, employeeId INTEGER NOT NULL, competencyDefinitionId INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'open', startedAt TEXT, completedAt TEXT, note TEXT, createdAt TEXT DEFAULT (datetime('now')), level INTEGER, approvedAt TEXT, approvedBy TEXT, stageScheme TEXT NOT NULL DEFAULT 'legacy', UNIQUE(employeeId, competencyDefinitionId), FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE, FOREIGN KEY (competencyDefinitionId) REFERENCES competency_definitions(id) ON DELETE CASCADE)"
+    },
+    {
+      "name": "instruction_definitions",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "topic", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "legalBasis", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "note", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "sortOrder", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "intervalMonths", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "intervalSource", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "minorHazardInstruction", "type": "INTEGER", "notNull": true, "default": "0" }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [],
+      "uniqueConstraints": [["topic"]],
+      "indexes": [
+        { "name": "idx_instruction_definitions_sort", "columns": ["sortOrder"], "unique": false, "sql": "CREATE INDEX idx_instruction_definitions_sort ON instruction_definitions(sortOrder)" }
+      ],
+      "createSql": "CREATE TABLE instruction_definitions (id INTEGER PRIMARY KEY AUTOINCREMENT, topic TEXT UNIQUE NOT NULL, legalBasis TEXT, note TEXT, sortOrder INTEGER, intervalMonths INTEGER, intervalSource TEXT CHECK(intervalSource IN ('norm', 'betrieblich')), minorHazardInstruction INTEGER NOT NULL DEFAULT 0)"
+    },
+    {
+      "name": "employee_instructions",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "employeeId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "instructionDefinitionId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "dueDate", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "completedAt", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "conductedBy", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "note", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "createdAt", "type": "TEXT", "notNull": false, "default": "datetime('now')" },
+        { "name": "evidenceRef", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "content", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "previousInstructionId", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "scheduleReviewRequired", "type": "INTEGER", "notNull": true, "default": "0" }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        { "columns": ["employeeId"], "table": "employees", "referencedColumns": ["id"], "onDelete": "CASCADE" },
+        { "columns": ["instructionDefinitionId"], "table": "instruction_definitions", "referencedColumns": ["id"], "onDelete": "CASCADE" },
+        { "columns": ["previousInstructionId"], "table": "employee_instructions", "referencedColumns": ["id"], "onDelete": "SET NULL" }
+      ],
+      "uniqueConstraints": [],
+      "indexes": [
+        { "name": "idx_employee_instructions_employee", "columns": ["employeeId"], "unique": false, "sql": "CREATE INDEX idx_employee_instructions_employee ON employee_instructions(employeeId)" },
+        { "name": "idx_employee_instructions_definition", "columns": ["instructionDefinitionId"], "unique": false, "sql": "CREATE INDEX idx_employee_instructions_definition ON employee_instructions(instructionDefinitionId)" }
+      ],
+      "createSql": "CREATE TABLE employee_instructions (id INTEGER PRIMARY KEY AUTOINCREMENT, employeeId INTEGER NOT NULL, instructionDefinitionId INTEGER NOT NULL, dueDate TEXT, completedAt TEXT, conductedBy TEXT, note TEXT, createdAt TEXT DEFAULT (datetime('now')), evidenceRef TEXT, content TEXT, previousInstructionId INTEGER REFERENCES employee_instructions(id) ON DELETE SET NULL, scheduleReviewRequired INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE, FOREIGN KEY (instructionDefinitionId) REFERENCES instruction_definitions(id) ON DELETE CASCADE)"
+    },
+    {
+      "name": "audits",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "auditDate", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "inspector", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "kind", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "findings", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "createdAt", "type": "TEXT", "notNull": false, "default": "datetime('now')" },
+        { "name": "reportRef", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "confirmed", "type": "INTEGER", "notNull": true, "default": "0" }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [],
+      "uniqueConstraints": [],
+      "indexes": [
+        { "name": "idx_audits_date", "columns": ["auditDate"], "unique": false, "sql": "CREATE INDEX idx_audits_date ON audits(auditDate)" }
+      ],
+      "createSql": "CREATE TABLE audits (id INTEGER PRIMARY KEY AUTOINCREMENT, auditDate TEXT NOT NULL, inspector TEXT, kind TEXT CHECK(kind IN ('regel', 'anlass')), findings TEXT, createdAt TEXT DEFAULT (datetime('now')), reportRef TEXT, confirmed INTEGER NOT NULL DEFAULT 0)"
+    },
+    {
+      "name": "audit_results",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "auditId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "sectionKey", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "result", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "note", "type": "TEXT", "notNull": false, "default": null }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        { "columns": ["auditId"], "table": "audits", "referencedColumns": ["id"], "onDelete": "CASCADE" }
+      ],
+      "uniqueConstraints": [],
+      "indexes": [
+        { "name": "idx_audit_results_audit", "columns": ["auditId"], "unique": false, "sql": "CREATE INDEX idx_audit_results_audit ON audit_results(auditId)" }
+      ],
+      "createSql": "CREATE TABLE audit_results (id INTEGER PRIMARY KEY AUTOINCREMENT, auditId INTEGER NOT NULL, sectionKey TEXT NOT NULL, result TEXT NOT NULL CHECK(result IN ('A', 'B', 'C', 'D', 'text', 'ok', 'no')), note TEXT, FOREIGN KEY (auditId) REFERENCES audits(id) ON DELETE CASCADE)"
+    },
+    {
+      "name": "audit_clients",
+      "columns": [
+        { "name": "auditId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "patientId", "type": "INTEGER", "notNull": true, "default": null }
+      ],
+      "primaryKey": ["auditId", "patientId"],
+      "foreignKeys": [
+        { "columns": ["auditId"], "table": "audits", "referencedColumns": ["id"], "onDelete": "CASCADE" },
+        { "columns": ["patientId"], "table": "patients", "referencedColumns": ["id"], "onDelete": "CASCADE" }
+      ],
+      "uniqueConstraints": [],
+      "indexes": [],
+      "createSql": "CREATE TABLE audit_clients (auditId INTEGER NOT NULL, patientId INTEGER NOT NULL, PRIMARY KEY (auditId, patientId), FOREIGN KEY (auditId) REFERENCES audits(id) ON DELETE CASCADE, FOREIGN KEY (patientId) REFERENCES patients(id) ON DELETE CASCADE)"
+    },
+    {
+      "name": "employment_terms",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "periodId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "effectiveFrom", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "weeklyHours", "type": "REAL", "notNull": false, "default": null },
+        { "name": "fte", "type": "REAL", "notNull": true, "default": null },
+        { "name": "verified", "type": "INTEGER", "notNull": true, "default": "0" },
+        { "name": "sourceRef", "type": "TEXT", "notNull": false, "default": null }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        { "columns": ["periodId"], "table": "employment_periods", "referencedColumns": ["id"], "onDelete": "CASCADE" }
+      ],
+      "uniqueConstraints": [["periodId", "effectiveFrom"]],
+      "indexes": [],
+      "createSql": "CREATE TABLE employment_terms (id INTEGER PRIMARY KEY AUTOINCREMENT, periodId INTEGER NOT NULL REFERENCES employment_periods(id) ON DELETE CASCADE, effectiveFrom TEXT NOT NULL, weeklyHours REAL, fte REAL NOT NULL CHECK(fte >= 0 AND fte <= 1), verified INTEGER NOT NULL DEFAULT 0, sourceRef TEXT, UNIQUE(periodId, effectiveFrom))"
+    },
+    {
+      "name": "competency_history",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "employeeId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "competencyDefinitionId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "changedAt", "type": "TEXT", "notNull": true, "default": "CURRENT_TIMESTAMP" },
+        { "name": "level", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "approvedAt", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "approvedBy", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "note", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "stageScheme", "type": "TEXT", "notNull": true, "default": null }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        { "columns": ["employeeId"], "table": "employees", "referencedColumns": ["id"], "onDelete": "CASCADE" },
+        { "columns": ["competencyDefinitionId"], "table": "competency_definitions", "referencedColumns": ["id"], "onDelete": "NO ACTION" }
+      ],
+      "uniqueConstraints": [],
+      "indexes": [],
+      "createSql": "CREATE TABLE competency_history (id INTEGER PRIMARY KEY, employeeId INTEGER NOT NULL REFERENCES employees(id) ON DELETE CASCADE, competencyDefinitionId INTEGER NOT NULL REFERENCES competency_definitions(id), changedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, level INTEGER, approvedAt TEXT, approvedBy TEXT, note TEXT, stageScheme TEXT NOT NULL)"
+    },
+    {
+      "name": "employment_term_history",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "periodId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "effectiveFrom", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "weeklyHours", "type": "REAL", "notNull": false, "default": null },
+        { "name": "fte", "type": "REAL", "notNull": false, "default": null },
+        { "name": "verified", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "sourceRef", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "changedAt", "type": "TEXT", "notNull": true, "default": "CURRENT_TIMESTAMP" }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [
+        { "columns": ["periodId"], "table": "employment_periods", "referencedColumns": ["id"], "onDelete": "CASCADE" }
+      ],
+      "uniqueConstraints": [],
+      "indexes": [],
+      "createSql": "CREATE TABLE employment_term_history (id INTEGER PRIMARY KEY, periodId INTEGER NOT NULL REFERENCES employment_periods(id) ON DELETE CASCADE, effectiveFrom TEXT NOT NULL, weeklyHours REAL, fte REAL, verified INTEGER, sourceRef TEXT, changedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)"
+    },
+    {
+      "name": "service_definitions",
+      "columns": [
+        { "name": "id", "type": "INTEGER", "notNull": false, "default": null },
+        { "name": "name", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "serviceType", "type": "TEXT", "notNull": true, "default": null },
+        { "name": "active", "type": "INTEGER", "notNull": true, "default": "1" },
+        { "name": "sortOrder", "type": "INTEGER", "notNull": true, "default": "0" },
+        { "name": "createdAt", "type": "TEXT", "notNull": false, "default": "datetime('now')" }
+      ],
+      "primaryKey": ["id"],
+      "foreignKeys": [],
+      "uniqueConstraints": [],
+      "indexes": [
+        { "name": "idx_service_definitions_name", "columns": ["name"], "unique": true, "sql": "CREATE UNIQUE INDEX idx_service_definitions_name ON service_definitions(name COLLATE NOCASE)" },
+        { "name": "idx_service_definitions_active", "columns": ["active", "sortOrder"], "unique": false, "sql": "CREATE INDEX idx_service_definitions_active ON service_definitions(active, sortOrder)" }
+      ],
+      "createSql": "CREATE TABLE service_definitions (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, serviceType TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, sortOrder INTEGER NOT NULL DEFAULT 0, createdAt TEXT DEFAULT (datetime('now')))",
+      "indexSql": [
+        "CREATE UNIQUE INDEX idx_service_definitions_name ON service_definitions(name COLLATE NOCASE)",
+        "CREATE INDEX idx_service_definitions_active ON service_definitions(active, sortOrder)"
+      ]
+    },
+    {
+      "name": "patient_services",
+      "columns": [
+        { "name": "patientId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "serviceDefinitionId", "type": "INTEGER", "notNull": true, "default": null },
+        { "name": "labelSnapshot", "type": "TEXT", "notNull": true, "default": null }
+      ],
+      "primaryKey": ["patientId", "serviceDefinitionId"],
+      "foreignKeys": [
+        { "columns": ["patientId"], "table": "patients", "referencedColumns": ["id"], "onDelete": "CASCADE" },
+        { "columns": ["serviceDefinitionId"], "table": "service_definitions", "referencedColumns": ["id"], "onDelete": "NO ACTION" }
+      ],
+      "uniqueConstraints": [],
+      "indexes": [
+        { "name": "idx_patient_services_definition", "columns": ["serviceDefinitionId"], "unique": false, "sql": "CREATE INDEX idx_patient_services_definition ON patient_services(serviceDefinitionId)" }
+      ],
+      "createSql": "CREATE TABLE patient_services (patientId INTEGER NOT NULL REFERENCES patients(id) ON DELETE CASCADE, serviceDefinitionId INTEGER NOT NULL REFERENCES service_definitions(id), labelSnapshot TEXT NOT NULL, PRIMARY KEY (patientId, serviceDefinitionId))"
+    }
+  ]
+}

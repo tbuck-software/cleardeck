@@ -34,6 +34,8 @@ export const api = {
     connect: (input: Parameters<Api['connectServer']>[0]) => call('connectServer', baseApi.connectServer, input),
     local: () => call('useLocalConnection', baseApi.useLocalConnection),
     refresh: () => call('refreshServer', baseApi.refreshServer),
+    resolveConflict: (choice: 'server' | 'local') => call('resolveServerConflict', baseApi.resolveServerConflict, choice),
+    setEditing: (editing: boolean) => call('setServerEditing', baseApi.setServerEditing, editing),
   },
   app: {
     getInfo: () => call('getAppInfo', baseApi.getAppInfo),

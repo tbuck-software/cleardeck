@@ -10,7 +10,7 @@ import fs from 'fs';
 import path from 'path';
 import * as XLSX from 'xlsx';
 
-import { getDb, getEncryptionKey } from './database/connection';
+import { getDb, getEncryptionKey, isRemoteDatabase } from './database/connection';
 import { encodeBackup } from './backupFormat';
 import { writeAtomic } from './atomicFile';
 import { restoreBackup } from './backup';
@@ -31,6 +31,9 @@ import { buildPersonListWorkbook, buildEmployeeWorkbook, writeWorkbook } from '.
 export const exportDatabase = async (
   mode: 'encrypted' | 'plain',
 ): Promise<{ saved: boolean; filePath?: string; error?: string }> => {
+  if (isRemoteDatabase() && mode === 'encrypted') {
+    throw new Error('Für den Serverbestand bitte eine SQLite-Datei exportieren. Die Geräteverschlüsselung eignet sich nicht für übertragbare Sicherungen.');
+  }
   const { canceled, filePath } = await dialog.showSaveDialog({
     title:
       mode === 'encrypted'

@@ -5,6 +5,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import Dashboard from '../Dashboard';
 import type { EmployeeWithPeriod, UnifiedEvent, YearDataset } from '../../../shared/types';
 import type { DashboardTask, DataQualityCheck } from '../../../utils/dashboardTasks';
+import { localDate } from '../../../utils/calendarDate';
 
 const sampleDataset: YearDataset = {
   employees: [],
@@ -44,7 +45,7 @@ const upcoming: UnifiedEvent[] = [
   {
     id: 'event-1',
     employeeId: 1,
-    date: new Date().toISOString().slice(0, 10),
+    date: localDate(),
     type: 'care-visit',
     title: 'Pflegevisite',
     employeeName: 'Max Mustermann',

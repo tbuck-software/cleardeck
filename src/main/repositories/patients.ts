@@ -31,6 +31,7 @@ import {
 } from '../../utils/qpr';
 import { localDate, requireDate } from '../../utils/calendarDate';
 import { getDb } from '../database/connection';
+import { nextDeviceId } from '../syncRecords';
 import { isCareLevel } from '../../utils/careLevel';
 
 const PATIENT_COLUMNS = `
@@ -294,10 +295,11 @@ export const savePatient = (input: SavePatientInput): PatientWithLatestVisit[] =
         id: input.id,
       });
     else {
+      const newPatientId = nextDeviceId(db, 'patients');
       db.prepare(
-        `INSERT INTO patients (${keys.join(',')}) VALUES (${keys.map((k) => `@${k}`).join(',')})`,
-      ).run(params);
-      patientId = (db.prepare('SELECT last_insert_rowid() as id').get() as { id: number }).id;
+        `INSERT INTO patients (id,${keys.join(',')}) VALUES (@id,${keys.map((k) => `@${k}`).join(',')})`,
+      ).run({ ...params, id: newPatientId });
+      patientId = newPatientId;
     }
 
     if (hasServiceRecord && patientId) {
@@ -396,19 +398,23 @@ export const saveVisit = (input: {
     comment: input.comment ?? null,
     resolvedAt: input.resolvedAt ?? null,
   };
-  if (input.id) {
-    const old = db.prepare('SELECT patientId FROM patient_visits WHERE id=?').get(input.id) as
-      | { patientId: number }
-      | undefined;
-    if (!old || old.patientId !== input.patientId)
-      throw new Error('Visite gehört nicht zu dieser Person.');
-    db.prepare(
-      'UPDATE patient_visits SET visitDate=@visitDate,actionNeeded=@actionNeeded,comment=@comment,resolvedAt=@resolvedAt,status=@status,assignedTo=@assignedTo,actionDueDate=@actionDueDate WHERE id=@id AND patientId=@patientId',
-    ).run({ ...params, id: input.id });
-  } else
-    db.prepare(
-      'INSERT INTO patient_visits (patientId,visitDate,actionNeeded,comment,resolvedAt,status,assignedTo,actionDueDate) VALUES (@patientId,@visitDate,@actionNeeded,@comment,@resolvedAt,@status,@assignedTo,@actionDueDate)',
-    ).run(params);
+  const persist = db.transaction(() => {
+    if (input.id) {
+      const old = db.prepare('SELECT patientId FROM patient_visits WHERE id=?').get(input.id) as
+        | { patientId: number }
+        | undefined;
+      if (!old || old.patientId !== input.patientId)
+        throw new Error('Visite gehört nicht zu dieser Person.');
+      db.prepare(
+        'UPDATE patient_visits SET visitDate=@visitDate,actionNeeded=@actionNeeded,comment=@comment,resolvedAt=@resolvedAt,status=@status,assignedTo=@assignedTo,actionDueDate=@actionDueDate WHERE id=@id AND patientId=@patientId',
+      ).run({ ...params, id: input.id });
+    } else {
+      db.prepare(
+        'INSERT INTO patient_visits (id,patientId,visitDate,actionNeeded,comment,resolvedAt,status,assignedTo,actionDueDate) VALUES (@id,@patientId,@visitDate,@actionNeeded,@comment,@resolvedAt,@status,@assignedTo,@actionDueDate)',
+      ).run({ ...params, id: nextDeviceId(db, 'patient_visits') });
+    }
+  });
+  persist();
 
   return listVisits(input.patientId);
 };

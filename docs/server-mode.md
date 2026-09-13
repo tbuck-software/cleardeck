@@ -1,26 +1,31 @@
 # Serverbetrieb
 
-Stand: 13.09.2026. Der Serverbetrieb ist ein optionaler, selbst gehosteter Betriebsweg. Der lokale Betrieb bleibt die Voreinstellung.
+Stand: 14.09.2026. Der Serverbetrieb ist ein optionaler, selbst gehosteter Betriebsweg. Der lokale Betrieb bleibt die Voreinstellung und bleibt vom Serverbestand getrennt.
 
-## Was der Serverbetrieb speichert
+## Architektur des aktuellen Betriebs
 
-Eine Serverinstallation hat genau einen gemeinsamen Arbeitsbereich. Die Desktop-App lädt dafür den vollständigen SQLite-Bestand, entschlüsselt ihn im Arbeitsspeicher und schreibt nach einer Änderung wieder einen vollständigen, verschlüsselten Snapshot zurück. PostgreSQL speichert dabei nur:
+Der aktuelle Serverbetrieb verwendet Protokoll 2 und das gemeinsame Sync-Schema 23. Die API nutzt dafür die Routen v2/login, v2/changes und v2/transactions; v2/session beendet eine Sitzung. PostgreSQL speichert fachliche Datensätze als lesbare Zeilen. Dazu kommen ein Änderungsverlauf, Konten, Sitzungen, Gerätezuordnungen und Quittungen für wiederholte Transaktionen. Löschungen werden als Tombstones im Änderungsverlauf weitergegeben.
 
-- den undurchsichtigen verschlüsselten Snapshot als `bytea`,
-- Konten, Passwort-Hashes, Rollen und Sitzungen,
-- die technische Änderungsfolge mit Revision, Benutzername und Zeit.
+Der Server erhält keinen verschlüsselten SQLite-Gesamtsnapshot und keinen gemeinsamen Datenschlüssel. Die Server-API liest die Datensätze, damit sie einzelne Änderungen prüfen und Deltas liefern kann. Eine Transaktion kann mehrere Zeilen enthalten. Der Server prüft die erwarteten Versionen aller betroffenen Datensätze atomar. Eine Änderung mit einer veralteten Version wird vollständig abgewiesen.
 
-Die fachlichen Tabellen und der fachliche Audit-Inhalt bleiben im verschlüsselten SQLite-Snapshot. Der Server erhält den 32-Byte-Datenschlüssel nicht. Im Snapshot-Kopf steht nur sein SHA-256-Fingerabdruck, damit die App einen falschen Schlüssel erkennen kann.
+Jedes Gerät meldet sich mit einer Geräte-ID an. Der Server vergibt dafür einen eindeutigen Geräteslot. Der Client reserviert daraus einen eigenen Bereich für lokale numerische IDs, damit neue Datensätze auf mehreren Geräten nicht dieselben IDs erhalten. Jede Transaktion trägt eine UUID. Wiederholte Übertragungen derselben UUID sind idempotent.
 
-Alle Geräte, die denselben Arbeitsbereich öffnen, benötigen denselben 32-Byte-Datenschlüssel. Die App fragt ihn bei jeder Anmeldung erneut ab und legt ihn nicht in der Serverkonfiguration ab. Das Serverpasswort ist davon getrennt. Es dient nur der Anmeldung am Server.
+Die Desktop-App hält für jede Kombination aus normalisierter Serveradresse und Benutzername eine eigene lokale Arbeitskopie. Der verschlüsselte, dauerhaft gespeicherte Cache enthält:
 
-Ein Konto hat die Rolle `reader` oder `editor`. Leser können den Bestand ansehen und exportieren. Editoren können Änderungen speichern. Eine Sitzung läuft nach acht Stunden ab. Das Serverkonto sieht keine einzelnen Patientenrechte vor, sondern gilt für den gesamten Arbeitsbereich.
+- die lokale SQLite-Datenbank,
+- den zuletzt bestätigten Serverstand mit Cursor,
+- die noch nicht bestätigten Transaktionen in der Outbox,
+- die bekannte Rolle und den Zustand der Synchronisierung.
 
-Der Snapshot darf höchstens 32 MiB groß sein. Der Server führt keine Live-Abfragen auf fachlichen SQL-Tabellen aus. Es gibt derzeit keinen von ClearDeck betriebenen Hosted-Dienst. Die Adresse in der App gehört zum selbst betriebenen Server des jeweiligen Betreibers.
+SQLite-Datenbank und Outbox werden in einem atomaren, authentifizierten Schreibvorgang gespeichert. Die App erzeugt den lokalen Schlüssel selbst. Der geschützte Betriebssystemspeicher (safeStorage) umschließt diesen Schlüssel. Ein gemeinsames dataKey oder ein manuelles Schlüsselfeld gibt es nicht. Das Passwort des ClearDeck-Kontos und das Sitzungstoken werden nicht gespeichert.
+
+Eine erfolgreiche Online-Anmeldung legt zusätzlich einen gesalzenen Passwortnachweis in der verschlüsselten Arbeitskopie ab. Offline öffnen nutzt diesen Nachweis ausdrücklich und prüft damit das Passwort der letzten erfolgreichen Online-Anmeldung. Die App weicht nach einem HTTP-401-Fehler nicht automatisch auf die Offline-Kopie aus.
+
+Der lokale verschlüsselte Cache ist auf 128 MiB begrenzt. Die v2-Synchronisationsanfragen und die einzelnen serverseitigen Synchronisationsseiten sind auf 32 MiB begrenzt.
 
 ## Server einrichten
 
-Die App verbindet sich mit der ClearDeck-API. SQL-Zugangsdaten gehören ausschließlich auf den Server. Der erste unterstützte externe Speicher ist PostgreSQL hinter dieser API; ein Firebase-Adapter ist nicht implementiert. Für einen gemieteten Server ist entscheidend, dass sich dort der unten beschriebene Stack betreiben lässt. Ein gewöhnliches Webhosting-Paket mit Datenbankzugang allein reicht dafür nicht.
+Die App verbindet sich mit der ClearDeck-API. Ein persönliches ClearDeck-Konto dient der Anmeldung in der Desktop-App; Benutzername und Passwort werden im Verbindungsdialog eingegeben. SQL-Zugangsdaten gehören ausschließlich auf den Server und werden nie in der App eingegeben. PostgreSQL ist der derzeit unterstützte externe Speicher. Ein Firebase-Adapter ist nicht implementiert. Ein gewöhnliches Webhosting-Paket mit Datenbankzugang reicht für diesen Stack nicht aus. Einen voreingestellten Hosted-Dienst gibt es nicht.
 
 ### Voraussetzungen
 
@@ -30,182 +35,138 @@ Für einen dauerhaften Betrieb werden benötigt:
 - PostgreSQL mit dauerhaftem Volume,
 - ein DNS-Name für die Serveradresse,
 - ein Reverse Proxy mit TLS, im vorgesehenen Setup Caddy,
-- ein geschützter Ort für PostgreSQL-Sicherungen und den Datenschlüssel.
+- ein geschütztes Ziel für PostgreSQL-Sicherungen.
 
-Die Compose-Datei `server/docker-compose.yml` und die Caddy-Konfiguration `server/Caddyfile` gehören zum Serverpaket. Die dort dokumentierten Service-Namen `app`, `db` und `caddy` sowie die Variablen aus `server/.env.example` sind maßgeblich. Zugangsdaten und Schlüssel gehören in eine lokale `.env`-Datei oder in den Secret-Speicher des Betriebs. Sie dürfen nicht in Git eingecheckt werden.
+Die Compose-Datei server/docker-compose.yml und die Caddy-Konfiguration server/Caddyfile gehören zum Serverpaket. Die dort dokumentierten Service-Namen app, db und caddy sowie die Variablen aus server/.env.example sind maßgeblich. Zugangsdaten gehören in eine lokale .env-Datei oder in den Secret-Speicher des Betriebs. Sie dürfen nicht in Git eingecheckt werden.
 
 ### Start mit Docker Compose
 
 Im Serververzeichnis starten:
 
-```sh
-cd server
-cp .env.example .env
-# POSTGRES_PASSWORD, DATABASE_URL und SERVER_DOMAIN in .env setzen
-docker compose up -d --build
-docker compose ps
-```
+    cd server
+    cp .env.example .env
+    # POSTGRES_PASSWORD, DATABASE_URL und SERVER_DOMAIN in .env setzen
+    docker compose up -d --build
+    docker compose ps
 
 Der Server legt die benötigten Tabellen beim ersten Start an. Prüfen, ob die Adresse erreichbar ist:
 
-```sh
-curl --fail https://cleardeck.example.de/health
-```
+    curl --fail https://cleardeck.example.de/health
 
-Die Antwort muss ein JSON mit `ok: true` enthalten. Der Node-Port ist nur im privaten Compose-Netz erreichbar. Von außen wird nur die HTTPS-Adresse des Reverse Proxys verwendet.
+Die Antwort muss ein JSON mit ok: true enthalten. Der Node-Port ist nur im privaten Compose-Netz erreichbar. Von außen wird nur die HTTPS-Adresse des Reverse Proxys verwendet.
 
 ### Caddy und TLS
 
-Caddy nimmt Anfragen für den DNS-Namen an und leitet sie an den internen ClearDeck-Port weiter. Die öffentliche Adresse muss genau die Origin ohne Pfad sein, zum Beispiel `https://cleardeck.example.de`. In der App gehören keine Zugangsdaten, Query-Parameter oder zusätzlichen Pfade in das Feld Serveradresse.
+Caddy nimmt Anfragen für den DNS-Namen an und leitet sie an den internen ClearDeck-Port weiter. Die öffentliche Adresse muss genau die Origin ohne Pfad sein, zum Beispiel https://cleardeck.example.de. In der App gehören keine Zugangsdaten, Query-Parameter oder zusätzlichen Pfade in das Feld Serveradresse.
 
 Für eine öffentliche Adresse gilt:
 
 1. DNS zeigt auf den Reverse Proxy.
 2. Caddy kann die Zertifikatsvalidierung erreichen und sein Zertifikats-Volume dauerhaft speichern.
 3. Die Firewall lässt für den Proxy nur die notwendigen Ports 80 und 443 zu. PostgreSQL und der interne Node-Port sind aus dem Internet nicht erreichbar.
-4. Nach dem Start wird die Zertifikatserneuerung und ein Neustart des Proxy-Containers geprüft.
+4. Zertifikatserneuerung, Proxy-Neustart und ein fehlerhafter Upstream werden in einem Testlauf geprüft.
 
-Die Desktop-App akzeptiert nur HTTPS. Unverschlüsseltes HTTP ist ausschließlich für `localhost`, `127.0.0.1` oder `::1` erlaubt, etwa für einen Test auf demselben Gerät. Browserzugriff auf die API ist absichtlich nicht vorgesehen.
+Die Desktop-App akzeptiert nur HTTPS. Unverschlüsseltes HTTP ist ausschließlich für localhost, 127.0.0.1 oder ::1 erlaubt, etwa für einen Test auf demselben Gerät. Browserzugriff auf die API ist nicht vorgesehen.
 
-### Erstes Konto anlegen
+### Konten anlegen
 
-Der Account-Befehl liest das Passwort aus `stdin`, speichert nur einen Hash und widerruft beim Setzen eines Kontos dessen bisherige Sitzungen. Nach dem Compose-Start die folgenden Eingaben in Bash ausführen:
+Der Account-Befehl liest das Passwort aus stdin, speichert nur einen Hash und widerruft beim Setzen eines Kontos dessen bisherige Sitzungen. Es gibt die Rollen admin, editor und reader. Das erste Admin-Konto wird bei der Serverbereitstellung über die Server-CLI angelegt; eine Selbstregistrierung und eine Admin-Oberfläche gibt es nicht. Ein Admin darf einen leeren Protokoll-2-Server initialisieren und besitzt zusätzlich die normalen Lese- und Schreibrechte eines Editors. Für den normalen Betrieb werden anschließend persönliche editor- und reader-Konten angelegt.
 
-```sh
-cd server
-read -r -s -p 'Passwort: ' CLEARDECK_ACCOUNT_PASSWORD; printf '\n'
-printf '%s\n' "$CLEARDECK_ACCOUNT_PASSWORD" | \
-  docker compose exec -T app npm run account -- set team-admin editor
-unset CLEARDECK_ACCOUNT_PASSWORD
-```
+Nach dem Compose-Start die folgenden Eingaben in Bash ausführen:
 
-Das Passwort muss 14 bis 256 Zeichen lang sein. Für einen Leser `reader` statt `editor` angeben. Ein weiteres Konto wird ebenfalls im Service `app` angelegt:
+    cd server
+    read -r -s -p 'Initiales Admin-Passwort: ' CLEARDECK_BOOTSTRAP_PASSWORD; printf '\n'
+    printf '%s\n' "$CLEARDECK_BOOTSTRAP_PASSWORD" | \
+      docker compose exec -T app npm run account -- set bootstrap-admin admin
+    unset CLEARDECK_BOOTSTRAP_PASSWORD
+    read -r -s -p 'Editor-Passwort: ' CLEARDECK_EDITOR_PASSWORD; printf '\n'
+    printf '%s\n' "$CLEARDECK_EDITOR_PASSWORD" | \
+      docker compose exec -T app npm run account -- set team-editor editor
+    unset CLEARDECK_EDITOR_PASSWORD
 
-```sh
-read -r -s -p 'Passwort: ' CLEARDECK_READER_PASSWORD; printf '\n'
-printf '%s\n' "$CLEARDECK_READER_PASSWORD" | \
-  docker compose exec -T app npm run account -- set team-reader reader
-unset CLEARDECK_READER_PASSWORD
-```
+Das Passwort muss 14 bis 256 Zeichen lang sein. Für ein Lesekonto reader statt editor angeben. Ein Konto deaktivieren:
 
-Das Konto deaktivieren:
+    docker compose exec -T app npm run account -- disable team-reader
 
-```sh
-docker compose exec -T app npm run account -- disable team-reader
-```
-
-Das Deaktivieren löscht die Sitzungen des Kontos. Es löscht weder Snapshots noch bereits heruntergeladene Exporte und kennt keine Rückholung eines bereits verteilten Datenschlüssels.
+Das Deaktivieren löscht die Sitzungen des Kontos. Bereits heruntergeladene lokale Arbeitskopien und Recovery-Kopien bleiben auf den Geräten bestehen. Die Synchronisierung dieses Kontos wird beim nächsten Serverzugriff abgewiesen.
 
 ## Mit der Desktop-App verbinden
 
-### Bestehenden lokalen Bestand übertragen
+Im Verbindungsdialog stehen `Benutzername` und `Passwort` im Vordergrund. Die Adresse wird separat über `Server einrichten…` oder `Server ändern…` gesetzt; dort gibt es das Feld `Serveradresse`. Die Zugangsdaten gehören zum persönlichen ClearDeck-Konto, nicht zum PostgreSQL-Betrieb.
 
-Die Übertragung ist ein bewusster Schritt und funktioniert nur von einem geöffneten lokalen Bestand auf einen leeren Server:
+### Einen lokalen Bestand übertragen
 
-1. Den lokalen Bestand anmelden und unter `Einstellungen → Verbindungen` `Lokalen Bestand auf Server übertragen…` wählen.
-2. `Lokalen Bestand übertragen` wählen. Für weitere Geräte stattdessen `Vorhandenen Bestand öffnen` verwenden.
-3. Serveradresse, Serverbenutzername und Serverpasswort eintragen.
-4. Den vorhandenen lokalen Recovery-Key verwenden oder einen neuen Datenschlüssel erzeugen. Den Schlüssel offline und getrennt vom Serverpasswort ablegen.
-5. Erst nach der Ablage des Schlüssels `Übertragen und verbinden` wählen.
+Die Übertragung ist ein bewusster Schritt und funktioniert nur von einem geöffneten lokalen Bestand auf einen leeren Protokoll-2-Server. Der Verbindungsdialog verlangt dafür ein Admin-Konto; die App weist vor dem Upload darauf hin. Nach der Erstinitialisierung werden die persönlichen editor- und reader-Konten für den normalen Betrieb verwendet:
 
-Der Server muss leer sein. Ein nichtleerer Server wird nicht überschrieben. Der lokale Bestand bleibt nach der Übertragung auf dem Gerät erhalten. Die Übertragung erzeugt keine Zusammenführung zweier Bestände.
+1. Den lokalen Bestand anmelden und unter Einstellungen → Verbindungen Lokalen Bestand auf Server übertragen… wählen.
+2. Im Dialog Lokalen Bestand übertragen öffnen.
+3. Serveradresse, Benutzername und Passwort des initialen Admin-Kontos eingeben.
+4. Übertragen und verbinden wählen.
 
-### Weitere Geräte anmelden
+Der Server darf noch keine initialisierten Datensätze enthalten. Ein nichtleerer oder alter Server wird nicht überschrieben. Die lokale Kopie bleibt auf dem Gerät erhalten. Die Übertragung erzeugt keine Zusammenführung zweier Bestände. Der erste Outbox-Eintrag enthält den lokalen Bestand als einzelne Datensatzänderungen. Ein editor- oder reader-Konto kann diesen Bootstrap-Schritt nicht ausführen.
 
-Auf jedem Gerät dieselbe ClearDeck-Version oder eine kompatible Version installieren. Unter `Einstellungen → Verbindungen → Serverbestand öffnen…` oder über `Vorhandenen Server verwenden` auf dem Sperrbildschirm die Serveradresse und das zugewiesene Konto eingeben. Danach denselben 32-Byte-Datenschlüssel eingeben. Der Schlüssel wird nicht an den Server gesendet.
+### Einen vorhandenen Serverbestand öffnen
 
-Die Client-Konfiguration speichert nur die Serveradresse, den Benutzernamen und die technische Instanz-ID. Serverpasswort, Datenschlüssel und Sitzungstoken werden nicht gespeichert. Nach einem Neustart fragt die App die Zugangsdaten und den Datenschlüssel erneut ab.
+Auf jedem Gerät dieselbe ClearDeck-Version oder eine kompatible Version installieren. Unter Einstellungen → Verbindungen → Serverbestand öffnen… oder über Vorhandenen Server verwenden auf dem Sperrbildschirm die Serveradresse und das zugewiesene Konto eingeben. Danach Verbinden wählen.
 
-### Zwischen Server und lokal wechseln
+Der Client lädt die Datensätze und den Änderungsverlauf in die lokale Arbeitskopie. Ein Datenschlüssel ist nicht erforderlich und wird nicht abgefragt. Die Konfiguration merkt sich Serveradresse, Benutzername und technische Instanz- und Geräteinformationen. Die lokale Arbeitskopie bleibt dem Konto zugeordnet.
 
-`Zum lokalen Bestand wechseln` zeigt zunächst, was beim Wechsel geschieht. `Lokalen Bestand öffnen` bestätigt den Wechsel, beendet die Serversitzung und setzt die Auswahl auf lokal. Die Serverdaten werden dabei nicht in den lokalen Bestand kopiert. Der lokale Bestand bleibt getrennt erhalten und muss nach dem Wechsel lokal angemeldet werden.
+### Eine alte v1-Serverinstallation
 
-Für eine ausdrückliche Rückmigration:
+Ein Protokoll-2-Client erkennt einen alten v1-Server mit verschlüsseltem SQLite-Gesamtsnapshot und lehnt ihn ab, ohne ihn zu überschreiben. Für die Übernahme:
 
-1. Im Serverbetrieb `Sicherheit & Backup → Serverbestand exportieren` wählen.
-2. Für die normale Rückmigration den verschlüsselten Export wählen und den Datenschlüssel getrennt bereithalten. Ein unverschlüsselter Export ist eine direkt lesbare SQLite-Datei und muss wie eine Patientendatei behandelt werden.
-3. Zum lokalen Bestand wechseln und lokal anmelden.
-4. Unter `Sicherheit & Backup → Backup wiederherstellen` die Datei wählen. Bei einem verschlüsselten Export den Datenschlüssel als Recovery-Key eingeben.
-5. Nach der Sicherheitskopie ersetzt die Wiederherstellung den lokalen Bestand vollständig. Die wichtigsten Listen, Zeiträume und Nachweise prüfen.
+1. Mit dem alten Client den v1-Bestand exportieren.
+2. Den Export im lokalen Betrieb des aktuellen Clients unter Sicherheit & Backup → Backup wiederherstellen importieren. Bei einem verschlüsselten v1-Export den damaligen Recovery-Key eingeben.
+3. Einen neuen, leeren Protokoll-2-Server einrichten.
+4. Den lokalen Bestand mit Lokalen Bestand auf Server übertragen… auf den neuen Server übertragen.
 
-Der Import und die Wiederherstellung bleiben im Serverbetrieb gesperrt. Auch der lokale Mitarbeiterimport ist dort gesperrt. Der Servermodus unterstützt nur den expliziten Bestands-Export und die laufende Bearbeitung des einen Serverbestands.
+Der alte Server bleibt bis zur geprüften Übernahme unverändert. Ein tatsächlich produktiver v1- oder v2-Server ist derzeit nicht bekannt.
 
 ## Laufender Betrieb
 
-Die Internetverbindung wird während der Nutzung benötigt. Wenn der Server nicht erreichbar ist, weicht die App nicht automatisch auf den lokalen Bestand aus. Die geladene Datenbank liegt nur im Arbeitsspeicher des ClearDeck-Prozesses. Beim Sperren oder Beenden schließt die App sie und verwirft den Schlüssel aus dem Arbeitsspeicher.
+Editoren schreiben zuerst in ihre lokale SQLite-Arbeitskopie. Die App erzeugt aus jeder Änderung eine Transaktion und legt sie in der verschlüsselten Outbox ab. Die Änderung ist sofort in der geöffneten Arbeitskopie sichtbar. Ein Synchronisierungsversuch startet so schnell wie möglich. Zusätzlich fragt der Client ungefähr alle drei Sekunden neue Deltas ab. Netzwerkzugriffe laufen außerhalb der Sperre für lokale Datenbankoperationen.
 
-Jede Datenoperation prüft zuerst die geladene Serverrevision. Eine andere offene App kann zwischen zwei Bedienvorgängen speichern. Dann meldet ClearDeck einen Konflikt und speichert die lokale Änderung nicht. Unter `Einstellungen → Verbindungen` `Serverbestand neu laden` wählen und die Eingabe danach erneut erfassen. Das Neuladen schließt offene Eingaben; bereits gespeicherte Änderungen bleiben erhalten.
+Der Server prüft die Rolle und die Sitzung für jede Synchronisierung. Ein admin darf einen leeren Server initialisieren und kann zusätzlich wie ein editor Änderungen als Servertransaktion übertragen. Ein editor kann Änderungen als Servertransaktion übertragen. Ein reader kann den Bestand öffnen und lesen, kann aber keine lokale Änderung als Servertransaktion übertragen. Die bekannte Rolle wird im Offline-Cache angezeigt und bleibt bis zur nächsten Online-Anmeldung maßgeblich für die lokale Bedienung. Der Server entscheidet bei jeder Übertragung erneut.
 
-Ein Leser erhält beim Speichern eine Berechtigungsfehlermeldung. Ein abgelaufenes oder widerrufenes Konto muss mit Serverpasswort und Datenschlüssel erneut verbunden werden. Ein falscher Datenschlüssel wird beim Entschlüsseln erkannt. Ein größerer Snapshot wird bei 32 MiB abgewiesen.
+Eine Sitzung ist acht Stunden gültig. Passwort und Token liegen nur während der Sitzung im Speicher. Nach einem Neustart ist eine Online-Anmeldung erforderlich, außer der Benutzer wählt für eine vorhandene Arbeitskopie ausdrücklich Offline öffnen und gibt das Passwort der letzten erfolgreichen Online-Anmeldung ein. Ein abgelaufenes, geändertes oder widerrufenes Passwort kann eine Offline-Kopie nicht aktualisieren.
+
+Wenn der Server nicht erreichbar ist, bleiben lokale Änderungen und die Outbox erhalten. Der Status in Einstellungen → Verbindungen wechselt auf Offline, Ausstehende Änderungen oder Synchronisierungsfehler. Ein HTTP-401 führt zu Anmeldung erforderlich; die App öffnet die Offline-Kopie nicht automatisch. Nach einer erneuten Online-Anmeldung versucht sie, die wartenden Transaktionen weiterzugeben.
+
+## Konflikte lösen
+
+Der Server verwendet einen Compare-and-Swap-Vergleich je Datensatz. Eine Transaktion mit mehreren Zeilen wird nur vollständig angewendet, wenn die erwarteten Versionen aller betroffenen Datensätze noch stimmen. Der Server schreibt Datensätze, Versionsnummern und Änderungsverlauf in einer Transaktion. Eine bereits angenommene Transaktions-UUID wird bei einem Retry nicht doppelt ausgeführt. Ein Tombstone hält eine Löschung für nachfolgende Deltas sichtbar.
+
+Wenn eine Transaktion wegen einer veralteten Datensatzversion abgewiesen wird, bleibt die gesamte Outbox erhalten und der Client zeigt den Status Konflikt. Die Einstellungen bieten dafür die aktuellen Aktionen:
+
+- Konflikt lösen: Serverversion übernehmen… erstellt zuerst eine verschlüsselte Recovery-Kopie. Danach übernimmt der Client die aktuelle Serverversion und verwirft alle wartenden lokalen Änderungen.
+- Konflikt lösen: Lokale Änderungen erneut senden… erstellt ebenfalls die Recovery-Kopie und reicht alle wartenden lokalen Änderungen gegen den aktuellen Serverstand erneut ein. Einzelne Änderungen können dabei weiterhin abgewiesen werden.
+
+Automatisch zusammengeführt werden nur Änderungen an unabhängigen Datensätzen. Änderungen an demselben Datensatz benötigen eine ausdrückliche Entscheidung. Die Recovery-Kopie wird vor der Entscheidung im lokalen Arbeitskopie-Verzeichnis geschrieben. Sie erhält einen Zeitstempel und eine UUID, ist verschlüsselt und bleibt an das Geräteprofil gebunden. Eine eigene Oberfläche zum Auffinden oder Wiederherstellen dieser Kopien gibt es noch nicht.
+
+## Zwischen Server und lokal wechseln
+
+Zum lokalen Bestand wechseln… zeigt vor der Aktion eine Bestätigung. Lokalen Bestand öffnen beendet die aktuelle Serversitzung und öffnet den bisherigen lokalen Bestand. Serverarbeitskopien, Outboxen und Recovery-Kopien bleiben dem jeweiligen Konto und der jeweiligen Serveradresse zugeordnet. Serverdaten werden nicht in den lokalen Bestand kopiert.
+
+Eine lokale Funktion, die den gemeinsamen Bestand nicht unterstützt, wird im Serverbetrieb abgewiesen. Dazu gehören lokale Backups, Wiederherstellung, Löschen oder Zurücksetzen des lokalen Datenbestands, der Mitarbeiterimport und das Öffnen lokaler Dokumente. Unter Sicherheit & Backup → Serverbestand exportieren steht für eine ausdrückliche Rückmigration nur der ausdrücklich gestartete unverschlüsselte .db-Export zur Verfügung. Ein verschlüsselter Export ist deaktiviert, weil der lokale Schlüssel an das Geräteprofil gebunden ist und außerhalb dieses Profils nicht wiederhergestellt werden kann. Die .db-Datei ist direkt lesbar und muss für die Rückmigration geschützt behandelt und anschließend lokal importiert werden.
 
 ## Sicherung und Wiederherstellung
 
-### PostgreSQL sichern
+Eine PostgreSQL-Sicherung enthält die lesbaren Datensätze, Tombstones und den Änderungsverlauf sowie Konten, Sitzungen und technische Metadaten. pg_dump verschlüsselt die Dump-Datei nicht. Sie braucht deshalb ein verschlüsseltes oder zugriffsgeschütztes Sicherungsziel.
 
-Eine Server-Sicherung ist ein PostgreSQL-Dump. Darin liegen der verschlüsselte Snapshot, Konten, Sitzungen und die technische Änderungsfolge. `pg_dump` verschlüsselt die Dump-Datei nicht zusätzlich: Kontennamen, Passwort-Hashes und technische Metadaten bleiben darin lesbar. Deshalb den Dump zusätzlich verschlüsseln oder auf einem verschlüsselten, zugriffsgeschützten Sicherungsziel ablegen. Der Datenschlüssel liegt niemals in diesem Dump und muss separat gesichert werden.
+    cd server
+    umask 077
+    mkdir -p backups
+    docker compose exec -T db sh -c \
+      'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom' \
+      > "backups/cleardeck-$(date +%Y%m%d-%H%M%S).dump"
 
-Vor jeder Sicherung ein geschütztes Ziel anlegen und die Dateirechte einschränken:
+Der lokale Cache und seine Recovery-Kopien liegen nicht im PostgreSQL-Dump. Ihre lokalen Schlüssel sind an den geschützten Gerätespeicher gebunden. Ein Server-Restore stellt deshalb keinen lokalen Offline-Cache auf einem Gerät wieder her. Der Server bietet keine portable verschlüsselte Client-Sicherung.
 
-```sh
-cd server
-umask 077
-mkdir -p backups
-docker compose exec -T db sh -c \
-  'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom' \
-  > "backups/cleardeck-$(date +%Y%m%d-%H%M%S).dump"
-```
+Bei einer Wiederherstellung muss der Betreiber vor dem Neustart einen frischen Dump anlegen, den Server stoppen, den gewählten PostgreSQL-Dump einspielen, alle alten Sitzungen invalidieren und eine neue Serverinstanz-ID setzen. Danach müssen mindestens ein Online-Login, der Cursor, ein Editor- und ein Reader-Zugriff, eine neue Transaktion und das Lesen eines Tombstones geprüft werden. Das vollständige TLS-, Backup- und Restore-Verfahren ist noch nicht abgenommen. Die offenen Schritte stehen im Hosting- und Launch-Plan.
 
-Die Compose-Umgebung setzt `POSTGRES_USER` und `POSTGRES_DB` im Service `db`. Alternativ kann `pg_dump --format=custom --dbname="$DATABASE_URL"` auf einem gesicherten Administrationsrechner verwendet werden. Das Passwort in `DATABASE_URL` muss URL-sicher sein oder percentkodiert werden.
+## Grenzen des aktuellen Serverbetriebs
 
-Den Dump nicht zusammen mit dem Datenschlüssel aufbewahren. Ein sinnvolles Sicherungsset enthält mindestens:
-
-- mehrere PostgreSQL-Dumps mit zusätzlicher Datei- oder Speicherverschlüsselung in einem zugriffsgeschützten und räumlich getrennten Ziel,
-- den 32-Byte-Datenschlüssel in einem separaten Offline- oder Secret-Management,
-- die Compose-/Umgebungsdokumentation und die Caddy-Zertifikatsdaten, soweit sie für den Wiederanlauf benötigt werden.
-
-Die Rücksicherung regelmäßig mit einer Kopie in einer Testumgebung üben. Nur die Existenz einer Dump-Datei beweist keine Wiederherstellbarkeit.
-
-### PostgreSQL wiederherstellen
-
-Vor einer Rücksicherung einen frischen Sicherheitsdump schreiben, dann den ClearDeck-Server stoppen. Die folgenden Befehle ersetzen die Serverdaten durch den gewählten Dump. Nur gegen die beabsichtigte Instanz ausführen:
-
-```sh
-docker compose stop app
-docker compose exec -T db sh -c \
-  'pg_restore --list' < backups/cleardeck-JJJJMMTT-HHMMSS.dump
-docker compose exec -T db sh -c \
-  'pg_restore --exit-on-error --clean --if-exists --no-owner -U "$POSTGRES_USER" -d "$POSTGRES_DB"' \
-  < backups/cleardeck-JJJJMMTT-HHMMSS.dump
-```
-
-Nur nach einer erfolgreichen Wiederherstellung weitermachen. **Vor dem Neustart alle zurückgesicherten Sitzungen löschen und eine neue Instanz-ID setzen.** Dadurch können vor dem Restore geladene Clients nicht versehentlich mit einem wiederverwendeten Revisionsstand schreiben:
-
-```sh
-docker compose exec -T db sh -c \
-  'psql -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"' <<'SQL'
-BEGIN;
-DELETE FROM sessions;
-UPDATE workspace SET instance_id = gen_random_uuid();
-COMMIT;
-SQL
-docker compose start app
-curl --fail https://cleardeck.example.de/health
-```
-
-Die Wiederherstellung nutzt die dokumentierten [pg_restore-Optionen](https://www.postgresql.org/docs/16/app-pgrestore.html) und die eingebaute [UUID-Funktion von PostgreSQL 16](https://www.postgresql.org/docs/16/functions-uuid.html).
-
-Nach der Wiederherstellung auf jedem Gerät zum lokalen Betrieb wechseln und den Server ohne Initialübertragung ausdrücklich neu verbinden. Die App erkennt die neue Instanz-ID; das ist nach einem Restore beabsichtigt. Den Datenschlüssel aus dem separaten Schlüsseldepot verwenden. Den Revisionsstand, ein Editor-Konto und einen Reader prüfen. Ohne Datenschlüssel bleibt der wiederhergestellte Snapshot unlesbar.
-
-Ein Account-Entzug beseitigt keine Kopien, die ein Gerät bereits geladen oder exportiert hat. Falls der Datenschlüssel bekannt geworden ist, reicht das Deaktivieren eines Kontos nicht aus. Eine Schlüsselrotation mit vollständiger Neuverschlüsselung und Verteilung eines neuen Schlüssels ist für den produktiven Betrieb noch offen.
-
-## Grenzen des aktuellen Servermodus
-
-Der aktuelle Umfang hat bewusst klare Grenzen:
-
-- Berechtigungen gelten für den gesamten Arbeitsbereich. Feinere Rechte je Patient oder Datensatz gibt es nicht.
-- Es gibt keine Offline-Bearbeitung und keine kollaborative Zusammenführung. Bei einer konkurrierenden Änderung muss neu geladen und erneut gespeichert werden.
-- Es gibt keine Mehrfaktor-Anmeldung.
-- Es gibt noch keine Serverfunktion für die Rotation des gemeinsamen Datenschlüssels.
-- Lokale automatische Sicherungen, lokale Sicherheitskopien, destruktives lokales Löschen oder Zurücksetzen sowie der Mitarbeiterimport sind im Serverbetrieb gesperrt.
-
-Diese Grenzen sind Betriebsbedingungen und keine Zusage, dass der Servermodus für jede Verarbeitung sensibler Gesundheitsdaten geeignet ist. Die technische Verschlüsselung ersetzt keine Risiko- und Rechtsprüfung.
+- Die Rollen admin, editor und reader gelten für den gesamten Arbeitsbereich. Der admin hat zusätzlich zu den Editor-Rechten die Erstinitialisierung eines leeren Servers. Eine Admin-Oberfläche, MFA sowie Rechte je Mandant, Patient oder Datensatz gibt es noch nicht.
+- Offline öffnen ist eine ausdrückliche lokale Funktion. Eine Kontosperre oder Rollenänderung kann eine bereits heruntergeladene Offline-Kopie nicht remote löschen. Sie verhindert weitere Online-Synchronisierung, sobald der Server die Änderung prüft.
+- Der Serverbetrieb ist selbst gehostet. Ein von ClearDeck betriebener Hosted-Dienst und ein produktiver Server sind nicht eingerichtet.
+- TLS, eine geprüfte Backup- und Restore-Strecke, eine unabhängige Sicherheitsprüfung und eine verbindliche Richtlinie für Offline-Kopien nach Kontowiderruf stehen noch aus.

@@ -58,7 +58,7 @@ import {
   withConnectionLock,
   withCurrentConnection,
 } from '../serverConnection';
-import { getBaseHours, setBaseHours, setHiddenEventTypes } from '../repositories/settings';
+import { getBaseHours, getHiddenEventTypes, setBaseHours, setHiddenEventTypes } from '../repositories/settings';
 
 type Row = Record<string, unknown>;
 type StoredRecord = { table: string; key: string; row: Row | null; version: number };
@@ -84,16 +84,18 @@ type ServerState = ReturnType<typeof getServerConnection> & {
 };
 
 type InitialRow = { table: string; key: readonly unknown[]; row: Row };
+type PromiseGate = { promise: Promise<void>; release: () => void };
 
 type FakeStore = {
   username: string;
   password: string;
-  role: 'reader' | 'editor';
+  role: 'reader' | 'editor' | 'admin';
   instanceId: string;
   deviceSlot: number;
   cursor: number;
   initialized: boolean;
   online: boolean;
+  changesGate: PromiseGate | null;
   rejectTransactionsStatus: 401 | 409 | null;
   dropNextTransactionResponse: boolean;
   requests: {
@@ -174,20 +176,29 @@ const tokenFor = (sequence: number): string =>
 
 const rowForSetting = (key: string, value: string | number): Row => ({ key, value: String(value) });
 
+const promiseGate = (): PromiseGate => {
+  let release!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
+};
+
 const startFakeServer = async (
-  overrides: Partial<Pick<FakeStore, 'username' | 'password' | 'role' | 'instanceId' | 'deviceSlot' | 'initialized'>> & {
+  overrides: Partial<Pick<FakeStore, 'username' | 'password' | 'role' | 'instanceId' | 'deviceSlot' | 'initialized' | 'changesGate'>> & {
     initialRows?: InitialRow[];
   } = {},
 ): Promise<FakeServer> => {
   const store: FakeStore = {
     username: 'alice',
     password: LOCAL_PASSWORD,
-    role: 'editor',
+    role: 'admin',
     instanceId: INSTANCE_A,
     deviceSlot: 7,
     cursor: 0,
     initialized: false,
     online: true,
+    changesGate: null,
     rejectTransactionsStatus: null,
     dropNextTransactionResponse: false,
     requests: { login: 0, changes: 0, transactions: 0, snapshots: 0, logout: 0 },
@@ -296,6 +307,8 @@ const startFakeServer = async (
           return;
         }
         store.changeQueries.push(since);
+        const changesGate = store.changesGate;
+        if (changesGate) await changesGate.promise;
         sendJson(response, 200, {
           instanceId: store.instanceId,
           cursor: store.cursor,
@@ -519,7 +532,7 @@ describe('v2 server connection with an encrypted offline delta cache', () => {
       () => server.store.requests.transactions >= 1 && state().pendingChanges === 0 && state().syncStatus === 'synced',
       'the initial workspace transaction',
     );
-    expect(connected).toMatchObject({ mode: 'server', connected: true, role: 'editor' });
+    expect(connected).toMatchObject({ mode: 'server', connected: true, role: 'admin' });
     expect(state()).toMatchObject({
       mode: 'server',
       connected: true,
@@ -544,6 +557,59 @@ describe('v2 server connection with an encrypted offline delta cache', () => {
     expect(server.store.initialized).toBe(true);
     expect(server.store.requests.snapshots).toBe(0);
     expect(server.store.routes.some((route) => route.includes('/v1/'))).toBe(false);
+
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(43));
+    await waitFor(() => state().pendingChanges === 0, 'the admin edit to upload');
+    expect(storedSetting(server, 'baseHours')).toEqual(rowForSetting('baseHours', 43));
+  });
+
+  it('keeps the editor role for an ordinary connection to an initialized workspace', async () => {
+    openLocal();
+    const server = await startFakeServer({
+      role: 'editor',
+      initialized: true,
+      initialRows: [{ table: 'settings', key: ['baseHours'], row: rowForSetting('baseHours', 36) }],
+    });
+    servers.push(server);
+
+    await connectServer(connectInput(server.url), true);
+    expect(state().role).toBe('editor');
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(43));
+    await waitFor(
+      () => server.store.requests.transactions >= 1 && state().pendingChanges === 0,
+      'the ordinary editor edit to upload',
+    );
+    expect(storedSetting(server, 'baseHours')).toEqual(rowForSetting('baseHours', 43));
+  });
+
+  it('rejects editor bootstrap before pulling local records or changing source files', async () => {
+    openLocal();
+    const sourceDatabase = getDb().serialize();
+    const sourceFiles = allFiles(dataRoot);
+    const server = await startFakeServer({ role: 'editor' });
+    servers.push(server);
+
+    await expect(connectServer(connectInput(server.url, true), true)).rejects.toThrow(/Administratorkonto/i);
+
+    expect(server.store.requests.login).toBe(1);
+    expect(server.store.requests.changes).toBe(0);
+    expect(server.store.requests.transactions).toBe(0);
+    expect(server.store.initialized).toBe(false);
+    expect(getDb().serialize()).toEqual(sourceDatabase);
+    expect(allFiles(dataRoot)).toEqual(sourceFiles);
+    expect(state()).toMatchObject({ mode: 'local', connected: false, hasOfflineCopy: false });
+  });
+
+  it('rejects an unknown server role before opening a workspace', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    server.store.role = 'owner' as unknown as FakeStore['role'];
+
+    await expect(connectServer(connectInput(server.url), true)).rejects.toThrow(/Änderungssynchronisierung/i);
+    expect(server.store.requests.changes).toBe(0);
+    expect(server.store.requests.transactions).toBe(0);
+    expect(state()).toMatchObject({ mode: 'local', connected: false, hasOfflineCopy: false });
   });
 
   it('writes offline changes durably, keeps them queued, and unlocks the same copy after a restart', async () => {
@@ -569,6 +635,45 @@ describe('v2 server connection with an encrypted offline delta cache', () => {
     expect(runtime.safeStorage.decryptString).toHaveBeenCalled();
     expect(getBaseHours()).toBe(44);
     expect(state()).toMatchObject({ connected: true, pendingChanges: 1, hasOfflineCopy: true });
+  });
+
+  it('rolls back a local write when the workspace cache rename fails and preserves the prior queue', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+
+    server.store.online = false;
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(44));
+    await waitFor(
+      () => state().pendingChanges === 1 && state().syncStatus === 'offline',
+      'the durable prior queue state',
+    );
+
+    const originalRenameSync = fs.renameSync;
+    const renameFailure = vi.spyOn(fs, 'renameSync').mockImplementation((oldPath, newPath) => {
+      if (path.basename(newPath.toString()) === 'workspace.json') {
+        throw new Error('simulated workspace cache rename failure');
+      }
+      return originalRenameSync(oldPath, newPath);
+    });
+    let callbackCalled = false;
+    await expect(
+      runServerOperation('settings:setBaseHours', () => {
+        callbackCalled = true;
+        setBaseHours(45);
+      }),
+    ).rejects.toThrow('simulated workspace cache rename failure');
+    expect(callbackCalled).toBe(true);
+    expect(getBaseHours()).toBe(44);
+    expect(state().pendingChanges).toBe(1);
+    expect(renameFailure).toHaveBeenCalled();
+    renameFailure.mockRestore();
+
+    await lockServer();
+    await connectServer(connectInput(server.url, false, true), true);
+    expect(getBaseHours()).toBe(44);
+    expect(state()).toMatchObject({ connected: true, pendingChanges: 1, syncStatus: 'offline' });
   });
 
   it('rejects a wrong offline password before touching the old encrypted cache', async () => {
@@ -686,6 +791,71 @@ describe('v2 server connection with an encrypted offline delta cache', () => {
     expect(server.store.requests.snapshots).toBe(0);
   });
 
+  it('keeps local writes responsive while a remote pull is waiting on the network', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    const cursorBeforeRemoteEdit = server.store.cursor;
+    server.pushRemote('settings', ['visitIntervalDays'], rowForSetting('visitIntervalDays', 120));
+    const gate = promiseGate();
+    server.store.changesGate = gate;
+
+    const refresh = refreshServer();
+    await waitFor(
+      () => server.store.changeQueries.includes(cursorBeforeRemoteEdit),
+      'the deliberately slow remote pull',
+    );
+
+    const write = withCurrentConnection(() =>
+      runServerOperation('settings:setBaseHours', () => {
+        setBaseHours(56);
+        return getBaseHours();
+      }),
+    );
+    const timeout = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('local write was blocked by the pull')), 500);
+    });
+    await expect(Promise.race([write, timeout])).resolves.toBe(56);
+    expect(getBaseHours()).toBe(56);
+
+    gate.release();
+    await refresh;
+    expect(getBaseHours()).toBe(56);
+    expect(state().pendingChanges).toBeGreaterThan(0);
+  });
+
+  it('defers applying pulled rows while the editor is in an active edit', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    setServerEditing(true);
+    server.pushRemote('settings', ['baseHours'], rowForSetting('baseHours', 57));
+
+    await refreshServer();
+    expect(getBaseHours()).toBe(36);
+    expect(state().pendingChanges).toBe(0);
+
+    setServerEditing(false);
+    await waitFor(() => getBaseHours() === 57, 'the deferred remote edit to apply');
+    expect(state().pendingChanges).toBe(0);
+    expect(storedSetting(server, 'baseHours')).toEqual(rowForSetting('baseHours', 57));
+  });
+
+  it('preserves local UI preferences when rebuilding the database from remote rows', async () => {
+    openLocal(36, ['local-secret', 'another-local-filter']);
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    server.pushRemote('settings', ['baseHours'], rowForSetting('baseHours', 58));
+
+    await refreshServer();
+
+    expect(getBaseHours()).toBe(58);
+    expect(getHiddenEventTypes()).toEqual(['local-secret', 'another-local-filter']);
+  });
+
   it('lets the user keep the local side of a conflict and retains a conflict backup', async () => {
     openLocal();
     const server = await startFakeServer();
@@ -761,6 +931,41 @@ describe('v2 server connection with an encrypted offline delta cache', () => {
     expect(getBaseHours()).toBe(36);
     expect(state().pendingChanges).toBe(0);
     expect(server.store.requests.transactions).toBe(0);
+  });
+
+  it('allows a reauthenticated reader to discard a pending conflict in favor of the server', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+
+    server.store.online = false;
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(45));
+    await waitFor(() => state().pendingChanges > 0, 'the queued local change');
+    server.store.online = true;
+    server.pushRemote('settings', ['baseHours'], rowForSetting('baseHours', 59));
+    await refreshServer();
+    await waitFor(() => state().syncStatus === 'conflict', 'the pending conflict');
+    expect(getBaseHours()).toBe(45);
+    expect(state().pendingChanges).toBeGreaterThan(0);
+
+    server.store.role = 'reader';
+    await lockServer();
+    await connectServer(connectInput(server.url), true);
+    expect(state().role).toBe('reader');
+    expect(state().syncStatus).toBe('conflict');
+    expect(state().pendingChanges).toBeGreaterThan(0);
+
+    await expect(resolveServerConflict('local')).rejects.toThrow(/nur lesen|lokale Änderungen|read/i);
+    expect(getBaseHours()).toBe(45);
+    expect(state().pendingChanges).toBeGreaterThan(0);
+
+    const beforeBackups = backupFiles(dataRoot);
+    await resolveServerConflict('server');
+    await waitFor(() => state().pendingChanges === 0, 'the server-side conflict decision');
+    expect(getBaseHours()).toBe(59);
+    expect(state().role).toBe('reader');
+    expect(backupFiles(dataRoot).length).toBeGreaterThan(beforeBackups.length);
   });
 
   it('keeps queued changes attached to their workspace while switching servers', async () => {

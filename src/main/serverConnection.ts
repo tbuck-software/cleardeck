@@ -1,200 +1,691 @@
 import fs from 'fs';
 import path from 'path';
+import { randomUUID } from 'crypto';
 import { getDataDir } from './appPaths';
 import { writeAtomic } from './atomicFile';
-import { parseRecoveryKey } from './crypto';
-import { encodeBackup, decodeBackup } from './backupFormat';
 import {
-  activateRemoteDatabase, closeDb, flushDatabase, getDb, getEncryptionKey, isDbOpen,
-  restoreMemorySnapshot, setEncryptionKey, setRemoteDatabase, validateDatabase,
+  activateRemoteDatabase,
+  closeDb,
+  flushDatabase,
+  getDb,
+  isDbOpen,
+  restoreMemorySnapshot,
+  setEncryptionKey,
+  setRemoteDatabase,
 } from './database/connection';
-import { normalizeServerUrl, serverRequest, readBoundedResponse, MAX_SERVER_SNAPSHOT } from './serverTransport';
-import type { ConnectServerInput, ServerConnection } from '../shared/serverConnection';
+import {
+  normalizeServerUrl,
+  serverRequest,
+  readBoundedResponse,
+  ServerRequestError,
+} from './serverTransport';
+import {
+  captureRecords,
+  captureLocalSettings,
+  captureDeviceCounters,
+  diffRecords,
+  createSyncDatabase,
+  allocateDeviceIds,
+  type SyncRecord,
+} from './syncRecords';
+import {
+  createWorkspaceCache,
+  loadWorkspaceCache,
+  saveWorkspaceCache,
+  preserveWorkspaceRecovery,
+  workspaceCachePath,
+  passwordProof,
+  verifyOfflinePassword,
+  type WorkspaceCache,
+  type CachedWorkspace,
+} from './syncCache';
+import type { ConnectServerInput, ServerConnection, ServerRole, SyncStatus } from '../shared/serverConnection';
 
-type Session = { token: string; revision: number; instanceId: string; role: 'reader' | 'editor'; url: string };
+type Session = {
+  cache: WorkspaceCache;
+  token: string | null;
+  status: SyncStatus;
+  error?: string;
+};
+type ServerRow = {
+  table: string;
+  key: string;
+  row: SyncRecord['row'] | null;
+  version: number;
+};
 let session: Session | null = null;
 let queue: Promise<unknown> = Promise.resolve();
 let connectionEpoch = 0;
+let dataVersion = 0;
+let editing = false;
+let timer: ReturnType<typeof setTimeout> | null = null;
+let syncing: { session: Session; promise: Promise<void> } | null = null;
 const configPath = () => path.join(getDataDir(), 'server.json');
+const identity = (row: { table: string; key: string }) => JSON.stringify([row.table, row.key]);
+// Reader access is explicit. A new IPC action must be reviewed before readers may call it.
+const readerActions = new Set([
+  'data:list',
+  'data:getPeriod',
+  'data:listPeriods',
+  'data:export',
+  'db:export',
+  'employment:integrityOverview',
+  'employment:previewConsolidate',
+  'employment:previewMerge',
+  'employment:previewReconcile',
+  'qualifications:list',
+  'services:list',
+  'competencies:listDefinitions',
+  'competencies:listEmployee',
+  'instructions:listDefinitions',
+  'instructions:listEmployee',
+  'instructions:employeesWithOpen',
+  'events:list',
+  'events:listRange',
+  'events:listUpcoming',
+  'settings:getBaseHours',
+  'settings:getHiddenEventTypes',
+  'settings:careSettings',
+  'dashboard:actionNeeded',
+  'dashboard:birthdaysAnniversaries',
+  'dashboard:definitionUsage',
+  'dashboard:employeeStats',
+  'dashboard:expiringTrainings',
+  'dashboard:openInstructions',
+  'dashboard:patientStats',
+  'patients:list',
+  'patients:get',
+  'patients:listBirthdays',
+  'patients:listVisitsInRange',
+  'visits:list',
+  'visits:recent',
+  'audits:sections',
+  'audits:exportPersonList',
+  'audits:list',
+  'dev:tables',
+]);
 
-/** Data requests, login, locking and switching all share this queue. */
+/** Only local mutations hold this lock. Network synchronization never blocks local reads/writes. */
 export function withConnectionLock<T>(operation: () => T | Promise<T>): Promise<T> {
   const result = queue.then(operation);
   queue = result.catch((): void => undefined);
   return result;
 }
-
-/** An operation submitted by the old screen must never target a newly selected database. */
 export function withCurrentConnection<T>(operation: () => T | Promise<T>): Promise<T> {
   const expected = connectionEpoch;
   return withConnectionLock(() => {
-    if (expected !== connectionEpoch) {
-      throw new Error('Die Datenablage wurde gewechselt oder neu geladen. Bitte die Aktion im aktuellen Bestand erneut ausführen.');
-    }
+    if (expected !== connectionEpoch)
+      throw new Error(
+        'Die Datenablage wurde gewechselt. Bitte die Aktion im aktuellen Bestand erneut ausführen.',
+      );
     return operation();
   });
 }
-
-export function getServerConnection(): ServerConnection {
-  let stored: ServerConnection = { mode: 'local' };
+function storedConnection(): ServerConnection {
   try {
     const input = JSON.parse(fs.readFileSync(configPath(), 'utf8'));
-    if (!input || !['local', 'server'].includes(input.mode)) throw new Error('invalid');
-    if (input.mode === 'server' && (typeof input.username !== 'string' || typeof input.instanceId !== 'string')) throw new Error('invalid');
-    stored = {
+    if (
+      !input ||
+      !['local', 'server'].includes(input.mode) ||
+      (input.mode === 'server' &&
+        (typeof input.username !== 'string' || typeof input.instanceId !== 'string'))
+    )
+      throw new Error('invalid');
+    return {
       mode: input.mode,
-      ...(input.url ? { url: normalizeServerUrl(input.url), username: input.username, instanceId: input.instanceId } : {}),
+      ...(input.url
+        ? {
+            url: normalizeServerUrl(input.url),
+            username: input.username,
+            instanceId: input.instanceId,
+          }
+        : {}),
     };
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-      throw new Error('Die Serverkonfiguration ist beschädigt. Es wird nicht automatisch auf den lokalen Bestand gewechselt.');
-    }
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { mode: 'local' };
+    throw new Error(
+      'Die Serverkonfiguration ist beschädigt. Der bisherige Bestand bleibt erhalten.',
+    );
   }
-  return { ...stored, connected: !!session, ...(session ? { role: session.role } : {}) };
 }
-
-export const isServerMode = (): boolean => getServerConnection().mode === 'server';
+export function getServerConnection(): ServerConnection {
+  const stored = storedConnection();
+  const state = session?.cache.state;
+  return {
+    ...stored,
+    connected: !!session,
+    dataVersion,
+    hasOfflineCopy: !!(
+      stored.url &&
+      stored.username &&
+      fs.existsSync(workspaceCachePath(stored.url, stored.username))
+    ),
+    ...(state
+      ? {
+          role: state.role,
+          syncStatus: session!.status,
+          pendingChanges: state.pending.length,
+          lastSyncedAt: state.lastSyncedAt,
+          syncError: session!.error,
+        }
+      : {}),
+  };
+}
+export const isServerMode = (): boolean => storedConnection().mode === 'server';
+/** Kept as the auth gate: an explicitly unlocked offline workspace is usable. */
 export const isServerConnected = (): boolean => !!session;
-
-const saveConnection = (config: ServerConnection) => {
-  fs.mkdirSync(getDataDir(), { recursive: true });
-  writeAtomic(configPath(), Buffer.from(JSON.stringify(config)));
+export const setServerEditing = (value: boolean): void => {
+  editing = value;
+  if (!value) scheduleSync(0);
 };
+const saveConnection = (config: ServerConnection) =>
+  writeAtomic(configPath(), Buffer.from(JSON.stringify(config)));
 
-function revisionOf(response: Response): number {
-  const match = /^"(\d{1,9})"$/.exec(response.headers.get('etag') ?? '');
-  if (!match) throw new Error('Der Server liefert keine gültige Bestandsversion.');
-  return Number(match[1]);
+function commit(current: Session, state: CachedWorkspace): void {
+  const cache = { ...current.cache, state };
+  saveWorkspaceCache(cache);
+  current.cache = cache;
 }
-
-async function revoke(current: Session | null) {
-  if (current) await serverRequest(current.url, '/v1/session', {
-    method: 'DELETE', headers: { Authorization: `Bearer ${current.token}` },
-  }).catch((): void => undefined);
+function mergeRecords(
+  base: SyncRecord[],
+  rows: { table: string; key: string; row: SyncRecord['row'] | null }[],
+): SyncRecord[] {
+  const records = new Map(base.map((row) => [identity(row), row]));
+  for (const row of rows) {
+    if (row.row === null) records.delete(identity(row));
+    else
+      records.set(identity(row), {
+        table: row.table,
+        key: row.key,
+        row: row.row,
+      });
+  }
+  return Array.from(records.values());
 }
-
-async function putSnapshot(current: Session, bytes: Buffer, key: Buffer): Promise<number> {
-  const payload = encodeBackup(bytes, key);
-  if (payload.length > MAX_SERVER_SNAPSHOT) throw new Error('Der Datenbestand überschreitet 32 MiB.');
-  const response = await serverRequest(current.url, '/v1/snapshot', {
-    method: 'PUT',
+async function jsonRequest<T>(
+  url: string,
+  route: string,
+  token: string | null,
+  body?: unknown,
+): Promise<T> {
+  const response = await serverRequest(url, route, {
+    method: body === undefined ? 'GET' : 'POST',
     headers: {
-      Authorization: `Bearer ${current.token}`, 'Content-Type': 'application/octet-stream',
-      'If-Match': `"${current.revision}"`, 'X-ClearDeck-Instance': current.instanceId,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
     },
-    body: new Uint8Array(payload),
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
-  const result = JSON.parse((await readBoundedResponse(response, 8192)).toString());
-  if (result.revision !== current.revision + 1) throw new Error('Unklare Speicherbestätigung. Bitte den Serverbestand neu laden.');
-  return result.revision;
+  return JSON.parse((await readBoundedResponse(response)).toString());
+}
+async function pull(
+  url: string,
+  token: string,
+  instanceId: string,
+  cursor: number,
+  base: SyncRecord[],
+) {
+  let records = base;
+  let initialized = false;
+  for (let page = 0; page < 10_000; page++) {
+    const result = await jsonRequest<{
+      instanceId: string;
+      cursor: number;
+      initialized: boolean;
+      changes: ServerRow[];
+      hasMore?: boolean;
+    }>(url, `/v2/changes?since=${cursor}`, token);
+    if (result.instanceId !== instanceId)
+      throw new Error(
+        'Die Serverinstanz wurde geändert. Die lokale Arbeitskopie bleibt erhalten; bitte den Betreiber kontaktieren.',
+      );
+    if (
+      !Number.isSafeInteger(result.cursor) ||
+      result.cursor < cursor ||
+      !Array.isArray(result.changes) ||
+      typeof result.initialized !== 'boolean'
+    )
+      throw new Error('Ungültige Synchronisierungsantwort.');
+    if (result.hasMore && result.cursor === cursor)
+      throw new Error('Die Synchronisierung kommt nicht voran.');
+    records = mergeRecords(records, result.changes);
+    cursor = result.cursor;
+    initialized = result.initialized;
+    if (!result.hasMore) return { records, cursor, initialized };
+  }
+  throw new Error('Zu viele Synchronisierungsseiten. Bitte erneut synchronisieren.');
+}
+function stopTimer(): void {
+  if (timer) clearTimeout(timer);
+  timer = null;
+}
+function scheduleSync(delay = 250): void {
+  if (!session) return;
+  stopTimer();
+  timer = setTimeout(() => {
+    timer = null;
+    void refreshServer();
+  }, delay);
+  timer.unref?.();
+}
+function setFailure(current: Session, failure: unknown): void {
+  const status = failure instanceof ServerRequestError ? failure.status : -1;
+  current.status =
+    status === 0
+      ? 'offline'
+      : [401, 403].includes(status)
+        ? 'auth-required'
+        : [409, 422].includes(status)
+          ? 'conflict'
+          : 'error';
+  current.error = failure instanceof Error ? failure.message : 'Synchronisierung fehlgeschlagen.';
+  // This state must survive a restart, especially an unresolved rejected transaction.
+  commit(current, {
+    ...current.cache.state,
+    syncStatus: current.status,
+    syncError: current.error,
+  });
 }
 
-export async function connectServer(input: ConnectServerInput, localUnlocked: boolean): Promise<ServerConnection> {
+export async function connectServer(
+  input: ConnectServerInput,
+  localUnlocked: boolean,
+): Promise<ServerConnection> {
   const url = normalizeServerUrl(input.url);
-  const key = parseRecoveryKey(input.dataKey);
-  const existing = getServerConnection();
-  if (input.initialize && (existing.mode !== 'local' || !localUnlocked || !isDbOpen())) {
+  const username = input.username.trim();
+  if (input.initialize && (isServerMode() || !localUnlocked || !isDbOpen()))
     throw new Error('Zum Übertragen zuerst den lokalen Bestand öffnen.');
-  }
-  const login = await serverRequest(url, '/v1/login', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username: input.username, password: input.password }),
-  });
-  const result = JSON.parse((await readBoundedResponse(login, 8192)).toString());
-  if (result.protocol !== 1 || !/^[A-Za-z0-9_-]{43}$/.test(result.token) ||
-    typeof result.instanceId !== 'string' || !['reader', 'editor'].includes(result.role)) {
-    throw new Error('Dieser Server unterstützt das ClearDeck-Protokoll nicht.');
-  }
-  const next: Session = { url, token: result.token, revision: 0, instanceId: result.instanceId, role: result.role };
+  let cache = loadWorkspaceCache(url, username);
+  let token: string | null = null;
   try {
-    if (existing.mode === 'server' && existing.url === url && existing.instanceId !== next.instanceId) {
-      throw new Error('Unter dieser Adresse antwortet eine andere Serverinstanz. Zuerst zum lokalen Betrieb wechseln und den neuen Server ausdrücklich verbinden.');
-    }
-    const response = await serverRequest(url, '/v1/snapshot', { headers: { Authorization: `Bearer ${next.token}` } });
-    next.revision = revisionOf(response);
-    if (response.headers.get('x-cleardeck-instance') !== next.instanceId) throw new Error('Die Serverinstanz hat sich geändert.');
-    let bytes: Buffer;
-    if (next.revision === 0) {
-      await response.body?.cancel();
-      if (!input.initialize) throw new Error('Der Server ist leer. Den lokalen Bestand ausdrücklich übertragen oder den Betreiber kontaktieren.');
-      bytes = getDb().serialize();
-      next.revision = await putSnapshot(next, bytes, key);
+    if (input.offline) {
+      if (input.initialize || !cache)
+        throw new Error(
+          'Für dieses Konto ist keine lokale Serverkopie vorhanden. Bitte einmal online anmelden.',
+        );
+      if (!verifyOfflinePassword(cache, input.password))
+        throw new Error('Das Passwort der letzten erfolgreichen Anmeldung stimmt nicht.');
     } else {
-      if (input.initialize) throw new Error('Der Server enthält bereits Daten. Der lokale Bestand wurde nicht übertragen.');
-      const payload = await readBoundedResponse(response);
-      if (!/^CLEARDECK-BACKUP-1:[a-f0-9]{64}\n/.test(payload.subarray(0, 84).toString())) throw new Error('Der Server liefert keinen verschlüsselten Bestand.');
-      const original = decodeBackup(payload, key);
-      bytes = validateDatabase(original);
-      // Migrations are themselves conditional writes and may not happen for readers.
-      if (!bytes.equals(original)) next.revision = await putSnapshot(next, bytes, key);
+      const deviceId = cache?.state.deviceId ?? randomUUID();
+      const login = await jsonRequest<{
+        protocol: number;
+        token: string;
+        role: ServerRole;
+        instanceId: string;
+        deviceSlot: number;
+      }>(url, '/v2/login', null, {
+        username,
+        password: input.password,
+        deviceId,
+      });
+      if (
+        login.protocol !== 2 ||
+        !/^[A-Za-z0-9_-]{43}$/.test(login.token) ||
+        !['reader', 'editor', 'admin'].includes(login.role) ||
+        typeof login.instanceId !== 'string' ||
+        !Number.isSafeInteger(login.deviceSlot) ||
+        login.deviceSlot < 1 ||
+        login.deviceSlot > 1_000_000
+      )
+        throw new Error(
+          'Dieser Server unterstützt die Änderungssynchronisierung nicht. Bitte zuerst den Server aktualisieren.',
+        );
+      token = login.token;
+      if (input.initialize && login.role !== 'admin')
+        throw new Error('Nur ein Administratorkonto darf den lokalen Bestand auf einen leeren Server übertragen.');
+      if (cache) {
+        if (
+          cache.state.instanceId !== login.instanceId ||
+          cache.state.deviceSlot !== login.deviceSlot
+        )
+          throw new Error(
+            'Die Serverinstanz oder Gerätezuordnung wurde geändert. Die lokale Arbeitskopie bleibt erhalten.',
+          );
+        if (input.initialize)
+          throw new Error(
+            'Für dieses Konto gibt es bereits eine Arbeitskopie. Bitte den Serverbestand öffnen.',
+          );
+        cache = {
+          ...cache,
+          state: {
+            ...cache.state,
+            role: login.role,
+            ...passwordProof(input.password),
+          },
+        };
+      } else {
+        const loaded = await pull(url, token, login.instanceId, 0, []);
+        if (input.initialize && loaded.initialized)
+          throw new Error(
+            'Der Server enthält bereits Daten. Der lokale Bestand wurde nicht übertragen.',
+          );
+        if (!input.initialize && !loaded.initialized)
+          throw new Error('Der Server ist leer. Bitte zuerst den lokalen Bestand übertragen.');
+        const localRecords = input.initialize ? captureRecords(getDb()) : loaded.records;
+        const bytes = createSyncDatabase(
+          localRecords,
+        !isServerMode() && isDbOpen() ? captureLocalSettings(getDb()) : undefined,
+        );
+        cache = createWorkspaceCache({
+          format: 2,
+          url,
+          username,
+          instanceId: login.instanceId,
+          deviceId,
+          deviceSlot: login.deviceSlot,
+          role: login.role,
+          cursor: loaded.cursor,
+          initialized: loaded.initialized,
+          database: bytes.toString('base64'),
+          base: loaded.records,
+          pending: input.initialize
+            ? [
+                {
+                  id: randomUUID(),
+                  instanceId: login.instanceId,
+                  initialize: true,
+                  changes: diffRecords([], localRecords),
+                },
+              ]
+            : [],
+          ...passwordProof(input.password),
+          syncStatus: input.initialize ? 'pending' : 'synced',
+        });
+      }
     }
-    if (existing.mode === 'local') flushDatabase();
+    const next: Session = {
+      cache: cache!,
+      token,
+      status: input.offline
+        ? 'offline'
+        : cache!.state.syncStatus === 'conflict'
+          ? 'conflict'
+          : cache!.state.pending.length
+            ? 'pending'
+            : 'synced',
+      error: cache!.state.syncError,
+    };
     const previous = session;
-    activateRemoteDatabase(bytes, key, () => {
-      saveConnection({ mode: 'server', url, username: input.username, instanceId: next.instanceId });
+    if (!isServerMode()) flushDatabase();
+    saveWorkspaceCache(next.cache);
+    activateRemoteDatabase(Buffer.from(next.cache.state.database, 'base64'), next.cache.key, () => {
+      allocateDeviceIds(getDb(), next.cache.state.deviceSlot);
+      saveConnection({
+        mode: 'server',
+        url,
+        username,
+        instanceId: next.cache.state.instanceId,
+      });
       session = next;
       connectionEpoch++;
+      dataVersion++;
+      editing = false;
     });
-    void revoke(previous);
+    if (previous?.token)
+      void serverRequest(previous.cache.state.url, '/v2/session', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${previous.token}` },
+      }).catch((): void => undefined);
+    scheduleSync(0);
     return getServerConnection();
-  } catch (error) { void revoke(next); throw error; }
+  } catch (error) {
+    if (token)
+      void serverRequest(url, '/v2/session', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      }).catch((): void => undefined);
+    throw error;
+  }
 }
 
 export async function lockServer(): Promise<void> {
+  stopTimer();
   const previous = session;
   session = null;
   connectionEpoch++;
+  editing = false;
   closeDb();
   setEncryptionKey(null);
-  void revoke(previous);
+  if (previous?.token)
+    void serverRequest(previous.cache.state.url, '/v2/session', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${previous.token}` },
+    }).catch((): void => undefined);
 }
-
 export async function useLocalConnection(): Promise<void> {
-  // Write the selection first. A filesystem error must not leave a half-switched session.
-  const previous = getServerConnection();
-  saveConnection({ mode: 'local', url: previous.url, username: previous.username, instanceId: previous.instanceId });
+  const previous = storedConnection();
+  saveConnection({
+    mode: 'local',
+    url: previous.url,
+    username: previous.username,
+    instanceId: previous.instanceId,
+  });
   await lockServer();
   setRemoteDatabase(false);
 }
 
-/** Freeze the loaded revision until explicit reload; never silently rebase an open edit form. */
-export async function runServerOperation<T>(channel: string, operation: () => T | Promise<T>): Promise<T> {
+export async function runServerOperation<T>(
+  channel: string,
+  operation: () => T | Promise<T>,
+): Promise<T> {
   const current = session;
-  if (!current) throw new Error('Bitte zuerst mit dem Server verbinden.');
-  if (channel === 'backup:settings') return { folder: null, auto: 'off', keep: 10, lastBackupAt: null, backups: [] } as T;
-  if (channel.startsWith('backup:') || ['db:import', 'db:delete', 'staff:prepareImport', 'staff:commitImport', 'data:openDocument'].includes(channel)) {
-    throw new Error('Diese lokale Funktion ist im Serverbetrieb nicht verfügbar. Sicherungen können über den Datenexport heruntergeladen werden.');
-  }
-  const response = await serverRequest(current.url, '/v1/snapshot', {
-    method: 'HEAD', headers: { Authorization: `Bearer ${current.token}` },
-  });
-  if (revisionOf(response) !== current.revision || response.headers.get('x-cleardeck-instance') !== current.instanceId) {
-    throw new Error('Der Serverbestand wurde auf einem anderen Gerät geändert. Unter Einstellungen → Datenablage neu laden, bevor du weiterarbeitest.');
-  }
+  if (!current) throw new Error('Bitte die lokale Serverkopie zuerst öffnen.');
+  if (channel === 'backup:settings')
+    return {
+      folder: null,
+      auto: 'off',
+      keep: 10,
+      lastBackupAt: null,
+      backups: [],
+    } as T;
+  if (
+    channel.startsWith('backup:') ||
+    [
+      'db:import',
+      'db:delete',
+      'staff:prepareImport',
+      'staff:commitImport',
+      'data:openDocument',
+    ].includes(channel)
+  )
+    throw new Error('Diese lokale Funktion ist für den gemeinsamen Bestand nicht verfügbar.');
+  if (current.cache.state.role === 'reader' && !readerActions.has(channel))
+    throw new Error('Dieses Konto darf nur lesen.');
   const before = getDb().serialize();
+  const records = captureRecords(getDb());
   try {
     const value = await operation();
     const after = getDb().serialize();
     if (!before.equals(after)) {
-      if (current.role !== 'editor') throw new Error('Dieses Konto darf nur lesen.');
-      current.revision = await putSnapshot(current, after, getEncryptionKey()!);
+      const changes = diffRecords(records, captureRecords(getDb()));
+      if (changes.length && current.cache.state.role === 'reader')
+        throw new Error('Dieses Konto darf nur lesen.');
+      const pending = changes.length
+        ? [
+            ...current.cache.state.pending,
+            {
+              id: randomUUID(),
+              instanceId: current.cache.state.instanceId,
+              initialize: false,
+              changes,
+            },
+          ]
+        : current.cache.state.pending;
+      commit(current, {
+        ...current.cache.state,
+        database: after.toString('base64'),
+        pending,
+      });
+      if (!['conflict', 'auth-required'].includes(current.status))
+        current.status = pending.length ? 'pending' : current.status;
+      scheduleSync();
     }
     return value;
-  } catch (error) { restoreMemorySnapshot(before); throw error; }
+  } catch (error) {
+    restoreMemorySnapshot(before);
+    allocateDeviceIds(getDb(), current.cache.state.deviceSlot);
+    throw error;
+  }
 }
 
+async function synchronize(current: Session): Promise<void> {
+  if (!current.token) {
+    current.status = 'offline';
+    return;
+  }
+  if (current.status === 'conflict' || current.status === 'auth-required') return;
+  current.status = 'syncing';
+  current.error = undefined;
+  try {
+    // New edits may arrive during any network await. Always acknowledge only the sent UUID.
+    for (let sent = 0; sent < 100; sent++) {
+      const state = await withConnectionLock(() =>
+        session === current ? current.cache.state : null,
+      );
+      if (!state) return;
+      const transaction = state.pending[0];
+      if (!transaction) break;
+      await jsonRequest(state.url, '/v2/transactions', current.token, transaction);
+      await withConnectionLock(() => {
+        if (session !== current) return;
+        const latest = current.cache.state;
+        commit(current, {
+          ...latest,
+          initialized: true,
+          base: mergeRecords(
+            latest.base,
+            transaction.changes.map((change) => ({
+              ...change,
+              row: change.after,
+            })),
+          ),
+          pending: latest.pending.filter((item) => item.id !== transaction.id),
+        });
+      });
+    }
+    const state = await withConnectionLock(() =>
+      session === current ? current.cache.state : null,
+    );
+    if (!state) return;
+    const loaded = await pull(state.url, current.token, state.instanceId, state.cursor, state.base);
+    await withConnectionLock(() => {
+      if (session !== current) return;
+      const latest = current.cache.state;
+      // Keep the edit's original comparison state until it is saved/cancelled.
+      if (latest.pending.length || editing) {
+        current.status = latest.pending.length ? 'pending' : 'synced';
+        return;
+      }
+      const changed = diffRecords(latest.base, loaded.records).length > 0;
+      let bytes = getDb().serialize();
+      if (changed)
+        bytes = createSyncDatabase(
+          loaded.records,
+          captureLocalSettings(getDb()),
+          captureDeviceCounters(getDb()) ?? undefined,
+        );
+      commit(current, {
+        ...latest,
+        base: loaded.records,
+        cursor: loaded.cursor,
+        initialized: loaded.initialized,
+        database: bytes.toString('base64'),
+        lastSyncedAt: new Date().toISOString(),
+        syncStatus: 'synced',
+        syncError: undefined,
+      });
+      if (changed) {
+        restoreMemorySnapshot(bytes);
+        allocateDeviceIds(getDb(), latest.deviceSlot);
+        dataVersion++;
+      }
+      current.status = 'synced';
+    });
+  } catch (error) {
+    await withConnectionLock(() => {
+      if (session === current) {
+        try {
+          setFailure(current, error);
+        } catch {
+          current.status = 'error';
+          current.error =
+            'Der lokale Synchronisierungszustand konnte nicht gespeichert werden. Die vorgemerkten Änderungen bleiben erhalten.';
+        }
+      }
+    });
+  }
+}
 export async function refreshServer(): Promise<void> {
-  if (!session) throw new Error('Bitte zuerst mit dem Server verbinden.');
-  const response = await serverRequest(session.url, '/v1/snapshot', { headers: { Authorization: `Bearer ${session.token}` } });
-  const revision = revisionOf(response);
-  if (response.headers.get('x-cleardeck-instance') !== session.instanceId || revision === 0) throw new Error('Die Serverinstanz wurde geändert oder geleert. Bitte erneut verbinden.');
-  const payload = await readBoundedResponse(response);
-  if (!/^CLEARDECK-BACKUP-1:[a-f0-9]{64}\n/.test(payload.subarray(0, 84).toString())) throw new Error('Ungültiger verschlüsselter Datenbestand.');
-  const original = decodeBackup(payload, getEncryptionKey());
-  const bytes = validateDatabase(original);
-  const next = { ...session, revision };
-  if (!bytes.equals(original)) next.revision = await putSnapshot(next, bytes, getEncryptionKey()!);
-  restoreMemorySnapshot(bytes);
-  session = next;
-  connectionEpoch++;
+  const current = session;
+  if (!current) return;
+  if (syncing?.session === current) return syncing.promise;
+  stopTimer();
+  const promise = synchronize(current).finally(() => {
+    if (syncing?.session !== current) return;
+    syncing = null;
+    if (session === current) scheduleSync(current.status === 'offline' ? 10_000 : 3_000);
+  });
+  syncing = { session: current, promise };
+  return promise;
+}
+
+export async function resolveServerConflict(choice: 'server' | 'local'): Promise<void> {
+  if (!['server', 'local'].includes(choice)) throw new Error('Ungültige Konfliktentscheidung.');
+  const current = session;
+  if (!current?.token || !['conflict', 'auth-required'].includes(current.status))
+    throw new Error('Bitte zuerst online anmelden und den Konflikt prüfen.');
+  if (choice === 'local' && current.cache.state.role === 'reader')
+    throw new Error('Dieses Konto darf lokale Änderungen nicht auf dem Server speichern.');
+  const snapshot = current.cache.state;
+  const loaded = await pull(snapshot.url, current.token, snapshot.instanceId, 0, []);
+  await withConnectionLock(() => {
+    if (session !== current || current.cache.state !== snapshot)
+      throw new Error(
+        'Der lokale Bestand wurde inzwischen geändert. Bitte die Entscheidung erneut prüfen.',
+      );
+    preserveWorkspaceRecovery(current.cache);
+    const records =
+      choice === 'server'
+        ? loaded.records
+        : mergeRecords(
+            loaded.records,
+            snapshot.pending.flatMap((transaction) =>
+              transaction.changes.map((change) => ({
+                ...change,
+                row: change.after,
+              })),
+            ),
+          );
+    const changes = diffRecords(loaded.records, records);
+    const bytes = createSyncDatabase(
+      records,
+      captureLocalSettings(getDb()),
+      captureDeviceCounters(getDb()) ?? undefined,
+    );
+    const pending = changes.length
+      ? [
+          {
+            id: randomUUID(),
+            instanceId: snapshot.instanceId,
+            initialize: false,
+            changes,
+          },
+        ]
+      : [];
+    commit(current, {
+      ...snapshot,
+      base: loaded.records,
+      cursor: loaded.cursor,
+      database: bytes.toString('base64'),
+      pending,
+      syncStatus: pending.length ? 'pending' : 'synced',
+      syncError: undefined,
+    });
+    restoreMemorySnapshot(bytes);
+    allocateDeviceIds(getDb(), snapshot.deviceSlot);
+    current.status = pending.length ? 'pending' : 'synced';
+    current.error = undefined;
+    dataVersion++;
+  });
+  await refreshServer();
 }

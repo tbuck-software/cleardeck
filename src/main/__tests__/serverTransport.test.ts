@@ -24,15 +24,15 @@ describe('server transport', () => {
     expect(() => normalizeServerUrl(url)).toThrow();
   });
 
-  it('does not turn a failed request into local operation', async () => {
+  it('classifies an unreachable server without discarding local changes', async () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError('connection refused'));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(serverRequest('https://cleardeck.example', '/v1/snapshot')).rejects.toThrow(
-      /nicht auf lokale Daten ausgewichen/,
+    await expect(serverRequest('https://cleardeck.example', '/v2/transactions')).rejects.toThrow(
+      /Lokale Änderungen bleiben gespeichert/,
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://cleardeck.example/v1/snapshot',
+      'https://cleardeck.example/v2/transactions',
       expect.objectContaining({ redirect: 'error', signal: expect.any(AbortSignal) }),
     );
   });
@@ -42,8 +42,8 @@ describe('server transport', () => {
     const fetchMock = vi.fn().mockResolvedValue(response);
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(serverRequest('https://cleardeck.example', '/v1/snapshot')).rejects.toThrow(
-      'Serverbestand wurde geändert',
+    await expect(serverRequest('https://cleardeck.example', '/v2/transactions')).rejects.toThrow(
+      'Konflikt mit dem Serverbestand',
     );
     await expect(response.body?.cancel()).resolves.toBeUndefined();
   });

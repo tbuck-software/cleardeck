@@ -2,11 +2,12 @@ FROM node:22-alpine
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
+COPY server/package.json server/package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
-COPY LICENSE ./LICENSE
-COPY src ./src
+COPY server/LICENSE ./LICENSE
+COPY server/src ./src
+COPY src/shared/syncSchema.json ./src/syncSchema.json
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \

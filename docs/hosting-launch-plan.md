@@ -1,100 +1,104 @@
 # Hosting- und Launch-Plan
 
-Stand: 13.09.2026. Dieses Dokument beschreibt die Freigabegates für den selbst gehosteten Serverbetrieb. Es ist ein Arbeitsplan, keine Zertifizierung und keine Rechtsberatung.
+Stand: 14.09.2026. Dieser Plan beschreibt die noch offenen technischen Schritte für den selbst gehosteten Serverbetrieb. Die v2-Prüfung ist für den geprüften Client- und Serverumfang erfolgreich; die verbleibenden Betriebsnachweise stehen weiter unten.
 
 ## Ausgangslage
 
-Die Desktop-App arbeitet lokal unverändert als Standard. Der optionale Servermodus nutzt pro Installation einen gemeinsamen, verschlüsselten SQLite-Snapshot bis 32 MiB. PostgreSQL enthält den Snapshot als undurchsichtige Nutzlast sowie Konten-, Sitzungs- und Änderungsmetadaten. Die Clients halten den 32-Byte-Datenschlüssel und geben ihn bei jeder Anmeldung ein. Der Server erhält den Schlüssel nicht.
+Die Desktop-App arbeitet lokal als Standard. Der lokale Bestand bleibt eine eigene, isolierte SQLite-Datenbank. Der optionale Serverbetrieb nutzt Protokoll 2 und Sync-Schema 23. PostgreSQL speichert lesbare Datensätze, Versionen, Tombstones und den Änderungsverlauf. Der Server speichert keinen verschlüsselten SQLite-Gesamtsnapshot und keinen gemeinsamen Datenschlüssel.
 
-Es gibt keinen von ClearDeck betriebenen Hosted-Dienst. Ein Betreiber verantwortet seine eigene VM oder seinen eigenen Container-Stack, seine TLS-Konfiguration, Konten, Backups, Logs und Datenschutzunterlagen.
+Für jede Kombination aus Serveradresse und Benutzername führt der Client eine verschlüsselte, dauerhaft gespeicherte lokale Arbeitskopie. Sie enthält SQLite, den bestätigten Serverstand und die Outbox. Ein erzeugter lokaler Schlüssel wird durch den geschützten Betriebssystemspeicher safeStorage umschlossen. SQLite und Outbox werden atomar geschrieben. Änderungen werden lokal sofort sichtbar, synchronisieren sich so schnell wie möglich und erhalten ungefähr alle drei Sekunden neue Deltas. Netzwerkzugriffe laufen außerhalb der Sperre für lokale Datenbankoperationen. Der lokale verschlüsselte Cache ist auf 128 MiB begrenzt; v2-Synchronisationsanfragen und einzelne Synchronisationsseiten sind auf 32 MiB begrenzt.
+
+Der Server vergibt Geräte-IDs und eindeutige Bereiche für lokale numerische IDs. Transaktionen tragen idempotente UUIDs. Mehrzeilige Transaktionen verwenden einen atomaren Compare-and-Swap je Datensatz. Konflikte lassen alle wartenden Änderungen erhalten; der Benutzer entscheidet über die Serverversion oder das erneute Senden aller lokalen Änderungen. Vor dieser Entscheidung entsteht eine verschlüsselte Recovery-Kopie.
+
+Der Server kennt die Rollen admin, editor und reader. Ein admin darf einen leeren Server initialisieren und verfügt zusätzlich über die normalen Lese- und Schreibrechte eines editor; für den normalen Schreibbetrieb laufen die persönlichen Konten vorzugsweise über editor, reader-Konten lesen. Das erste Admin-Konto wird bei der Serverbereitstellung über die Server-CLI angelegt. Eine Admin-Oberfläche, Selbstregistrierung, MFA und mandanten- oder datensatzfeine Rechte gibt es noch nicht. Ein persönliches ClearDeck-Konto dient der Anmeldung in der Desktop-App; Benutzername und Passwort werden dort eingegeben, während SQL-Zugangsdaten ausschließlich auf dem Server bleiben. Die Serveradresse wird über `Server einrichten…` beziehungsweise `Server ändern…` gesetzt. Ein von ClearDeck betriebener Hosted-Dienst ist nicht bereitgestellt, und es gibt keinen voreingestellten Hosted-Dienst. Ein produktiver Server ist nicht bekannt.
+
+Die App-Administration umfasst derzeit das Anlegen, Deaktivieren und Ändern von Rolle oder Passwort sowie die einmalige Erstübertragung. Diese Kontenverwaltung läuft vollständig über die Server-CLI; es gibt weder eine grafische Benutzerverwaltung noch einen API-Endpunkt für Kontenverwaltung. Das erste Admin-Konto wird bei der Bereitstellung über die CLI angelegt. Die grafische Benutzerverwaltung ist eine nächste Produktpriorität. Der Serverbetreiber verantwortet Serverkonfiguration, automatische Sicherungen und Aufbewahrungsfristen, Restore, Updates sowie Speicher-, Fehler- und Ausfallalarme.
 
 ## Freigabestatus
 
-Die [Bereinigung vor der Veröffentlichung](publication-cleanup.md) dokumentiert die Entfernung privater Originalunterlagen, den korrigierten Update-Build und zurückgezogene Pakete. Die vollständige Entfernung alter PR-Referenzen und zwischengespeicherter Inhalte bei GitHub bleibt ein eigener Schritt vor dem öffentlichen Start.
+Die [Bereinigung vor der Veröffentlichung](publication-cleanup.md) dokumentiert die abgeschlossene Entfernung privater Originalunterlagen, die Token-Bereinigung und die historischen Windows-Prüfungen. Die dort verlinkten Serveraufnahmen und der alte Serverprüfbericht beschreiben den v1-Snapshot-Stand vom 13.09.2026. Sie belegen die neue Row-Transaction-API nicht.
 
-Der Servermodus darf als technische Vorschau in einem kontrollierten, privaten Setup getestet werden. Ein öffentlich erreichbarer oder produktiver Betrieb wartet auf die Gates unten. Das Repository bleibt bis zum Abschluss der Prüfungen privat.
+Das Repository bleibt privat. Es gibt in diesem Arbeitsstand keine Umbenennung, keine öffentliche Veröffentlichung und keinen neuen Release. Die Änderung der Sichtbarkeit und ein späterer Release bleiben der letzte Schritt des Eigentümers.
 
-## Technische Gates
+## Offene Freigabegates
 
-### 1. Reproduzierbares Serverpaket
+### Prüfgrundlagen
 
-Vor der Freigabe müssen Docker-Image, Compose-Datei und Caddy-Konfiguration nachvollziehbar gebaut und betrieben werden können.
+Vor einer Freigabe müssen Docker-Image, Compose-Datei und Caddy-Konfiguration nachvollziehbar gebaut und betrieben werden können. PostgreSQL und Caddy verwenden getrennte dauerhafte Volumes; der App-Container bleibt zustandslos. Secrets kommen ausschließlich aus dem Secret-Speicher oder aus lokalen, nicht eingecheckten Umgebungsdateien. Der interne Node-Port und der PostgreSQL-Port werden nicht öffentlich gebunden.
 
-- Base-Images und Node-Abhängigkeiten auf konkrete, überprüfte Versionen festlegen.
-- PostgreSQL und Caddy mit getrennten, dauerhaften Volumes betreiben; der App-Container bleibt zustandslos.
-- Secrets ausschließlich über Secret-Management oder lokale, nicht eingecheckte Umgebungsdateien zuführen.
-- Der interne Node-Port und PostgreSQL-Port dürfen nicht öffentlich gebunden sein.
-- Health-Check, kontrolliertes Herunterfahren und Wiederanlauf mit erhaltenem Volume prüfen.
-- Containerrechte, Dateirechte und Update-Rollback dokumentieren.
+Health-Check, kontrolliertes Herunterfahren, Wiederanlauf mit erhaltenem Bestand, Containerrechte, Dateirechte und ein Update-Rollback gehören in den Prüfbericht. Die zugehörige Evidenz ist ein frischer Compose-Start, ein Neustart mit unverändertem Bestand und die Ausgabe der relevanten Compose-Prüfungen.
 
-Abnahmeevidenz: ein frischer Compose-Start, ein Neustart mit unverändertem Bestand und die Ausgabe der relevanten `docker compose`-Prüfungen.
+Die automatisierten Server- und Clienttests werden durch einen reproduzierbaren Integrationslauf ergänzt. Der aktuelle Lauf umfasst `npx tsc --noEmit`, `npm run lint`, 610 erfolgreiche Desktoptests in 92 Dateien, neun bestandene und zwei übersprungene Servertests, zwei von zwei Fälle gegen ein echtes PostgreSQL sowie einen erfolgreichen Docker-Image-Build. `npm run test:integration` gegen reales PostgreSQL war mit zwei von zwei Fällen erfolgreich. Geprüft wurden Protokoll-2-Login, Admin-Bootstrap eines leeren Servers, die Zurückweisung eines Nicht-Admins vor dem Datenupload durch die Desktop-App und die entsprechende API-403-Antwort, persönliche Editor- und Reader-Konten, abgelaufene Sitzung, Kontoänderung und Kontowiderruf, ungültige Zeilen, Cursor und Tombstones, Gerätebereiche, konkurrierende Transaktionen, Offline öffnen, HTTP-401 ohne automatischen Fallback und die lokale Outbox.
 
-### 2. TLS und Transport
+### 1. TLS und Transport prüfen
 
-- Caddy mit gültigem Zertifikat, automatischer Erneuerung und dauerhaftem Zertifikats-Volume testen.
-- Nur die HTTPS-Origin ohne Pfad in der App verwenden.
-- HTTP nur für Loopback-Tests zulassen. Öffentliche HTTP-Anfragen müssen auf HTTPS umgeleitet oder abgewiesen werden.
-- Alle externen Requests und Assets prüfen, insbesondere den Google-Fonts-`@import` in `src/styles/design-system.css`. Vor der Veröffentlichung lokal vendoren, entfernen oder die Datenschutzfreigabe dokumentieren. Die aktuelle CSP im Dev-Setup ersetzt diese Prüfung nicht.
-- PostgreSQL auf demselben Host halten oder seine Verbindung zusätzlich mit TLS und Netzwerkregeln schützen.
-- Zertifikatsablauf, DNS-Ausfall, Proxy-Neustart und fehlerhafte Upstreams in einem Testlauf prüfen.
-- Browserzugriff, unerwartete `Origin`-Header und Redirects dürfen keine Daten ausliefern.
+Für eine reale Serveradresse müssen folgende Punkte nachgewiesen werden:
 
-Abnahmeevidenz: TLS- und Proxy-Testbericht mit Zertifikatskette, Ablaufdatum, erreichbaren Ports und einem erfolgreichen Desktop-Login.
+- DNS zeigt auf den Reverse Proxy, und Caddy stellt ein gültiges Zertifikat aus.
+- Zertifikatserneuerung, dauerhaftes Zertifikats-Volume und Proxy-Neustart funktionieren.
+- Die Desktop-App verwendet ausschließlich die HTTPS-Origin ohne Pfad. HTTP bleibt auf Loopback-Tests beschränkt.
+- Nur die Proxy-Ports 80 und 443 sind öffentlich erreichbar. PostgreSQL und der interne Node-Port bleiben intern.
+- Ein Desktop-Login, eine Änderung und ein Delta-Abruf funktionieren hinter dem Proxy.
+- Browseranfragen, falsche Origin-Header und Redirects liefern keine API-Daten.
+- Alle externen Requests und Assets werden geprüft, insbesondere der Google-Fonts-@import in src/styles/design-system.css. Vor der Veröffentlichung wird er lokal vendort, entfernt oder ausdrücklich freigegeben. Die aktuelle CSP im Dev-Setup ersetzt diese Prüfung nicht.
 
-### 3. Externe Sicherheitsprüfung
+Abnahmeevidenz: ein datierter TLS- und Proxy-Test mit Zertifikatskette, Ablaufdatum, erreichbaren Ports, Neustart und erfolgreichem Desktop-Sync.
 
-Vor einem öffentlichen Launch ist eine unabhängige Prüfung erforderlich. Sie muss mindestens abdecken:
+### 2. Backup und Restore prüfen
 
-- Threat Model für Snapshot-Verlust, Schlüsselverlust, kompromittierte Konten und kompromittierte Clients,
-- Passwort-Hashing, Sitzungsablauf nach acht Stunden, Token-Widerruf und Rollenprüfung,
-- TLS, Header, CORS/Browser-Sperre, Redirects, Request-Limits, Rate-Limits und Fehlermeldungen,
-- Snapshot-Verschlüsselung, Authentizität, Schlüssel-Fingerabdruck, 32-MiB-Grenze und Speicherfehler,
-- Revisions- und Instanzprüfung bei konkurrierenden Geräten,
-- PostgreSQL-Rechte, Logs, Backups, Wiederherstellung und Datenlöschung,
-- npm- und Container-Abhängigkeiten sowie den Build- und Updateweg.
+Eine PostgreSQL-Sicherung enthält lesbare fachliche Zeilen, Tombstones, den Änderungsverlauf, Konten und technische Metadaten. Der Dump muss deshalb verschlüsselt oder auf einem zugriffsgeschützten Ziel abgelegt werden. Lokale Arbeitskopien und Recovery-Kopien liegen nicht im Serverdump. Der Client bietet für eine ausdrückliche Rückmigration nur einen direkt lesbaren unverschlüsselten .db-Export. Eine portable verschlüsselte Client-Sicherung gibt es nicht, weil der lokale Schlüssel an das Geräteprofil gebunden ist.
 
-Befunde erhalten einen Schweregrad, eine verantwortliche Person und eine nachprüfbare Behebung. Ein offener kritischer oder hoher Befund blockiert den Launch. Eine Verschlüsselung allein ist kein Nachweis, dass das Gesamtsystem sicher oder rechtskonform ist.
+Der Restore-Test muss eine isolierte PostgreSQL-Instanz verwenden und diese Fälle zeigen:
 
-### 4. Tests und Fehlerfälle
+- Dump erstellen und den Inhalt in einer frischen Instanz wiederherstellen.
+- Vor dem Neustart Sitzungen invalidieren und eine neue Serverinstanz-ID setzen.
+- Mit einem persönlichen Editor und einem Reader online anmelden; das initiale Admin-Konto kann ebenfalls lesen und schreiben, bleibt für den normalen Betrieb aber vorzugsweise dem Bootstrap und der Administration vorbehalten.
+- Einen bestehenden Cursor fortsetzen, eine neue Transaktion übertragen und ein Tombstone per Delta lesen.
+- Eine wiederholte Transaktions-UUID nur einmal anwenden.
+- Nach dem Restore vorhandene lokale Caches sicher neu anmelden oder den geänderten Instanzstand sauber ablehnen.
 
-Die automatisierten Server- und Clienttests müssen durch einen reproduzierbaren Integrationslauf ergänzt werden. Der Lauf deckt mindestens ab:
+Abnahmeevidenz: Dump, Restore-Protokoll und ein kurzer Clientlauf mit den genannten Fällen. Die konkrete Restore-Anleitung gehört zusätzlich in das Serverpaket.
 
-- Erststart mit leerem PostgreSQL und Anlegen eines Editor-Kontos,
-- Editor- und Reader-Login, abgelaufene Sitzung, Kontoänderung und Kontoentzug,
-- falsche Passwörter, leere oder beschädigte Snapshots und ungültige Request-Köpfe,
-- Reader-Schreibversuch, fehlende Revision, falsche Instanz-ID und 32-MiB-Grenze,
-- Initialübertragung nur auf einen leeren Server, Abbruch bei nichtleerem Server und falschem Datenschlüssel,
-- zwei Geräte mit konkurrierenden Schreibvorgängen und explizites Neuladen,
-- Serverausfall ohne automatischen lokalen Fallback,
-- App-Neustart mit erneut erforderlichem Datenschlüssel,
-- PostgreSQL-Dump, Wiederherstellung und anschließendes Lesen und Schreiben.
+Als nächste Betriebsarbeiten sind automatische PostgreSQL-Sicherungen mit festgelegten Aufbewahrungsfristen, ein regelmäßig wiederholter Restore-Test und Alarme für ausgefallene oder fehlerhafte Server- und Speicherprozesse einzurichten. Diese Betriebsfunktionen sind noch nicht bereitgestellt.
 
-Abnahmeevidenz: CI-Artefakte, Testprotokoll der Multi-Geräte-Szenarien und ein gespeicherter Restore-Test.
+### 3. Unabhängige Sicherheitsprüfung
 
-### 5. Backup, Schlüssel und Restore
+Eine unabhängige Prüfung muss den aktuellen Protokoll-2-Stand abdecken:
 
-- Für jede produktive Instanz einen Aufbewahrungsplan für verschlüsselte `pg_dump`-Dateien festlegen.
-- Dumps zusätzlich verschlüsseln oder auf einem verschlüsselten, zugriffsgeschützten Ziel ablegen und mindestens eine Kopie räumlich getrennt halten.
-- Den 32-Byte-Datenschlüssel getrennt von PostgreSQL, Dumps, Serverpasswort und Caddy-Host aufbewahren.
-- Regelmäßig einen Restore in einer isolierten Umgebung durchführen und dokumentieren.
-- Nach einem Restore vor dem App-Neustart alle Sitzungen löschen und die Instanz-ID erneuern. Danach Revision, Konten, Rollen und einen Test-Export prüfen.
-- Caddy-Zertifikatsdaten und Compose-/Secret-Dokumentation in den Wiederanlauf einbeziehen.
-- Aufbewahrung und Löschung von Dumps, Exportdateien und Logs festlegen. Retention muss mit fachlichen und gesetzlichen Pflichten abgestimmt werden.
+- Login, achtstündige Sitzung, Token-Widerruf und Rollenprüfung für admin, editor und reader bei jeder Synchronisierung,
+- lesbare Serverzeilen, per-Datensatz-CAS, atomare Mehrzeilen-Transaktionen, Tombstones und idempotente UUIDs,
+- Geräte-IDs und eindeutige ID-Bereiche,
+- sichere lokale Cache-Datei, safeStorage-Umschließung und atomaren SQLite-/Outbox-Schreibvorgang,
+- Konfliktzustand, Erhalt aller wartenden Transaktionen und Recovery-Kopie vor der Benutzerentscheidung,
+- TLS, Request-Limits, Browser-Sperre, Fehlerantworten und PostgreSQL-Rechte.
 
-Der Server kann den Datenschlüssel nicht wiederherstellen. Ein erfolgreicher PostgreSQL-Restore ohne den getrennten Schlüssel stellt nur verschlüsselte Bytes wieder her.
+Abnahmeevidenz: datierter Bericht mit Befunden, Schweregrad, Verantwortlichem und nachprüfbarer Behebung. Ein offener kritischer oder hoher Befund blockiert den Launch.
 
-### 6. Incident Response
+### 4. Richtlinie für Offline-Kopien und Kontowiderruf
+
+Offline öffnen ist eine ausdrückliche Aktion mit dem Passwortnachweis der letzten erfolgreichen Online-Anmeldung. Der Server akzeptiert nach einer Kontosperre oder Rollenänderung keine weiteren Synchronisierungen. Bereits geladene lokale Daten, Outboxen und Recovery-Kopien kann er nicht remote löschen.
+
+Vor einem Launch muss der Betreiber dafür eine verbindliche Ablaufbeschreibung festlegen und testen:
+
+1. Konto deaktivieren oder Passwort ändern und alle Sitzungen widerrufen.
+2. Verhalten einer bereits offline geöffneten Arbeitskopie und ihrer wartenden Änderungen festhalten.
+3. Verhalten bei der nächsten Online-Anmeldung und beim Zurückweisen der Outbox dokumentieren.
+4. Benutzerseitige Hinweise für Offline öffnen, Anmeldung erforderlich und verbleibende lokale Daten festlegen.
+
+Abnahmeevidenz: reproduzierbarer Test mit einem Editor- und einem Reader-Konto sowie die freigegebene Ablaufbeschreibung. Eine nachträgliche Löschung der Offline-Kopie durch den Server ist kein vorhandener Mechanismus.
+
+### Incident Response
 
 Vor dem Launch schriftlich festlegen:
 
 1. Wer einen Sicherheitsvorfall entgegennimmt und wer außerhalb der Arbeitszeit erreichbar ist.
 2. Wie der Server vom Netz genommen, ein Konto deaktiviert und Sitzungen widerrufen werden.
-3. Wie Beweise gesichert werden, ohne Snapshot-Inhalte, Passwörter oder Datenschlüssel in Logs zu kopieren.
+3. Wie Beweise gesichert werden, ohne Datensatzinhalte, Passwörter, Sitzungstoken oder lokale Schlüssel in Logs zu kopieren.
 4. Wie Betreiber, Verantwortliche, Datenschutzbeauftragte, Auftragsverarbeiter und betroffene Personen informiert werden.
 5. Wie die Entscheidung zu einer Meldung, deren Frist und die getroffenen Maßnahmen dokumentiert werden.
-6. Wie nach einem Schlüsselverlust eine vollständige Schlüsselrotation technisch durchgeführt wird.
+6. Wie nach einem Kontowiderruf bereits geladene Offline-Kopien, Recovery-Kopien und wartende Änderungen behandelt werden.
 
-Das Deaktivieren eines Serverkontos verhindert neue Anmeldungen. Es löscht keine bereits geladenen oder exportierten Daten und macht einen bekannten Datenschlüssel nicht ungültig. Bis eine Schlüsselrotation verfügbar ist, muss ein bekannt gewordener Datenschlüssel als kompromittiert behandelt werden.
+Das Deaktivieren eines Serverkontos verhindert neue Anmeldungen und Synchronisierungen. Es löscht keine bereits geladenen oder exportierten Daten. Die konkrete Behandlung der verbleibenden Offline-Kopie gehört in die Richtlinie aus Gate 4.
 
 ## Datenschutz und Recht
 
@@ -115,23 +119,38 @@ Für das geplante kommerzielle Angebot zusätzlich den Anwendungsbereich des Cyb
 
 ## Bekannte Produktlücken vor einem breiteren Einsatz
 
-Diese Funktionen sind noch nicht vorhanden und müssen als bewusste Einschränkung in die Betriebsentscheidung:
+Diese Funktionen sind noch nicht vorhanden und müssen in der Betriebsentscheidung berücksichtigt werden:
 
-- feingranulare Berechtigungen je Patient,
-- Offline-Bearbeitung mit Konfliktzusammenführung,
+- feingranulare Berechtigungen je Mandant, Patient oder Datensatz,
+- eine grafische Benutzerverwaltung für Konten, Rollen, Passwörter und Einladungen,
 - Mehrfaktor-Anmeldung,
-- serverseitige Rotation des gemeinsamen Datenschlüssels,
-- ein automatisierter serverseitiger Backup- und Restore-Dienst,
+- portable verschlüsselte Client-Sicherungen außerhalb des Geräteprofils,
+- eine eigene Oberfläche zum Auffinden oder Wiederherstellen der gerätegebundenen Konflikt-Recovery-Kopien,
+- ein automatisierter serverseitiger Backup- und Restore-Dienst mit Aufbewahrungsfristen und Ausfallalarmen,
 - zentrale Aufbewahrungs-, Lösch- und Exportkontrollen für bereits verteilte Kopien.
 
-## Veröffentlichung und privater Draft-PR
+Die Offline-Bearbeitung und die Konfliktentscheidungen sind im aktuellen Client vorgesehen. Die verbindliche Richtlinie für Offline-Kopien nach Kontowiderruf bleibt trotzdem ein offenes Freigabegate, weil der Server vorhandene Kopien nicht remote löschen kann.
+
+## Validierung des Feature-Branches
+
+Der aktuelle vollständige Desktop-Lauf umfasst 610 erfolgreiche Tests in 92 Dateien. `npx tsc --noEmit` und `npm run lint` sind erfolgreich. `npm test` im Serverpaket meldete neun bestandene und zwei übersprungene Tests; `npm run test:integration` gegen reales PostgreSQL war mit zwei von zwei Fällen erfolgreich. Der Docker-Image-Build war ebenfalls erfolgreich.
+
+Der native Electron-Lauf mit 1.405 synthetischen Zeilen bestätigte Bootstrap mit Revision 1, die lokale Änderung von 36 auf 37 über App-Neustart und ausdrückliches `Offline öffnen`, den Reconnect mit Revision 2 sowie einen echten CAS-Konflikt zwischen Serverwert 38 und lokalem Wert 39. Die ausstehende Änderung blieb bis zur Entscheidung erhalten. Nach dem Neustart bestand die Cache-Validierung, und der Login lud weiterhin ausstehende Änderung 1 mit Wert 39. Die Auswahl der Serverversion stellte 38 wieder her, zeigte `Synchronisiert` und erzeugte zuvor eine verschlüsselte Recovery-Kopie mit Zeitstempel und UUID. Der bestätigte Rückwechsel zum lokalen Bestand zeigte wieder den ursprünglichen Wert 36.
+
+Der zusätzliche Rollenlauf prüfte einen separaten leeren PostgreSQL-Server: Die Desktop-App wies einen Editor vor dem Datenupload ab, der API-Test bestätigte 403, und PostgreSQL blieb bei `initialized=false`, Revision 0. Mit dem initialen Admin-Konto wurden anschließend 1.405 synthetische Zeilen übertragen; der Server stand danach auf `initialized=true`, Revision 1.
+
+Damit sind die v2-Client- und Serverläufe einschließlich Admin-Bootstrap dokumentiert. Vor einer Freigabe fehlen weiterhin die operative TLS- und Zertifikatserneuerungsprüfung, der geprüfte PostgreSQL-Dump und Restore, die unabhängige Sicherheitsprüfung sowie die verbindliche Richtlinie für Offline-Kopien nach Kontowiderruf.
+
+Die historische Evidenz und ihre genaue Abgrenzung stehen in [Prüfung des optionalen Serverbetriebs](server-mode-verification.md). Ein bestandener v1-Snapshot-Lauf ist kein Nachweis für die neue Row-Transaction-API.
+
+## Veröffentlichung und PR #45
 
 ### Eigenen Hosting-Service vorbereiten
 
-Nach dem privaten Selfhost-Pilot kann derselbe Server als betreuter Dienst angeboten werden. Dafür zusätzlich erledigen:
+Nach einem privaten Selfhost-Pilot kann ein betreuter Dienst separat geplant werden. Er ist nicht deployed. Dafür zusätzlich erledigen:
 
-- Zunächst je Kundenorganisation einen getrennten Stack mit eigener Datenbank, Domain und eigenen Zugangsdaten provisionieren. Der aktuelle Server unterstützt genau einen Arbeitsbereich; gemeinsame Mandantenverwaltung wäre eine weitere Entwicklung.
-- Einrichtung und Einladung vereinfachen: Serveradresse und persönliches Konto bereitstellen; den Datenschlüssel weiterhin getrennt durch die Organisation erzeugen und verteilen lassen.
+- Zunächst je Kundenorganisation einen getrennten Stack mit eigener PostgreSQL-Datenbank, Domain und eigenen Zugangsdaten provisionieren. Der aktuelle Server unterstützt genau einen Arbeitsbereich; eine Multi-DB-Provisionierungsoberfläche ist für den Start mit einer Organisation nicht erforderlich, gemeinsame Mandantenverwaltung wäre eine weitere Entwicklung.
+- Einrichtung und Einladung vereinfachen: initiales Admin-Konto über die Betreiber-CLI anlegen, danach persönliche Editor- und Reader-Konten bereitstellen; den lokalen Geräteschlüssel erzeugt jedes Gerät selbst und bindet ihn an seinen geschützten Betriebssystemspeicher.
 - Betrieb mit überwachten Backups, getesteter Wiederherstellung, Updates, Alarmierung und benannter Vertretung organisieren.
 - Leistungsumfang, Supportzeiten, Preise, Abrechnung, Kündigung und Datenrückgabe festlegen; Vertrags- und Datenschutzunterlagen dafür prüfen lassen.
 - Einen Pilotkunden erst nach den für seinen konkreten Einsatz erforderlichen technischen und rechtlichen Freigaben aufnehmen.
@@ -140,13 +159,20 @@ Eine einfache Serveradresse in der App ersetzt diese Betriebsaufgaben nicht. Die
 
 ### Repository zuletzt veröffentlichen
 
-Der Draft-PR bleibt im privaten Repository. Vor der Veröffentlichung des Repositorys sind folgende Prüfungen abzuhaken:
+Vor dem öffentlichen Start müssen die vier Freigabegates oben, die aktuelle v2-Testevidenz und der Abgleich von Desktop- und Serverdokumentation vorliegen. Zusätzlich sind folgende Prüfungen abzuhaken:
 
-- MIT-Lizenz, Copyright-Inhaber und Lizenzfelder in `package.json` und App-Info prüfen.
-- Quellcode, Git-Historie, Artefakte, `.env`-Dateien, CI-Logs und Testdaten auf Passwörter, Tokens, Datenschlüssel und Patientendaten prüfen.
+- MIT-Lizenz, Copyright-Inhaber und Lizenzfelder in package.json und App-Info prüfen.
+- Quellcode, Git-Historie, Artefakte, .env-Dateien, CI-Logs und Testdaten auf Passwörter, Tokens, lokale Schlüssel und Patientendaten prüfen.
 - Lizenz- und Notice-Prüfung für npm-Abhängigkeiten, Serverabhängigkeiten, Container-Images und mitgelieferte Dateien durchführen.
 - Reproduzierbaren Build, Lint, Tests, Integrationslauf, TLS-Test, externen Security-Review und Restore-Test dokumentieren.
 - Die Server- und Datenschutzdokumentation mit dem tatsächlich ausgelieferten Compose-/Caddy-Setup abgleichen.
 - Einen Ansprechpartner, eine Sicherheitskontaktadresse und den Incident-Ablauf im privaten Betriebsplan festhalten.
 
-Erst wenn diese Nachweise vorliegen, stellt Torben das Repository selbst öffentlich. Die Änderung der Sichtbarkeit bleibt ausschließlich bei ihm. Das ist der letzte Schritt und kein automatischer Teil eines Releases oder dieses Draft-PRs.
+Die Reihenfolge danach ist fest:
+
+1. Die aktuellen Test- und Restore-Ergebnisse werden eingetragen.
+2. Die Dokumentation wird gegen das tatsächlich ausgelieferte Protokoll-2- und Compose-Setup geprüft.
+3. Der Eigentümer entscheidet über einen Release und eine mögliche Umbenennung.
+4. Der Eigentümer veröffentlicht das Repository zuletzt selbst.
+
+Es gibt keinen automatischen Schritt, der einen Hosted-Dienst bereitstellt, das Repository umbenennt, es öffentlich schaltet oder einen Release veröffentlicht.

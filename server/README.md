@@ -1,19 +1,24 @@
 # ClearDeck sync server
 
-This optional service stores one ClearDeck workspace per deployment. It stores
-the complete encrypted SQLite snapshot supplied by the desktop client as an
-opaque `bytea`; it cannot open, search, or merge the data. Clients coordinate
-writes with a revision and `If-Match` (compare-and-swap), so a stale client must
-reload before it can overwrite another device's change.
+This optional service stores one ClearDeck workspace per deployment. Protocol 2
+stores validated SQLite rows as PostgreSQL `jsonb` records and keeps a durable
+change log for offline clients. Existing protocol-1 encrypted SQLite snapshots
+remain opaque `bytea` data; they are never silently migrated or deleted.
 
-The server has no default account. Create an editor or reader account after the
+The server has no default account. Create an administrator, editor, or reader account after the
 database is healthy:
 
 ```sh
 docker compose up -d --build
 docker compose exec -T app npm run account -- set alice editor < password.txt
 docker compose exec -T app npm run account -- set bob reader < password.txt
+docker compose exec -T app npm run account -- set bootstrap-admin admin < password.txt
 ```
+
+Only an `admin` account may initialize an empty protocol-2 workspace. Admin
+accounts retain editor write access after initialization; readers remain
+read-only. Protocol 2 stores validated rows and change history in PostgreSQL,
+while existing encrypted protocol-1 snapshots remain opaque and unchanged.
 
 `password.txt` should contain one password of 14–256 characters and should be
 removed after use. To revoke an account and all of its sessions, run:

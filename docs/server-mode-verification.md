@@ -1,37 +1,79 @@
 # Prüfung des optionalen Serverbetriebs
 
-Stand: 13.09.2026, Branch `feature/server-mode`.
+Stand: 14.09.2026, Branch feature/server-mode. Diese Seite trennt die Prüfung des neuen Protokoll-2-Standes von der historischen Evidenz des vorherigen v1-Snapshot-Servers.
 
-## Desktopchecks
+## Aktueller Prüfstatus
 
-- `npx tsc --noEmit`: erfolgreich.
-- `npm run lint`: erfolgreich.
-- `npm test -- --run --silent`: 83 Testdateien, 530 Tests erfolgreich.
+Der aktuelle vollständige v2-Lauf ist für den geprüften Client- und Serverumfang bestanden. Er umfasst 610 erfolgreiche Desktoptests in 92 Dateien; `npx tsc --noEmit` und `npm run lint` sind erfolgreich. `npm test` im Serverpaket meldete neun bestandene und zwei übersprungene Tests; `npm run test:integration` gegen reales PostgreSQL war mit zwei von zwei Fällen erfolgreich. Der Docker-Image-Build war ebenfalls erfolgreich.
 
-Die neuen Tests prüfen unter anderem falsche Schlüssel und Passwörter, lokale Dateitrennung, explizite Erstübertragung, Reader-Schreibschutz, Revisionskonflikte, fehlgeschlagene Konfigurationsspeicherung sowie wartende Datenaktionen beim Wechsel oder Neuladen.
+Der native Electron-Lauf mit 1.405 synthetischen Zeilen bestätigte Bootstrap mit Revision 1, die lokale Änderung von 36 auf 37 über App-Neustart und ausdrückliches `Offline öffnen`, den Reconnect mit Revision 2 sowie einen echten CAS-Konflikt zwischen Serverwert 38 und lokalem Wert 39. Die ausstehende Änderung blieb bis zur Entscheidung erhalten. Nach dem Neustart bestand die Cache-Validierung; der Login lud weiterhin ausstehende Änderung 1 mit Wert 39. Die Auswahl der Serverversion stellte 38 wieder her, zeigte `Synchronisiert` und erzeugte zuvor eine verschlüsselte Recovery-Kopie mit Zeitstempel und UUID. Der bestätigte Rückwechsel zum lokalen Bestand zeigte wieder den ursprünglichen Wert 36.
 
-## Überarbeitete Einstellungen
+Der Admin-Bootstrap wurde zusätzlich gegen einen separaten leeren PostgreSQL-Server geprüft. Die Desktop-App wies einen Editor vor dem Datenupload mit der Admin-Anforderung ab; der separate API-Test bestätigte die entsprechende 403-Antwort. PostgreSQL blieb bei `initialized=false`, Revision 0. Mit dem initialen Admin-Konto übertrug die App anschließend 1.405 synthetische Zeilen erfolgreich; der Server stand danach auf `initialized=true`, Revision 1. Das Admin-Konto behält dabei die normalen Editor- und Reader-Rechte. Die anschließende Nutzung kann mit persönlichen Editor- und Reader-Konten erfolgen.
 
-Datenablage und Update-Quelle stehen gemeinsam unter Einstellungen → Verbindungen. Wie unter Sicherheit & Backup öffnen Zeilen die Formulare als Dialog, auf schmalen Fenstern als Bottom Sheet. Vorhandenen Serverbestand öffnen und lokalen Bestand übertragen sind getrennte Dialoge; beim Übertragen wird der Datenschlüssel sofort erzeugt. Der Sperrbildschirm im Serverbetrieb zeigt die Anmeldung direkt. Abbrechen löscht die eingegebenen Geheimnisse und die Bestätigung zur Schlüsselsicherung. Der Rückwechsel zum lokalen Bestand erklärt vor der Bestätigung, dass Serveränderungen nicht übernommen werden.
+## Abgedeckte Fälle im v2-Lauf
 
-Für diese Überarbeitung sind TypeScript, Lint und 578 Desktoptests in 88 Dateien erfolgreich. Die Komponententests prüfen auch den direkten Formulareinstieg vom Anmeldebildschirm, das Zurücksetzen nach Abbruch, die Rückwechselbestätigung und bereinigte Fehlermeldungen beim Speichern der Update-Quelle.
+Der aktuelle Lauf deckte mindestens diese Fälle ab:
 
-## Laufender Electron-Client mit PostgreSQL
+- Schema 23 und Protokoll-2-Login mit Geräte-ID und eindeutigem Geräteslot,
+- leeren Server erkennen, Admin-Bootstrap ausdrücklich übertragen und Nicht-Admins vor dem Datenupload abweisen,
+- lesbare Datensätze, Deltas, Cursor und Tombstones synchronisieren,
+- lokale SQLite-Arbeitskopie und Outbox für Serveradresse und Benutzername verschlüsselt und atomar speichern,
+- lokale Änderungen sofort anzeigen, bei Netzwerkfehlern erhalten und ohne Datenbank-Sperre synchronisieren,
+- Admin-, Editor- und Reader-Rechte bei jeder Synchronisierung prüfen,
+- Offline öffnen nur nach ausdrücklicher Aktion mit dem Passwortnachweis der letzten Online-Anmeldung,
+- per-Datensatz-CAS, atomare Mehrzeilen-Transaktionen, idempotente UUIDs und eindeutige Geräte-ID-Bereiche,
+- Konflikte mit Erhalt aller wartenden Änderungen, Recovery-Kopie vor der Entscheidung und den beiden aktuellen UI-Aktionen prüfen,
+- einen alten v1-Server ohne Überschreiben ablehnen,
+- HTTP-401 ohne automatischen Offline-Fallback behandeln.
 
-Die Serverchecks liefen zusätzlich erfolgreich: neun HTTP-/Passworttests, der separat gestartete PostgreSQL-Integrationslauf, Docker-Image-Build und Caddy-Konfigurationsprüfung. Der Integrationslauf prüft konkurrierende Schreibvorgänge, Persistenz, Rollen, Widerruf und die Sperre alter Sitzungen nach Erneuerung der Instanz-ID. `npm audit --omit=dev` im Serverpaket meldete keine bekannten Schwachstellen.
+Die anschließende Anmeldung mit persönlichen Editor- und Reader-Konten wurde nach dem Admin-Bootstrap verwendet; ein Admin kann zusätzlich wie ein Editor lesen und schreiben.
 
-Mit dem getrennten synthetischen Demo-Profil und einem temporären lokalen PostgreSQL-16-Container geprüft:
+## Geprüfte aktuelle UI
 
-1. Die App startet lokal. Der Server wird erst nach Eingabe und Bestätigung verbunden.
+Die überarbeiteten Verbindungen stehen unter Einstellungen → Verbindungen. Die Aktionen heißen:
+
+- Serverbestand öffnen…
+- Lokalen Bestand auf Server übertragen…
+- Jetzt synchronisieren
+- Anmeldung ändern…
+- Serverstand übernehmen… beziehungsweise Konflikt lösen: Serverversion übernehmen…
+- Konflikt lösen: Lokale Änderungen erneut senden…
+- Zum lokalen Bestand wechseln…
+
+Der Sperrbildschirm bietet Vorhandenen Server verwenden und nach einer vorhandenen Online-Arbeitskopie Offline öffnen. Im Verbindungsdialog stehen Benutzername und Passwort im Vordergrund. Die Serveradresse wird separat über Server einrichten… oder Server ändern… gesetzt und dort im Feld Serveradresse eingegeben. Ein Datenschlüssel wird im neuen v2-Dialog nicht abgefragt. Vor dem Rückwechsel bestätigt der Benutzer Lokalen Bestand öffnen. Die lokale Bestandsübertragung weist auf das erforderliche Admin-Konto hin; ein Nicht-Admin darf vor dem Datenupload nicht initialisieren.
+
+## Historische Evidenz des v1-Snapshot-Servers
+
+Die folgenden Ergebnisse stammen aus Läufen vom 13.09.2026 vor der Umstellung auf Protokoll 2. Sie prüften einen verschlüsselten SQLite-Gesamtsnapshot mit gemeinsamem Datenschlüssel. Sie bleiben als historische Nachweise erhalten und gelten nicht als Validierung der neuen Row-Transaction-API.
+
+### Historische Desktopchecks vom 13.09.2026
+
+- npx tsc --noEmit war erfolgreich.
+- npm run lint war erfolgreich.
+- npm test -- --run --silent meldete 83 Testdateien und 530 erfolgreiche Tests.
+
+Die damaligen Tests prüften unter anderem falsche Schlüssel und Passwörter, lokale Dateitrennung, ausdrückliche Erstübertragung, Reader-Schreibschutz, Revisionskonflikte, fehlgeschlagene Konfigurationsspeicherung sowie wartende Datenaktionen beim Wechsel oder Neuladen.
+
+Für die damalige Überarbeitung der Einstellungsoberfläche waren TypeScript, Lint und 578 Desktoptests in 88 Dateien erfolgreich. Die Komponententests prüften den direkten Formulareinstieg vom Anmeldebildschirm, das Zurücksetzen nach Abbruch, die Rückwechselbestätigung und Fehlermeldungen beim Speichern der Update-Quelle. Auch diese Zahlen gehören zum v1-Snapshot-Stand.
+
+### Historische Serverchecks vom 13.09.2026
+
+Neun HTTP- und Passworttests, der separat gestartete PostgreSQL-Integrationslauf, der Docker-Image-Build und die Caddy-Konfigurationsprüfung waren damals erfolgreich. Der damalige Integrationslauf prüfte konkurrierende Snapshot-Schreibvorgänge, Persistenz, Rollen, Widerruf und die Sperre alter Sitzungen nach Erneuerung der Instanz-ID. npm audit --omit=dev im damaligen Serverpaket meldete keine bekannten Schwachstellen.
+
+### Historischer Electron-Lauf vom 13.09.2026
+
+Der Lauf nutzte ein getrenntes Demo-Profil mit synthetischen Daten und einen temporären lokalen PostgreSQL-16-Container. Er prüfte:
+
+1. Die App startet lokal und verbindet den Server erst nach Eingabe und Bestätigung.
 2. Der lokale Demobestand lässt sich ausdrücklich auf einen leeren Server übertragen.
-3. Nach einem App-Neustart bleiben Adresse und Benutzername erhalten; Passwort und Datenschlüssel müssen erneut eingegeben werden.
+3. Nach einem App-Neustart bleiben Adresse und Benutzername erhalten; Passwort und gemeinsamer Datenschlüssel müssen erneut eingegeben werden.
 4. Eine Änderung der Bezugswochenstunden von 36 auf 37 wird als neuer verschlüsselter Snapshot gespeichert. Die lokale Datenbankdatei bleibt während der Serverbearbeitung bytegleich.
-5. Ein zweiter HTTP-Client schreibt mit derselben Ausgangsrevision. Ein anschließender Schreibversuch des ersten Clients wird wegen seines veralteten Bestands abgewiesen. Nach explizitem Neuladen zeigt die App den gültigen Wert 37.
+5. Ein zweiter HTTP-Client schreibt mit derselben Ausgangsrevision. Der anschließende Schreibversuch des ersten Clients wird wegen seines veralteten Snapshots abgewiesen. Nach explizitem Neuladen zeigt die App den gültigen Wert 37.
 6. Ein Reader-Konto kann den Bestand öffnen. Sein Schreibversuch wird abgewiesen; die Serverrevision bleibt unverändert.
 7. Nach dem Rückwechsel zum lokalen Betrieb zeigt die App wieder den ursprünglichen Wert 36. Serveränderungen wurden nicht lokal übernommen.
 
-Die temporären Testdienste wurden anschließend beendet und der Testcontainer entfernt. Für diesen Lauf wurden keine produktiven Daten oder externen Hostingkonten verwendet.
+Die temporären Testdienste wurden danach beendet und der Testcontainer entfernt. Für diesen historischen Lauf wurden keine produktiven Daten oder externen Hostingkonten verwendet.
 
-## Grenzen dieser Prüfung
+## Noch offene Nachweise
 
-Der Lauf nutzt HTTP ausschließlich auf Loopback. Öffentliche TLS-Konfiguration, Zertifikatserneuerung, vollständiger Dump/Restore und ein unabhängiger Sicherheitsreview sind dadurch nicht nachgewiesen. Die entsprechenden Schritte stehen im [Hosting- und Launch-Plan](hosting-launch-plan.md). Bestehende Hinweise der Entwicklungsumgebung zur Electron-CSP und zum blockierten Google-Fonts-Import sind dort ebenfalls berücksichtigt.
+Die operative TLS- und Zertifikatserneuerungsprüfung, PostgreSQL-Dump und Restore, die unabhängige Sicherheitsprüfung sowie die Richtlinie für Offline-Kopien nach Kontowiderruf sind noch nicht abgenommen. Der [Hosting- und Launch-Plan](hosting-launch-plan.md) führt diese Schritte.

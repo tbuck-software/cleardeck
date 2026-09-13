@@ -6,6 +6,7 @@ import type {
 } from '../../shared/types';
 import { getDb } from '../database/connection';
 import { nextDueDate } from '../../utils/instructionSchedule';
+import { nextDeviceId } from '../syncRecords';
 
 const normalizeDefinitionRows = (rows: any[]): InstructionDefinition[] =>
   rows.map((row) => ({
@@ -56,12 +57,14 @@ export const addInstructionDefinition = (input: {
   const maxSort = db.prepare('SELECT MAX(sortOrder) as mx FROM instruction_definitions').get() as {
     mx: number | null;
   };
+  const id = nextDeviceId(db, 'instruction_definitions');
   db.prepare(
     `
-    INSERT INTO instruction_definitions (topic, legalBasis, note, sortOrder, intervalMonths, intervalSource, minorHazardInstruction)
-    VALUES (@topic, @legalBasis, @note, @sortOrder, @intervalMonths, @intervalSource, @minorHazardInstruction)
+    INSERT INTO instruction_definitions (id, topic, legalBasis, note, sortOrder, intervalMonths, intervalSource, minorHazardInstruction)
+    VALUES (@id, @topic, @legalBasis, @note, @sortOrder, @intervalMonths, @intervalSource, @minorHazardInstruction)
   `,
   ).run({
+    id,
     topic,
     legalBasis: input.legalBasis?.trim() || null,
     note: input.note?.trim() || null,
@@ -250,23 +253,22 @@ export const saveEmployeeInstruction = (input: {
         id,
         input.employeeId,
       );
-    else
-      id = Number(
-        db
-          .prepare(
-            'INSERT INTO employee_instructions(employeeId,instructionDefinitionId,dueDate,completedAt,conductedBy,note,evidenceRef,content) VALUES (?,?,?,?,?,?,?,?)',
-          )
-          .run(
-            input.employeeId,
-            input.instructionDefinitionId,
-            input.dueDate ?? null,
-            input.completedAt ?? null,
-            input.conductedBy ?? null,
-            input.note ?? null,
-            evidence,
-            content,
-          ).lastInsertRowid,
+    else {
+      id = nextDeviceId(db, 'employee_instructions');
+      db.prepare(
+        'INSERT INTO employee_instructions(id,employeeId,instructionDefinitionId,dueDate,completedAt,conductedBy,note,evidenceRef,content) VALUES (?,?,?,?,?,?,?,?,?)',
+      ).run(
+        id,
+        input.employeeId,
+        input.instructionDefinitionId,
+        input.dueDate ?? null,
+        input.completedAt ?? null,
+        input.conductedBy ?? null,
+        input.note ?? null,
+        evidence,
+        content,
       );
+    }
     if (!input.scheduleFollowUp || !input.completedAt) return;
     const definition = db
       .prepare(
@@ -304,8 +306,8 @@ export const saveEmployeeInstruction = (input: {
     )
       return;
     db.prepare(
-      'INSERT INTO employee_instructions(employeeId,instructionDefinitionId,dueDate,previousInstructionId) VALUES (?,?,?,?)',
-    ).run(input.employeeId, input.instructionDefinitionId, due, id);
+      'INSERT INTO employee_instructions(id,employeeId,instructionDefinitionId,dueDate,previousInstructionId) VALUES (?,?,?,?,?)',
+    ).run(nextDeviceId(db, 'employee_instructions'), input.employeeId, input.instructionDefinitionId, due, id);
   })();
   return listEmployeeInstructions(input.employeeId);
 };
@@ -346,14 +348,14 @@ export const assignInstructionToEmployees = (input: {
     'SELECT id FROM employee_instructions WHERE employeeId = ? AND instructionDefinitionId = ? AND completedAt IS NULL',
   );
   const insert = db.prepare(
-    'INSERT INTO employee_instructions (employeeId, instructionDefinitionId, dueDate) VALUES (?, ?, ?)',
+    'INSERT INTO employee_instructions (id, employeeId, instructionDefinitionId, dueDate) VALUES (?, ?, ?, ?)',
   );
 
   let assigned = 0;
   const write = db.transaction(() => {
     input.employeeIds.forEach((employeeId) => {
       if (openEntry.get(employeeId, input.instructionDefinitionId)) return;
-      insert.run(employeeId, input.instructionDefinitionId, dueDate);
+      insert.run(nextDeviceId(db, 'employee_instructions'), employeeId, input.instructionDefinitionId, dueDate);
       assigned += 1;
     });
   });

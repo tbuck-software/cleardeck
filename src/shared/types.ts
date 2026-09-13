@@ -227,7 +227,7 @@ export interface AppState {
   startupError?: string;
   connectionMode?: 'local' | 'server';
   serverUrl?: string;
-  serverRole?: 'reader' | 'editor';
+  serverRole?: import('./serverConnection').ServerRole;
 }
 
 export interface RecoveryInfo {

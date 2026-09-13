@@ -2,7 +2,7 @@ import { openStore } from './store.mjs';
 
 const [action, username, role = 'editor'] = process.argv.slice(2);
 if (!['set', 'disable'].includes(action) || !username) {
-  throw new Error('Aufruf: npm run account -- set BENUTZER reader|editor oder disable BENUTZER. Passwort für set über stdin.');
+  throw new Error('Aufruf: npm run account -- set BENUTZER reader|editor|admin oder disable BENUTZER. Passwort für set über stdin.');
 }
 const store = await openStore(process.env.DATABASE_URL);
 try {

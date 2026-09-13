@@ -14,6 +14,7 @@ import type {
 } from '../../shared/types';
 import { requireDate, localDate } from '../../utils/calendarDate';
 import { getDb } from '../database/connection';
+import { nextDeviceId } from '../syncRecords';
 
 /** Fixed by the QPR; the app never invents or reorders these. */
 export const AUDIT_SECTIONS: AuditSectionDefinition[] = [
@@ -124,11 +125,13 @@ export const saveAudit = (input: {
       db.prepare('DELETE FROM audit_results WHERE auditId = ?').run(auditId);
       db.prepare('DELETE FROM audit_clients WHERE auditId = ?').run(auditId);
     } else {
+      auditId = nextDeviceId(db, 'audits');
       const info = db
         .prepare(
-          'INSERT INTO audits (auditDate, inspector, kind, findings, reportRef, confirmed) VALUES (@auditDate, @inspector, @kind, @findings, @reportRef, @confirmed)',
+          'INSERT INTO audits (id, auditDate, inspector, kind, findings, reportRef, confirmed) VALUES (@id, @auditDate, @inspector, @kind, @findings, @reportRef, @confirmed)',
         )
         .run({
+          id: auditId,
           auditDate: input.auditDate,
           inspector: input.inspector ?? null,
           kind: input.kind ?? null,
@@ -140,10 +143,10 @@ export const saveAudit = (input: {
     }
 
     const insertResult = db.prepare(
-      'INSERT INTO audit_results (auditId, sectionKey, result, note) VALUES (?, ?, ?, ?)',
+      'INSERT INTO audit_results (id, auditId, sectionKey, result, note) VALUES (?, ?, ?, ?, ?)',
     );
     recorded.forEach((row) => {
-      insertResult.run(auditId, row.sectionKey, row.result, row.note ?? null);
+      insertResult.run(nextDeviceId(db, 'audit_results'), auditId, row.sectionKey, row.result, row.note ?? null);
     });
 
     const insertClient = db.prepare(

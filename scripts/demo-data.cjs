@@ -2,6 +2,7 @@
 const { seedDatabase } = require('../src/main/database/seed.ts');
 const { nextDueDate } = require('../src/utils/instructionSchedule.ts');
 const { localDate } = require('../src/utils/calendarDate.ts');
+const { nextDeviceId } = require('../src/main/syncRecords.ts');
 
 // Called only by the explicit demo launcher, on a new isolated database.
 module.exports = function populateDemo(db) {
@@ -32,7 +33,7 @@ module.exports = function populateDemo(db) {
     ).run();
     db.exec("DELETE FROM employee_events WHERE type IN ('fte-change','weekly-hours-change')");
     const insertTerm = db.prepare(
-      'INSERT INTO employment_terms(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) VALUES(?,?,?,?,?,?)',
+      'INSERT INTO employment_terms(id,periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) VALUES(?,?,?,?,?,?,?)',
     );
     for (const e of db.prepare('SELECT * FROM employees ORDER BY id').all()) {
       db.prepare('UPDATE employees SET name=?, note=?, fte=? WHERE id=?').run(
@@ -50,6 +51,7 @@ module.exports = function populateDemo(db) {
         const verified = e.id % 9 ? 1 : 0;
         const source = verified ? `DEMO-Personalakte ${e.id} / Abschnitt ${p.id}` : null;
         insertTerm.run(
+          nextDeviceId(db, 'employment_terms'),
           p.id,
           p.startDate,
           change ? Math.max(12, e.weeklyHours - 6) : e.weeklyHours,
@@ -58,10 +60,19 @@ module.exports = function populateDemo(db) {
           source,
         );
         if (change) {
-          insertTerm.run(p.id, change, e.weeklyHours, fte(e.weeklyHours), verified, source);
+          insertTerm.run(
+            nextDeviceId(db, 'employment_terms'),
+            p.id,
+            change,
+            e.weeklyHours,
+            fte(e.weeklyHours),
+            verified,
+            source,
+          );
           db.prepare(
-            'INSERT INTO employee_events(employeeId,eventDate,type,title,details) VALUES(?,?,?,?,?)',
+            'INSERT INTO employee_events(id,employeeId,eventDate,type,title,details) VALUES(?,?,?,?,?,?)',
           ).run(
+            nextDeviceId(db, 'employee_events'),
             e.id,
             change,
             'weekly-hours-change',
@@ -71,9 +82,23 @@ module.exports = function populateDemo(db) {
         }
       }
     }
-    db.exec(
-      'INSERT INTO employment_term_history(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) SELECT periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef FROM employment_terms',
+    const insertTermHistory = db.prepare(
+      'INSERT INTO employment_term_history(id,periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) VALUES(?,?,?,?,?,?,?)',
     );
+    for (const term of db
+      .prepare(
+        'SELECT periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef FROM employment_terms',
+      )
+      .all())
+      insertTermHistory.run(
+        nextDeviceId(db, 'employment_term_history'),
+        term.periodId,
+        term.effectiveFrom,
+        term.weeklyHours,
+        term.fte,
+        term.verified,
+        term.sourceRef,
+      );
     for (const p of db.prepare('SELECT * FROM patients ORDER BY id').all()) {
       const ended = p.id % 19 === 0;
       const unknown = p.id % 13 === 0;
@@ -143,12 +168,19 @@ module.exports = function populateDemo(db) {
       [3, 21],
     ])
       db.prepare(
-        'INSERT INTO patient_visits(patientId,visitDate,status,actionNeeded,comment) VALUES(?,?,?,0,?)',
-      ).run(id, shift(today, offset), 'planned', 'DEMO: nächster geplanter Hausbesuch.');
+        'INSERT INTO patient_visits(id,patientId,visitDate,status,actionNeeded,comment) VALUES(?,?,?,?,0,?)',
+      ).run(
+        nextDeviceId(db, 'patient_visits'),
+        id,
+        shift(today, offset),
+        'planned',
+        'DEMO: nächster geplanter Hausbesuch.',
+      );
     for (const id of [4, 5, 6])
       db.prepare(
-        'INSERT INTO patient_visits(patientId,visitDate,status,actionNeeded,assignedTo,actionDueDate,comment) VALUES(?,?,?,1,?,?,?)',
+        'INSERT INTO patient_visits(id,patientId,visitDate,status,actionNeeded,assignedTo,actionDueDate,comment) VALUES(?,?,?,?,1,?,?,?)',
       ).run(
+        nextDeviceId(db, 'patient_visits'),
         id,
         shift(today, -3),
         'completed',
@@ -163,7 +195,7 @@ module.exports = function populateDemo(db) {
       .prepare('SELECT * FROM instruction_definitions ORDER BY sortOrder,id LIMIT 8')
       .all();
     const insertInstruction = db.prepare(
-      'INSERT INTO employee_instructions(employeeId,instructionDefinitionId,dueDate,completedAt,conductedBy,note,evidenceRef,content,previousInstructionId) VALUES(?,?,?,?,?,?,?,?,?)',
+      'INSERT INTO employee_instructions(id,employeeId,instructionDefinitionId,dueDate,completedAt,conductedBy,note,evidenceRef,content,previousInstructionId) VALUES(?,?,?,?,?,?,?,?,?,?)',
     );
     for (const e of db.prepare('SELECT * FROM employees').all()) {
       const start = db
@@ -177,6 +209,7 @@ module.exports = function populateDemo(db) {
           : null;
         if (completion && completion <= today) {
           const result = insertInstruction.run(
+            nextDeviceId(db, 'employee_instructions'),
             e.id,
             d.id,
             completion,
@@ -195,6 +228,7 @@ module.exports = function populateDemo(db) {
           );
           if (next)
             insertInstruction.run(
+              nextDeviceId(db, 'employee_instructions'),
               e.id,
               d.id,
               next,
@@ -207,6 +241,7 @@ module.exports = function populateDemo(db) {
             );
         } else
           insertInstruction.run(
+            nextDeviceId(db, 'employee_instructions'),
             e.id,
             d.id,
             shift(today, (((e.id + index) % 5) - 2) * 10),
@@ -244,8 +279,9 @@ module.exports = function populateDemo(db) {
       );
       if (start <= today)
         db.prepare(
-          "INSERT INTO competency_history(employeeId,competencyDefinitionId,changedAt,level,approvedAt,approvedBy,note,stageScheme) VALUES(?,?,?,?,?,?,?,'practice-v1')",
+          "INSERT INTO competency_history(id,employeeId,competencyDefinitionId,changedAt,level,approvedAt,approvedBy,note,stageScheme) VALUES(?,?,?,?,?,?,?,?,'practice-v1')",
         ).run(
+          nextDeviceId(db, 'competency_history'),
           c.employeeId,
           c.competencyDefinitionId,
           `${start > shift(today, -10) ? start : shift(today, -10)} 12:00:00`,
@@ -257,9 +293,10 @@ module.exports = function populateDemo(db) {
     }
     const audit = db
       .prepare(
-        "INSERT INTO audits(auditDate,inspector,kind,findings,confirmed) VALUES(?,?,'regel',?,0)",
+        "INSERT INTO audits(id,auditDate,inspector,kind,findings,confirmed) VALUES(?,?,?,'regel',?,0)",
       )
       .run(
+        nextDeviceId(db, 'audits'),
         shift(today, -7),
         'Demo-Prüfstelle',
         'DEMO-Entwurf: Originalbericht und Zuordnung noch abgleichen.',
@@ -271,7 +308,8 @@ module.exports = function populateDemo(db) {
       ['qb4', 'text'],
       ['qb5', 'ok'],
     ])
-      db.prepare('INSERT INTO audit_results(auditId,sectionKey,result,note) VALUES(?,?,?,?)').run(
+      db.prepare('INSERT INTO audit_results(id,auditId,sectionKey,result,note) VALUES(?,?,?,?,?)').run(
+        nextDeviceId(db, 'audit_results'),
         Number(audit.lastInsertRowid),
         key,
         result,
@@ -283,8 +321,13 @@ module.exports = function populateDemo(db) {
         id,
       );
     db.prepare(
-      "INSERT INTO audits(auditDate,inspector,kind,findings,confirmed) VALUES(?,?,'anlass',?,0)",
-    ).run(today, 'Demo-Prüfstelle', 'DEMO: leerer Entwurf zum Ausprobieren.');
+      "INSERT INTO audits(id,auditDate,inspector,kind,findings,confirmed) VALUES(?,?,?,'anlass',?,0)",
+    ).run(
+      nextDeviceId(db, 'audits'),
+      today,
+      'Demo-Prüfstelle',
+      'DEMO: leerer Entwurf zum Ausprobieren.',
+    );
     if (db.pragma('foreign_key_check').length) throw Error('Demo foreign key check failed');
   })();
 };

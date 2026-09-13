@@ -17,7 +17,9 @@ services:
       - private
 
   app:
-    build: .
+    build:
+      context: ..
+      dockerfile: server/Dockerfile
     restart: unless-stopped
     init: true
     environment:

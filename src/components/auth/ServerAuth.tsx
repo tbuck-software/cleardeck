@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import ConfirmModal from '../modals/ConfirmModal';
-import ServerConnectModal, { ServerConnectFields, useServerConnectForm } from '../modals/ServerConnectModal';
+import ServerConnectModal, {
+  ServerAddressDialog,
+  ServerConnectFields,
+  useServerConnectForm,
+} from '../modals/ServerConnectModal';
 import Icon from '../ui/Icon';
 import type { ConfirmState } from '../../types/ui';
 import type { ServerConnection } from '../../shared/serverConnection';
@@ -22,6 +26,12 @@ export const ServerSignIn = () => {
     onConnected: reload,
   });
 
+  const rememberedServer = Boolean(connection?.mode === 'server' && connection.url && connection.username);
+  const offlineAvailable = rememberedServer &&
+    Boolean(connection?.hasOfflineCopy) &&
+    form.url === connection?.url &&
+    form.username.trim() === connection?.username;
+
   useEffect(() => {
     api.connection.get().then(setConnection).catch((failure) => setError(userFacingErrorMessage(failure)));
   }, []);
@@ -37,6 +47,8 @@ export const ServerSignIn = () => {
 
   const shownError = form.error ?? error;
 
+  if (form.addressOpen) return <ServerAddressDialog form={form} />;
+
   return (
     <div className="auth-screen">
       <form
@@ -48,12 +60,13 @@ export const ServerSignIn = () => {
       >
         <img src={logoUrl} alt="" className="auth-logo" />
         <div>
-          <h1 className="auth-title">Beim Server anmelden</h1>
+          <h1 className="auth-title">Bei ClearDeck anmelden</h1>
           <p className="cd-muted" style={{ margin: 0 }}>
-            Passwort und Datenschlüssel werden bei jeder Anmeldung abgefragt.
+            Melde dich mit deinem ClearDeck-Konto an. Offline gilt das Passwort deiner letzten
+            Online-Anmeldung.
           </p>
         </div>
-        <ServerConnectFields form={form} rememberedAccount={Boolean(connection?.url && connection.username)} />
+        <ServerConnectFields form={form} rememberedAccount={rememberedServer} />
         {shownError && (
           <div className="cd-notice cd-notice-bad" role="alert">
             <Icon name="warning" />
@@ -68,6 +81,17 @@ export const ServerSignIn = () => {
         >
           {form.busy ? 'Verbinde …' : 'Anmelden'}
         </button>
+        {offlineAvailable && (
+          <button
+            type="button"
+            className="btn btn-secondary"
+            style={{ minHeight: 44, paddingInline: 22 }}
+            disabled={!form.complete || form.busy}
+            onClick={() => void form.submit({ offline: true })}
+          >
+            {form.busy ? 'Öffne …' : 'Offline öffnen'}
+          </button>
+        )}
         <button
           type="button"
           className="cd-link"
@@ -75,7 +99,8 @@ export const ServerSignIn = () => {
           onClick={() =>
             setConfirm({
               title: 'Zum lokalen Bestand wechseln?',
-              message: 'Der lokale Bestand wird wieder geöffnet. Änderungen vom Server werden nicht übernommen.',
+              message:
+                'Der lokale Bestand dieses Geräts wird geöffnet. Serverarbeitsbereiche und ausstehende Änderungen bleiben dem jeweiligen Konto zugeordnet; Serverdaten werden nicht in den lokalen Bestand übertragen.',
               confirmLabel: 'Lokalen Bestand öffnen',
               onConfirm: () => void switchToLocal(),
             })

@@ -1,10 +1,10 @@
 /// <reference types="vitest/globals" />
 /// <reference types="@testing-library/jest-dom" />
 
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 
 const apiMock = vi.hoisted(() => ({
-  connection: { get: vi.fn(), connect: vi.fn(), local: vi.fn(), refresh: vi.fn() },
+  connection: { get: vi.fn(), connect: vi.fn(), local: vi.fn(), refresh: vi.fn(), resolveConflict: vi.fn() },
   updates: { getPreferences: vi.fn(), savePreferences: vi.fn() },
 }));
 vi.mock('../../../../services/api', () => ({ api: apiMock, default: apiMock }));
@@ -12,7 +12,15 @@ vi.mock('../../../../services/api', () => ({ api: apiMock, default: apiMock }));
 import SettingsConnections from '../SettingsConnections';
 
 const { connection, updates } = apiMock;
-const reader = { mode: 'server', connected: true, role: 'reader', username: 'maria', url: 'https://example.org' };
+const reader = {
+  mode: 'server',
+  connected: true,
+  role: 'reader',
+  username: 'maria',
+  url: 'https://example.org',
+  syncStatus: 'synced',
+  pendingChanges: 0,
+};
 
 const renderPage = () => {
   const changed = vi.fn();
@@ -21,81 +29,168 @@ const renderPage = () => {
   return { changed, notice };
 };
 
-const fillCredentials = (dialog: HTMLElement) => {
-  fireEvent.change(within(dialog).getByLabelText('Serveradresse'), { target: { value: 'https://example.org' } });
-  fireEvent.change(within(dialog).getByLabelText('Benutzername'), { target: { value: 'maria' } });
-  fireEvent.change(within(dialog).getByLabelText('Serverpasswort'), { target: { value: 'personal-password' } });
+const fillCredentials = async (dialog: HTMLElement): Promise<HTMLElement> => {
+  const name = dialog.getAttribute('aria-label') ?? '';
+  fireEvent.click(within(dialog).getByRole('button', { name: /Server (einrichten|ändern)/ }));
+  const addressDialog = await screen.findByRole('dialog', { name: /Server.*(einrichten|ändern)/i });
+  fireEvent.change(within(addressDialog).getByLabelText('Serveradresse'), { target: { value: 'https://example.org' } });
+  fireEvent.click(within(addressDialog).getByRole('button', { name: 'Übernehmen' }));
+  const activeDialog = await screen.findByRole('dialog', { name });
+  fireEvent.change(within(activeDialog).getByLabelText('Benutzername'), { target: { value: 'maria' } });
+  fireEvent.change(within(activeDialog).getByLabelText('Passwort'), { target: { value: 'personal-password' } });
+  return activeDialog;
 };
 
 beforeEach(() => {
   vi.resetAllMocks();
   connection.get.mockResolvedValue({ mode: 'local', connected: false });
   connection.connect.mockResolvedValue({ mode: 'server', connected: true });
+  connection.resolveConflict.mockResolvedValue(undefined);
   updates.getPreferences.mockResolvedValue({ repositoryUrl: 'https://github.com/Rasalas/employee-db', hasToken: false });
 });
 
 describe('Datenablage', () => {
-  it('opens an existing workspace from its own dialog without uploading local data', async () => {
+  it('opens an existing workspace with credentials and no shared data key', async () => {
     const { changed } = renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Serverbestand öffnen/ }));
-    const dialog = screen.getByRole('dialog', { name: 'Serverbestand öffnen' });
+    let dialog = screen.getByRole('dialog', { name: 'Serverbestand öffnen' });
     expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
-    fillCredentials(dialog);
-    fireEvent.change(within(dialog).getByLabelText('Datenschlüssel'), { target: { value: 'shared-key' } });
+    expect(within(dialog).queryByLabelText('Datenschlüssel')).not.toBeInTheDocument();
+    dialog = await fillCredentials(dialog);
     fireEvent.click(within(dialog).getByRole('button', { name: 'Verbinden' }));
     await waitFor(() => expect(changed).toHaveBeenCalledOnce());
-    expect(connection.connect).toHaveBeenCalledWith({ url: 'https://example.org', username: 'maria', password: 'personal-password', dataKey: 'shared-key', initialize: false });
+    expect(connection.connect).toHaveBeenCalledWith({
+      url: 'https://example.org',
+      username: 'maria',
+      password: 'personal-password',
+      initialize: false,
+    });
   });
 
-  it('only transfers after the generated key was acknowledged', async () => {
+  it('transfers after credentials without generating or acknowledging a key', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Lokalen Bestand auf Server übertragen/ }));
-    const dialog = screen.getByRole('dialog', { name: 'Lokalen Bestand übertragen' });
-    fillCredentials(dialog);
+    let dialog = screen.getByRole('dialog', { name: 'Lokalen Bestand übertragen' });
+    dialog = await fillCredentials(dialog);
     const submit = within(dialog).getByRole('button', { name: 'Übertragen und verbinden' });
-    expect(submit).toBeDisabled();
-    fireEvent.click(within(dialog).getByRole('checkbox', { name: /sicher abgelegt/ }));
+    expect(submit).toBeEnabled();
     fireEvent.click(submit);
-    await waitFor(() => expect(connection.connect).toHaveBeenCalledWith(expect.objectContaining({ initialize: true })));
-    expect(connection.connect.mock.calls[0][0].dataKey).toMatch(/^[A-Za-z0-9+/]{43}=$/);
+    await waitFor(() => expect(connection.connect).toHaveBeenCalledWith({
+      url: 'https://example.org',
+      username: 'maria',
+      password: 'personal-password',
+      initialize: true,
+    }));
+    expect(connection.connect.mock.calls[0][0]).not.toHaveProperty('dataKey');
   });
 
-  it('forgets secrets and consent when the dialog is closed', async () => {
+  it('does not render key generation, copy, or acknowledgement controls', async () => {
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Lokalen Bestand auf Server übertragen/ }));
-    let dialog = screen.getByRole('dialog');
-    fillCredentials(dialog);
-    fireEvent.click(within(dialog).getByRole('checkbox', { name: /sicher abgelegt/ }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Abbrechen' }));
-    fireEvent.click(screen.getByRole('button', { name: /Lokalen Bestand auf Server übertragen/ }));
-    dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByLabelText('Serverpasswort')).toHaveValue('');
-    expect(within(dialog).getByRole('checkbox', { name: /sicher abgelegt/ })).not.toBeChecked();
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryByText(/Datenschlüssel/i)).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Kopieren' })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Neu erzeugen' })).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
   });
 
   it('keeps the dialog open with a cleaned error when connecting fails', async () => {
     connection.connect.mockRejectedValue(new Error('Anmeldung fehlgeschlagen'));
     const { changed } = renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Serverbestand öffnen/ }));
-    const dialog = screen.getByRole('dialog');
-    fillCredentials(dialog);
-    fireEvent.change(within(dialog).getByLabelText('Datenschlüssel'), { target: { value: 'shared-key' } });
+    let dialog = screen.getByRole('dialog');
+    dialog = await fillCredentials(dialog);
     fireEvent.click(within(dialog).getByRole('button', { name: 'Verbinden' }));
     expect(await within(dialog).findByRole('alert')).toHaveTextContent('Anmeldung fehlgeschlagen');
-    expect(within(dialog).getByLabelText('Serverpasswort')).toHaveValue('');
+    expect(within(dialog).getByLabelText('Passwort')).toHaveValue('');
     expect(changed).not.toHaveBeenCalled();
   });
 
-  it('shows the server account and offers refresh and sign-in changes', async () => {
-    connection.get.mockResolvedValue(reader);
+  it('shows pending state and synchronizes in place without reloading the app', async () => {
+    connection.get.mockResolvedValue({ ...reader, syncStatus: 'pending', pendingChanges: 2, lastSyncedAt: '2026-09-13T10:00:00.000Z' });
     connection.refresh.mockResolvedValue(undefined);
     const { changed } = renderPage();
-    expect(await screen.findByText('example.org · maria · Nur lesen')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Serverbestand neu laden/ }));
-    await waitFor(() => expect(changed).toHaveBeenCalledOnce());
+    expect(await screen.findByText('Ausstehende Änderungen')).toBeInTheDocument();
+    expect(screen.getByText('2 ausstehende lokale Änderungen')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Jetzt synchronisieren/ }));
+    await waitFor(() => expect(connection.refresh).toHaveBeenCalledOnce());
+    expect(changed).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: /Anmeldung ändern/ }));
-    expect(screen.getByLabelText('Serveradresse')).toHaveValue('https://example.org');
+    expect(screen.getByText('example.org')).toBeInTheDocument();
     expect(screen.getByLabelText('Benutzername')).toHaveValue('maria');
+  });
+
+  it('offers conflict resolution only for conflicts and confirms the full queue impact', async () => {
+    connection.get.mockResolvedValue({ ...reader, syncStatus: 'conflict', pendingChanges: 3 });
+    renderPage();
+    expect(await screen.findByText('Konflikt')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Serverversion übernehmen/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Serverversion übernehmen?' });
+    expect(within(dialog).getByText(/ALLE ausstehenden lokalen Änderungen/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/Wiederherstellungssicherung/)).toBeInTheDocument();
+    expect(connection.resolveConflict).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Serverversion übernehmen' }));
+    await waitFor(() => expect(connection.resolveConflict).toHaveBeenCalledWith('server'));
+  });
+
+  it('explains that local conflict replay can still be rejected', async () => {
+    connection.get.mockResolvedValue({ ...reader, role: 'editor', syncStatus: 'conflict', pendingChanges: 3 });
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: /Lokale Änderungen erneut senden/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Lokale Änderungen erneut senden?' });
+    expect(within(dialog).getByText(/neuesten Serverversionen erneut ein/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/weiterhin abgelehnt werden/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Lokale Änderungen erneut senden' }));
+    await waitFor(() => expect(connection.resolveConflict).toHaveBeenCalledWith('local'));
+  });
+
+  it('allows a reader with a retained queue to explicitly adopt the server state', async () => {
+    connection.get.mockResolvedValue({ ...reader, syncStatus: 'auth-required', pendingChanges: 2 });
+    renderPage();
+    const action = await screen.findByRole('button', { name: /Serverstand übernehmen/ });
+    fireEvent.click(action);
+    const dialog = screen.getByRole('dialog', { name: 'Serverversion übernehmen?' });
+    expect(within(dialog).getByText(/ALLE ausstehenden lokalen Änderungen/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Serverversion übernehmen' }));
+    await waitFor(() => expect(connection.resolveConflict).toHaveBeenCalledWith('server'));
+    expect(screen.queryByRole('button', { name: /Lokale Änderungen erneut senden/ })).not.toBeInTheDocument();
+  });
+
+  it('labels admins clearly and allows them to replay the retained queue', async () => {
+    connection.get.mockResolvedValue({ ...reader, role: 'admin', syncStatus: 'conflict', pendingChanges: 2 });
+    renderPage();
+    expect(await screen.findByText(/Administration/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Lokale Änderungen erneut senden/ }));
+    const dialog = screen.getByRole('dialog', { name: 'Lokale Änderungen erneut senden?' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Lokale Änderungen erneut senden' }));
+    await waitFor(() => expect(connection.resolveConflict).toHaveBeenCalledWith('local'));
+  });
+
+  it('does not offer queue discard or replay when auth is required without pending changes', async () => {
+    connection.get.mockResolvedValue({ ...reader, syncStatus: 'auth-required', pendingChanges: 0 });
+    renderPage();
+    await screen.findByText('Anmeldung erforderlich');
+    expect(screen.queryByRole('button', { name: /Serverstand übernehmen/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Lokale Änderungen erneut senden/ })).not.toBeInTheDocument();
+  });
+
+  it('polls connection state every three seconds while mounted', async () => {
+    vi.useFakeTimers();
+    try {
+      connection.get.mockResolvedValue(reader);
+      renderPage();
+      expect(connection.get).toHaveBeenCalledOnce();
+      await act(async () => {
+        await Promise.resolve();
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+        await Promise.resolve();
+      });
+      expect(connection.get).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('confirms before switching back to the local workspace', async () => {
@@ -103,7 +198,7 @@ describe('Datenablage', () => {
     connection.local.mockResolvedValue(undefined);
     renderPage();
     fireEvent.click(await screen.findByRole('button', { name: /Zum lokalen Bestand wechseln/ }));
-    expect(screen.getByText(/Änderungen vom Server werden nicht übernommen/)).toBeInTheDocument();
+    expect(screen.getByText(/Serverdaten werden nicht in den lokalen Bestand übertragen/)).toBeInTheDocument();
     expect(connection.local).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Lokalen Bestand öffnen' }));
     await waitFor(() => expect(connection.local).toHaveBeenCalledOnce());

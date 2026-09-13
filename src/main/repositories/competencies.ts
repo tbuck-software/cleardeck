@@ -6,6 +6,7 @@ import type {
 
 import { requireDate, localDate } from '../../utils/calendarDate';
 import { getDb } from '../database/connection';
+import { nextDeviceId } from '../syncRecords';
 
 const normalizeDefinitionRows = (rows: any[]): CompetencyDefinition[] =>
   rows.map((row) => ({
@@ -48,12 +49,14 @@ export const addCompetencyDefinition = (input: {
     mx: number | null;
   };
   const nextSort = (maxSort.mx ?? 0) + 1;
+  const id = nextDeviceId(db, 'competency_definitions');
   db.prepare(
     `
-    INSERT INTO competency_definitions (code, name, category, relevance, sortOrder, note)
-    VALUES (@code, @name, @category, @relevance, @sortOrder, @note)
+    INSERT INTO competency_definitions (id, code, name, category, relevance, sortOrder, note)
+    VALUES (@id, @code, @name, @category, @relevance, @sortOrder, @note)
   `,
   ).run({
+    id,
     code: input.code?.trim() || null,
     name: trimmed,
     category: input.category?.trim() || 'Allgemein',
@@ -211,15 +214,16 @@ const writeEmployeeCompetency = (input: {
     throw new Error('Abschluss braucht Bestätigungsdatum und verantwortliche Person.');
   db.transaction(() => {
     const snapshot = db.prepare(
-      'INSERT INTO competency_history (employeeId,competencyDefinitionId,level,approvedAt,approvedBy,note,stageScheme) VALUES (?,?,?,?,?,?,?)',
+      'INSERT INTO competency_history (id,employeeId,competencyDefinitionId,level,approvedAt,approvedBy,note,stageScheme) VALUES (?,?,?,?,?,?,?,?)',
     );
     if (
       old &&
       !db
         .prepare('SELECT 1 FROM competency_history WHERE employeeId=? AND competencyDefinitionId=?')
         .get(input.employeeId, input.competencyDefinitionId)
-    )
+      )
       snapshot.run(
+        nextDeviceId(db, 'competency_history'),
         input.employeeId,
         input.competencyDefinitionId,
         old.level ?? null,
@@ -228,11 +232,13 @@ const writeEmployeeCompetency = (input: {
         old.note ?? null,
         old.stageScheme,
       );
+    const employeeCompetencyId = old?.id ?? nextDeviceId(db, 'employee_competencies');
     db.prepare(
-      `INSERT INTO employee_competencies (employeeId,competencyDefinitionId,level,approvedAt,approvedBy,note,stageScheme)
-      VALUES (@employeeId,@competencyDefinitionId,@level,@approvedAt,@approvedBy,@note,@stageScheme)
+      `INSERT INTO employee_competencies (id,employeeId,competencyDefinitionId,level,approvedAt,approvedBy,note,stageScheme)
+      VALUES (@id,@employeeId,@competencyDefinitionId,@level,@approvedAt,@approvedBy,@note,@stageScheme)
       ON CONFLICT(employeeId,competencyDefinitionId) DO UPDATE SET level=excluded.level,approvedAt=excluded.approvedAt,approvedBy=excluded.approvedBy,note=excluded.note,stageScheme=excluded.stageScheme`,
     ).run({
+      id: employeeCompetencyId,
       employeeId: input.employeeId,
       competencyDefinitionId: input.competencyDefinitionId,
       level: normalizedLevel,
@@ -242,6 +248,7 @@ const writeEmployeeCompetency = (input: {
       stageScheme,
     });
     snapshot.run(
+      nextDeviceId(db, 'competency_history'),
       input.employeeId,
       input.competencyDefinitionId,
       normalizedLevel,

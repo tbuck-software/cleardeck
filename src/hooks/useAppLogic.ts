@@ -1,6 +1,7 @@
 import { localDate } from '../utils/calendarDate';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { AppState, EmployeeWithPeriod } from '../shared/types';
+import api from '../services/api';
+import type { AppState, EmployeeWithPeriod, YearDataset } from '../shared/types';
 import { statusLabels, fteHelp } from '../constants';
 import useConfirmations from './useConfirmations';
 import useRecovery from './useRecovery';
@@ -17,6 +18,17 @@ import usePatients from './usePatients';
 import usePatientDashboard from './usePatientDashboard';
 import useServiceCatalog from './useServiceCatalog';
 import { userFacingErrorMessage } from '../utils/errorMessage';
+
+export type RefreshAllResult = {
+  dataset: YearDataset;
+  directoryDataset: YearDataset;
+  currentDataset: YearDataset;
+};
+
+export type RefreshAllOptions = {
+  /** Lets the caller cancel the commit if an editor opened while reads ran. */
+  shouldApply?: () => boolean;
+};
 
 const useAppLogic = () => {
   const currentYear = useMemo(() => new Date().getFullYear(), []);
@@ -191,6 +203,127 @@ const useAppLogic = () => {
     loadCalendar: calendarSlice.actions.loadEvents,
     loadServiceDefinitions: serviceCatalogSlice.actions.loadServiceDefinitions,
   };
+
+  /**
+   * Re-read every renderer read model after the main process applies a remote
+   * change. This intentionally updates state in place: modal state and form
+   * drafts live in their own slices and are never reset by a refresh.
+   */
+  const refreshAll = useCallback(async (options: RefreshAllOptions = {}): Promise<RefreshAllResult | null> => {
+    if (!authSlice.appReady.unlocked) return null;
+    const shouldApply = options.shouldApply ?? (() => true);
+
+    const selectedEmployee = employeeSlice.state.selectedEmployee;
+    const selectedEmployeeId = selectedEmployee?.id;
+    const selectedPeriodId = selectedEmployee?.periodId;
+    const selectedPatient = patientSlice.state.selectedPatient;
+    const selectedPatientId = selectedPatient?.id;
+
+    const [nextDataset, nextDirectoryDataset, nextCurrentDataset, nextQualifications, nextCompetencies, nextInstructions, nextPatients, nextServiceDefinitions] = await Promise.all([
+      api.employees.list(year),
+      api.employees.list(currentYear, 'directory'),
+      api.employees.list(currentYear, 'current'),
+      api.qualifications.list(),
+      api.competencies.listDefinitions(),
+      api.instructions.listDefinitions(),
+      api.patients.list(),
+      api.services.list(),
+    ]);
+
+    if (!shouldApply()) return null;
+
+    employeeSlice.setters.setDataset(nextDataset);
+    employeeSlice.setters.setQualifications(nextQualifications);
+    employeeSlice.setters.setCompetencyDefinitions(nextCompetencies);
+    employeeSlice.setters.setInstructionDefinitions(nextInstructions);
+    serviceCatalogSlice.setters.setServiceDefinitions(nextServiceDefinitions);
+    patientSlice.setters.setPatients(nextPatients);
+    authSlice.hydrateQualifications(nextQualifications);
+
+    const freshEmployee = selectedEmployeeId == null
+      ? undefined
+      : [nextDataset, nextDirectoryDataset, nextCurrentDataset]
+          .flatMap((data) => data.employees)
+          .find((employee) =>
+            employee.id === selectedEmployeeId &&
+            (selectedPeriodId == null || employee.periodId === selectedPeriodId),
+          ) ??
+        [nextDataset, nextDirectoryDataset, nextCurrentDataset]
+          .flatMap((data) => data.employees)
+          .find((employee) => employee.id === selectedEmployeeId);
+
+    if (selectedEmployeeId != null && freshEmployee) {
+      if (!shouldApply()) return null;
+      employeeSlice.setters.setSelectedEmployee(freshEmployee);
+      employeeSlice.setters.setForm((previous) => ({
+        ...previous,
+        id: freshEmployee.id,
+        periodId: freshEmployee.periodId,
+        name: freshEmployee.name,
+        qualification: freshEmployee.qualification,
+        note: freshEmployee.note ?? '',
+        startDate: freshEmployee.startDate,
+        endDate: freshEmployee.endDate ?? '',
+        fte: freshEmployee.fte ?? previous.fte,
+        weeklyHours: freshEmployee.weeklyHours ?? null,
+        linked: true,
+      }));
+      await Promise.all([
+        eventSlice.actions.loadHistory(selectedEmployeeId),
+        employeeSlice.actions.loadEmployeeCompetencies(selectedEmployeeId),
+        employeeSlice.actions.loadEmployeeInstructions(selectedEmployeeId),
+      ]);
+    } else if (selectedEmployeeId != null) {
+      if (!shouldApply()) return null;
+      employeeSlice.setters.setSelectedEmployee(null);
+      employeeSlice.actions.resetForm();
+      employeeSlice.setters.setPage('list');
+    }
+
+    if (selectedPatientId != null) {
+      if (!shouldApply()) return null;
+      const freshPatient = nextPatients.find((patient) => patient.id === selectedPatientId);
+      if (freshPatient) {
+        patientSlice.setters.setSelectedPatient(freshPatient);
+        await patientSlice.actions.loadVisits(selectedPatientId);
+      } else {
+        patientSlice.setters.setSelectedPatient(null);
+        patientSlice.setters.setVisits([]);
+      }
+    }
+
+    await Promise.all([
+      settingsSlice.actions.hydrateFromApi(),
+      loadActionsRef.current.loadHiddenEventTypes(),
+      loadActionsRef.current.loadUpcomingEvents(),
+      loadActionsRef.current.loadDashboardWidgets(),
+      loadActionsRef.current.loadPatientDashboard(),
+      loadActionsRef.current.loadCalendar(),
+      employmentIntegritySlice.refresh(),
+    ]);
+
+    return {
+      dataset: nextDataset,
+      directoryDataset: nextDirectoryDataset,
+      currentDataset: nextCurrentDataset,
+    };
+  }, [
+    api,
+    authSlice.appReady.unlocked,
+    authSlice.hydrateQualifications,
+    currentYear,
+    employeeSlice.actions,
+    employeeSlice.setters,
+    employeeSlice.state.selectedEmployee,
+    employmentIntegritySlice.refresh,
+    eventSlice.actions,
+    patientSlice.actions,
+    patientSlice.setters,
+    patientSlice.state.selectedPatient,
+    serviceCatalogSlice.setters,
+    settingsSlice.actions,
+    year,
+  ]);
 
   // Load upcoming events and filters when app is unlocked
   useEffect(() => {
@@ -480,6 +613,7 @@ const useAppLogic = () => {
       refreshPatients: patientSlice.actions.refreshPatients,
       refreshEmploymentIntegrity: employmentIntegritySlice.refresh,
       loadServiceDefinitions: serviceCatalogSlice.actions.loadServiceDefinitions,
+      refreshAll,
       saveServiceDefinition: serviceCatalogSlice.actions.saveServiceDefinition,
       toggleServiceDefinition: serviceCatalogSlice.actions.toggleServiceDefinition,
       reorderServiceDefinitions: serviceCatalogSlice.actions.reorderServiceDefinitions,

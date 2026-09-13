@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Dialog from '../ui/Dialog';
-import Checkbox from '../ui/Checkbox';
 import api from '../../services/api';
 import { userFacingErrorMessage } from '../../utils/errorMessage';
 
@@ -9,25 +8,20 @@ export type ServerConnectVariant = 'open' | 'transfer' | 'login';
 const COPY: Record<ServerConnectVariant, { title: string; subtitle: string; primary: string }> = {
   open: {
     title: 'Serverbestand öffnen',
-    subtitle: 'Mit einem eingerichteten ClearDeck-Server verbinden. Der lokale Bestand bleibt unverändert.',
+    subtitle: 'Mit deinem ClearDeck-Konto anmelden. Der lokale Bestand bleibt unverändert.',
     primary: 'Verbinden',
   },
   transfer: {
     title: 'Lokalen Bestand übertragen',
     subtitle:
-      'Der gesamte lokale Bestand einschließlich Klientendaten wird auf einen leeren Server kopiert. Die lokale Kopie bleibt erhalten.',
+      'Der gesamte lokale Bestand einschließlich Klientendaten wird auf einen leeren Server übertragen. Die lokale Kopie bleibt erhalten. Dafür ist ein Administratorkonto erforderlich.',
     primary: 'Übertragen und verbinden',
   },
   login: {
     title: 'Anmeldung ändern',
-    subtitle: 'Passwort und Datenschlüssel werden nicht gespeichert und bei jeder Anmeldung abgefragt.',
+    subtitle: '',
     primary: 'Anmelden',
   },
-};
-
-const generateKey = () => {
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return btoa(Array.from(bytes, (value) => String.fromCharCode(value)).join(''));
 };
 
 type FormOptions = {
@@ -37,37 +31,103 @@ type FormOptions = {
   onConnected: () => void;
 };
 
+type SubmitOptions = {
+  offline?: boolean;
+};
+
+export const normalizeServerAddress = (value: string): string => {
+  const input = value.trim();
+  if (!input) throw new Error('Bitte eine Serveradresse eingeben.');
+  let address: URL;
+  try {
+    address = new URL(input);
+  } catch {
+    throw new Error('Bitte eine gültige Serveradresse eingeben.');
+  }
+  if (
+    address.username ||
+    address.password ||
+    address.search ||
+    address.hash ||
+    !['', '/'].includes(address.pathname)
+  ) {
+    throw new Error('Bitte nur die Serveradresse ohne Pfad, Zugangsdaten oder Parameter eingeben.');
+  }
+  const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(address.hostname);
+  if (address.protocol !== 'https:' && !(address.protocol === 'http:' && loopback)) {
+    throw new Error('Der Server benötigt HTTPS. HTTP ist nur auf diesem Gerät erlaubt.');
+  }
+  return address.origin;
+};
+
+const displayServerAddress = (value: string): string =>
+  value.replace(/^https?:\/\//, '').replace(/\/$/, '');
+
 /** One connect attempt; secrets are reset whenever the form (re)opens. */
 export const useServerConnectForm = ({ variant, initialUrl = '', initialUsername = '', onConnected }: FormOptions) => {
-  const [url, setUrl] = useState('');
+  const [url, setUrlState] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [dataKey, setDataKey] = useState('');
-  const [keySaved, setKeySaved] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [addressOpen, setAddressOpen] = useState(false);
+  const [addressDraft, setAddressDraft] = useState('');
+  const [addressError, setAddressError] = useState<string | null>(null);
   const transfer = variant === 'transfer';
 
   useEffect(() => {
     if (!variant) return;
-    setUrl(initialUrl);
+    setUrlState(initialUrl);
     setUsername(initialUsername);
     setPassword('');
-    setDataKey(variant === 'transfer' ? generateKey() : '');
-    setKeySaved(false);
-    setCopied(false);
     setError(null);
+    setAddressOpen(false);
+    setAddressDraft(initialUrl);
+    setAddressError(null);
   }, [variant, initialUrl, initialUsername]);
 
-  const complete = Boolean(url.trim() && username.trim() && password && dataKey && (!transfer || keySaved));
+  const complete = Boolean(url.trim() && username.trim() && password);
 
-  const submit = async () => {
+  const openAddressEditor = () => {
+    setAddressDraft(url);
+    setAddressError(null);
+    setAddressOpen(true);
+  };
+
+  const cancelAddressEditor = () => {
+    setAddressOpen(false);
+    setAddressError(null);
+  };
+
+  const applyAddressEditor = (): boolean => {
+    try {
+      const normalized = normalizeServerAddress(addressDraft);
+      if (normalized !== url) {
+        setPassword('');
+        setError(null);
+      }
+      setUrlState(normalized);
+      setAddressOpen(false);
+      setAddressError(null);
+      return true;
+    } catch (failure) {
+      setAddressError(failure instanceof Error ? failure.message : 'Die Serveradresse ist ungültig.');
+      return false;
+    }
+  };
+
+  const submit = async ({ offline = false }: SubmitOptions = {}) => {
     if (!complete || busy) return;
     setBusy(true);
     setError(null);
     try {
-      await api.connection.connect({ url: url.trim(), username: username.trim(), password, dataKey, initialize: transfer });
+      await api.connection.connect({
+        url: url.trim(),
+        username: username.trim(),
+        password,
+        initialize: transfer,
+        ...(offline ? { offline: true } : {}),
+      });
       onConnected();
     } catch (failure) {
       setError(userFacingErrorMessage(failure));
@@ -77,24 +137,25 @@ export const useServerConnectForm = ({ variant, initialUrl = '', initialUsername
     }
   };
 
-  const copyKey = async () => {
-    try {
-      await navigator.clipboard.writeText(dataKey);
-      setCopied(true);
-    } catch {
-      setError('Kopieren nicht möglich. Bitte den Schlüssel markieren und manuell kopieren.');
-    }
-  };
-
-  const regenerateKey = () => {
-    setDataKey(generateKey());
-    setKeySaved(false);
-    setCopied(false);
-  };
-
   return {
-    transfer, url, setUrl, username, setUsername, password, setPassword, dataKey, setDataKey,
-    keySaved, setKeySaved, copied, busy, error, complete, submit, copyKey, regenerateKey,
+    transfer,
+    url,
+    setUrl: setUrlState,
+    username,
+    setUsername,
+    password,
+    setPassword,
+    busy,
+    error,
+    complete,
+    submit,
+    addressOpen,
+    addressDraft,
+    setAddressDraft,
+    addressError,
+    openAddressEditor,
+    cancelAddressEditor,
+    applyAddressEditor,
   };
 };
 
@@ -111,47 +172,67 @@ export const ServerConnectFields = ({ form, rememberedAccount }: { form: ServerC
 
   return (
     <fieldset disabled={form.busy}>
-      <div className="field">
-        <label htmlFor="server-url">Serveradresse</label>
-        <input id="server-url" className="input" type="url" placeholder="https://cleardeck.meine-firma.de" value={form.url} onChange={(event) => form.setUrl(event.target.value)} autoCapitalize="none" spellCheck={false} />
-      </div>
       <div className="cd-field-grid">
         <div className="field">
           <label htmlFor="server-username">Benutzername</label>
           <input id="server-username" className="input" autoComplete="username" value={form.username} onChange={(event) => form.setUsername(event.target.value)} autoCapitalize="none" spellCheck={false} />
         </div>
         <div className="field">
-          <label htmlFor="server-password">Serverpasswort</label>
+          <label htmlFor="server-password">Passwort</label>
           <input id="server-password" ref={passwordRef} className="input" type="password" autoComplete="current-password" value={form.password} onChange={(event) => form.setPassword(event.target.value)} />
         </div>
       </div>
-
-      {form.transfer ? (
-        <>
-          <div className="field">
-            <div id="server-data-key-label" className="connection-label">Neuer Datenschlüssel</div>
-            <div className="connection-key" aria-labelledby="server-data-key-label" aria-live="polite">{form.dataKey}</div>
-            <div className="connection-key-actions">
-              <button type="button" className="btn btn-secondary" onClick={() => void form.copyKey()}>
-                {form.copied ? 'Kopiert' : 'Kopieren'}
-              </button>
-              <button type="button" className="btn btn-ghost" onClick={form.regenerateKey}>
-                Neu erzeugen
-              </button>
-            </div>
-          </div>
-          <Checkbox className="connection-consent" checked={form.keySaved} onChange={(event) => form.setKeySaved(event.target.checked)}>
-            Ich habe den Schlüssel sicher abgelegt. Ohne ihn können die Daten nicht wiederhergestellt werden.
-          </Checkbox>
-        </>
-      ) : (
-        <div className="field">
-          <label htmlFor="server-data-key">Datenschlüssel</label>
-          <input id="server-data-key" className="input" type="password" autoComplete="off" value={form.dataKey} onChange={(event) => form.setDataKey(event.target.value)} aria-describedby="server-key-help" />
-          <p id="server-key-help" className="cd-muted-13">Den Schlüssel erhältst du von der Person, die den Serverbestand eingerichtet hat.</p>
-        </div>
-      )}
+      <div className="connection-status" style={{ justifyContent: 'space-between', gap: 10 }}>
+        <span className="cd-muted-14" title={form.url}>
+          {form.url ? displayServerAddress(form.url) : 'Noch nicht eingerichtet'}
+        </span>
+        <button type="button" className="cd-link" onClick={form.openAddressEditor}>
+          {form.url ? 'Server ändern…' : 'Server einrichten…'}
+        </button>
+      </div>
     </fieldset>
+  );
+};
+
+export const ServerAddressDialog = ({ form }: { form: ServerConnectForm }) => {
+  if (!form.addressOpen) return null;
+  const hasAddress = Boolean(form.url.trim());
+  const title = hasAddress ? 'Serveradresse ändern' : 'Server einrichten';
+  return (
+    <Dialog
+      open
+      manageFocus
+      width={520}
+      title={title}
+      primaryLabel="Übernehmen"
+      primaryDisabled={!form.addressDraft.trim()}
+      onPrimary={() => form.applyAddressEditor()}
+      onClose={form.cancelAddressEditor}
+    >
+      <form
+        className="connection-fields"
+        onSubmit={(event) => {
+          event.preventDefault();
+          form.applyAddressEditor();
+        }}
+      >
+        <div className="field">
+          <label htmlFor="server-address-draft">Serveradresse</label>
+          <input
+            id="server-address-draft"
+            className="input"
+            type="url"
+            placeholder="https://cleardeck.meine-firma.de"
+            value={form.addressDraft}
+            onChange={(event) => form.setAddressDraft(event.target.value)}
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+        </div>
+        {form.addressError && <p role="alert" className="cd-notice cd-notice-bad">{form.addressError}</p>}
+        <button type="submit" hidden />
+      </form>
+    </Dialog>
   );
 };
 
@@ -160,6 +241,7 @@ type ServerConnectModalProps = FormOptions & { onClose: () => void };
 const ServerConnectModal = ({ onClose, ...options }: ServerConnectModalProps) => {
   const form = useServerConnectForm(options);
   if (!options.variant) return null;
+  if (form.addressOpen) return <ServerAddressDialog form={form} />;
   const copy = COPY[options.variant];
 
   return (

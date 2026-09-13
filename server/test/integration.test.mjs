@@ -92,20 +92,19 @@ test('Postgres store persists encrypted snapshots, revokes sessions, and enforce
   let app;
   try {
     store = await openStore(container.connectionString);
+    await store.setAccount('admin', 'admin-password', 'admin');
     await store.setAccount('editor', 'old-editor-password', 'editor');
     await store.setAccount('second-editor', 'second-editor-password', 'editor');
     await store.setAccount('reader', 'reader-password', 'reader');
 
     const firstPayload = payload(0x11);
     const secondPayload = payload(0x22);
-    const [first, second] = await Promise.all([
-      store.write(0, firstPayload, 'editor'),
-      store.write(0, secondPayload, 'second-editor'),
-    ]);
-    assert.equal([first, second].filter((result) => result?.revision === 1).length, 1);
-    assert.equal([first, second].filter((result) => result === null).length, 1);
-    const winningPayload = first?.revision === 1 ? firstPayload : secondPayload;
-    const winningUser = first?.revision === 1 ? 'editor' : 'second-editor';
+    const first = await store.write(0, firstPayload, 'admin');
+    const second = await store.write(0, secondPayload, 'second-editor');
+    assert.deepEqual(first, { revision: 1 });
+    assert.equal(second, null);
+    const winningPayload = firstPayload;
+    const winningUser = 'admin';
     const initial = await store.read();
     assert.equal(initial.revision, 1);
     assert.ok(initial.payload.equals(winningPayload));
@@ -123,6 +122,15 @@ test('Postgres store persists encrypted snapshots, revokes sessions, and enforce
     assert.equal(await store.authenticate(disabledSession.token), null);
 
     app = await startHttp(store);
+    const incompatibleLogin = await http(app.url, '/v2/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: 'admin', password: 'admin-password', deviceId: randomUUID() }),
+    });
+    assert.equal(incompatibleLogin.response.status, 409);
+    const preservedSnapshot = await store.read();
+    assert.equal(preservedSnapshot.revision, 1);
+    assert.ok(preservedSnapshot.payload.equals(winningPayload));
     const oldLogin = await http(app.url, '/v1/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -223,6 +231,160 @@ test('Postgres store persists encrypted snapshots, revokes sessions, and enforce
       headers: { Authorization: `Bearer ${fencedToken}` },
     });
     assert.equal(replay.response.status, 401);
+  } finally {
+    if (app) await stopHttp(app.server).catch(() => undefined);
+    if (store) await store.close().catch(() => undefined);
+    await docker(['rm', '--force', container.name]).catch(() => undefined);
+  }
+});
+
+test('Postgres v2 sync keeps per-record CAS, atomic batches, receipts, tombstones, and instance fences', { skip: skipReason }, async () => {
+  if (!dockerReady) throw new Error('Docker daemon is unavailable.');
+  const container = await startPostgres();
+  let store;
+  let app;
+  const employee = (id, name, note = null) => ({
+    id, name, note, weeklyHours: null, fte: null, createdAt: '2026-01-01 00:00:00', birthDate: null, department: null,
+  });
+  const transaction = (id, instanceId, changes, initialize = false) => ({ id, instanceId, initialize, changes });
+  try {
+    store = await openStore(container.connectionString);
+    await store.setAccount('editor', 'editor-password-v2', 'editor');
+    await store.setAccount('admin', 'admin-password-v2', 'admin');
+    await store.setAccount('reader', 'reader-password-v2', 'reader');
+    app = await startHttp(store);
+
+    const login = async (username, password, deviceId) => http(app.url, '/v2/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, deviceId }),
+    });
+    const first = await login('editor', 'editor-password-v2', randomUUID());
+    assert.equal(first.response.status, 200);
+    assert.equal(first.body.protocol, 2);
+    assert.equal(first.body.deviceSlot, 1);
+    assert.equal(first.body.revision, 0);
+    const second = await login('editor', 'editor-password-v2', randomUUID());
+    assert.equal(second.response.status, 200);
+    assert.equal(second.body.deviceSlot, 2);
+    const admin = await login('admin', 'admin-password-v2', randomUUID());
+    assert.equal(admin.response.status, 200);
+    assert.equal(admin.body.role, 'admin');
+    assert.equal(admin.body.deviceSlot, 3);
+    const instance = first.body.instanceId;
+    const headers = (session) => ({ Authorization: `Bearer ${session.body.token}`, 'Content-Type': 'application/json' });
+
+    const base = [employee(1, 'Alpha'), employee(2, 'Beta')];
+    const initialBody = transaction(randomUUID(), instance, base.map((row) => ({
+      table: 'employees', key: JSON.stringify([row.id]), before: null, after: row,
+    })), true);
+    const editorBootstrap = await http(app.url, '/v2/transactions', { method: 'POST', headers: headers(first), body: JSON.stringify(initialBody) });
+    assert.equal(editorBootstrap.response.status, 403);
+    const afterEditorBootstrap = await http(app.url, '/v2/changes?since=0', { headers: { Authorization: `Bearer ${first.body.token}` } });
+    assert.equal(afterEditorBootstrap.response.status, 200);
+    assert.equal(afterEditorBootstrap.body.initialized, false);
+    assert.equal(afterEditorBootstrap.body.cursor, 0);
+    assert.deepEqual(afterEditorBootstrap.body.changes, []);
+    const initialized = await http(app.url, '/v2/transactions', { method: 'POST', headers: headers(admin), body: JSON.stringify(initialBody) });
+    assert.equal(initialized.response.status, 200);
+    assert.deepEqual(initialized.body, { cursor: 1 });
+
+    const initialChanges = await http(app.url, '/v2/changes?since=0', { headers: { Authorization: `Bearer ${second.body.token}` } });
+    assert.equal(initialChanges.response.status, 200);
+    assert.equal(initialChanges.body.initialized, true);
+    assert.equal(initialChanges.body.cursor, 1);
+    assert.equal(initialChanges.body.changes.length, 2);
+
+    // Two clients with the same stale cursor may edit unrelated rows.
+    const editOne = transaction(randomUUID(), instance, [{
+      table: 'employees', key: '[1]', before: employee(1, 'Alpha'), after: employee(1, 'Alpha', 'A'),
+    }]);
+    const editTwo = transaction(randomUUID(), instance, [{
+      table: 'employees', key: '[2]', before: employee(2, 'Beta'), after: employee(2, 'Beta', 'B'),
+    }]);
+    const [one, two] = await Promise.all([
+      http(app.url, '/v2/transactions', { method: 'POST', headers: headers(first), body: JSON.stringify(editOne) }),
+      http(app.url, '/v2/transactions', { method: 'POST', headers: headers(second), body: JSON.stringify(editTwo) }),
+    ]);
+    assert.equal(one.response.status, 200);
+    assert.equal(two.response.status, 200);
+    assert.deepEqual([one.body.cursor, two.body.cursor].sort((a, b) => a - b), [2, 3]);
+    const firstPage = await http(app.url, '/v2/changes?since=1&limit=1', { headers: { Authorization: `Bearer ${first.body.token}` } });
+    assert.equal(firstPage.response.status, 200);
+    assert.equal(firstPage.body.cursor, 2);
+    assert.equal(firstPage.body.hasMore, true);
+    const secondPage = await http(app.url, '/v2/changes?since=2&limit=1', { headers: { Authorization: `Bearer ${first.body.token}` } });
+    assert.equal(secondPage.body.cursor, 3);
+    assert.equal(secondPage.body.hasMore, false);
+
+    const sameRowConflict = transaction(randomUUID(), instance, [{
+      table: 'employees', key: '[1]', before: employee(1, 'Alpha'), after: employee(1, 'Alpha', 'stale'),
+    }]);
+    const conflict = await http(app.url, '/v2/transactions', { method: 'POST', headers: headers(second), body: JSON.stringify(sameRowConflict) });
+    assert.equal(conflict.response.status, 409);
+    assert.equal(conflict.body.conflict.table, 'employees');
+
+    // One bad CAS in a multi-row batch leaves the good row untouched.
+    const atomic = transaction(randomUUID(), instance, [
+      { table: 'employees', key: '[1]', before: employee(1, 'Alpha', 'A'), after: employee(1, 'Alpha', 'atomic') },
+      { table: 'employees', key: '[2]', before: employee(2, 'Beta'), after: employee(2, 'Beta', 'should-not-commit') },
+    ]);
+    const atomicResult = await http(app.url, '/v2/transactions', { method: 'POST', headers: headers(first), body: JSON.stringify(atomic) });
+    assert.equal(atomicResult.response.status, 409);
+    const afterAtomic = await http(app.url, '/v2/changes?since=3', { headers: { Authorization: `Bearer ${first.body.token}` } });
+    assert.equal(afterAtomic.body.changes.length, 0);
+
+    // UUID receipts make retries safe and reject body reuse.
+    const retryBody = transaction(randomUUID(), instance, [{
+      table: 'employees', key: '[1]', before: employee(1, 'Alpha', 'A'), after: employee(1, 'Alpha', 'retry'),
+    }]);
+    const sent = await http(app.url, '/v2/transactions', { method: 'POST', headers: headers(first), body: JSON.stringify(retryBody) });
+    const retried = await http(app.url, '/v2/transactions', { method: 'POST', headers: headers(first), body: JSON.stringify(retryBody) });
+    assert.equal(sent.response.status, 200);
+    assert.deepEqual(retried.body, sent.body);
+    const reused = { ...retryBody, changes: [{ ...retryBody.changes[0], after: employee(1, 'Alpha', 'different') }] };
+    const reusedResult = await http(app.url, '/v2/transactions', { method: 'POST', headers: headers(first), body: JSON.stringify(reused) });
+    assert.equal(reusedResult.response.status, 409);
+
+    const reader = await login('reader', 'reader-password-v2', randomUUID());
+    const readerResult = await http(app.url, '/v2/transactions', {
+      method: 'POST', headers: headers(reader), body: JSON.stringify(transaction(randomUUID(), instance, [{
+        table: 'employees', key: '[1]', before: employee(1, 'Alpha', 'retry'), after: employee(1, 'Alpha', 'reader'),
+      }])),
+    });
+    assert.equal(readerResult.response.status, 403);
+    await store.disableAccount('reader');
+    const revoked = await http(app.url, '/v2/changes?since=0', { headers: { Authorization: `Bearer ${reader.body.token}` } });
+    assert.equal(revoked.response.status, 401);
+
+    const invalidForeignKey = transaction(randomUUID(), instance, [{
+      table: 'employment_periods', key: '[99]', before: null,
+      after: { id: 99, employeeId: 404, startDate: '2026-01-01', endDate: null, qualification: null, note: null },
+    }]);
+    const invalidResult = await http(app.url, '/v2/transactions', { method: 'POST', headers: headers(first), body: JSON.stringify(invalidForeignKey) });
+    assert.equal(invalidResult.response.status, 422);
+
+    const deleteBody = transaction(randomUUID(), instance, [{
+      table: 'employees', key: '[2]', before: employee(2, 'Beta', 'B'), after: null,
+    }]);
+    const deleted = await http(app.url, '/v2/transactions', { method: 'POST', headers: headers(first), body: JSON.stringify(deleteBody) });
+    assert.equal(deleted.response.status, 200);
+    const tombstone = await http(app.url, `/v2/changes?since=${deleted.body.cursor - 1}`, { headers: { Authorization: `Bearer ${first.body.token}` } });
+    assert.equal(tombstone.body.changes.at(-1).row, null);
+
+    // Changing the instance fences old sessions and leaves the records intact.
+    const fencePool = new pg.Pool({ connectionString: container.connectionString, max: 1 });
+    const nextInstance = randomUUID();
+    try { await fencePool.query('UPDATE workspace SET instance_id=$1', [nextInstance]); } finally { await fencePool.end(); }
+    const fenced = await http(app.url, '/v2/changes?since=0', { headers: { Authorization: `Bearer ${first.body.token}` } });
+    assert.equal(fenced.response.status, 409);
+    assert.equal(fenced.body.instanceId, nextInstance);
+    const newLogin = await login('editor', 'editor-password-v2', randomUUID());
+    assert.equal(newLogin.response.status, 200);
+    assert.equal(newLogin.body.instanceId, nextInstance);
+    const persisted = await http(app.url, `/v2/changes?since=${deleted.body.cursor}`, { headers: { Authorization: `Bearer ${newLogin.body.token}` } });
+    assert.equal(persisted.response.status, 200);
+    assert.equal(persisted.body.changes.length, 0);
   } finally {
     if (app) await stopHttp(app.server).catch(() => undefined);
     if (store) await store.close().catch(() => undefined);
