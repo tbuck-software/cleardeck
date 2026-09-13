@@ -1227,10 +1227,6 @@ const App = () => {
       )}
 
       <main className="app-main">
-        {appReady.connectionMode === 'server' && <div className="connection-banner">
-          <span>{appReady.serverUrl} · {appReady.serverRole === 'reader' ? 'Nur lesen' : 'Änderungen werden online gespeichert'}</span>
-          <button type="button" className="btn" onClick={() => navigateToPage('settings')}>Datenablage</button>
-        </div>}
         {page === 'dashboard' && (
           <Dashboard
             year={year}
