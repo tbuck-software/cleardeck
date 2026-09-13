@@ -5,16 +5,14 @@ import {
   DEFAULT_UPDATE_REPOSITORY_URL,
   type UpdatePreferences,
 } from '../../../shared/updatePreferences';
+import { userFacingErrorMessage } from '../../../utils/errorMessage';
 
 type Notice = {
   kind: 'success' | 'error';
   text: string;
 };
 
-const errorText = (error: unknown): string =>
-  error instanceof Error && error.message
-    ? error.message
-    : 'Die Update-Quelle konnte nicht gespeichert werden.';
+const UPDATE_ERROR_FALLBACK = 'Die Update-Quelle konnte nicht gespeichert werden.';
 
 const UpdateSourceSettings = () => {
   const [repositoryUrl, setRepositoryUrl] = useState(DEFAULT_UPDATE_REPOSITORY_URL);
@@ -35,7 +33,7 @@ const UpdateSourceSettings = () => {
       })
       .catch((error) => {
         if (!active) return;
-        setNotice({ kind: 'error', text: errorText(error) });
+        setNotice({ kind: 'error', text: userFacingErrorMessage(error, UPDATE_ERROR_FALLBACK) });
       })
       .finally(() => {
         if (active) setLoaded(true);
@@ -65,40 +63,21 @@ const UpdateSourceSettings = () => {
         text: removeToken ? 'Gespeicherten Token entfernt.' : 'Update-Quelle gespeichert.',
       });
     } catch (error) {
-      setNotice({ kind: 'error', text: errorText(error) });
+      setNotice({ kind: 'error', text: userFacingErrorMessage(error, UPDATE_ERROR_FALLBACK) });
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <section
-      aria-labelledby="update-source-heading"
-      style={{
-        borderTop: '1px solid var(--color-divider)',
-        paddingTop: 22,
-      }}
-    >
+    <section aria-labelledby="update-source-heading">
       <details>
-        <summary
-          style={{
-            cursor: 'pointer',
-          }}
-        >
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'baseline',
-              gap: 10,
-              flexWrap: 'wrap',
-            }}
-          >
-            <span id="update-source-heading" className="cd-h3" style={{ fontSize: 22 }}>
-              Update-Quelle
-            </span>
-            <span className="cd-muted-13">
-              {!loaded ? 'Lädt …' : hasToken ? 'Token gespeichert' : 'Ohne Token'}
-            </span>
+        <summary className="cd-item" style={{ listStyle: 'none' }}>
+          <span id="update-source-heading" style={{ fontWeight: 600 }}>
+            Update-Quelle
+          </span>
+          <span className="cd-arrow" aria-hidden="true">
+            →
           </span>
         </summary>
 
@@ -107,15 +86,9 @@ const UpdateSourceSettings = () => {
             event.preventDefault();
             void save();
           }}
-          style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 18 }}
+          style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 16 }}
           aria-busy={busy}
         >
-          <p className="cd-muted-14" style={{ margin: 0, maxWidth: 650 }}>
-            Updates kommen aus diesem GitHub-Repository. Für ein privates Repository kannst du
-            unten einen persönlichen Zugriffstoken mit Leserechten hinterlegen. Für ein
-            öffentliches Repository bleibt das Feld leer.
-          </p>
-
           <div className="field">
             <label htmlFor="update-repository-url">GitHub-Repository</label>
             <input
@@ -133,19 +106,8 @@ const UpdateSourceSettings = () => {
             />
           </div>
 
-          <fieldset
-            style={{
-              border: 0,
-              margin: 0,
-              padding: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 8,
-            }}
-          >
-            <legend style={{ fontSize: 12, color: 'var(--color-neutral-700)', padding: 0 }}>
-              Zugriff auf privates Repository
-            </legend>
+          <div className="field">
+            <label htmlFor="update-repository-token">Persönlicher Zugriffstoken</label>
             <input
               id="update-repository-token"
               className="input"
@@ -154,26 +116,22 @@ const UpdateSourceSettings = () => {
               spellCheck={false}
               value={token}
               onChange={(event) => setToken(event.target.value)}
-              placeholder={hasToken ? 'Neuen Token eingeben zum Ersetzen' : 'Optionaler Zugriffstoken'}
+              placeholder={
+                hasToken ? 'Neuen Token eingeben zum Ersetzen' : 'Optional für private Repositories'
+              }
               disabled={!loaded || busy}
-              aria-label="Persönlicher Zugriffstoken"
             />
-            <p className="cd-muted-13" style={{ margin: 0 }}>
-              Der Token wird nur auf diesem Gerät verschlüsselt gespeichert und nie angezeigt.
-            </p>
             {hasToken && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <button
-                  type="button"
-                  className="btn btn-ghost cd-danger-link"
-                  onClick={() => void save(true)}
-                  disabled={busy}
-                >
-                  Gespeicherten Token entfernen
-                </button>
-              </div>
+              <button
+                type="button"
+                className="cd-link cd-danger-link"
+                onClick={() => void save(true)}
+                disabled={busy}
+              >
+                Gespeicherten Token entfernen
+              </button>
             )}
-          </fieldset>
+          </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <button type="submit" className="btn btn-primary" disabled={!loaded || busy}>

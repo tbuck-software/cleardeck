@@ -31,12 +31,13 @@ beforeEach(() => {
 });
 
 describe('UpdateSourceSettings', () => {
-  it('loads the repository URL and shows only whether a token exists', async () => {
+  it('loads the repository URL and keeps the token value hidden', async () => {
     await openSettings({ ...defaultPreferences, hasToken: true });
 
     expect(screen.getByLabelText('GitHub-Repository')).toHaveValue(defaultPreferences.repositoryUrl);
-    expect(screen.getByText('Token gespeichert')).toBeInTheDocument();
     expect(screen.getByLabelText('Persönlicher Zugriffstoken')).toHaveValue('');
+    expect(screen.getByLabelText('Persönlicher Zugriffstoken')).toHaveAttribute('type', 'password');
+    expect(screen.getByRole('button', { name: 'Gespeicherten Token entfernen' })).toBeInTheDocument();
   });
 
   it('saves the URL and optional token, then clears the token field', async () => {
@@ -60,7 +61,7 @@ describe('UpdateSourceSettings', () => {
     }));
     expect(await screen.findByRole('status')).toHaveTextContent('Update-Quelle gespeichert.');
     expect(screen.getByLabelText('Persönlicher Zugriffstoken')).toHaveValue('');
-    expect(screen.getByText('Token gespeichert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Gespeicherten Token entfernen' })).toBeInTheDocument();
   });
 
   it('omits an empty token so an existing token stays saved', async () => {
@@ -88,11 +89,26 @@ describe('UpdateSourceSettings', () => {
     expect(screen.queryByRole('button', { name: 'Gespeicherten Token entfernen' })).not.toBeInTheDocument();
   });
 
-  it('explains the public and private repository choices without exposing credentials', async () => {
+  it('keeps the optional token control concise without exposing credentials', async () => {
     await openSettings();
 
-    expect(screen.getByText(/privates Repository kannst du unten/)).toBeInTheDocument();
-    expect(screen.getByText(/öffentliches Repository bleibt das Feld leer/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Persönlicher Zugriffstoken')).toHaveAttribute(
+      'placeholder',
+      'Optional für private Repositories',
+    );
     expect(screen.queryByText('synthetic-token')).not.toBeInTheDocument();
+  });
+
+  it('shows cleaned API errors when saving fails', async () => {
+    await openSettings();
+    apiMock.updates.savePreferences.mockRejectedValue(
+      new Error(
+        'Error invoking remote method "updates.savePreferences": Error: Die Repository-URL ist ungültig.',
+      ),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update-Quelle speichern' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Die Repository-URL ist ungültig.');
   });
 });

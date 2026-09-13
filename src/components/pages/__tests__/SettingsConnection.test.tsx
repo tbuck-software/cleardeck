@@ -38,7 +38,7 @@ it('connects to an existing workspace without implicitly uploading local data', 
 it('requires separate transfer and key preservation acknowledgements', async () => {
   render(<SettingsConnection allowTransfer onChanged={vi.fn()} />);
   await openForm();
-  fireEvent.click(screen.getByRole('checkbox', { name: /gesamten lokalen Bestand/ }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Lokalen Bestand übertragen' }));
   fireEvent.click(screen.getByRole('button', { name: 'Übertragen und verbinden' }));
   expect(connection.connect).not.toHaveBeenCalled();
   expect(screen.getByRole('alert')).toHaveTextContent('sicher ablegen');
@@ -68,4 +68,36 @@ it('offers explicit refresh and a return to local storage for a reader', async (
   fireEvent.click(screen.getByRole('button', { name: 'Serverbestand neu laden' }));
   await waitFor(() => expect(changed).toHaveBeenCalledOnce());
   expect(connection.refresh).toHaveBeenCalledOnce();
+});
+
+it('clears transfer consent and credentials when the form is cancelled', async () => {
+  render(<SettingsConnection allowTransfer />);
+  await openForm();
+  fireEvent.click(screen.getByRole('radio', { name: 'Lokalen Bestand übertragen' }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /sicher abgelegt/ }));
+  fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Mit einem Server verbinden' }));
+  expect(screen.getByRole('radio', { name: 'Vorhandenen Bestand öffnen' })).toBeChecked();
+  expect(screen.getByLabelText('Serverpasswort')).toHaveValue('');
+  expect(screen.getByLabelText('Datenschlüssel')).toHaveValue('');
+  fireEvent.click(screen.getByRole('radio', { name: 'Lokalen Bestand übertragen' }));
+  expect(screen.getByRole('checkbox', { name: /sicher abgelegt/ })).not.toBeChecked();
+});
+
+it('explains the separate local copy before switching back', async () => {
+  connection.get.mockResolvedValue({ mode: 'server', connected: true, role: 'reader', username: 'maria', url: 'https://example.org' });
+  connection.local.mockResolvedValue(undefined);
+  render(<SettingsConnection onChanged={vi.fn()} />);
+  fireEvent.click(await screen.findByRole('button', { name: 'Zum lokalen Bestand wechseln' }));
+  expect(screen.getByText(/Änderungen vom Server werden nicht übernommen/)).toBeInTheDocument();
+  expect(connection.local).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Lokalen Bestand öffnen' }));
+  await waitFor(() => expect(connection.local).toHaveBeenCalledOnce());
+});
+
+it('opens the login form directly from the existing-server entry point', async () => {
+  render(<SettingsConnection initiallyOpen />);
+  expect(await screen.findByLabelText('Serveradresse')).toBeInTheDocument();
+  expect(screen.queryByRole('radio')).not.toBeInTheDocument();
+  expect(connection.connect).not.toHaveBeenCalled();
 });

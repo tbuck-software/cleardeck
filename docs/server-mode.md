@@ -103,8 +103,8 @@ Das Deaktivieren löscht die Sitzungen des Kontos. Es löscht weder Snapshots no
 Die Übertragung ist ein bewusster Schritt und funktioniert nur von einem geöffneten lokalen Bestand auf einen leeren Server:
 
 1. Den lokalen Bestand anmelden und unter `Einstellungen → Allgemein → Datenablage` den Server verbinden.
-2. Serveradresse, Serverbenutzername und Serverpasswort eintragen.
-3. `Den gesamten lokalen Bestand einschließlich Klientendaten auf einen leeren Server übertragen` aktivieren.
+2. `Lokalen Bestand übertragen` wählen. Für weitere Geräte stattdessen `Vorhandenen Bestand öffnen` verwenden.
+3. Serveradresse, Serverbenutzername und Serverpasswort eintragen.
 4. Den vorhandenen lokalen Recovery-Key verwenden oder einen neuen Datenschlüssel erzeugen. Den Schlüssel offline und getrennt vom Serverpasswort ablegen.
 5. Erst nach der Ablage des Schlüssels `Übertragen und verbinden` wählen.
 
@@ -118,7 +118,7 @@ Die Client-Konfiguration speichert nur die Serveradresse, den Benutzernamen und 
 
 ### Zwischen Server und lokal wechseln
 
-`Zum lokalen Bestand wechseln` beendet die Serversitzung und setzt die Auswahl auf lokal. Die Serverdaten werden dabei nicht in den lokalen Bestand kopiert. Der lokale Bestand bleibt getrennt erhalten und muss nach dem Wechsel lokal angemeldet werden.
+`Zum lokalen Bestand wechseln` zeigt zunächst, was beim Wechsel geschieht. `Lokalen Bestand öffnen` bestätigt den Wechsel, beendet die Serversitzung und setzt die Auswahl auf lokal. Die Serverdaten werden dabei nicht in den lokalen Bestand kopiert. Der lokale Bestand bleibt getrennt erhalten und muss nach dem Wechsel lokal angemeldet werden.
 
 Für eine ausdrückliche Rückmigration:
 

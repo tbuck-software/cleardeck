@@ -1153,7 +1153,7 @@ const App = () => {
             />
             {!authLoading && !appReady.startupError && <details className="connection-auth-option">
               <summary>Vorhandenen Server verwenden</summary>
-              <SettingsConnection />
+              <SettingsConnection initiallyOpen />
             </details>}
             </>
           }
