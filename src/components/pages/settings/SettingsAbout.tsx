@@ -2,6 +2,7 @@ import React from 'react';
 import HelpPopover from '../../ui/HelpPopover';
 import type { AppInfo, UpdateStatus } from '../../../shared/types';
 import logoUrl from '../../../assets/logo.png';
+import UpdateSourceSettings from './UpdateSourceSettings';
 
 const CHECK_LABELS: Record<UpdateStatus['state'], string> = {
   idle: 'Noch nicht geprüft',
@@ -88,7 +89,7 @@ const SettingsAbout = ({
         </div>
         <div>
           <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>Lizenz</div>
-          <div style={{ fontWeight: 600 }}>{appInfo?.license ?? 'Proprietär'}</div>
+          <div style={{ fontWeight: 600 }}>{appInfo?.license ?? 'MIT'}</div>
           {appInfo?.copyright && (
             <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>
               {appInfo.copyright}
@@ -112,6 +113,8 @@ const SettingsAbout = ({
           Jetzt prüfen
         </button>
       </p>
+
+      <UpdateSourceSettings />
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <button type="button" className="btn btn-primary" onClick={onContact}>

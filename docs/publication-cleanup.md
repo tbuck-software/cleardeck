@@ -8,14 +8,18 @@ Stand: 13.09.2026. Das Repository bleibt privat. Die Änderung auf öffentlich n
 - Personenbezüge in Review-Texten sind neutralisiert. Private Arbeitsplatzpfade wurden durch portable Verweise ersetzt.
 - Der Build bettet kein GitHub-Zugriffstoken mehr ein. Ein Regressionstest kompiliert mit einem synthetischen Token und prüft, dass dessen Wert nicht im Ergebnis steht.
 - Das betroffene Token wurde zur Sperrung an GitHub übermittelt; GitHub hat die Anfrage angenommen. Das Repository-Secret für diesen Buildweg ist gelöscht.
-- Die sechs betroffenen Releases ab 1.7.1 sind als Entwürfe zurückgezogen; ihre 63 Assets und sechs zugehörige CI-Paketartefakte wurden entfernt.
+- Die sechs betroffenen Releases ab 1.7.1 sind als Entwürfe zurückgezogen; ihre 63 Assets und sechs zugehörige CI-Paketartefakte wurden entfernt. Für den nativen Upgrade-Test wurde der archivierte originale Windows-Installer 2.2.0 anschließend wieder in den privaten Entwurf geladen und gegen seinen früheren SHA-256-Digest geprüft.
 - Automatische Veröffentlichung und Wiederverwendung des alten Mac-Pakets sind aus dem neuen Workflow entfernt. Kandidaten werden auf Tokens geprüft, einschließlich der unkomprimierten App-Bundles.
 
-Der alte private Auto-Update-Zugriff benötigt einen neuen Verteilungsweg. Ein neues gemeinsames Token darf nicht wieder in App-Pakete eingebaut werden. Vor einem neuen Release sind saubere Pakete und ein neuer Ausgangsstand für native Upgrade-Prüfungen erforderlich. Diese Bereinigung veröffentlicht keine neue App-Version.
+## Windows-Updates
 
-Für bestehende Windows-Installationen aus den letzten beiden Releases ist die Wiederherstellung der Updates noch offen. Die ursprünglichen Pakete enthalten den Token im Klartext innerhalb von `app.asar`. Verbliebene lokale Paketkopien werden für die Upgrade-Prüfung aufbewahrt; ihre erneute Veröffentlichung würde den widerrufenen Zugriff nicht wiederherstellen.
+Die Korrektur liegt im [Draft-PR #46](https://github.com/Rasalas/employee-db/pull/46) und ist auch in den Server-Branch übernommen. Version 2.2.1 enthält unter Einstellungen → Über ClearDeck → Update-Quelle ein Feld für den GitHub-Link, vorbelegt mit `https://github.com/Rasalas/employee-db`. Öffentliche Releases benötigen keinen Token. Für private Releases kann auf dem jeweiligen Gerät ein persönlicher Token mit Leserechten geschützt gespeichert werden. Ein abgewiesener Token erlaubt einen erneuten Versuch ohne Anmeldung. Ein gemeinsames Geheimnis wird nicht mehr im Paket ausgeliefert.
 
-GitHub kann weiterhin die Downloads bereitstellen. Solange der Quellcode privat bleibt, kommt ein separates öffentliches Repository ausschließlich für Installer und Update-Metadaten infrage. Ein zusätzlicher Webserver ist dafür nicht erforderlich. Das öffentliche Repository legt der Eigentümer selbst an. Bestehende Clients benötigen einmalig eine Umstellung des Feeds oder eine korrigierte Installation. Der konkrete Downloadort, saubere Pakete und ein erfolgreicher nativer Windows-Upgrade-Test stehen noch aus.
+GitHub bleibt der Downloadort. Ein separates öffentliches Repository oder ein zusätzlicher Webserver ist dafür nicht erforderlich. Über eine Umbenennung und die spätere Veröffentlichung entscheidet weiterhin ausschließlich der Eigentümer.
+
+Bestehende Windows-Installationen benötigen einmalig den korrigierten Installer über ihrer bisherigen Version. Die ursprünglichen Pakete enthalten den inzwischen zur Sperrung eingereichten Token im Klartext innerhalb von `app.asar`. Verbliebene lokale Paketkopien bleiben für die Upgrade-Prüfung erhalten.
+
+Die nativen Windows-Prüfungen laufen noch. Geprüft werden die direkte Installation über einen aus dem Release-Tag rekonstruierten Stand 2.1.0, über den ursprünglichen Installer 2.2.0 und ein anschließendes In-App-Update von 2.2.1 auf einen ausschließlich für den Test gebauten Nachfolger. Erst erfolgreiche Paket- und Upgrade-Prüfungen erlauben die Veröffentlichung von 2.2.1. Der Test-Nachfolger 2.2.2 wird nicht veröffentlicht.
 
 ## Bilder für den Serverbetrieb
 
