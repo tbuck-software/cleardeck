@@ -6,66 +6,145 @@ import http, { type IncomingMessage, type ServerResponse } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
-
 import { randomBytes } from 'node:crypto';
-import SqliteAdapter from './sqliteAdapter';
 
-const runtime = vi.hoisted(() => ({ root: '' }));
+const runtime = vi.hoisted(() => {
+  const wrapKey = Buffer.from('cleardeck-test-safe-storage-key-32');
+  const xor = (input: Buffer, nonce: Buffer): Buffer =>
+    Buffer.from(input.map((value, index) => value ^ wrapKey[index % wrapKey.length] ^ nonce[index % nonce.length]));
+
+  return {
+    root: '',
+    safeStorage: {
+      isEncryptionAvailable: vi.fn(() => true),
+      encryptString: vi.fn((value: string) => {
+        const nonce = Buffer.from('test-safe-storage');
+        return Buffer.concat([nonce, xor(Buffer.from(value, 'utf8'), nonce)]);
+      }),
+      decryptString: vi.fn((encrypted: Buffer | string) => {
+        const bytes = Buffer.isBuffer(encrypted) ? encrypted : Buffer.from(encrypted);
+        const nonce = bytes.subarray(0, 17);
+        return xor(bytes.subarray(17), nonce).toString('utf8');
+      }),
+    },
+  };
+});
 
 vi.mock('electron', () => ({
   app: { getPath: () => runtime.root },
+  safeStorage: runtime.safeStorage,
 }));
+
 vi.mock('better-sqlite3', async () => ({ default: (await import('./sqliteAdapter')).default }));
 
 import {
   closeDb,
   flushDatabase,
   getDb,
-  getEncryptedDbPath,
-  getWorkingDbPath,
   openDatabase,
   setEncryptionKey,
   setRemoteDatabase,
   setStorageMode,
 } from '../database/connection';
-import { decodeBackup, encodeBackup } from '../backupFormat';
 import {
   connectServer,
   getServerConnection,
   lockServer,
   refreshServer,
+  resolveServerConflict,
   runServerOperation,
-  withCurrentConnection,
-  withConnectionLock,
+  setServerEditing,
   useLocalConnection,
+  withConnectionLock,
+  withCurrentConnection,
 } from '../serverConnection';
-import {
-  getBaseHours,
-  getHiddenEventTypes,
-  setBaseHours,
-  setHiddenEventTypes,
-} from '../repositories/settings';
+import { getBaseHours, setBaseHours, setHiddenEventTypes } from '../repositories/settings';
+
+type Row = Record<string, unknown>;
+type StoredRecord = { table: string; key: string; row: Row | null; version: number };
+type LoginRequest = { username?: string; password?: string; deviceId?: string };
+type TransactionChange = {
+  table: string;
+  key: string;
+  before: Row | null;
+  after: Row | null;
+};
+type TransactionRequest = {
+  id: string;
+  instanceId: string;
+  initialize: boolean;
+  changes: TransactionChange[];
+};
+type ServerState = ReturnType<typeof getServerConnection> & {
+  syncStatus: string;
+  pendingChanges: number;
+  lastSyncedAt: string | number | null;
+  syncError: string | null;
+  hasOfflineCopy: boolean;
+};
+
+type InitialRow = { table: string; key: readonly unknown[]; row: Row };
 
 type FakeStore = {
   username: string;
   password: string;
   role: 'reader' | 'editor';
   instanceId: string;
-  revision: number;
-  payload: Buffer | null;
-  conflictOnPut: boolean;
-  requests: { login: number; get: number; head: number; put: number; logout: number };
-  lastIfMatch?: string;
+  deviceSlot: number;
+  cursor: number;
+  initialized: boolean;
+  online: boolean;
+  rejectTransactionsStatus: 401 | 409 | null;
+  dropNextTransactionResponse: boolean;
+  requests: {
+    login: number;
+    changes: number;
+    transactions: number;
+    snapshots: number;
+    logout: number;
+  };
+  routes: string[];
+  loginBodies: LoginRequest[];
+  changeQueries: number[];
+  transactionBodies: TransactionRequest[];
+  records: Map<string, StoredRecord>;
+  history: StoredRecord[];
+  processedTransactions: Map<string, number>;
+  deviceSlots: Map<string, number>;
+  tokens: Set<string>;
+  revokedTokens: Set<string>;
+  nextToken: number;
 };
 
 type FakeServer = {
   store: FakeStore;
   url: string;
   close: () => Promise<void>;
+  pushRemote: (table: string, key: readonly unknown[], row: Row | null) => void;
 };
 
-const TOKEN = 'T'.repeat(43);
+const TOKEN_SUFFIX = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 const LOCAL_PASSWORD = 'server-password';
+const BASE_HOURS_KEY = JSON.stringify(['baseHours']);
+const INSTANCE_A = '11111111-1111-4111-8111-111111111111';
+const INSTANCE_B = '22222222-2222-4222-8222-222222222222';
+
+const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+
+const canonical = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(canonical);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, item]) => [key, canonical(item)]),
+    );
+  }
+  return value;
+};
+
+const sameValue = (left: unknown, right: unknown): boolean =>
+  JSON.stringify(canonical(left)) === JSON.stringify(canonical(right));
 
 const readRequestBody = async (request: IncomingMessage): Promise<Buffer> => {
   const chunks: Buffer[] = [];
@@ -74,106 +153,239 @@ const readRequestBody = async (request: IncomingMessage): Promise<Buffer> => {
 };
 
 const sendJson = (response: ServerResponse, status: number, value: unknown): void => {
+  if (response.destroyed) return;
   response.writeHead(status, { 'Content-Type': 'application/json' });
   response.end(JSON.stringify(value));
 };
 
-const startFakeServer = async (overrides: Partial<FakeStore> = {}): Promise<FakeServer> => {
+const recordId = (table: string, key: string): string => `${table}\u0000${key}`;
+
+const parseKey = (key: string): readonly unknown[] | null => {
+  try {
+    const value: unknown = JSON.parse(key);
+    return Array.isArray(value) ? value : null;
+  } catch {
+    return null;
+  }
+};
+
+const tokenFor = (sequence: number): string =>
+  `T${String(sequence).padStart(4, '0')}${TOKEN_SUFFIX[sequence % TOKEN_SUFFIX.length]}`.padEnd(43, 't');
+
+const rowForSetting = (key: string, value: string | number): Row => ({ key, value: String(value) });
+
+const startFakeServer = async (
+  overrides: Partial<Pick<FakeStore, 'username' | 'password' | 'role' | 'instanceId' | 'deviceSlot' | 'initialized'>> & {
+    initialRows?: InitialRow[];
+  } = {},
+): Promise<FakeServer> => {
   const store: FakeStore = {
     username: 'alice',
     password: LOCAL_PASSWORD,
     role: 'editor',
-    instanceId: '11111111-1111-4111-8111-111111111111',
-    revision: 0,
-    payload: null,
-    conflictOnPut: false,
-    requests: { login: 0, get: 0, head: 0, put: 0, logout: 0 },
+    instanceId: INSTANCE_A,
+    deviceSlot: 7,
+    cursor: 0,
+    initialized: false,
+    online: true,
+    rejectTransactionsStatus: null,
+    dropNextTransactionResponse: false,
+    requests: { login: 0, changes: 0, transactions: 0, snapshots: 0, logout: 0 },
+    routes: [],
+    loginBodies: [],
+    changeQueries: [],
+    transactionBodies: [],
+    records: new Map(),
+    history: [],
+    processedTransactions: new Map(),
+    deviceSlots: new Map(),
+    tokens: new Set(),
+    revokedTokens: new Set(),
+    nextToken: 0,
     ...overrides,
   };
+
+  const appendChange = (table: string, key: string, row: Row | null): void => {
+    store.cursor++;
+    const next = { table, key, row: row ? clone(row) : null, version: store.cursor };
+    store.records.set(recordId(table, key), next);
+    store.history.push(clone(next));
+  };
+
+  for (const initial of overrides.initialRows ?? []) {
+    appendChange(initial.table, JSON.stringify(initial.key), initial.row);
+  }
 
   const server = http.createServer(async (request, response) => {
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('Connection', 'close');
+
     try {
-      if (request.url === '/v1/login' && request.method === 'POST') {
+      const address = `http://${request.headers.host ?? '127.0.0.1'}`;
+      const parsedUrl = new URL(request.url ?? '/', address);
+      const route = `${request.method ?? 'GET'} ${parsedUrl.pathname}`;
+      store.routes.push(route);
+
+      if (parsedUrl.pathname === '/v2/login' && request.method === 'POST') {
         store.requests.login++;
-        const input = JSON.parse((await readRequestBody(request)).toString()) as {
-          username?: string;
-          password?: string;
-        };
-        if (input.username !== store.username || input.password !== store.password) {
+        if (!store.online) {
+          response.destroy();
+          return;
+        }
+        const input = JSON.parse((await readRequestBody(request)).toString()) as LoginRequest;
+        store.loginBodies.push(clone(input));
+        if (
+          input.username !== store.username ||
+          input.password !== store.password ||
+          typeof input.deviceId !== 'string' ||
+          !input.deviceId
+        ) {
           sendJson(response, 401, { error: 'Anmeldung fehlgeschlagen.' });
           return;
         }
+        let deviceSlot = store.deviceSlots.get(input.deviceId);
+        if (!deviceSlot) {
+          deviceSlot = store.deviceSlots.size + store.deviceSlot;
+          store.deviceSlots.set(input.deviceId, deviceSlot);
+        }
+        if (deviceSlot < 1 || deviceSlot > 1_000_000) {
+          sendJson(response, 500, { error: 'Ungültiger Geräteslot.' });
+          return;
+        }
+        const token = tokenFor(++store.nextToken);
+        store.tokens.add(token);
         sendJson(response, 200, {
-          protocol: 1,
-          token: TOKEN,
+          protocol: 2,
+          token,
           role: store.role,
           instanceId: store.instanceId,
-          revision: store.revision,
+          deviceSlot,
+          revision: store.cursor,
         });
         return;
       }
 
-      const authorized = request.headers.authorization === `Bearer ${TOKEN}`;
-      if (!authorized) {
-        sendJson(response, 401, { error: 'Sitzung abgelaufen.' });
-        return;
-      }
-      if (request.url === '/v1/session' && request.method === 'DELETE') {
+      if (parsedUrl.pathname === '/v2/session' && request.method === 'DELETE') {
         store.requests.logout++;
         sendJson(response, 200, { ok: true });
         return;
       }
-      if (request.url !== '/v1/snapshot') {
-        sendJson(response, 404, { error: 'Nicht gefunden.' });
+
+      if (parsedUrl.pathname === '/v1/snapshot') {
+        store.requests.snapshots++;
+        sendJson(response, 404, { error: 'v1 snapshots are not supported by this fixture.' });
         return;
       }
 
-      const snapshotHeaders = {
-        ETag: `"${store.revision}"`,
-        'X-ClearDeck-Instance': store.instanceId,
-      };
-      if (request.method === 'HEAD') {
-        store.requests.head++;
-        response.writeHead(store.revision === 0 ? 204 : 200, snapshotHeaders);
-        response.end();
+      const authorization = request.headers.authorization;
+      const token = typeof authorization === 'string' ? authorization.replace(/^Bearer\s+/, '') : '';
+      if (!store.online) {
+        response.destroy();
         return;
       }
-      if (request.method === 'GET') {
-        store.requests.get++;
-        if (store.revision === 0 || !store.payload) {
-          response.writeHead(204, snapshotHeaders);
-          response.end();
-        } else {
-          response.writeHead(200, {
-            ...snapshotHeaders,
-            'Content-Type': 'application/octet-stream',
-          });
-          response.end(store.payload);
-        }
+      if (!token || !store.tokens.has(token) || store.revokedTokens.has(token)) {
+        sendJson(response, 401, { error: 'Sitzung abgelaufen.' });
         return;
       }
-      if (request.method === 'PUT') {
-        store.requests.put++;
-        store.lastIfMatch = request.headers['if-match'];
-        const payload = await readRequestBody(request);
-        if (store.conflictOnPut || request.headers['if-match'] !== `"${store.revision}"`) {
-          sendJson(response, 409, { error: 'Der Bestand wurde geändert.' });
+
+      if (parsedUrl.pathname === '/v2/changes' && request.method === 'GET') {
+        store.requests.changes++;
+        const since = Number(parsedUrl.searchParams.get('since'));
+        if (!Number.isSafeInteger(since) || since < 0) {
+          sendJson(response, 422, { error: 'Ungültiger Cursor.' });
           return;
         }
-        if (request.headers['x-cleardeck-instance'] !== store.instanceId) {
-          sendJson(response, 409, { error: 'Die Serverinstanz hat sich geändert.' });
-          return;
-        }
-        store.payload = payload;
-        store.revision++;
-        sendJson(response, 200, { revision: store.revision });
+        store.changeQueries.push(since);
+        sendJson(response, 200, {
+          instanceId: store.instanceId,
+          cursor: store.cursor,
+          initialized: store.initialized,
+          changes: store.history
+            .filter((change) => change.version > since)
+            .map((change) => ({
+              table: change.table,
+              key: change.key,
+              row: change.row ? clone(change.row) : null,
+              version: change.version,
+            })),
+        });
         return;
       }
-      sendJson(response, 405, { error: 'Methode nicht erlaubt.' });
+
+      if (parsedUrl.pathname === '/v2/transactions' && request.method === 'POST') {
+        store.requests.transactions++;
+        const input = JSON.parse((await readRequestBody(request)).toString()) as TransactionRequest;
+        store.transactionBodies.push(clone(input));
+        if (
+          !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.id) ||
+          input.instanceId !== store.instanceId ||
+          !Array.isArray(input.changes)
+        ) {
+          sendJson(response, 422, { error: 'Ungültige Transaktion.' });
+          return;
+        }
+        if (store.rejectTransactionsStatus) {
+          const status = store.rejectTransactionsStatus;
+          if (status === 401) {
+            for (const activeToken of store.tokens) store.revokedTokens.add(activeToken);
+          }
+          sendJson(response, status, { error: status === 401 ? 'Sitzung abgelaufen.' : 'CAS-Konflikt.' });
+          return;
+        }
+        const previousCursor = store.processedTransactions.get(input.id);
+        if (previousCursor !== undefined) {
+          sendJson(response, 200, { cursor: previousCursor });
+          return;
+        }
+        if (input.initialize && store.initialized) {
+          sendJson(response, 409, { error: 'Bestand ist bereits initialisiert.' });
+          return;
+        }
+        if (!input.initialize && !store.initialized) {
+          sendJson(response, 409, { error: 'Bestand ist noch nicht initialisiert.' });
+          return;
+        }
+
+        for (const change of input.changes) {
+          const key = parseKey(change.key);
+          if (
+            !key ||
+            typeof change.table !== 'string' ||
+            !Object.prototype.hasOwnProperty.call(change, 'before') ||
+            !Object.prototype.hasOwnProperty.call(change, 'after')
+          ) {
+            sendJson(response, 422, { error: 'Ungültiger Datensatz.' });
+            return;
+          }
+          const current = store.records.get(recordId(change.table, change.key));
+          const currentRow = current?.row ?? null;
+          if (!sameValue(currentRow, change.before)) {
+            sendJson(response, 409, {
+              error: 'CAS-Konflikt.',
+              table: change.table,
+              key: change.key,
+            });
+            return;
+          }
+        }
+
+        for (const change of input.changes) {
+          appendChange(change.table, change.key, change.after ? clone(change.after) : null);
+        }
+        store.initialized = true;
+        store.processedTransactions.set(input.id, store.cursor);
+        if (store.dropNextTransactionResponse) {
+          store.dropNextTransactionResponse = false;
+          response.destroy();
+          return;
+        }
+        sendJson(response, 200, { cursor: store.cursor });
+        return;
+      }
+
+      sendJson(response, 404, { error: 'Nicht gefunden.' });
     } catch {
-      if (!response.headersSent) sendJson(response, 500, { error: 'Fehler.' });
+      if (!response.headersSent && !response.destroyed) sendJson(response, 500, { error: 'Fehler.' });
     }
   });
 
@@ -181,9 +393,14 @@ const startFakeServer = async (overrides: Partial<FakeStore> = {}): Promise<Fake
   await once(server, 'listening');
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('Fake server did not bind a port.');
+
   return {
     store,
     url: `http://127.0.0.1:${address.port}`,
+    pushRemote: (table, key, row) => {
+      appendChange(table, JSON.stringify(key), row);
+      store.initialized = true;
+    },
     close: () =>
       new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
@@ -192,189 +409,420 @@ const startFakeServer = async (overrides: Partial<FakeStore> = {}): Promise<Fake
   };
 };
 
-const connectInput = (url: string, key: Buffer, initialize = false) => ({
+const connectInput = (url: string, initialize = false, offline = false) => ({
   url,
   username: 'alice',
   password: LOCAL_PASSWORD,
-  dataKey: key.toString('base64'),
   initialize,
+  ...(offline ? { offline: true } : {}),
 });
 
-const setLocalBaseHours = (hours: number): void => {
+const state = (): ServerState => getServerConnection() as ServerState;
+
+const openLocal = (baseHours = 36, hiddenEventTypes = ['local-secret']): void => {
   openDatabase({ create: true });
-  setBaseHours(hours);
-  setHiddenEventTypes(['local-secret']);
+  setBaseHours(baseHours);
+  setHiddenEventTypes(hiddenEventTypes);
   flushDatabase();
 };
 
-const snapshotAtBaseHours = (hours: number, hiddenEventTypes = ['remote-secret']): Buffer => {
-  const copy = new SqliteAdapter(getDb().serialize());
-  copy.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('baseHours', ?)").run(String(hours));
-  copy
-    .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('hiddenEventTypes', ?)")
-    .run(JSON.stringify(hiddenEventTypes));
-  const bytes = copy.serialize();
-  copy.close();
-  return bytes;
-};
-
-const storeSnapshot = (store: FakeStore, bytes: Buffer, key: Buffer, revision = 1): void => {
-  store.payload = encodeBackup(bytes, key);
-  store.revision = revision;
-};
-
-const readStoredBaseHours = (store: FakeStore, key: Buffer): number => {
-  const bytes = decodeBackup(store.payload!, key);
-  const copy = new SqliteAdapter(bytes);
-  try {
-    return Number((copy.prepare("SELECT value FROM settings WHERE key='baseHours'").get() as { value: string }).value);
-  } finally {
-    copy.close();
+const waitFor = async (
+  predicate: () => boolean,
+  message: string,
+  timeout = 3_000,
+): Promise<void> => {
+  const deadline = Date.now() + timeout;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await new Promise<void>((resolve) => setTimeout(resolve, 10));
   }
+  throw new Error(`Timed out waiting for ${message}.`);
 };
 
-const readStoredHiddenEventTypes = (store: FakeStore, key: Buffer): string[] => {
-  const bytes = decodeBackup(store.payload!, key);
-  const copy = new SqliteAdapter(bytes);
-  try {
-    const value = (copy.prepare("SELECT value FROM settings WHERE key='hiddenEventTypes'").get() as { value?: string } | undefined)?.value;
-    return value ? JSON.parse(value) : [];
-  } finally {
-    copy.close();
-  }
+const initializeConnection = async (server: FakeServer): Promise<void> => {
+  await connectServer(connectInput(server.url, true), true);
+  await waitFor(
+    () => server.store.requests.transactions >= 1 && state().pendingChanges === 0 && state().syncStatus === 'synced',
+    'the initial workspace transaction',
+  );
 };
 
-const readLocalBaseHours = (key: Buffer): number => {
-  const bytes = decodeBackup(fs.readFileSync(getEncryptedDbPath()), key);
-  const copy = new SqliteAdapter(bytes);
-  try {
-    return Number((copy.prepare("SELECT value FROM settings WHERE key='baseHours'").get() as { value: string }).value);
-  } finally {
-    copy.close();
-  }
+const allFiles = (root: string): Record<string, string> => {
+  const files: Record<string, string> = {};
+  const visit = (directory: string): void => {
+    if (!fs.existsSync(directory)) return;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(absolute);
+      else files[path.relative(root, absolute)] = fs.readFileSync(absolute).toString('base64');
+    }
+  };
+  visit(root);
+  return files;
 };
 
-describe('server connection with encrypted SQLite snapshots', () => {
+const backupFiles = (root: string): string[] =>
+  Object.keys(allFiles(root)).filter((file) =>
+    file.split(path.sep).includes('backups') || file.split(path.sep).some((part) => part.startsWith('recovery-')),
+  );
+
+const lastTransaction = (server: FakeServer): TransactionRequest => {
+  const transaction = server.store.transactionBodies[server.store.transactionBodies.length - 1];
+  if (!transaction) throw new Error('Expected a transaction request.');
+  return transaction;
+};
+
+const storedSetting = (server: FakeServer, key: string): Row | null =>
+  server.store.records.get(recordId('settings', JSON.stringify([key])))?.row ?? null;
+
+describe('v2 server connection with an encrypted offline delta cache', () => {
   let dataRoot: string;
   let localKey: Buffer;
   const servers: FakeServer[] = [];
 
   beforeEach(() => {
-    dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'cleardeck-server-connection-'));
+    dataRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'cleardeck-v2-server-connection-'));
     runtime.root = dataRoot;
     localKey = randomBytes(32);
     setRemoteDatabase(false);
     setStorageMode('encrypted');
     setEncryptionKey(localKey);
+    vi.clearAllMocks();
   });
 
   afterEach(async () => {
+    setServerEditing(false);
     await lockServer().catch((): void => undefined);
     closeDb();
     setRemoteDatabase(false);
     setEncryptionKey(null);
-    for (const server of servers.splice(0)) {
-      await server.close().catch((): void => undefined);
-    }
+    for (const server of servers.splice(0)) await server.close().catch((): void => undefined);
     fs.rmSync(dataRoot, { recursive: true, force: true });
   });
 
-  it('uses local mode when no server configuration exists', () => {
-    expect(getServerConnection()).toEqual({ mode: 'local', connected: false });
+  it('exposes the local state shape before any server workspace exists', () => {
+    expect(state()).toMatchObject({
+      mode: 'local',
+      connected: false,
+      hasOfflineCopy: false,
+    });
   });
 
-  it('initializes an empty server only by explicit request and keeps local encrypted files local', async () => {
-    setLocalBaseHours(36);
+  it('initializes the server with v2 rows and caches the workspace key through safeStorage', async () => {
+    openLocal();
     const server = await startFakeServer();
     servers.push(server);
 
-    expect(await connectServer(connectInput(server.url, localKey, true), true)).toMatchObject({
+    const connectedPromise = connectServer(connectInput(server.url, true), true);
+    const connected = await connectedPromise;
+    await waitFor(
+      () => server.store.requests.transactions >= 1 && state().pendingChanges === 0 && state().syncStatus === 'synced',
+      'the initial workspace transaction',
+    );
+    expect(connected).toMatchObject({ mode: 'server', connected: true, role: 'editor' });
+    expect(state()).toMatchObject({
       mode: 'server',
       connected: true,
-      role: 'editor',
+      pendingChanges: 0,
+      hasOfflineCopy: true,
     });
-    expect(server.store.revision).toBe(1);
-    expect(readStoredBaseHours(server.store, localKey)).toBe(36);
-    expect(fs.existsSync(getWorkingDbPath())).toBe(false);
+    expect(state().lastSyncedAt).not.toBeNull();
+    expect(runtime.safeStorage.encryptString).toHaveBeenCalled();
 
-    const localFileAfterConnect = fs.readFileSync(getEncryptedDbPath());
-    await runServerOperation('settings:setBaseHours', () => {
-      setBaseHours(42);
-      setHiddenEventTypes(['remote-secret']);
-    });
-    expect(getBaseHours()).toBe(42);
-    expect(getHiddenEventTypes()).toEqual(['remote-secret']);
-    expect(readStoredBaseHours(server.store, localKey)).toBe(42);
-    expect(readStoredHiddenEventTypes(server.store, localKey)).toEqual(['remote-secret']);
-    expect(fs.readFileSync(getEncryptedDbPath())).toEqual(localFileAfterConnect);
-    expect(fs.readFileSync(getEncryptedDbPath()).includes(Buffer.from('remote-secret'))).toBe(false);
-    expect(readLocalBaseHours(localKey)).toBe(36);
+    expect(server.store.requests.login).toBe(1);
+    expect(server.store.loginBodies[0]).toMatchObject({ username: 'alice', password: LOCAL_PASSWORD });
+    expect(server.store.loginBodies[0]?.deviceId).toEqual(expect.any(String));
+    expect(server.store.deviceSlots.get(server.store.loginBodies[0]!.deviceId!)).toBeGreaterThanOrEqual(1);
+    expect(server.store.deviceSlots.get(server.store.loginBodies[0]!.deviceId!)).toBeLessThanOrEqual(1_000_000);
+
+    const transaction = lastTransaction(server);
+    expect(transaction.initialize).toBe(true);
+    expect(transaction.instanceId).toBe(server.store.instanceId);
+    expect(transaction.changes.length).toBeGreaterThan(0);
+    expect(transaction.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    expect(transaction.changes.every((change) => Array.isArray(parseKey(change.key)))).toBe(true);
+    expect(server.store.initialized).toBe(true);
+    expect(server.store.requests.snapshots).toBe(0);
+    expect(server.store.routes.some((route) => route.includes('/v1/'))).toBe(false);
+  });
+
+  it('writes offline changes durably, keeps them queued, and unlocks the same copy after a restart', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    const loginCount = server.store.requests.login;
+
+    server.store.online = false;
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(44));
+    await waitFor(
+      () => state().pendingChanges > 0 && state().syncStatus === 'offline',
+      'the offline transaction to remain pending',
+    );
+    expect(getBaseHours()).toBe(44);
+    expect(state()).toMatchObject({ connected: true, hasOfflineCopy: true });
+    expect(state().syncError).toEqual(expect.any(String));
 
     await lockServer();
-    expect(fs.readFileSync(getEncryptedDbPath())).toEqual(localFileAfterConnect);
-    expect(fs.existsSync(getWorkingDbPath())).toBe(false);
+    await connectServer(connectInput(server.url, false, true), true);
+    expect(server.store.requests.login).toBe(loginCount);
+    expect(runtime.safeStorage.decryptString).toHaveBeenCalled();
+    expect(getBaseHours()).toBe(44);
+    expect(state()).toMatchObject({ connected: true, pendingChanges: 1, hasOfflineCopy: true });
+  });
+
+  it('rejects a wrong offline password before touching the old encrypted cache', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    await lockServer();
+    const before = allFiles(dataRoot);
+    const loginCount = server.store.requests.login;
+
+    await expect(
+      connectServer({ ...connectInput(server.url, false, true), password: 'wrong-password' }, true),
+    ).rejects.toThrow();
+    expect(server.store.requests.login).toBe(loginCount);
+    expect(allFiles(dataRoot)).toEqual(before);
+    expect(state()).toMatchObject({ mode: 'server', connected: false });
+  });
+
+  it('uploads only changed rows through transactions and never sends a full snapshot', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    server.store.transactionBodies.length = 0;
+    server.store.routes.length = 0;
+
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(42));
+    await waitFor(() => state().pendingChanges === 0 && server.store.transactionBodies.length >= 1, 'changed row upload');
+
+    const transaction = lastTransaction(server);
+    expect(transaction.initialize).toBe(false);
+    expect(transaction.changes).toHaveLength(1);
+    expect(transaction.changes[0]).toEqual({
+      table: 'settings',
+      key: BASE_HOURS_KEY,
+      before: rowForSetting('baseHours', 36),
+      after: rowForSetting('baseHours', 42),
+    });
+    expect(storedSetting(server, 'baseHours')).toEqual(rowForSetting('baseHours', 42));
+    expect(server.store.requests.snapshots).toBe(0);
+    expect(server.store.routes.some((route) => route.includes('/v1/'))).toBe(false);
+  });
+
+  it('keeps a local edit and its queue after an independent server CAS conflict', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    server.store.rejectTransactionsStatus = 409;
+
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(48));
+    await waitFor(() => state().pendingChanges > 0 && state().syncStatus === 'conflict', 'the CAS-conflicted change to remain queued');
+    expect(getBaseHours()).toBe(48);
+    expect(storedSetting(server, 'baseHours')).toEqual(rowForSetting('baseHours', 36));
+    expect(state().syncError).toEqual(expect.any(String));
+  });
+
+  it('keeps a revoked-session edit queued and flushes it after same-account login', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    server.store.rejectTransactionsStatus = 401;
+
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(49));
+    await waitFor(() => state().pendingChanges > 0, 'the revoked-session change to remain queued');
+    expect(getBaseHours()).toBe(49);
+
+    server.store.rejectTransactionsStatus = null;
+    await lockServer();
+    await connectServer(connectInput(server.url), true);
+    await waitFor(() => state().pendingChanges === 0, 'the preserved queue to flush after re-login');
+    expect(server.store.requests.login).toBe(2);
+    expect(getBaseHours()).toBe(49);
+    expect(storedSetting(server, 'baseHours')).toEqual(rowForSetting('baseHours', 49));
+  });
+
+  it('retries an applied transaction with the same UUID after the response is lost', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    server.store.transactionBodies.length = 0;
+    server.store.dropNextTransactionResponse = true;
+
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(41));
+    await waitFor(() => server.store.transactionBodies.length >= 1, 'the dropped transaction request');
+    await waitFor(() => state().syncStatus === 'offline', 'the failed transaction state');
+    await refreshServer();
+    await waitFor(() => state().pendingChanges === 0, 'the idempotent retry to finish');
+
+    const ids = server.store.transactionBodies.map((transaction) => transaction.id);
+    expect(new Set(ids).size).toBe(1);
+    expect(server.store.processedTransactions.size).toBe(2);
+    expect(server.store.history.filter((change) => change.table === 'settings' && change.key === BASE_HOURS_KEY)).toHaveLength(2);
+    expect(storedSetting(server, 'baseHours')).toEqual(rowForSetting('baseHours', 41));
+  });
+
+  it('pulls an independent remote edit with a cursor and preserves local state when nothing is pending', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    const cursorBeforeRemoteEdit = server.store.cursor;
+    const transactionsBeforeRefresh = server.store.requests.transactions;
+    server.pushRemote('settings', ['baseHours'], rowForSetting('baseHours', 55));
+
+    await refreshServer();
+    expect(getBaseHours()).toBe(55);
+    expect(state()).toMatchObject({ pendingChanges: 0 });
+    expect(state().syncError).toBeUndefined();
+    expect(server.store.changeQueries).toContain(cursorBeforeRemoteEdit);
+    expect(server.store.requests.transactions).toBe(transactionsBeforeRefresh);
+    expect(server.store.requests.snapshots).toBe(0);
+  });
+
+  it('lets the user keep the local side of a conflict and retains a conflict backup', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    server.store.online = false;
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(45));
+    await waitFor(() => state().pendingChanges > 0, 'the local conflict edit');
+    server.store.online = true;
+    server.pushRemote('settings', ['baseHours'], rowForSetting('baseHours', 50));
+    server.pushRemote('settings', ['visitIntervalDays'], rowForSetting('visitIntervalDays', 120));
+    setServerEditing(true);
+    await refreshServer();
+    expect(getBaseHours()).toBe(45);
+    await waitFor(() => state().syncStatus === 'conflict', 'the local/server conflict state');
+    expect(state().pendingChanges).toBeGreaterThan(0);
+
+    const beforeBackups = backupFiles(dataRoot);
+    setServerEditing(false);
+    await resolveServerConflict('local');
+    await waitFor(() => state().pendingChanges === 0, 'the local conflict decision to upload');
+    expect(getBaseHours()).toBe(45);
+    expect(storedSetting(server, 'baseHours')).toEqual(rowForSetting('baseHours', 45));
+    expect(storedSetting(server, 'visitIntervalDays')).toEqual(rowForSetting('visitIntervalDays', 120));
+    expect(getDb().prepare("SELECT value FROM settings WHERE key='visitIntervalDays'").get()).toEqual({ value: '120' });
+    expect(backupFiles(dataRoot).length).toBeGreaterThan(beforeBackups.length);
+  });
+
+  it('lets the user choose the server side of a conflict and drops only the local loser', async () => {
+    openLocal();
+    const server = await startFakeServer();
+    servers.push(server);
+    await initializeConnection(server);
+    server.store.online = false;
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(46));
+    await waitFor(() => state().pendingChanges > 0, 'the queued local conflict edit');
+    server.store.online = true;
+    server.pushRemote('settings', ['baseHours'], rowForSetting('baseHours', 51));
+    await refreshServer();
+    expect(getBaseHours()).toBe(46);
+    await waitFor(() => state().syncStatus === 'conflict', 'the local/server conflict state');
+
+    const beforeBackups = backupFiles(dataRoot);
+    await resolveServerConflict('server');
+    await waitFor(() => state().pendingChanges === 0, 'the server conflict decision');
+    expect(getBaseHours()).toBe(51);
+    expect(storedSetting(server, 'baseHours')).toEqual(rowForSetting('baseHours', 51));
+    expect(backupFiles(dataRoot).length).toBeGreaterThan(beforeBackups.length);
+  });
+
+  it('uses the server-authoritative reader role and never queues a write', async () => {
+    openLocal();
+    const server = await startFakeServer({
+      initialized: true,
+      role: 'reader',
+      initialRows: [
+        { table: 'settings', key: ['baseHours'], row: rowForSetting('baseHours', 36) },
+        { table: 'settings', key: ['hiddenEventTypes'], row: rowForSetting('hiddenEventTypes', '[]') },
+      ],
+    });
+    servers.push(server);
+    await connectServer(connectInput(server.url), true);
+    expect(state().role).toBe('reader');
+    let called = false;
+
+    await expect(
+      runServerOperation('settings:setBaseHours', () => {
+        called = true;
+        setBaseHours(49);
+      }),
+    ).rejects.toThrow(/nur lesen|read/i);
+    expect(called).toBe(false);
+    expect(getBaseHours()).toBe(36);
+    expect(state().pendingChanges).toBe(0);
+    expect(server.store.requests.transactions).toBe(0);
+  });
+
+  it('keeps queued changes attached to their workspace while switching servers', async () => {
+    openLocal();
+    const first = await startFakeServer({ instanceId: INSTANCE_A });
+    const second = await startFakeServer({
+      instanceId: INSTANCE_B,
+      initialized: true,
+      initialRows: [{ table: 'settings', key: ['baseHours'], row: rowForSetting('baseHours', 36) }],
+    });
+    servers.push(first, second);
+    await initializeConnection(first);
+
+    first.store.online = false;
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(47));
+    await waitFor(() => state().pendingChanges > 0, 'the first workspace queue');
+    await useLocalConnection();
+
+    await connectServer(connectInput(second.url), true);
+    await waitFor(() => state().connected === true, 'the second workspace connection');
+    expect(second.store.requests.transactions).toBe(0);
+    expect(storedSetting(second, 'baseHours')).toEqual(rowForSetting('baseHours', 36));
 
     await useLocalConnection();
-    setEncryptionKey(localKey);
-    openDatabase();
-    expect(getBaseHours()).toBe(36);
-    expect(getHiddenEventTypes()).toEqual(['local-secret']);
-    expect(getServerConnection()).toMatchObject({ mode: 'local', connected: false });
+    await connectServer(connectInput(first.url, false, true), true);
+    expect(state()).toMatchObject({ connected: true, pendingChanges: 1 });
+    expect(getBaseHours()).toBe(47);
   });
 
-  it('refuses an empty server without initialize and preserves the open local database', async () => {
-    setLocalBaseHours(39);
-    const localFile = fs.readFileSync(getEncryptedDbPath());
+  it('keeps a stable device id and valid primary-key JSON across reconnects', async () => {
+    openLocal();
     const server = await startFakeServer();
     servers.push(server);
+    await initializeConnection(server);
+    const firstDeviceId = server.store.loginBodies[0]?.deviceId;
+    expect(firstDeviceId).toEqual(expect.any(String));
+    await lockServer();
+    await connectServer(connectInput(server.url), true);
 
-    await expect(connectServer(connectInput(server.url, localKey), true)).rejects.toThrow(/Server ist leer/);
-    expect(server.store.revision).toBe(0);
-    expect(getServerConnection()).toEqual({ mode: 'local', connected: false });
-    expect(getBaseHours()).toBe(39);
-    expect(fs.readFileSync(getEncryptedDbPath())).toEqual(localFile);
-    expect(fs.existsSync(getWorkingDbPath())).toBe(false);
+    expect(server.store.loginBodies[1]?.deviceId).toBe(firstDeviceId);
+    expect(server.store.deviceSlots.get(firstDeviceId!)).toBeGreaterThanOrEqual(1);
+    expect(server.store.deviceSlots.get(firstDeviceId!)).toBeLessThanOrEqual(1_000_000);
+
+    await runServerOperation('settings:setBaseHours', () => setBaseHours(43));
+    await waitFor(() => state().pendingChanges === 0, 'the reconnect write');
+    const transaction = lastTransaction(server);
+    expect(transaction.id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+    expect(transaction.changes[0]?.key).toBe(BASE_HOURS_KEY);
+    expect(transaction.changes[0]?.key).not.toBe('baseHours');
   });
 
-  it('does not initialize an empty server while the local database is locked or closed', async () => {
+  it('keeps connection work serialized and rejects callbacks captured before a workspace switch', async () => {
+    openLocal();
     const server = await startFakeServer();
     servers.push(server);
-
-    await expect(connectServer(connectInput(server.url, localKey, true), false)).rejects.toThrow(
-      /lokalen Bestand öffnen/,
-    );
-    expect(server.store.requests.login).toBe(0);
-    expect(server.store.revision).toBe(0);
-  });
-
-  it('rejects an explicit initialization when the server already has a snapshot', async () => {
-    setLocalBaseHours(36);
-    const localFile = fs.readFileSync(getEncryptedDbPath());
-    const server = await startFakeServer();
-    servers.push(server);
-    storeSnapshot(server.store, snapshotAtBaseHours(44), localKey);
-    const remoteFile = server.store.payload;
-
-    await expect(connectServer(connectInput(server.url, localKey, true), true)).rejects.toThrow(
-      /Server enthält bereits Daten/,
-    );
-    expect(server.store.requests.put).toBe(0);
-    expect(server.store.payload).toEqual(remoteFile);
-    expect(getServerConnection()).toEqual({ mode: 'local', connected: false });
-    expect(getBaseHours()).toBe(36);
-    expect(fs.readFileSync(getEncryptedDbPath())).toEqual(localFile);
-  });
-
-  it('serializes queued work before switching back to the local connection', async () => {
-    setLocalBaseHours(36);
-    const server = await startFakeServer();
-    servers.push(server);
-    storeSnapshot(server.store, snapshotAtBaseHours(36), localKey);
-    await connectServer(connectInput(server.url, localKey), true);
+    await initializeConnection(server);
 
     const events: string[] = [];
     let release!: () => void;
-    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     const operation = withConnectionLock(async () => {
       events.push('operation:start');
       await gate;
@@ -398,168 +846,5 @@ describe('server connection with encrypted SQLite snapshots', () => {
     await expect(staleOperation).rejects.toThrow(/Datenablage wurde gewechselt/);
     expect(staleOperationCalled).toBe(false);
     expect(events).toEqual(['operation:start', 'operation:end', 'switch:start', 'switch:end']);
-    expect(getServerConnection()).toMatchObject({ mode: 'local', connected: false });
-  });
-
-  it('keeps local state after a failed login', async () => {
-    setLocalBaseHours(40);
-    const localFile = fs.readFileSync(getEncryptedDbPath());
-    const server = await startFakeServer();
-    servers.push(server);
-
-    await expect(
-      connectServer({ ...connectInput(server.url, localKey), password: 'wrong-password' }, true),
-    ).rejects.toThrow(/Anmeldung fehlgeschlagen/);
-    expect(server.store.requests.login).toBe(1);
-    expect(getServerConnection()).toEqual({ mode: 'local', connected: false });
-    expect(getBaseHours()).toBe(40);
-    expect(fs.readFileSync(getEncryptedDbPath())).toEqual(localFile);
-  });
-
-  it('keeps local state after a wrong recovery key', async () => {
-    setLocalBaseHours(40);
-    const localFile = fs.readFileSync(getEncryptedDbPath());
-    const serverKey = randomBytes(32);
-    const server = await startFakeServer();
-    servers.push(server);
-    storeSnapshot(server.store, snapshotAtBaseHours(44), serverKey);
-
-    await expect(connectServer(connectInput(server.url, localKey), true)).rejects.toThrow(
-      /Recovery-Key|Sicherung beschädigt/,
-    );
-    expect(getServerConnection()).toEqual({ mode: 'local', connected: false });
-    expect(getBaseHours()).toBe(40);
-    expect(fs.readFileSync(getEncryptedDbPath())).toEqual(localFile);
-    expect(fs.existsSync(getWorkingDbPath())).toBe(false);
-  });
-
-  it('rolls back a real repository edit when the remote compare-and-swap write conflicts', async () => {
-    setLocalBaseHours(36);
-    const server = await startFakeServer();
-    servers.push(server);
-    storeSnapshot(server.store, snapshotAtBaseHours(36), localKey);
-    await connectServer(connectInput(server.url, localKey), true);
-    const localFile = fs.readFileSync(getEncryptedDbPath());
-    server.store.conflictOnPut = true;
-
-    await expect(
-      runServerOperation('settings:setBaseHours', () => setBaseHours(48)),
-    ).rejects.toThrow(/Serverbestand wurde geändert/);
-    expect(getBaseHours()).toBe(36);
-    expect(server.store.revision).toBe(1);
-    expect(readStoredBaseHours(server.store, localKey)).toBe(36);
-    expect(fs.readFileSync(getEncryptedDbPath())).toEqual(localFile);
-  });
-
-  it('blocks a stale edit until the changed server revision is explicitly refreshed', async () => {
-    setLocalBaseHours(36);
-    const server = await startFakeServer();
-    servers.push(server);
-    storeSnapshot(server.store, snapshotAtBaseHours(36), localKey);
-    await connectServer(connectInput(server.url, localKey), true);
-    const localFile = fs.readFileSync(getEncryptedDbPath());
-    let called = false;
-
-    storeSnapshot(server.store, snapshotAtBaseHours(50), localKey, 2);
-    await expect(
-      runServerOperation('settings:setBaseHours', () => {
-        called = true;
-        setBaseHours(49);
-      }),
-    ).rejects.toThrow(/anderen Gerät geändert/);
-    expect(called).toBe(false);
-    expect(getBaseHours()).toBe(36);
-    expect(fs.readFileSync(getEncryptedDbPath())).toEqual(localFile);
-
-    await refreshServer();
-    expect(getBaseHours()).toBe(50);
-    await runServerOperation('settings:setBaseHours', () => setBaseHours(51));
-    expect(getBaseHours()).toBe(51);
-    expect(server.store.lastIfMatch).toBe('"2"');
-  });
-
-  it('rejects work queued before a refresh completes so it cannot use the reloaded database', async () => {
-    setLocalBaseHours(36);
-    const server = await startFakeServer();
-    servers.push(server);
-    storeSnapshot(server.store, snapshotAtBaseHours(36), localKey);
-    await connectServer(connectInput(server.url, localKey), true);
-
-    const refresh = withConnectionLock(() => refreshServer());
-    let staleOperationCalled = false;
-    const staleOperation = withCurrentConnection(() => {
-      staleOperationCalled = true;
-    });
-
-    await refresh;
-    await expect(staleOperation).rejects.toThrow(/Datenablage wurde gewechselt/);
-    expect(staleOperationCalled).toBe(false);
-    expect(getBaseHours()).toBe(36);
-  });
-
-  it('rejects reader writes and restores the memory snapshot without issuing a PUT', async () => {
-    setLocalBaseHours(36);
-    const server = await startFakeServer({ role: 'reader' });
-    servers.push(server);
-    storeSnapshot(server.store, snapshotAtBaseHours(36), localKey);
-    await connectServer(connectInput(server.url, localKey), true);
-    const localFile = fs.readFileSync(getEncryptedDbPath());
-
-    await expect(
-      runServerOperation('settings:setBaseHours', () => setBaseHours(49)),
-    ).rejects.toThrow(/nur lesen/);
-    expect(getBaseHours()).toBe(36);
-    expect(server.store.requests.put).toBe(0);
-    expect(server.store.revision).toBe(1);
-    expect(fs.readFileSync(getEncryptedDbPath())).toEqual(localFile);
-  });
-
-  it('refreshes revisions and reconnects to the same server instance without touching local files', async () => {
-    setLocalBaseHours(36);
-    const server = await startFakeServer();
-    servers.push(server);
-    storeSnapshot(server.store, snapshotAtBaseHours(36), localKey);
-    await connectServer(connectInput(server.url, localKey), true);
-    const localFile = fs.readFileSync(getEncryptedDbPath());
-
-    storeSnapshot(server.store, snapshotAtBaseHours(50), localKey, 2);
-    await refreshServer();
-    expect(getBaseHours()).toBe(50);
-    expect(fs.readFileSync(getEncryptedDbPath())).toEqual(localFile);
-
-    await runServerOperation('settings:setBaseHours', () => setBaseHours(51));
-    expect(server.store.lastIfMatch).toBe('"2"');
-    expect(server.store.revision).toBe(3);
-
-    storeSnapshot(server.store, snapshotAtBaseHours(60), localKey, 4);
-    await connectServer(connectInput(server.url, localKey), true);
-    expect(getBaseHours()).toBe(60);
-    expect(server.store.requests.login).toBe(2);
-    expect(fs.readFileSync(getEncryptedDbPath())).toEqual(localFile);
-  });
-
-  it('keeps the previous local mode when server.json cannot be persisted', async () => {
-    setLocalBaseHours(36);
-    const configPath = path.join(dataRoot, 'data', 'server.json');
-    fs.writeFileSync(configPath, JSON.stringify({ mode: 'local' }));
-    const previousConfig = fs.readFileSync(configPath);
-    const server = await startFakeServer();
-    servers.push(server);
-    storeSnapshot(server.store, snapshotAtBaseHours(36), localKey);
-    const rename = fs.renameSync;
-    vi.spyOn(fs, 'renameSync').mockImplementation((from, to) => {
-      if (to === configPath) throw new Error('server.json disk unavailable');
-      return rename(from, to);
-    });
-
-    await expect(connectServer(connectInput(server.url, localKey), true)).rejects.toThrow(
-      'server.json disk unavailable',
-    );
-    expect(fs.readFileSync(configPath)).toEqual(previousConfig);
-    expect(getServerConnection()).toEqual({ mode: 'local', connected: false });
-    expect(getBaseHours()).toBe(36);
-    expect(fs.readFileSync(getEncryptedDbPath())).not.toEqual(Buffer.alloc(0));
-    expect(readLocalBaseHours(localKey)).toBe(36);
-    expect(fs.existsSync(getWorkingDbPath())).toBe(false);
   });
 });
