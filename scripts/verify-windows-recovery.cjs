@@ -240,7 +240,7 @@ function verifyAsar(asarFile) {
   if (!entries.length) throw new Error(`app.asar is empty: ${asarFile}`);
   let scannedFiles = 0;
   for (const entry of entries) {
-    const normalizedEntry = entry.replace(/^\/+/, '');
+    const normalizedEntry = entry.replace(/^[\\/]+/, '').replace(/[\\/]/g, path.sep);
     try {
       const stat = asar.statFile(asarFile, normalizedEntry);
       if (stat && stat.files) continue;

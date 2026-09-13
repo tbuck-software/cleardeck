@@ -14,6 +14,7 @@ const asar = require('@electron/asar');
 const { createClient } = require('electron-updater/out/providerFactory');
 const { PrivateGitHubProvider } = require('electron-updater/out/providers/PrivateGitHubProvider');
 const {
+  verifyAsar,
   verifyPackagedBundle,
   verifyPrivateGitHubFeed,
   verifyPublicGitHubFeed,
@@ -184,4 +185,19 @@ it('accepts an explicit version that differs from package.json', async () => {
   );
   expect(JSON.parse(output).version).toBe(version);
   await expect(verifyWindowsRecovery(artifactRoot, '2.2.2')).rejects.toThrow(/Missing Windows release asset/);
+});
+
+it('scans nested ASAR entries listed with Windows separators', async () => {
+  fs.mkdirSync(path.join(appSource, '.webpack/main'), { recursive: true });
+  fs.writeFileSync(path.join(appSource, '.webpack/main/index.js'), 'module.exports = true;');
+  const archive = path.join(root, 'windows-paths.asar');
+  await asar.createPackage(appSource, archive);
+  const listPackage = asar.listPackage;
+  try {
+    asar.listPackage = (file: string) => listPackage(file)
+      .map((entry: string) => entry.replace(/\//g, '\\'));
+    expect(verifyAsar(archive).scannedFiles).toBe(2);
+  } finally {
+    asar.listPackage = listPackage;
+  }
 });
