@@ -1,4 +1,8 @@
 import type { StaffImportPreview, StaffImportRow } from './shared/staffImport';
+import type {
+  SaveUpdatePreferencesInput,
+  UpdatePreferences,
+} from './shared/updatePreferences';
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   BulkCompetencyChange,
@@ -265,6 +269,8 @@ export type Api = {
   checkUpdates: (manual?: boolean) => Promise<boolean>;
   downloadUpdate: () => Promise<boolean>;
   installUpdate: () => Promise<boolean>;
+  getUpdatePreferences: () => Promise<UpdatePreferences>;
+  saveUpdatePreferences: (input: SaveUpdatePreferencesInput) => Promise<UpdatePreferences>;
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
   getDevTables: () => Promise<Record<string, Record<string, unknown>[]>>;
   // Dashboard widgets
@@ -474,6 +480,8 @@ const api: Api = {
   checkUpdates: (manual = false) => ipcRenderer.invoke('updates:check', manual),
   downloadUpdate: () => ipcRenderer.invoke('updates:download'),
   installUpdate: () => ipcRenderer.invoke('updates:install'),
+  getUpdatePreferences: () => ipcRenderer.invoke('updates:getPreferences'),
+  saveUpdatePreferences: (input) => ipcRenderer.invoke('updates:savePreferences', input),
   onUpdateStatus: (cb) => {
     const listener = (_event: Electron.IpcRendererEvent, status: UpdateStatus) => cb(status);
     ipcRenderer.on('updates:status', listener);

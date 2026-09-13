@@ -1,0 +1,187 @@
+name: Windows update recovery
+
+on:
+  push:
+    branches: ['fix/windows-update-recovery']
+    tags: ['v2.2.1']
+    paths-ignore: ['docs/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-recovery-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.8.1
+      - run: npx vitest run
+
+  build:
+    needs: checks
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['2.2.1', '2.2.2']
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Set test-only successor version
+        if: matrix.version == '2.2.2'
+        run: npm version 2.2.2 --no-git-tag-version --ignore-scripts
+      - name: Build Windows package without update credentials
+        run: npm run make
+        env:
+          SKIP_FUSES: '1'
+      - run: node scripts/generate-update-yml.js
+      - name: Verify Windows package and public GitHub feed
+        shell: pwsh
+        run: |
+          node scripts/verify-windows-recovery.cjs out/make '${{ matrix.version }}' > windows-verification.json
+          if ($LASTEXITCODE -ne 0) { throw 'Windows artifact verification failed.' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-recovery-${{ matrix.version }}
+          path: out/make/**
+          if-no-files-found: error
+          retention-days: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-verification-${{ matrix.version }}
+          path: windows-verification.json
+          if-no-files-found: error
+          retention-days: 7
+
+  baseline:
+    needs: checks
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v2.1.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The original 2.1 installer is unavailable. Reconstruct its release
+      # source without credentials; this is not an original-binary test.
+      - run: npm run make
+        env:
+          SKIP_FUSES: '1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-baseline-2.1.0
+          path: out/make/squirrel.windows/x64/*Setup.exe
+          if-no-files-found: error
+          retention-days: 1
+
+  upgrade:
+    needs: [build, baseline]
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - from: '2.1.0'
+            to: '2.2.1'
+            mode: manual
+            baseline: windows-baseline-2.1.0
+          - from: '2.2.0'
+            to: '2.2.1'
+            mode: manual
+            baseline: original-release
+          - from: '2.2.1'
+            to: '2.2.2'
+            mode: update
+            baseline: windows-recovery-2.2.1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-recovery-${{ matrix.to }}
+          path: candidate
+      - uses: actions/download-artifact@v4
+        if: matrix.baseline != 'original-release'
+        with:
+          name: ${{ matrix.baseline }}
+          path: baseline
+      - name: Obtain original 2.2.0 installer from private draft
+        if: matrix.baseline == 'original-release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Path baseline | Out-Null
+          gh release download v2.2.0 --pattern ClearDeck-2.2.0-Setup.exe --dir baseline
+          if ($LASTEXITCODE -ne 0) { throw 'Original baseline download failed.' }
+          $digest = (Get-FileHash baseline/ClearDeck-2.2.0-Setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($digest -ne '28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784') {
+            throw 'Original installer does not match the archived release digest.'
+          }
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.8.1
+      - name: Exercise installed Windows applications
+        shell: pwsh
+        run: |
+          $installer = @(Get-ChildItem baseline -Recurse -Filter '*Setup.exe')
+          if ($installer.Count -ne 1) { throw 'Expected exactly one baseline installer.' }
+          ./scripts/test-windows-candidate.ps1 -OldVersion '${{ matrix.from }}' -OldInstaller $installer[0].FullName -Artifacts (Resolve-Path candidate).Path -Mode '${{ matrix.mode }}' -TargetVersion '${{ matrix.to }}'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: windows-upgrade-${{ matrix.from }}-${{ matrix.to }}-${{ matrix.mode }}
+          path: ${{ runner.temp }}/cleardeck-candidate-result
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    if: github.ref == 'refs/tags/v2.2.1'
+    needs: [checks, build, baseline, upgrade]
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-recovery-2.2.1
+          path: release-files
+      - name: Verify uploaded draft before publishing Windows recovery
+        run: node scripts/publish-windows-recovery.cjs release-files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NATIVE_WINDOWS_UPGRADES_VERIFIED: '1'
+
+# The 2.2.2 successor exists only to test the next in-app upgrade.
+# Branch runs publish nothing. Only the verified v2.2.1 tag can publish.

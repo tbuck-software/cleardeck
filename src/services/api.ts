@@ -205,6 +205,9 @@ export const api = {
     check: (manual = false) => call('checkUpdates', baseApi.checkUpdates, manual),
     download: () => call('downloadUpdate', baseApi.downloadUpdate),
     install: () => call('installUpdate', baseApi.installUpdate),
+    getPreferences: () => call('getUpdatePreferences', baseApi.getUpdatePreferences),
+    savePreferences: (input: Parameters<Api['saveUpdatePreferences']>[0]) =>
+      call('saveUpdatePreferences', baseApi.saveUpdatePreferences, input),
     onStatus: (cb: (status: UpdateStatus) => void) => baseApi.onUpdateStatus(cb),
   },
   dev: {

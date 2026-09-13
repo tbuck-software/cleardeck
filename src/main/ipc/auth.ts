@@ -122,7 +122,7 @@ export const registerAuthHandlers = (): void => {
       author: 'Torben Buck – tbuck software',
       email: 'mail@tbuck.de',
       github: 'https://github.com/Rasalas/employee-db',
-      license: 'Proprietär (Einzelnutzer-Lizenz)',
+      license: 'MIT',
       copyright: `© ${new Date().getFullYear()} tbuck software`,
       electronVersion: process.versions.electron,
       nodeVersion: process.versions.node,
