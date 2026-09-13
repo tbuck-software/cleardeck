@@ -1,5 +1,5 @@
 # Never run against an existing user's profile.
-param([ValidateSet('1.7.1','1.8.0','2.0.0')][string]$OldVersion, [string]$Artifacts)
+param([ValidateSet('1.7.1','1.8.0','2.0.0','2.1.0')][string]$OldVersion, [string]$Artifacts)
 $ErrorActionPreference = 'Stop'
 if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted' -or $env:RUNNER_OS -ne 'Windows') { throw 'Disposable GitHub-hosted Windows runner required.' }
 $env:OLD_VERSION = $OldVersion

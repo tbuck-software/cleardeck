@@ -1,0 +1,22 @@
+checks	Run npx vitest run	2026-09-13T10:16:47.8206464Z ^[[2m Test Files ^[[22m ^[[1m^[[32m80 passed^[[39m^[[22m^[[90m (80)^[[39m
+checks	Run npx vitest run	2026-09-13T10:16:47.8219584Z ^[[2m      Tests ^[[22m ^[[1m^[[32m501 passed^[[39m^[[22m^[[90m (501)^[[39m
+windows-upgrade (1.8.0)	Original installed app to candidate	2026-09-13T10:23:29.6599865Z Unlocked installed 1.8.0; existing employee loaded.
+windows-upgrade (1.8.0)	Original installed app to candidate	2026-09-13T10:23:45.3018056Z Unlocked installed 2.2.0; existing employee loaded.
+windows-upgrade (1.8.0)	Original installed app to candidate	2026-09-13T10:23:45.7320914Z Original configuration, keys, records and histories preserved; schema 23; 1 automatic migration backups.
+windows-upgrade (1.8.0)	Original installed app to candidate	2026-09-13T10:23:48.4569657Z Unlocked installed 2.2.0; existing employee loaded.
+windows-upgrade (1.8.0)	Original installed app to candidate	2026-09-13T10:23:48.8656896Z Original configuration, keys, records and histories preserved; schema 23; 1 automatic migration backups.
+windows-upgrade (1.7.1)	Original installed app to candidate	2026-09-13T10:22:59.2563886Z Unlocked installed 1.7.1; existing employee loaded.
+windows-upgrade (1.7.1)	Original installed app to candidate	2026-09-13T10:23:12.2005716Z Unlocked installed 2.2.0; existing employee loaded.
+windows-upgrade (1.7.1)	Original installed app to candidate	2026-09-13T10:23:12.4649347Z Original configuration, keys, records and histories preserved; schema 23; 1 automatic migration backups.
+windows-upgrade (1.7.1)	Original installed app to candidate	2026-09-13T10:23:14.6893659Z Unlocked installed 2.2.0; existing employee loaded.
+windows-upgrade (1.7.1)	Original installed app to candidate	2026-09-13T10:23:14.6894256Z Original configuration, keys, records and histories preserved; schema 23; 1 automatic migration backups.
+windows-upgrade (2.1.0)	Original installed app to candidate	2026-09-13T10:23:22.7644143Z Unlocked installed 2.1.0; existing employee loaded.
+windows-upgrade (2.1.0)	Original installed app to candidate	2026-09-13T10:23:38.4611310Z Unlocked installed 2.2.0; existing employee loaded.
+windows-upgrade (2.1.0)	Original installed app to candidate	2026-09-13T10:23:38.8964739Z Original configuration, keys, records and histories preserved; schema 23; 1 automatic migration backups.
+windows-upgrade (2.1.0)	Original installed app to candidate	2026-09-13T10:23:41.7806386Z Unlocked installed 2.2.0; existing employee loaded.
+windows-upgrade (2.1.0)	Original installed app to candidate	2026-09-13T10:23:42.2258764Z Original configuration, keys, records and histories preserved; schema 23; 1 automatic migration backups.
+windows-upgrade (2.0.0)	Original installed app to candidate	2026-09-13T10:23:17.2167907Z Unlocked installed 2.0.0; existing employee loaded.
+windows-upgrade (2.0.0)	Original installed app to candidate	2026-09-13T10:23:32.9125030Z Unlocked installed 2.2.0; existing employee loaded.
+windows-upgrade (2.0.0)	Original installed app to candidate	2026-09-13T10:23:33.3155233Z Original configuration, keys, records and histories preserved; schema 23; 1 automatic migration backups.
+windows-upgrade (2.0.0)	Original installed app to candidate	2026-09-13T10:23:36.0159149Z Unlocked installed 2.2.0; existing employee loaded.
+windows-upgrade (2.0.0)	Original installed app to candidate	2026-09-13T10:23:36.5209630Z Original configuration, keys, records and histories preserved; schema 23; 1 automatic migration backups.

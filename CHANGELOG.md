@@ -2,7 +2,18 @@
 
 ## [Unreleased]
 
+## [2.2.0]
+
+- Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.
+- Vereinbarte Leistungen je Patient:in auswählen; die MD-Personenliste ergibt sich daraus.
+- Leistungskatalog unter Verwaltung pflegen.
+- Auffällige Beschäftigungsdaten als Aufgaben sehen und direkt in der Historie bereinigen; doppelte Personen zusammenführen.
+- VZÄ früherer Beschäftigungen korrigieren, ohne Perioden zu ändern.
+- Pflegegrad „unbekannt“ und „kein Pflegegrad“ getrennt erfassen.
+- Eintritt und Beschäftigungsverlauf eindeutig anzeigen.
 - Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.
+- Einheitliche Listen mit klarer Bedienung auf allen Seiten.
+- Mitarbeiterliste über das Menü der Teamseite übernehmen.
 
 ## [2.1.0]
 

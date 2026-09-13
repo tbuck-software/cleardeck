@@ -1,0 +1,109 @@
+{
+  "artifacts": {
+    "version": "2.2.0",
+    "manifests": [
+      {
+        "name": "latest.yml",
+        "version": "2.2.0",
+        "files": [
+          "ClearDeck-2.2.0-Setup.exe"
+        ]
+      },
+      {
+        "name": "latest-linux.yml",
+        "version": "2.2.0",
+        "files": [
+          "cleardeck_2.2.0_amd64.deb",
+          "cleardeck-2.2.0-1.x86_64.rpm"
+        ]
+      },
+      {
+        "name": "latest-mac.yml",
+        "version": "1.8.0",
+        "files": [
+          "ClearDeck-darwin-arm64-1.8.0.zip"
+        ]
+      }
+    ],
+    "assets": [
+      "ClearDeck-2.2.0-Setup.exe",
+      "ClearDeck-darwin-arm64-1.8.0.zip",
+      "ClearDeck-win32-x64-2.2.0.zip",
+      "RELEASES",
+      "cleardeck-2.2.0-1.x86_64.rpm",
+      "cleardeck-2.2.0-full.nupkg",
+      "cleardeck_2.2.0_amd64.deb",
+      "latest-linux.yml",
+      "latest-mac.yml",
+      "latest.yml"
+    ],
+    "hashes": {
+      "ClearDeck-2.2.0-Setup.exe": "28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784",
+      "ClearDeck-darwin-arm64-1.8.0.zip": "7b315d54b025b136488238592f6b185cce81297646cdc845b918c14bea4ac5c3",
+      "ClearDeck-win32-x64-2.2.0.zip": "5815d9076a08e8838b7e99e662602f2ba6cbd8253b5ea2f67852cdf4707425aa",
+      "RELEASES": "6753a76e4b812e70a23e011947c09f0ee296678d6dca5efcbddf552999b12c79",
+      "cleardeck-2.2.0-1.x86_64.rpm": "a3165074318fe1306053b80cafde2a6f283e8b0e5ccd0e4c8693ab9465b947b2",
+      "cleardeck-2.2.0-full.nupkg": "2f2c3a64dc13741e9413ea6113c7331edfb9d18cde11d1f2fbeaed2751d0c4a5",
+      "cleardeck_2.2.0_amd64.deb": "7f487576a47ac06dc4c8d42f94a2724e054e54632c95439c8ad5e7ab46615dff",
+      "latest-linux.yml": "67504559c7aba5e810ae64ed88e363cf470f455eeb8ba18fbe7d46a91b0b3f71",
+      "latest-mac.yml": "8ef281d3f9634ee683df3110cbde4ba77e8b023cb551d050728dd3a53583e07a",
+      "latest.yml": "ba564d15b6ebcb75f3ab3e00b34291251f3e512a9cb6c0c91a49a86e3ef2794d"
+    }
+  },
+  "feeds": [
+    {
+      "channel": "latest",
+      "installed": "1.7.1",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        "ClearDeck-2.2.0-Setup.exe"
+      ]
+    },
+    {
+      "channel": "latest",
+      "installed": "1.8.0",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        "ClearDeck-2.2.0-Setup.exe"
+      ]
+    },
+    {
+      "channel": "latest",
+      "installed": "2.0.0",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        "ClearDeck-2.2.0-Setup.exe"
+      ]
+    },
+    {
+      "channel": "latest-mac",
+      "installed": "1.7.1",
+      "offered": "1.8.0",
+      "updateAvailable": true,
+      "resolved": [
+        "ClearDeck-darwin-arm64-1.8.0.zip"
+      ]
+    },
+    {
+      "channel": "latest-mac",
+      "installed": "1.8.0",
+      "offered": "1.8.0",
+      "updateAvailable": false,
+      "resolved": [
+        "ClearDeck-darwin-arm64-1.8.0.zip"
+      ]
+    },
+    {
+      "channel": "latest-mac",
+      "installed": "2.0.0",
+      "offered": "1.8.0",
+      "updateAvailable": false,
+      "resolved": [
+        "ClearDeck-darwin-arm64-1.8.0.zip"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,829 @@
+{
+  "ok": true,
+  "checkedAt": "2026-09-13T10:26:39.876Z",
+  "version": "2.2.0",
+  "macVersion": "1.8.0",
+  "inputs": {
+    "tagArtifacts": "./.cache/release-2.2.0/tag",
+    "published": "./.cache/release-2.2.0/published",
+    "metadata": "./.cache/release-2.2.0/release-metadata.json",
+    "candidateRoot": "../employee-db-release-2.2.0",
+    "changelog": "../employee-db-release-2.2.0/CHANGELOG.md",
+    "macReference": "./.cache/release-2.2.0/original-mac"
+  },
+  "checks": [
+    {
+      "name": "release-metadata-shape",
+      "status": "passed"
+    },
+    {
+      "name": "candidate-version-and-commit",
+      "status": "passed"
+    },
+    {
+      "name": "candidate-verify-release-artifacts",
+      "status": "passed"
+    },
+    {
+      "name": "tag-build-artifacts",
+      "status": "passed"
+    },
+    {
+      "name": "published-artifacts",
+      "status": "passed"
+    },
+    {
+      "name": "tag-vs-published-sha256-map",
+      "status": "passed"
+    },
+    {
+      "name": "github-assets-sha256-digests",
+      "status": "passed"
+    },
+    {
+      "name": "changelog-and-release-notes",
+      "status": "passed"
+    },
+    {
+      "name": "private-github-provider",
+      "status": "passed"
+    },
+    {
+      "name": "original-mac-byte-comparison",
+      "status": "passed"
+    }
+  ],
+  "release": {
+    "url": "https://github.com/Rasalas/employee-db/releases/tag/v2.2.0",
+    "tag": "v2.2.0",
+    "body": "- Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.\n- Vereinbarte Leistungen je Patient:in auswählen; die MD-Personenliste ergibt sich daraus.\n- Leistungskatalog unter Verwaltung pflegen.\n- Auffällige Beschäftigungsdaten als Aufgaben sehen und direkt in der Historie bereinigen; doppelte Personen zusammenführen.\n- VZÄ früherer Beschäftigungen korrigieren, ohne Perioden zu ändern.\n- Pflegegrad „unbekannt“ und „kein Pflegegrad“ getrennt erfassen.\n- Eintritt und Beschäftigungsverlauf eindeutig anzeigen.\n- Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.\n- Einheitliche Listen mit klarer Bedienung auf allen Seiten.\n- Mitarbeiterliste über das Menü der Teamseite übernehmen.\n\nPlattformen: 2.2.0 für Windows und Linux. macOS bleibt bei 1.8.0; der bisherige Signaturfehler ist nicht behoben.\n",
+    "metadataStates": {
+      "draft": {
+        "status": "passed",
+        "value": false
+      },
+      "prerelease": {
+        "status": "passed",
+        "value": false
+      },
+      "isLatest": {
+        "status": "skipped",
+        "reason": "Field was not included in the saved release metadata JSON."
+      }
+    }
+  },
+  "candidate": {
+    "version": "2.2.0",
+    "commit": "fb2857c51e2fea947b7e3ee15df137439a3dcfcb",
+    "expectedCommit": "fb2857c51e2fea947b7e3ee15df137439a3dcfcb"
+  },
+  "tagBuild": {
+    "artifacts": {
+      "version": "2.2.0",
+      "manifests": [
+        {
+          "name": "latest.yml",
+          "version": "2.2.0",
+          "files": [
+            "ClearDeck-2.2.0-Setup.exe"
+          ]
+        },
+        {
+          "name": "latest-linux.yml",
+          "version": "2.2.0",
+          "files": [
+            "cleardeck_2.2.0_amd64.deb",
+            "cleardeck-2.2.0-1.x86_64.rpm"
+          ]
+        },
+        {
+          "name": "latest-mac.yml",
+          "version": "1.8.0",
+          "files": [
+            "ClearDeck-darwin-arm64-1.8.0.zip"
+          ]
+        }
+      ],
+      "assets": [
+        "ClearDeck-2.2.0-Setup.exe",
+        "ClearDeck-darwin-arm64-1.8.0.zip",
+        "ClearDeck-win32-x64-2.2.0.zip",
+        "RELEASES",
+        "cleardeck-2.2.0-1.x86_64.rpm",
+        "cleardeck-2.2.0-full.nupkg",
+        "cleardeck_2.2.0_amd64.deb",
+        "latest-linux.yml",
+        "latest-mac.yml",
+        "latest.yml"
+      ],
+      "hashes": {
+        "ClearDeck-2.2.0-Setup.exe": "28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784",
+        "ClearDeck-darwin-arm64-1.8.0.zip": "7b315d54b025b136488238592f6b185cce81297646cdc845b918c14bea4ac5c3",
+        "ClearDeck-win32-x64-2.2.0.zip": "5815d9076a08e8838b7e99e662602f2ba6cbd8253b5ea2f67852cdf4707425aa",
+        "RELEASES": "6753a76e4b812e70a23e011947c09f0ee296678d6dca5efcbddf552999b12c79",
+        "cleardeck-2.2.0-1.x86_64.rpm": "a3165074318fe1306053b80cafde2a6f283e8b0e5ccd0e4c8693ab9465b947b2",
+        "cleardeck-2.2.0-full.nupkg": "2f2c3a64dc13741e9413ea6113c7331edfb9d18cde11d1f2fbeaed2751d0c4a5",
+        "cleardeck_2.2.0_amd64.deb": "7f487576a47ac06dc4c8d42f94a2724e054e54632c95439c8ad5e7ab46615dff",
+        "latest-linux.yml": "67504559c7aba5e810ae64ed88e363cf470f455eeb8ba18fbe7d46a91b0b3f71",
+        "latest-mac.yml": "8ef281d3f9634ee683df3110cbde4ba77e8b023cb551d050728dd3a53583e07a",
+        "latest.yml": "ba564d15b6ebcb75f3ab3e00b34291251f3e512a9cb6c0c91a49a86e3ef2794d"
+      }
+    },
+    "feeds": [
+      {
+        "channel": "latest",
+        "installed": "1.7.1",
+        "offered": "2.2.0",
+        "updateAvailable": true,
+        "resolved": [
+          "ClearDeck-2.2.0-Setup.exe"
+        ]
+      },
+      {
+        "channel": "latest",
+        "installed": "1.8.0",
+        "offered": "2.2.0",
+        "updateAvailable": true,
+        "resolved": [
+          "ClearDeck-2.2.0-Setup.exe"
+        ]
+      },
+      {
+        "channel": "latest",
+        "installed": "2.0.0",
+        "offered": "2.2.0",
+        "updateAvailable": true,
+        "resolved": [
+          "ClearDeck-2.2.0-Setup.exe"
+        ]
+      },
+      {
+        "channel": "latest-mac",
+        "installed": "1.7.1",
+        "offered": "1.8.0",
+        "updateAvailable": true,
+        "resolved": [
+          "ClearDeck-darwin-arm64-1.8.0.zip"
+        ]
+      },
+      {
+        "channel": "latest-mac",
+        "installed": "1.8.0",
+        "offered": "1.8.0",
+        "updateAvailable": false,
+        "resolved": [
+          "ClearDeck-darwin-arm64-1.8.0.zip"
+        ]
+      },
+      {
+        "channel": "latest-mac",
+        "installed": "2.0.0",
+        "offered": "1.8.0",
+        "updateAvailable": false,
+        "resolved": [
+          "ClearDeck-darwin-arm64-1.8.0.zip"
+        ]
+      }
+    ]
+  },
+  "published": {
+    "version": "2.2.0",
+    "manifests": [
+      {
+        "name": "latest.yml",
+        "version": "2.2.0",
+        "files": [
+          "ClearDeck-2.2.0-Setup.exe"
+        ]
+      },
+      {
+        "name": "latest-linux.yml",
+        "version": "2.2.0",
+        "files": [
+          "cleardeck_2.2.0_amd64.deb",
+          "cleardeck-2.2.0-1.x86_64.rpm"
+        ]
+      },
+      {
+        "name": "latest-mac.yml",
+        "version": "1.8.0",
+        "files": [
+          "ClearDeck-darwin-arm64-1.8.0.zip"
+        ]
+      }
+    ],
+    "assets": [
+      "ClearDeck-2.2.0-Setup.exe",
+      "ClearDeck-darwin-arm64-1.8.0.zip",
+      "ClearDeck-win32-x64-2.2.0.zip",
+      "RELEASES",
+      "cleardeck-2.2.0-1.x86_64.rpm",
+      "cleardeck-2.2.0-full.nupkg",
+      "cleardeck_2.2.0_amd64.deb",
+      "latest-linux.yml",
+      "latest-mac.yml",
+      "latest.yml"
+    ],
+    "hashes": {
+      "ClearDeck-2.2.0-Setup.exe": "28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784",
+      "ClearDeck-darwin-arm64-1.8.0.zip": "7b315d54b025b136488238592f6b185cce81297646cdc845b918c14bea4ac5c3",
+      "ClearDeck-win32-x64-2.2.0.zip": "5815d9076a08e8838b7e99e662602f2ba6cbd8253b5ea2f67852cdf4707425aa",
+      "RELEASES": "6753a76e4b812e70a23e011947c09f0ee296678d6dca5efcbddf552999b12c79",
+      "cleardeck-2.2.0-1.x86_64.rpm": "a3165074318fe1306053b80cafde2a6f283e8b0e5ccd0e4c8693ab9465b947b2",
+      "cleardeck-2.2.0-full.nupkg": "2f2c3a64dc13741e9413ea6113c7331edfb9d18cde11d1f2fbeaed2751d0c4a5",
+      "cleardeck_2.2.0_amd64.deb": "7f487576a47ac06dc4c8d42f94a2724e054e54632c95439c8ad5e7ab46615dff",
+      "latest-linux.yml": "67504559c7aba5e810ae64ed88e363cf470f455eeb8ba18fbe7d46a91b0b3f71",
+      "latest-mac.yml": "8ef281d3f9634ee683df3110cbde4ba77e8b023cb551d050728dd3a53583e07a",
+      "latest.yml": "ba564d15b6ebcb75f3ab3e00b34291251f3e512a9cb6c0c91a49a86e3ef2794d"
+    }
+  },
+  "sha256": {
+    "tag": {
+      "cleardeck_2.2.0_amd64.deb": "7f487576a47ac06dc4c8d42f94a2724e054e54632c95439c8ad5e7ab46615dff",
+      "cleardeck-2.2.0-1.x86_64.rpm": "a3165074318fe1306053b80cafde2a6f283e8b0e5ccd0e4c8693ab9465b947b2",
+      "cleardeck-2.2.0-full.nupkg": "2f2c3a64dc13741e9413ea6113c7331edfb9d18cde11d1f2fbeaed2751d0c4a5",
+      "ClearDeck-2.2.0-Setup.exe": "28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784",
+      "ClearDeck-darwin-arm64-1.8.0.zip": "7b315d54b025b136488238592f6b185cce81297646cdc845b918c14bea4ac5c3",
+      "ClearDeck-win32-x64-2.2.0.zip": "5815d9076a08e8838b7e99e662602f2ba6cbd8253b5ea2f67852cdf4707425aa",
+      "latest-linux.yml": "67504559c7aba5e810ae64ed88e363cf470f455eeb8ba18fbe7d46a91b0b3f71",
+      "latest-mac.yml": "8ef281d3f9634ee683df3110cbde4ba77e8b023cb551d050728dd3a53583e07a",
+      "latest.yml": "ba564d15b6ebcb75f3ab3e00b34291251f3e512a9cb6c0c91a49a86e3ef2794d",
+      "RELEASES": "6753a76e4b812e70a23e011947c09f0ee296678d6dca5efcbddf552999b12c79"
+    },
+    "published": {
+      "cleardeck_2.2.0_amd64.deb": "7f487576a47ac06dc4c8d42f94a2724e054e54632c95439c8ad5e7ab46615dff",
+      "cleardeck-2.2.0-1.x86_64.rpm": "a3165074318fe1306053b80cafde2a6f283e8b0e5ccd0e4c8693ab9465b947b2",
+      "cleardeck-2.2.0-full.nupkg": "2f2c3a64dc13741e9413ea6113c7331edfb9d18cde11d1f2fbeaed2751d0c4a5",
+      "ClearDeck-2.2.0-Setup.exe": "28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784",
+      "ClearDeck-darwin-arm64-1.8.0.zip": "7b315d54b025b136488238592f6b185cce81297646cdc845b918c14bea4ac5c3",
+      "ClearDeck-win32-x64-2.2.0.zip": "5815d9076a08e8838b7e99e662602f2ba6cbd8253b5ea2f67852cdf4707425aa",
+      "latest-linux.yml": "67504559c7aba5e810ae64ed88e363cf470f455eeb8ba18fbe7d46a91b0b3f71",
+      "latest-mac.yml": "8ef281d3f9634ee683df3110cbde4ba77e8b023cb551d050728dd3a53583e07a",
+      "latest.yml": "ba564d15b6ebcb75f3ab3e00b34291251f3e512a9cb6c0c91a49a86e3ef2794d",
+      "RELEASES": "6753a76e4b812e70a23e011947c09f0ee296678d6dca5efcbddf552999b12c79"
+    },
+    "matches": true,
+    "githubAssets": {
+      "cleardeck_2.2.0_amd64.deb": "7f487576a47ac06dc4c8d42f94a2724e054e54632c95439c8ad5e7ab46615dff",
+      "cleardeck-2.2.0-1.x86_64.rpm": "a3165074318fe1306053b80cafde2a6f283e8b0e5ccd0e4c8693ab9465b947b2",
+      "cleardeck-2.2.0-full.nupkg": "2f2c3a64dc13741e9413ea6113c7331edfb9d18cde11d1f2fbeaed2751d0c4a5",
+      "ClearDeck-2.2.0-Setup.exe": "28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784",
+      "ClearDeck-darwin-arm64-1.8.0.zip": "7b315d54b025b136488238592f6b185cce81297646cdc845b918c14bea4ac5c3",
+      "ClearDeck-win32-x64-2.2.0.zip": "5815d9076a08e8838b7e99e662602f2ba6cbd8253b5ea2f67852cdf4707425aa",
+      "latest-linux.yml": "67504559c7aba5e810ae64ed88e363cf470f455eeb8ba18fbe7d46a91b0b3f71",
+      "latest-mac.yml": "8ef281d3f9634ee683df3110cbde4ba77e8b023cb551d050728dd3a53583e07a",
+      "latest.yml": "ba564d15b6ebcb75f3ab3e00b34291251f3e512a9cb6c0c91a49a86e3ef2794d",
+      "RELEASES": "6753a76e4b812e70a23e011947c09f0ee296678d6dca5efcbddf552999b12c79"
+    },
+    "githubAssetsMatch": true
+  },
+  "releaseNotes": {
+    "expectedHistory": [
+      {
+        "version": "2.2.0",
+        "note": "- Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.\n- Vereinbarte Leistungen je Patient:in auswählen; die MD-Personenliste ergibt sich daraus.\n- Leistungskatalog unter Verwaltung pflegen.\n- Auffällige Beschäftigungsdaten als Aufgaben sehen und direkt in der Historie bereinigen; doppelte Personen zusammenführen.\n- VZÄ früherer Beschäftigungen korrigieren, ohne Perioden zu ändern.\n- Pflegegrad „unbekannt“ und „kein Pflegegrad“ getrennt erfassen.\n- Eintritt und Beschäftigungsverlauf eindeutig anzeigen.\n- Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.\n- Einheitliche Listen mit klarer Bedienung auf allen Seiten.\n- Mitarbeiterliste über das Menü der Teamseite übernehmen."
+      },
+      {
+        "version": "2.1.0",
+        "note": "- Arbeitszeiten direkt in der Historie ergänzen und korrigieren.\n- Frühere Arbeitszeitdaten nach einer Eintrittskorrektur sofort auswählen.\n- Einfacheres Arbeitszeitformular ohne zusätzliche Prüf-Checkbox.\n- Kompetenzstufen für ausgewählte oder alle Kompetenzen gemeinsam ändern."
+      },
+      {
+        "version": "2.0.0",
+        "note": "- Übersichtlichere Oberfläche mit Hilfe direkt am Formular.\n- Offene Aufgaben und Fristen auf einen Blick.\n- Personen und Funktionen schnell finden.\n- Bessere Bedienung in kleinen Fenstern.\n- Patientenlisten flexibel sortieren.\n- Arbeitszeiten und Beschäftigungsverläufe nachvollziehen.\n- Genauere Jahresauswertungen und Exporte.\n- Personaldaten mit Vorschau aus Excel oder CSV übernehmen.\n- Einweisungen und Nachweise gezielt nachverfolgen.\n- Einarbeitung und Kompetenzen im Blick behalten.\n- Pflegemerkmale und Pflegeleistungen genauer erfassen.\n- Personenlisten für die Pflegeprüfung exportieren.\n- Pflegevisiten und offene Maßnahmen nachverfolgen.\n- Prüfergebnisse mit Originalberichten verknüpfen.\n- Bestehende Daten automatisch übernehmen und sichern.\n- Sicherungen einfacher verwalten und wiederherstellen.\n- Updates mit Fortschrittsanzeige herunterladen und installieren."
+      },
+      {
+        "version": "1.8.0",
+        "note": "- Überarbeitete Einstellungen mit eigenen Bereichen für Qualifikationen, Kompetenzen und Einweisungen.\n- Links zu Hilfe und Releases öffnen sich im externen Browser.\n- Detaillierte Kennzahlen im Dashboard zeigen fehlende Nachweise und den Stand der Kompetenzen.\n- Kompetenzabzeichen und ein Kompetenzpass geben je Teammitglied Auskunft über vorhandene Fähigkeiten.\n- Kompetenzstufen lassen sich in einem interaktiven Auswahlfeld bearbeiten.\n- Eine Kompetenzmatrix und die Verwaltung von Einweisungen ergänzen die Nachweisübersicht.\n- Vereinheitlichte Dialoge und verständlichere Hinweise bei der Anmeldung.\n- Die lokale Datenbank kann auch ohne Verschlüsselung verwendet werden.\n- Überarbeitete Funktionen zum Zurücksetzen lokaler Daten und zum Laden von Demodaten.\n- Änderungen an Wochenstunden und VZÄ werden historisiert.\n- Einstellungen zeigen installierte und angebotene Update-Versionen getrennt an.\n- Korrigierte Auswahl der Update-Quelle, wenn keine Umgebungsvariable gesetzt ist."
+      },
+      {
+        "version": "1.7.2",
+        "note": "- Angepasste App-Paketierung für Windows-Updates mit Squirrel."
+      },
+      {
+        "version": "1.7.1",
+        "note": "- Überarbeitete Bereinigung und Aufbewahrung von Build-Dateien bei der Veröffentlichung."
+      },
+      {
+        "version": "1.7.0",
+        "note": "- Patient:innen in einem eigenen Dialog anlegen und bearbeiten.\n- Geburtstage und Besuche von Patient:innen erscheinen im Kalender.\n- Verbesserte Eingabe von Geburtsdaten und einheitliche Datumsanzeige.\n- Kürzere Aufbewahrung von Build-Dateien verhindert Speicherprobleme bei der Veröffentlichung."
+      },
+      {
+        "version": "1.6.0",
+        "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+      },
+      {
+        "version": "1.5.0",
+        "note": "- Patient:innenverwaltung mit Besuchsdokumentation und Bewertung nach QPR 2026.\n- Kalender mit Monats-, Wochen- und Jahresansicht sowie Ereignisfiltern.\n- Kommende Termine, Geburtstage und Jubiläen werden im Dashboard angezeigt.\n- Verbesserte Anordnung der Dashboard-Karten auf verschiedenen Bildschirmgrößen.\n- Die zwischenzeitliche Abteilungsverwaltung wurde wieder entfernt.\n- Eine Content Security Policy begrenzt die im App-Fenster zulässigen Inhalte.\n- Ergänzte Projektkonfiguration für Build, Typprüfung und Codeprüfung."
+      },
+      {
+        "version": "1.4.12",
+        "note": "- Überarbeitete Darstellung des Logos in Sidebar und Infobereich."
+      },
+      {
+        "version": "1.4.11",
+        "note": "- Korrigierte Erkennung des App-Namens bei der macOS-Paketierung."
+      },
+      {
+        "version": "1.4.10",
+        "note": "- Ergänzte lokale Signierung der macOS-App beim Erstellen der Pakete."
+      },
+      {
+        "version": "1.4.9",
+        "note": "- Eigener Installationsschritt für die Anwendung von Abhängigkeitspatches."
+      },
+      {
+        "version": "1.4.8",
+        "note": "- Unterstützung für Abhängigkeitspatches im Build ergänzt."
+      },
+      {
+        "version": "1.4.7",
+        "note": "- Präzisere Beschreibung der Teamübersicht und ergänztes App-Symbol."
+      },
+      {
+        "version": "1.4.6",
+        "note": "- Verbesserte Auswahl der Installationsdateien für Update-Metadaten.\n- Der Release-Befehl erzeugt die Update-Metadaten mit."
+      },
+      {
+        "version": "1.4.5",
+        "note": "- GitHub-Update-Konfiguration wird im App-Paket mitgeliefert."
+      },
+      {
+        "version": "1.4.4",
+        "note": "- App-Symbole und typisierte Bildimporte ergänzt."
+      },
+      {
+        "version": "1.4.3",
+        "note": "- ClearDeck-Logo in Sidebar und Einstellungen ergänzt."
+      },
+      {
+        "version": "1.4.2",
+        "note": "- Name der ausführbaren Datei auf ClearDeck umgestellt."
+      },
+      {
+        "version": "1.4.1",
+        "note": "- Update-Metadaten werden bei der Veröffentlichung automatisch erzeugt.\n- Sidebar an kleinere Bildschirmgrößen angepasst."
+      },
+      {
+        "version": "1.4.0",
+        "note": "- Employee DB heißt jetzt ClearDeck.\n- Überarbeiteter Infobereich mit Version, Systeminformationen, Lizenz und Kontakt zum Entwickler.\n- Verbesserte Darstellung der Support-Verknüpfung."
+      },
+      {
+        "version": "1.3.3",
+        "note": "- Authentifizierter Zugriff auf Updates aus dem privaten GitHub-Repository ergänzt."
+      },
+      {
+        "version": "1.3.2",
+        "note": "- Abhängigkeit zur Verarbeitung der Update-Metadaten aktualisiert."
+      },
+      {
+        "version": "1.3.1",
+        "note": "- Zusätzliche Teamdaten und Qualifikationen in der Teamtabelle ergänzt."
+      },
+      {
+        "version": "1.3.0",
+        "note": "- Neue Dialoge zum Anlegen und Bearbeiten von Teammitgliedern.\n- Überarbeitete Detailansicht mit chronologischer Darstellung, Ereignissymbolen und Qualifikationen.\n- Sortierbare Teamtabelle und verbesserte Formular-, Fokus- und Scroll-Darstellung.\n- Überarbeitete Einstellungen mit Tabs für Datenbank, Qualifikationen und System.\n- Qualifikationsübersicht und verbesserte Karten im Dashboard.\n- Einheitliche Bezeichnung „Team“ sowie überarbeitete Sidebar.\n- VZÄ-Berechnung ergänzt und auf maximal 1 je Person begrenzt.\n- Qualifikationen und Notizen werden Beschäftigungszeiträumen zugeordnet; vereinfachte Verwaltung dieser Zeiträume.\n- Neue Teammitglieder erhalten automatisch ein Eintrittsereignis.\n- Ereignisse nutzen vorgegebene Bezeichnungen statt freier Titel.\n- Nicht mehr verwendete Teamdatenfelder und überflüssige Statushinweise entfernt.\n- Versionierte Datenbankmigrationen, reparierte Datenbankverknüpfungen und Werkzeuge zur Datenbankinspektion.\n- Überarbeitete Datenbankverbindung, Verschlüsselung und Beispieldaten.\n- Zentralisierte API-Aufrufe und aufgeteilte Logik für Teamverwaltung, Bestätigungen, Wiederherstellung und Updates.\n- Automatisierte Tests und Typkonfiguration ergänzt.\n- macOS-Installation als DMG ergänzt."
+      },
+      {
+        "version": "1.2.0",
+        "note": "- Wiederherstellungsschlüssel anzeigen und für die Passwortwiederherstellung verwenden."
+      },
+      {
+        "version": "1.1.8",
+        "note": "- Korrigierte API-Anbindung für Update-Status und Update-Prüfung."
+      },
+      {
+        "version": "1.1.7",
+        "note": "- Update-Hinweis mit Zurückstellfunktion in der Sidebar.\n- Korrigierte Markierung der Navigation beim Anzeigen und Bearbeiten von Teammitgliedern."
+      },
+      {
+        "version": "1.1.6",
+        "note": "- Korrigierte Schreibberechtigungen beim Veröffentlichen von Releases."
+      },
+      {
+        "version": "1.1.5",
+        "note": "- Windows-kompatible Build-Konfiguration und angepasster Name der ausführbaren Datei."
+      },
+      {
+        "version": "1.1.4",
+        "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+      },
+      {
+        "version": "1.1.3",
+        "note": "- Überarbeitete Versionsvergabe und Tag-Erstellung beim Veröffentlichen."
+      }
+    ],
+    "manifests": {
+      "latest.yml": [
+        {
+          "version": "2.2.0",
+          "note": "- Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.\n- Vereinbarte Leistungen je Patient:in auswählen; die MD-Personenliste ergibt sich daraus.\n- Leistungskatalog unter Verwaltung pflegen.\n- Auffällige Beschäftigungsdaten als Aufgaben sehen und direkt in der Historie bereinigen; doppelte Personen zusammenführen.\n- VZÄ früherer Beschäftigungen korrigieren, ohne Perioden zu ändern.\n- Pflegegrad „unbekannt“ und „kein Pflegegrad“ getrennt erfassen.\n- Eintritt und Beschäftigungsverlauf eindeutig anzeigen.\n- Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.\n- Einheitliche Listen mit klarer Bedienung auf allen Seiten.\n- Mitarbeiterliste über das Menü der Teamseite übernehmen."
+        },
+        {
+          "version": "2.1.0",
+          "note": "- Arbeitszeiten direkt in der Historie ergänzen und korrigieren.\n- Frühere Arbeitszeitdaten nach einer Eintrittskorrektur sofort auswählen.\n- Einfacheres Arbeitszeitformular ohne zusätzliche Prüf-Checkbox.\n- Kompetenzstufen für ausgewählte oder alle Kompetenzen gemeinsam ändern."
+        },
+        {
+          "version": "2.0.0",
+          "note": "- Übersichtlichere Oberfläche mit Hilfe direkt am Formular.\n- Offene Aufgaben und Fristen auf einen Blick.\n- Personen und Funktionen schnell finden.\n- Bessere Bedienung in kleinen Fenstern.\n- Patientenlisten flexibel sortieren.\n- Arbeitszeiten und Beschäftigungsverläufe nachvollziehen.\n- Genauere Jahresauswertungen und Exporte.\n- Personaldaten mit Vorschau aus Excel oder CSV übernehmen.\n- Einweisungen und Nachweise gezielt nachverfolgen.\n- Einarbeitung und Kompetenzen im Blick behalten.\n- Pflegemerkmale und Pflegeleistungen genauer erfassen.\n- Personenlisten für die Pflegeprüfung exportieren.\n- Pflegevisiten und offene Maßnahmen nachverfolgen.\n- Prüfergebnisse mit Originalberichten verknüpfen.\n- Bestehende Daten automatisch übernehmen und sichern.\n- Sicherungen einfacher verwalten und wiederherstellen.\n- Updates mit Fortschrittsanzeige herunterladen und installieren."
+        },
+        {
+          "version": "1.8.0",
+          "note": "- Überarbeitete Einstellungen mit eigenen Bereichen für Qualifikationen, Kompetenzen und Einweisungen.\n- Links zu Hilfe und Releases öffnen sich im externen Browser.\n- Detaillierte Kennzahlen im Dashboard zeigen fehlende Nachweise und den Stand der Kompetenzen.\n- Kompetenzabzeichen und ein Kompetenzpass geben je Teammitglied Auskunft über vorhandene Fähigkeiten.\n- Kompetenzstufen lassen sich in einem interaktiven Auswahlfeld bearbeiten.\n- Eine Kompetenzmatrix und die Verwaltung von Einweisungen ergänzen die Nachweisübersicht.\n- Vereinheitlichte Dialoge und verständlichere Hinweise bei der Anmeldung.\n- Die lokale Datenbank kann auch ohne Verschlüsselung verwendet werden.\n- Überarbeitete Funktionen zum Zurücksetzen lokaler Daten und zum Laden von Demodaten.\n- Änderungen an Wochenstunden und VZÄ werden historisiert.\n- Einstellungen zeigen installierte und angebotene Update-Versionen getrennt an.\n- Korrigierte Auswahl der Update-Quelle, wenn keine Umgebungsvariable gesetzt ist."
+        },
+        {
+          "version": "1.7.2",
+          "note": "- Angepasste App-Paketierung für Windows-Updates mit Squirrel."
+        },
+        {
+          "version": "1.7.1",
+          "note": "- Überarbeitete Bereinigung und Aufbewahrung von Build-Dateien bei der Veröffentlichung."
+        },
+        {
+          "version": "1.7.0",
+          "note": "- Patient:innen in einem eigenen Dialog anlegen und bearbeiten.\n- Geburtstage und Besuche von Patient:innen erscheinen im Kalender.\n- Verbesserte Eingabe von Geburtsdaten und einheitliche Datumsanzeige.\n- Kürzere Aufbewahrung von Build-Dateien verhindert Speicherprobleme bei der Veröffentlichung."
+        },
+        {
+          "version": "1.6.0",
+          "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+        },
+        {
+          "version": "1.5.0",
+          "note": "- Patient:innenverwaltung mit Besuchsdokumentation und Bewertung nach QPR 2026.\n- Kalender mit Monats-, Wochen- und Jahresansicht sowie Ereignisfiltern.\n- Kommende Termine, Geburtstage und Jubiläen werden im Dashboard angezeigt.\n- Verbesserte Anordnung der Dashboard-Karten auf verschiedenen Bildschirmgrößen.\n- Die zwischenzeitliche Abteilungsverwaltung wurde wieder entfernt.\n- Eine Content Security Policy begrenzt die im App-Fenster zulässigen Inhalte.\n- Ergänzte Projektkonfiguration für Build, Typprüfung und Codeprüfung."
+        },
+        {
+          "version": "1.4.12",
+          "note": "- Überarbeitete Darstellung des Logos in Sidebar und Infobereich."
+        },
+        {
+          "version": "1.4.11",
+          "note": "- Korrigierte Erkennung des App-Namens bei der macOS-Paketierung."
+        },
+        {
+          "version": "1.4.10",
+          "note": "- Ergänzte lokale Signierung der macOS-App beim Erstellen der Pakete."
+        },
+        {
+          "version": "1.4.9",
+          "note": "- Eigener Installationsschritt für die Anwendung von Abhängigkeitspatches."
+        },
+        {
+          "version": "1.4.8",
+          "note": "- Unterstützung für Abhängigkeitspatches im Build ergänzt."
+        },
+        {
+          "version": "1.4.7",
+          "note": "- Präzisere Beschreibung der Teamübersicht und ergänztes App-Symbol."
+        },
+        {
+          "version": "1.4.6",
+          "note": "- Verbesserte Auswahl der Installationsdateien für Update-Metadaten.\n- Der Release-Befehl erzeugt die Update-Metadaten mit."
+        },
+        {
+          "version": "1.4.5",
+          "note": "- GitHub-Update-Konfiguration wird im App-Paket mitgeliefert."
+        },
+        {
+          "version": "1.4.4",
+          "note": "- App-Symbole und typisierte Bildimporte ergänzt."
+        },
+        {
+          "version": "1.4.3",
+          "note": "- ClearDeck-Logo in Sidebar und Einstellungen ergänzt."
+        },
+        {
+          "version": "1.4.2",
+          "note": "- Name der ausführbaren Datei auf ClearDeck umgestellt."
+        },
+        {
+          "version": "1.4.1",
+          "note": "- Update-Metadaten werden bei der Veröffentlichung automatisch erzeugt.\n- Sidebar an kleinere Bildschirmgrößen angepasst."
+        },
+        {
+          "version": "1.4.0",
+          "note": "- Employee DB heißt jetzt ClearDeck.\n- Überarbeiteter Infobereich mit Version, Systeminformationen, Lizenz und Kontakt zum Entwickler.\n- Verbesserte Darstellung der Support-Verknüpfung."
+        },
+        {
+          "version": "1.3.3",
+          "note": "- Authentifizierter Zugriff auf Updates aus dem privaten GitHub-Repository ergänzt."
+        },
+        {
+          "version": "1.3.2",
+          "note": "- Abhängigkeit zur Verarbeitung der Update-Metadaten aktualisiert."
+        },
+        {
+          "version": "1.3.1",
+          "note": "- Zusätzliche Teamdaten und Qualifikationen in der Teamtabelle ergänzt."
+        },
+        {
+          "version": "1.3.0",
+          "note": "- Neue Dialoge zum Anlegen und Bearbeiten von Teammitgliedern.\n- Überarbeitete Detailansicht mit chronologischer Darstellung, Ereignissymbolen und Qualifikationen.\n- Sortierbare Teamtabelle und verbesserte Formular-, Fokus- und Scroll-Darstellung.\n- Überarbeitete Einstellungen mit Tabs für Datenbank, Qualifikationen und System.\n- Qualifikationsübersicht und verbesserte Karten im Dashboard.\n- Einheitliche Bezeichnung „Team“ sowie überarbeitete Sidebar.\n- VZÄ-Berechnung ergänzt und auf maximal 1 je Person begrenzt.\n- Qualifikationen und Notizen werden Beschäftigungszeiträumen zugeordnet; vereinfachte Verwaltung dieser Zeiträume.\n- Neue Teammitglieder erhalten automatisch ein Eintrittsereignis.\n- Ereignisse nutzen vorgegebene Bezeichnungen statt freier Titel.\n- Nicht mehr verwendete Teamdatenfelder und überflüssige Statushinweise entfernt.\n- Versionierte Datenbankmigrationen, reparierte Datenbankverknüpfungen und Werkzeuge zur Datenbankinspektion.\n- Überarbeitete Datenbankverbindung, Verschlüsselung und Beispieldaten.\n- Zentralisierte API-Aufrufe und aufgeteilte Logik für Teamverwaltung, Bestätigungen, Wiederherstellung und Updates.\n- Automatisierte Tests und Typkonfiguration ergänzt.\n- macOS-Installation als DMG ergänzt."
+        },
+        {
+          "version": "1.2.0",
+          "note": "- Wiederherstellungsschlüssel anzeigen und für die Passwortwiederherstellung verwenden."
+        },
+        {
+          "version": "1.1.8",
+          "note": "- Korrigierte API-Anbindung für Update-Status und Update-Prüfung."
+        },
+        {
+          "version": "1.1.7",
+          "note": "- Update-Hinweis mit Zurückstellfunktion in der Sidebar.\n- Korrigierte Markierung der Navigation beim Anzeigen und Bearbeiten von Teammitgliedern."
+        },
+        {
+          "version": "1.1.6",
+          "note": "- Korrigierte Schreibberechtigungen beim Veröffentlichen von Releases."
+        },
+        {
+          "version": "1.1.5",
+          "note": "- Windows-kompatible Build-Konfiguration und angepasster Name der ausführbaren Datei."
+        },
+        {
+          "version": "1.1.4",
+          "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+        },
+        {
+          "version": "1.1.3",
+          "note": "- Überarbeitete Versionsvergabe und Tag-Erstellung beim Veröffentlichen."
+        }
+      ],
+      "latest-linux.yml": [
+        {
+          "version": "2.2.0",
+          "note": "- Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.\n- Vereinbarte Leistungen je Patient:in auswählen; die MD-Personenliste ergibt sich daraus.\n- Leistungskatalog unter Verwaltung pflegen.\n- Auffällige Beschäftigungsdaten als Aufgaben sehen und direkt in der Historie bereinigen; doppelte Personen zusammenführen.\n- VZÄ früherer Beschäftigungen korrigieren, ohne Perioden zu ändern.\n- Pflegegrad „unbekannt“ und „kein Pflegegrad“ getrennt erfassen.\n- Eintritt und Beschäftigungsverlauf eindeutig anzeigen.\n- Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.\n- Einheitliche Listen mit klarer Bedienung auf allen Seiten.\n- Mitarbeiterliste über das Menü der Teamseite übernehmen."
+        },
+        {
+          "version": "2.1.0",
+          "note": "- Arbeitszeiten direkt in der Historie ergänzen und korrigieren.\n- Frühere Arbeitszeitdaten nach einer Eintrittskorrektur sofort auswählen.\n- Einfacheres Arbeitszeitformular ohne zusätzliche Prüf-Checkbox.\n- Kompetenzstufen für ausgewählte oder alle Kompetenzen gemeinsam ändern."
+        },
+        {
+          "version": "2.0.0",
+          "note": "- Übersichtlichere Oberfläche mit Hilfe direkt am Formular.\n- Offene Aufgaben und Fristen auf einen Blick.\n- Personen und Funktionen schnell finden.\n- Bessere Bedienung in kleinen Fenstern.\n- Patientenlisten flexibel sortieren.\n- Arbeitszeiten und Beschäftigungsverläufe nachvollziehen.\n- Genauere Jahresauswertungen und Exporte.\n- Personaldaten mit Vorschau aus Excel oder CSV übernehmen.\n- Einweisungen und Nachweise gezielt nachverfolgen.\n- Einarbeitung und Kompetenzen im Blick behalten.\n- Pflegemerkmale und Pflegeleistungen genauer erfassen.\n- Personenlisten für die Pflegeprüfung exportieren.\n- Pflegevisiten und offene Maßnahmen nachverfolgen.\n- Prüfergebnisse mit Originalberichten verknüpfen.\n- Bestehende Daten automatisch übernehmen und sichern.\n- Sicherungen einfacher verwalten und wiederherstellen.\n- Updates mit Fortschrittsanzeige herunterladen und installieren."
+        },
+        {
+          "version": "1.8.0",
+          "note": "- Überarbeitete Einstellungen mit eigenen Bereichen für Qualifikationen, Kompetenzen und Einweisungen.\n- Links zu Hilfe und Releases öffnen sich im externen Browser.\n- Detaillierte Kennzahlen im Dashboard zeigen fehlende Nachweise und den Stand der Kompetenzen.\n- Kompetenzabzeichen und ein Kompetenzpass geben je Teammitglied Auskunft über vorhandene Fähigkeiten.\n- Kompetenzstufen lassen sich in einem interaktiven Auswahlfeld bearbeiten.\n- Eine Kompetenzmatrix und die Verwaltung von Einweisungen ergänzen die Nachweisübersicht.\n- Vereinheitlichte Dialoge und verständlichere Hinweise bei der Anmeldung.\n- Die lokale Datenbank kann auch ohne Verschlüsselung verwendet werden.\n- Überarbeitete Funktionen zum Zurücksetzen lokaler Daten und zum Laden von Demodaten.\n- Änderungen an Wochenstunden und VZÄ werden historisiert.\n- Einstellungen zeigen installierte und angebotene Update-Versionen getrennt an.\n- Korrigierte Auswahl der Update-Quelle, wenn keine Umgebungsvariable gesetzt ist."
+        },
+        {
+          "version": "1.7.2",
+          "note": "- Angepasste App-Paketierung für Windows-Updates mit Squirrel."
+        },
+        {
+          "version": "1.7.1",
+          "note": "- Überarbeitete Bereinigung und Aufbewahrung von Build-Dateien bei der Veröffentlichung."
+        },
+        {
+          "version": "1.7.0",
+          "note": "- Patient:innen in einem eigenen Dialog anlegen und bearbeiten.\n- Geburtstage und Besuche von Patient:innen erscheinen im Kalender.\n- Verbesserte Eingabe von Geburtsdaten und einheitliche Datumsanzeige.\n- Kürzere Aufbewahrung von Build-Dateien verhindert Speicherprobleme bei der Veröffentlichung."
+        },
+        {
+          "version": "1.6.0",
+          "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+        },
+        {
+          "version": "1.5.0",
+          "note": "- Patient:innenverwaltung mit Besuchsdokumentation und Bewertung nach QPR 2026.\n- Kalender mit Monats-, Wochen- und Jahresansicht sowie Ereignisfiltern.\n- Kommende Termine, Geburtstage und Jubiläen werden im Dashboard angezeigt.\n- Verbesserte Anordnung der Dashboard-Karten auf verschiedenen Bildschirmgrößen.\n- Die zwischenzeitliche Abteilungsverwaltung wurde wieder entfernt.\n- Eine Content Security Policy begrenzt die im App-Fenster zulässigen Inhalte.\n- Ergänzte Projektkonfiguration für Build, Typprüfung und Codeprüfung."
+        },
+        {
+          "version": "1.4.12",
+          "note": "- Überarbeitete Darstellung des Logos in Sidebar und Infobereich."
+        },
+        {
+          "version": "1.4.11",
+          "note": "- Korrigierte Erkennung des App-Namens bei der macOS-Paketierung."
+        },
+        {
+          "version": "1.4.10",
+          "note": "- Ergänzte lokale Signierung der macOS-App beim Erstellen der Pakete."
+        },
+        {
+          "version": "1.4.9",
+          "note": "- Eigener Installationsschritt für die Anwendung von Abhängigkeitspatches."
+        },
+        {
+          "version": "1.4.8",
+          "note": "- Unterstützung für Abhängigkeitspatches im Build ergänzt."
+        },
+        {
+          "version": "1.4.7",
+          "note": "- Präzisere Beschreibung der Teamübersicht und ergänztes App-Symbol."
+        },
+        {
+          "version": "1.4.6",
+          "note": "- Verbesserte Auswahl der Installationsdateien für Update-Metadaten.\n- Der Release-Befehl erzeugt die Update-Metadaten mit."
+        },
+        {
+          "version": "1.4.5",
+          "note": "- GitHub-Update-Konfiguration wird im App-Paket mitgeliefert."
+        },
+        {
+          "version": "1.4.4",
+          "note": "- App-Symbole und typisierte Bildimporte ergänzt."
+        },
+        {
+          "version": "1.4.3",
+          "note": "- ClearDeck-Logo in Sidebar und Einstellungen ergänzt."
+        },
+        {
+          "version": "1.4.2",
+          "note": "- Name der ausführbaren Datei auf ClearDeck umgestellt."
+        },
+        {
+          "version": "1.4.1",
+          "note": "- Update-Metadaten werden bei der Veröffentlichung automatisch erzeugt.\n- Sidebar an kleinere Bildschirmgrößen angepasst."
+        },
+        {
+          "version": "1.4.0",
+          "note": "- Employee DB heißt jetzt ClearDeck.\n- Überarbeiteter Infobereich mit Version, Systeminformationen, Lizenz und Kontakt zum Entwickler.\n- Verbesserte Darstellung der Support-Verknüpfung."
+        },
+        {
+          "version": "1.3.3",
+          "note": "- Authentifizierter Zugriff auf Updates aus dem privaten GitHub-Repository ergänzt."
+        },
+        {
+          "version": "1.3.2",
+          "note": "- Abhängigkeit zur Verarbeitung der Update-Metadaten aktualisiert."
+        },
+        {
+          "version": "1.3.1",
+          "note": "- Zusätzliche Teamdaten und Qualifikationen in der Teamtabelle ergänzt."
+        },
+        {
+          "version": "1.3.0",
+          "note": "- Neue Dialoge zum Anlegen und Bearbeiten von Teammitgliedern.\n- Überarbeitete Detailansicht mit chronologischer Darstellung, Ereignissymbolen und Qualifikationen.\n- Sortierbare Teamtabelle und verbesserte Formular-, Fokus- und Scroll-Darstellung.\n- Überarbeitete Einstellungen mit Tabs für Datenbank, Qualifikationen und System.\n- Qualifikationsübersicht und verbesserte Karten im Dashboard.\n- Einheitliche Bezeichnung „Team“ sowie überarbeitete Sidebar.\n- VZÄ-Berechnung ergänzt und auf maximal 1 je Person begrenzt.\n- Qualifikationen und Notizen werden Beschäftigungszeiträumen zugeordnet; vereinfachte Verwaltung dieser Zeiträume.\n- Neue Teammitglieder erhalten automatisch ein Eintrittsereignis.\n- Ereignisse nutzen vorgegebene Bezeichnungen statt freier Titel.\n- Nicht mehr verwendete Teamdatenfelder und überflüssige Statushinweise entfernt.\n- Versionierte Datenbankmigrationen, reparierte Datenbankverknüpfungen und Werkzeuge zur Datenbankinspektion.\n- Überarbeitete Datenbankverbindung, Verschlüsselung und Beispieldaten.\n- Zentralisierte API-Aufrufe und aufgeteilte Logik für Teamverwaltung, Bestätigungen, Wiederherstellung und Updates.\n- Automatisierte Tests und Typkonfiguration ergänzt.\n- macOS-Installation als DMG ergänzt."
+        },
+        {
+          "version": "1.2.0",
+          "note": "- Wiederherstellungsschlüssel anzeigen und für die Passwortwiederherstellung verwenden."
+        },
+        {
+          "version": "1.1.8",
+          "note": "- Korrigierte API-Anbindung für Update-Status und Update-Prüfung."
+        },
+        {
+          "version": "1.1.7",
+          "note": "- Update-Hinweis mit Zurückstellfunktion in der Sidebar.\n- Korrigierte Markierung der Navigation beim Anzeigen und Bearbeiten von Teammitgliedern."
+        },
+        {
+          "version": "1.1.6",
+          "note": "- Korrigierte Schreibberechtigungen beim Veröffentlichen von Releases."
+        },
+        {
+          "version": "1.1.5",
+          "note": "- Windows-kompatible Build-Konfiguration und angepasster Name der ausführbaren Datei."
+        },
+        {
+          "version": "1.1.4",
+          "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+        },
+        {
+          "version": "1.1.3",
+          "note": "- Überarbeitete Versionsvergabe und Tag-Erstellung beim Veröffentlichen."
+        }
+      ]
+    },
+    "body": "- Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.\n- Vereinbarte Leistungen je Patient:in auswählen; die MD-Personenliste ergibt sich daraus.\n- Leistungskatalog unter Verwaltung pflegen.\n- Auffällige Beschäftigungsdaten als Aufgaben sehen und direkt in der Historie bereinigen; doppelte Personen zusammenführen.\n- VZÄ früherer Beschäftigungen korrigieren, ohne Perioden zu ändern.\n- Pflegegrad „unbekannt“ und „kein Pflegegrad“ getrennt erfassen.\n- Eintritt und Beschäftigungsverlauf eindeutig anzeigen.\n- Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.\n- Einheitliche Listen mit klarer Bedienung auf allen Seiten.\n- Mitarbeiterliste über das Menü der Teamseite übernehmen.\n\nPlattformen: 2.2.0 für Windows und Linux. macOS bleibt bei 1.8.0; der bisherige Signaturfehler ist nicht behoben.",
+    "expectedBody": "- Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.\n- Vereinbarte Leistungen je Patient:in auswählen; die MD-Personenliste ergibt sich daraus.\n- Leistungskatalog unter Verwaltung pflegen.\n- Auffällige Beschäftigungsdaten als Aufgaben sehen und direkt in der Historie bereinigen; doppelte Personen zusammenführen.\n- VZÄ früherer Beschäftigungen korrigieren, ohne Perioden zu ändern.\n- Pflegegrad „unbekannt“ und „kein Pflegegrad“ getrennt erfassen.\n- Eintritt und Beschäftigungsverlauf eindeutig anzeigen.\n- Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.\n- Einheitliche Listen mit klarer Bedienung auf allen Seiten.\n- Mitarbeiterliste über das Menü der Teamseite übernehmen.\n\nPlattformen: 2.2.0 für Windows und Linux. macOS bleibt bei 1.8.0; der bisherige Signaturfehler ist nicht behoben."
+  },
+  "provider": {
+    "implementation": "electron-updater PrivateGitHubProvider",
+    "transport": "offline replay of saved GitHub metadata and downloaded assets",
+    "liveNetworkRequest": false,
+    "channels": [
+      {
+        "channel": "latest",
+        "installed": "1.7.1",
+        "offered": "2.2.0",
+        "updateAvailable": true,
+        "resolved": [
+          "ClearDeck-2.2.0-Setup.exe"
+        ]
+      },
+      {
+        "channel": "latest",
+        "installed": "1.8.0",
+        "offered": "2.2.0",
+        "updateAvailable": true,
+        "resolved": [
+          "ClearDeck-2.2.0-Setup.exe"
+        ]
+      },
+      {
+        "channel": "latest",
+        "installed": "2.0.0",
+        "offered": "2.2.0",
+        "updateAvailable": true,
+        "resolved": [
+          "ClearDeck-2.2.0-Setup.exe"
+        ]
+      },
+      {
+        "channel": "latest",
+        "installed": "2.1.0",
+        "offered": "2.2.0",
+        "updateAvailable": true,
+        "resolved": [
+          "ClearDeck-2.2.0-Setup.exe"
+        ]
+      },
+      {
+        "channel": "latest-linux",
+        "installed": "1.7.1",
+        "offered": "2.2.0",
+        "updateAvailable": true,
+        "resolved": [
+          "cleardeck_2.2.0_amd64.deb",
+          "cleardeck-2.2.0-1.x86_64.rpm"
+        ]
+      },
+      {
+        "channel": "latest-linux",
+        "installed": "1.8.0",
+        "offered": "2.2.0",
+        "updateAvailable": true,
+        "resolved": [
+          "cleardeck_2.2.0_amd64.deb",
+          "cleardeck-2.2.0-1.x86_64.rpm"
+        ]
+      },
+      {
+        "channel": "latest-linux",
+        "installed": "2.0.0",
+        "offered": "2.2.0",
+        "updateAvailable": true,
+        "resolved": [
+          "cleardeck_2.2.0_amd64.deb",
+          "cleardeck-2.2.0-1.x86_64.rpm"
+        ]
+      },
+      {
+        "channel": "latest-linux",
+        "installed": "2.1.0",
+        "offered": "2.2.0",
+        "updateAvailable": true,
+        "resolved": [
+          "cleardeck_2.2.0_amd64.deb",
+          "cleardeck-2.2.0-1.x86_64.rpm"
+        ]
+      },
+      {
+        "channel": "latest-mac",
+        "installed": "1.7.1",
+        "offered": "1.8.0",
+        "updateAvailable": true,
+        "resolved": [
+          "ClearDeck-darwin-arm64-1.8.0.zip"
+        ]
+      },
+      {
+        "channel": "latest-mac",
+        "installed": "1.8.0",
+        "offered": "1.8.0",
+        "updateAvailable": false,
+        "resolved": [
+          "ClearDeck-darwin-arm64-1.8.0.zip"
+        ]
+      },
+      {
+        "channel": "latest-mac",
+        "installed": "2.0.0",
+        "offered": "1.8.0",
+        "updateAvailable": false,
+        "resolved": [
+          "ClearDeck-darwin-arm64-1.8.0.zip"
+        ]
+      },
+      {
+        "channel": "latest-mac",
+        "installed": "2.1.0",
+        "offered": "1.8.0",
+        "updateAvailable": false,
+        "resolved": [
+          "ClearDeck-darwin-arm64-1.8.0.zip"
+        ]
+      }
+    ],
+    "installedVersions": [
+      "1.7.1",
+      "1.8.0",
+      "2.0.0",
+      "2.1.0"
+    ]
+  },
+  "macReference": {
+    "reference": "./.cache/release-2.2.0/original-mac",
+    "files": [
+      {
+        "name": "latest-mac.yml",
+        "bytes": 359,
+        "sha256": "8ef281d3f9634ee683df3110cbde4ba77e8b023cb551d050728dd3a53583e07a"
+      },
+      {
+        "name": "ClearDeck-darwin-arm64-1.8.0.zip",
+        "bytes": 117152639,
+        "sha256": "7b315d54b025b136488238592f6b185cce81297646cdc845b918c14bea4ac5c3"
+      }
+    ],
+    "status": "passed"
+  }
+}

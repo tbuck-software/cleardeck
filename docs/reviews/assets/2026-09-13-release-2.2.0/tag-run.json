@@ -1,0 +1,90 @@
+{
+  "attempt": 1,
+  "conclusion": "success",
+  "headBranch": "v2.2.0",
+  "headSha": "fb2857c51e2fea947b7e3ee15df137439a3dcfcb",
+  "jobs": [
+    {
+      "name": "checks",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rasalas/employee-db/actions/runs/34751325826/job/103708265497",
+      "startedAt": "2026-09-13T10:14:29Z",
+      "completedAt": "2026-09-13T10:16:52Z"
+    },
+    {
+      "name": "retained-mac-feed",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rasalas/employee-db/actions/runs/34751325826/job/103708270913",
+      "startedAt": "2026-09-13T10:14:33Z",
+      "completedAt": "2026-09-13T10:15:12Z"
+    },
+    {
+      "name": "build (windows-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rasalas/employee-db/actions/runs/34751325826/job/103708547926",
+      "startedAt": "2026-09-13T10:16:54Z",
+      "completedAt": "2026-09-13T10:21:23Z"
+    },
+    {
+      "name": "build (ubuntu-latest)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rasalas/employee-db/actions/runs/34751325826/job/103708547934",
+      "startedAt": "2026-09-13T10:16:54Z",
+      "completedAt": "2026-09-13T10:19:13Z"
+    },
+    {
+      "name": "windows-upgrade (1.8.0)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rasalas/employee-db/actions/runs/34751325826/job/103709065417",
+      "startedAt": "2026-09-13T10:21:26Z",
+      "completedAt": "2026-09-13T10:23:55Z"
+    },
+    {
+      "name": "windows-upgrade (1.7.1)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rasalas/employee-db/actions/runs/34751325826/job/103709065436",
+      "startedAt": "2026-09-13T10:21:25Z",
+      "completedAt": "2026-09-13T10:23:20Z"
+    },
+    {
+      "name": "verify",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rasalas/employee-db/actions/runs/34751325826/job/103709065437",
+      "startedAt": "2026-09-13T10:21:25Z",
+      "completedAt": "2026-09-13T10:22:04Z"
+    },
+    {
+      "name": "windows-upgrade (2.1.0)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rasalas/employee-db/actions/runs/34751325826/job/103709065455",
+      "startedAt": "2026-09-13T10:21:25Z",
+      "completedAt": "2026-09-13T10:23:48Z"
+    },
+    {
+      "name": "windows-upgrade (2.0.0)",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rasalas/employee-db/actions/runs/34751325826/job/103709065464",
+      "startedAt": "2026-09-13T10:21:26Z",
+      "completedAt": "2026-09-13T10:23:43Z"
+    },
+    {
+      "name": "publish",
+      "status": "completed",
+      "conclusion": "success",
+      "url": "https://github.com/Rasalas/employee-db/actions/runs/34751325826/job/103709348594",
+      "startedAt": "2026-09-13T10:23:57Z",
+      "completedAt": "2026-09-13T10:25:35Z"
+    }
+  ],
+  "status": "completed",
+  "url": "https://github.com/Rasalas/employee-db/actions/runs/34751325826"
+}

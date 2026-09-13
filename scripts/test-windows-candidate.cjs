@@ -25,7 +25,9 @@ const decrypt = (payload, key) => {
   decipher.setAuthTag(payload.subarray(12, 28));
   return Buffer.concat([decipher.update(payload.subarray(28)), decipher.final()]);
 };
-function inspect(bytes) {
+// `columns` pins the full-table snapshot to the pre-upgrade column set so that
+// columns added by a migration do not count as changed data.
+function inspect(bytes, columns = {}) {
   const file = path.join(result, 'inspection.db');
   fs.writeFileSync(file, bytes);
   const db = new DatabaseSync(file);
@@ -55,17 +57,21 @@ function inspect(bytes) {
       'SELECT id,employeeId,instructionDefinitionId,dueDate,completedAt FROM employee_instructions ORDER BY id',
     );
   }
-  if (process.env.OLD_VERSION === '2.0.0') {
+  const recorded = {};
+  if (['2.0.0', '2.1.0'].includes(process.env.OLD_VERSION)) {
     for (const table of ['employees', 'employment_periods', 'employee_events', 'patients',
       'patient_visits', 'employee_competencies', 'employee_instructions', 'employment_terms',
-      'employment_term_history', 'competency_history', 'audits', 'audit_clients', 'audit_results'])
-      snapshot[table] = all(`SELECT * FROM ${table} ORDER BY ${table === 'audit_clients' ? 'auditId, patientId' : 'id'}`);
+      'employment_term_history', 'competency_history', 'audits', 'audit_clients', 'audit_results']) {
+      const cols = columns[table] ?? all(`PRAGMA table_info(${table})`).map((c) => c.name);
+      recorded[table] = cols;
+      snapshot[table] = all(`SELECT ${cols.join(',')} FROM ${table} ORDER BY ${table === 'audit_clients' ? 'auditId, patientId' : 'id'}`);
+    }
   }
   assert.equal(all('PRAGMA quick_check')[0].quick_check, 'ok');
   assert.equal(all('PRAGMA foreign_key_check').length, 0);
   db.close();
   fs.unlinkSync(file);
-  return { version, snapshot };
+  return { version, snapshot, columns: recorded };
 }
 async function run() {
   fs.mkdirSync(result, { recursive: true });
@@ -138,7 +144,7 @@ async function run() {
       ]),
       crypto.pbkdf2Sync(password, config.salt, 200000, 32, 'sha512'),
     );
-    const after = inspect(decrypt(fs.readFileSync(path.join(data, 'employee.db.enc')), key));
+    const after = inspect(decrypt(fs.readFileSync(path.join(data, 'employee.db.enc')), key), before.columns);
     const registry = fs.readFileSync('src/main/database/migrations/index.ts', 'utf8')
       .match(/export const migrations[^=]*=\s*\[([\s\S]*?)\]/)?.[1];
     const registered = [...(registry || '').matchAll(/v(\d+)_/g)];
@@ -202,7 +208,7 @@ async function run() {
     console.log(`Unlocked installed ${info.info.version}; existing employee loaded.`);
     if (mode === 'old-ui') {
       let install;
-      if (process.env.OLD_VERSION === '2.0.0') {
+      if (['2.0.0', '2.1.0'].includes(process.env.OLD_VERSION)) {
         await page.locator('.app-sidebar .cd-nav-update').waitFor({ state: 'visible', timeout: 180000 });
         await page.locator('.app-sidebar .cd-nav-update').click();
         await page.getByRole('button', { name: 'Herunterladen', exact: true }).click();

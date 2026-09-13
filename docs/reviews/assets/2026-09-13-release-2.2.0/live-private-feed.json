@@ -1,0 +1,297 @@
+{
+  "checkedAt": "2026-09-13T10:26:13.429Z",
+  "release": "v2.2.0",
+  "method": "Installed PrivateGitHubProvider with authenticated gh transport against live GitHub API; version comparisons asserted separately; no native installation in this check.",
+  "requests": [
+    {
+      "platform": "win32",
+      "endpoint": "/repos/Rasalas/employee-db/releases/latest",
+      "accept": "application/vnd.github.v3+json"
+    },
+    {
+      "platform": "win32",
+      "endpoint": "/repos/Rasalas/employee-db/releases/assets/561010455",
+      "accept": "application/octet-stream"
+    },
+    {
+      "platform": "linux",
+      "endpoint": "/repos/Rasalas/employee-db/releases/latest",
+      "accept": "application/vnd.github.v3+json"
+    },
+    {
+      "platform": "linux",
+      "endpoint": "/repos/Rasalas/employee-db/releases/assets/561010396",
+      "accept": "application/octet-stream"
+    },
+    {
+      "platform": "darwin",
+      "endpoint": "/repos/Rasalas/employee-db/releases/latest",
+      "accept": "application/vnd.github.v3+json"
+    },
+    {
+      "platform": "darwin",
+      "endpoint": "/repos/Rasalas/employee-db/releases/assets/561010427",
+      "accept": "application/octet-stream"
+    }
+  ],
+  "feeds": [
+    {
+      "platform": "win32",
+      "channel": "latest",
+      "installed": "1.7.1",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "ClearDeck-2.2.0-Setup.exe",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010640"
+        }
+      ]
+    },
+    {
+      "platform": "win32",
+      "channel": "latest",
+      "installed": "1.7.2",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "ClearDeck-2.2.0-Setup.exe",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010640"
+        }
+      ]
+    },
+    {
+      "platform": "win32",
+      "channel": "latest",
+      "installed": "1.8.0",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "ClearDeck-2.2.0-Setup.exe",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010640"
+        }
+      ]
+    },
+    {
+      "platform": "win32",
+      "channel": "latest",
+      "installed": "2.0.0",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "ClearDeck-2.2.0-Setup.exe",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010640"
+        }
+      ]
+    },
+    {
+      "platform": "win32",
+      "channel": "latest",
+      "installed": "2.1.0",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "ClearDeck-2.2.0-Setup.exe",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010640"
+        }
+      ]
+    },
+    {
+      "platform": "win32",
+      "channel": "latest",
+      "installed": "2.2.0",
+      "offered": "2.2.0",
+      "updateAvailable": false,
+      "resolved": [
+        {
+          "name": "ClearDeck-2.2.0-Setup.exe",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010640"
+        }
+      ]
+    },
+    {
+      "platform": "linux",
+      "channel": "latest-linux",
+      "installed": "1.7.1",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "cleardeck_2.2.0_amd64.deb",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010307"
+        },
+        {
+          "name": "cleardeck-2.2.0-1.x86_64.rpm",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010495"
+        }
+      ]
+    },
+    {
+      "platform": "linux",
+      "channel": "latest-linux",
+      "installed": "1.7.2",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "cleardeck_2.2.0_amd64.deb",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010307"
+        },
+        {
+          "name": "cleardeck-2.2.0-1.x86_64.rpm",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010495"
+        }
+      ]
+    },
+    {
+      "platform": "linux",
+      "channel": "latest-linux",
+      "installed": "1.8.0",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "cleardeck_2.2.0_amd64.deb",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010307"
+        },
+        {
+          "name": "cleardeck-2.2.0-1.x86_64.rpm",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010495"
+        }
+      ]
+    },
+    {
+      "platform": "linux",
+      "channel": "latest-linux",
+      "installed": "2.0.0",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "cleardeck_2.2.0_amd64.deb",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010307"
+        },
+        {
+          "name": "cleardeck-2.2.0-1.x86_64.rpm",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010495"
+        }
+      ]
+    },
+    {
+      "platform": "linux",
+      "channel": "latest-linux",
+      "installed": "2.1.0",
+      "offered": "2.2.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "cleardeck_2.2.0_amd64.deb",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010307"
+        },
+        {
+          "name": "cleardeck-2.2.0-1.x86_64.rpm",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010495"
+        }
+      ]
+    },
+    {
+      "platform": "linux",
+      "channel": "latest-linux",
+      "installed": "2.2.0",
+      "offered": "2.2.0",
+      "updateAvailable": false,
+      "resolved": [
+        {
+          "name": "cleardeck_2.2.0_amd64.deb",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010307"
+        },
+        {
+          "name": "cleardeck-2.2.0-1.x86_64.rpm",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010495"
+        }
+      ]
+    },
+    {
+      "platform": "darwin",
+      "channel": "latest-mac",
+      "installed": "1.7.1",
+      "offered": "1.8.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "ClearDeck-darwin-arm64-1.8.0.zip",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010208"
+        }
+      ]
+    },
+    {
+      "platform": "darwin",
+      "channel": "latest-mac",
+      "installed": "1.7.2",
+      "offered": "1.8.0",
+      "updateAvailable": true,
+      "resolved": [
+        {
+          "name": "ClearDeck-darwin-arm64-1.8.0.zip",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010208"
+        }
+      ]
+    },
+    {
+      "platform": "darwin",
+      "channel": "latest-mac",
+      "installed": "1.8.0",
+      "offered": "1.8.0",
+      "updateAvailable": false,
+      "resolved": [
+        {
+          "name": "ClearDeck-darwin-arm64-1.8.0.zip",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010208"
+        }
+      ]
+    },
+    {
+      "platform": "darwin",
+      "channel": "latest-mac",
+      "installed": "2.0.0",
+      "offered": "1.8.0",
+      "updateAvailable": false,
+      "resolved": [
+        {
+          "name": "ClearDeck-darwin-arm64-1.8.0.zip",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010208"
+        }
+      ]
+    },
+    {
+      "platform": "darwin",
+      "channel": "latest-mac",
+      "installed": "2.1.0",
+      "offered": "1.8.0",
+      "updateAvailable": false,
+      "resolved": [
+        {
+          "name": "ClearDeck-darwin-arm64-1.8.0.zip",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010208"
+        }
+      ]
+    },
+    {
+      "platform": "darwin",
+      "channel": "latest-mac",
+      "installed": "2.2.0",
+      "offered": "1.8.0",
+      "updateAvailable": false,
+      "resolved": [
+        {
+          "name": "ClearDeck-darwin-arm64-1.8.0.zip",
+          "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010208"
+        }
+      ]
+    }
+  ]
+}

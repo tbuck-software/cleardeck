@@ -1,0 +1,90 @@
+{
+  "tag_name": "v2.2.0",
+  "html_url": "https://github.com/Rasalas/employee-db/releases/tag/v2.2.0",
+  "draft": false,
+  "prerelease": false,
+  "published_at": "2026-09-13T10:25:32Z",
+  "body": "- Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.\n- Vereinbarte Leistungen je Patient:in auswählen; die MD-Personenliste ergibt sich daraus.\n- Leistungskatalog unter Verwaltung pflegen.\n- Auffällige Beschäftigungsdaten als Aufgaben sehen und direkt in der Historie bereinigen; doppelte Personen zusammenführen.\n- VZÄ früherer Beschäftigungen korrigieren, ohne Perioden zu ändern.\n- Pflegegrad „unbekannt“ und „kein Pflegegrad“ getrennt erfassen.\n- Eintritt und Beschäftigungsverlauf eindeutig anzeigen.\n- Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.\n- Einheitliche Listen mit klarer Bedienung auf allen Seiten.\n- Mitarbeiterliste über das Menü der Teamseite übernehmen.\n\nPlattformen: 2.2.0 für Windows und Linux. macOS bleibt bei 1.8.0; der bisherige Signaturfehler ist nicht behoben.\n",
+  "assets": [
+    {
+      "id": 561010495,
+      "name": "cleardeck-2.2.0-1.x86_64.rpm",
+      "size": 95017997,
+      "digest": "sha256:a3165074318fe1306053b80cafde2a6f283e8b0e5ccd0e4c8693ab9465b947b2",
+      "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010495",
+      "browser_download_url": "https://github.com/Rasalas/employee-db/releases/download/v2.2.0/cleardeck-2.2.0-1.x86_64.rpm"
+    },
+    {
+      "id": 561010833,
+      "name": "cleardeck-2.2.0-full.nupkg",
+      "size": 135845947,
+      "digest": "sha256:2f2c3a64dc13741e9413ea6113c7331edfb9d18cde11d1f2fbeaed2751d0c4a5",
+      "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010833",
+      "browser_download_url": "https://github.com/Rasalas/employee-db/releases/download/v2.2.0/cleardeck-2.2.0-full.nupkg"
+    },
+    {
+      "id": 561010640,
+      "name": "ClearDeck-2.2.0-Setup.exe",
+      "size": 136604672,
+      "digest": "sha256:28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784",
+      "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010640",
+      "browser_download_url": "https://github.com/Rasalas/employee-db/releases/download/v2.2.0/ClearDeck-2.2.0-Setup.exe"
+    },
+    {
+      "id": 561010208,
+      "name": "ClearDeck-darwin-arm64-1.8.0.zip",
+      "size": 117152639,
+      "digest": "sha256:7b315d54b025b136488238592f6b185cce81297646cdc845b918c14bea4ac5c3",
+      "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010208",
+      "browser_download_url": "https://github.com/Rasalas/employee-db/releases/download/v2.2.0/ClearDeck-darwin-arm64-1.8.0.zip"
+    },
+    {
+      "id": 561010984,
+      "name": "ClearDeck-win32-x64-2.2.0.zip",
+      "size": 140559632,
+      "digest": "sha256:5815d9076a08e8838b7e99e662602f2ba6cbd8253b5ea2f67852cdf4707425aa",
+      "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010984",
+      "browser_download_url": "https://github.com/Rasalas/employee-db/releases/download/v2.2.0/ClearDeck-win32-x64-2.2.0.zip"
+    },
+    {
+      "id": 561010307,
+      "name": "cleardeck_2.2.0_amd64.deb",
+      "size": 90928816,
+      "digest": "sha256:7f487576a47ac06dc4c8d42f94a2724e054e54632c95439c8ad5e7ab46615dff",
+      "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010307",
+      "browser_download_url": "https://github.com/Rasalas/employee-db/releases/download/v2.2.0/cleardeck_2.2.0_amd64.deb"
+    },
+    {
+      "id": 561010396,
+      "name": "latest-linux.yml",
+      "size": 9435,
+      "digest": "sha256:67504559c7aba5e810ae64ed88e363cf470f455eeb8ba18fbe7d46a91b0b3f71",
+      "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010396",
+      "browser_download_url": "https://github.com/Rasalas/employee-db/releases/download/v2.2.0/latest-linux.yml"
+    },
+    {
+      "id": 561010427,
+      "name": "latest-mac.yml",
+      "size": 359,
+      "digest": "sha256:8ef281d3f9634ee683df3110cbde4ba77e8b023cb551d050728dd3a53583e07a",
+      "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010427",
+      "browser_download_url": "https://github.com/Rasalas/employee-db/releases/download/v2.2.0/latest-mac.yml"
+    },
+    {
+      "id": 561010455,
+      "name": "latest.yml",
+      "size": 9370,
+      "digest": "sha256:ba564d15b6ebcb75f3ab3e00b34291251f3e512a9cb6c0c91a49a86e3ef2794d",
+      "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010455",
+      "browser_download_url": "https://github.com/Rasalas/employee-db/releases/download/v2.2.0/latest.yml"
+    },
+    {
+      "id": 561010792,
+      "name": "RELEASES",
+      "size": 80,
+      "digest": "sha256:6753a76e4b812e70a23e011947c09f0ee296678d6dca5efcbddf552999b12c79",
+      "url": "https://api.github.com/repos/Rasalas/employee-db/releases/assets/561010792",
+      "browser_download_url": "https://github.com/Rasalas/employee-db/releases/download/v2.2.0/RELEASES"
+    }
+  ]
+}
