@@ -1,5 +1,5 @@
 # Personal/project-specific files
-/VZÄ MA 2024.docx
+VZÄ MA 2024.docx
 /WhatsApp Audio 2025-12-02 at 20.20.40.opus
 /WhatsApp Audio 2025-12-02 at 20.24.36.opus
 /WhatsApp Audio 2025-12-02 at 20.49.13.opus
@@ -11,6 +11,8 @@
 interview/
 audio/
 MA-Liste VZÄ.xlsx
+/docs/private/
+/assets/icon.af
 
 # Logs
 logs
@@ -110,3 +112,7 @@ dist/
 
 # Separate Electron host for the live development app
 .dev-runtime/
+
+# Local browser verification artifacts
+/.playwright-cli/
+/output/playwright/
