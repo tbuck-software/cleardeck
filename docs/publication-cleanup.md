@@ -13,7 +13,7 @@ Stand: 13.09.2026. Das Repository bleibt privat. Die Änderung auf öffentlich n
 
 ## Windows-Updates
 
-Die Korrektur liegt im [Draft-PR #46](https://github.com/Rasalas/employee-db/pull/46) und ist auch in den Server-Branch übernommen. Version 2.2.1 enthält unter Einstellungen → Über ClearDeck → Update-Quelle ein Feld für den GitHub-Link, vorbelegt mit `https://github.com/Rasalas/employee-db`. Öffentliche Releases benötigen keinen Token. Für private Releases kann auf dem jeweiligen Gerät ein persönlicher Token mit Leserechten geschützt gespeichert werden. Ein abgewiesener Token erlaubt einen erneuten Versuch ohne Anmeldung. Ein gemeinsames Geheimnis wird nicht mehr im Paket ausgeliefert.
+Die Korrektur ist Teil des gemeinsamen [Draft-PRs #45](https://github.com/Rasalas/employee-db/pull/45). Der zusätzliche Draft #46 wurde nach dem Zusammenführen geschlossen; der separate Windows-Testbranch bleibt für die Installer-Prüfung erhalten. Version 2.2.1 enthält unter Einstellungen → Über ClearDeck → Update-Quelle ein Feld für den GitHub-Link, vorbelegt mit `https://github.com/Rasalas/employee-db`. Öffentliche Releases benötigen keinen Token. Für private Releases kann auf dem jeweiligen Gerät ein persönlicher Token mit Leserechten geschützt gespeichert werden. Ein abgewiesener Token erlaubt einen erneuten Versuch ohne Anmeldung. Ein gemeinsames Geheimnis wird nicht mehr im Paket ausgeliefert.
 
 GitHub bleibt der Downloadort. Ein separates öffentliches Repository oder ein zusätzlicher Webserver ist dafür nicht erforderlich. Über eine Umbenennung und die spätere Veröffentlichung entscheidet weiterhin ausschließlich der Eigentümer.
 
