@@ -1,5 +1,6 @@
 import React from 'react';
 import Segmented from '../../ui/Segmented';
+import SettingsConnection from './SettingsConnection';
 import type { CareSettings } from '../../../shared/types';
 
 type SettingsGeneralProps = {
@@ -23,6 +24,8 @@ const SettingsGeneral = ({
         Allgemein
       </h1>
     </header>
+
+    <SettingsConnection allowTransfer />
 
     <div className="field">
       <label htmlFor="base-hours">Bezugswochenstunden für anteilige VZÄ</label>

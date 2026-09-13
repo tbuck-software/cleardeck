@@ -29,6 +29,12 @@ async function call<T extends (...args: any[]) => any>(
 export type ExportFormat = 'csv' | 'xlsx';
 
 export const api = {
+  connection: {
+    get: () => call('getServerConnection', baseApi.getServerConnection),
+    connect: (input: Parameters<Api['connectServer']>[0]) => call('connectServer', baseApi.connectServer, input),
+    local: () => call('useLocalConnection', baseApi.useLocalConnection),
+    refresh: () => call('refreshServer', baseApi.refreshServer),
+  },
   app: {
     getInfo: () => call('getAppInfo', baseApi.getAppInfo),
     openExternal: (url: string) => call('openExternal', baseApi.openExternal, url),

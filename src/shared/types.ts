@@ -225,6 +225,9 @@ export interface AppState {
   unlocked: boolean;
   storageMode: StorageMode;
   startupError?: string;
+  connectionMode?: 'local' | 'server';
+  serverUrl?: string;
+  serverRole?: 'reader' | 'editor';
 }
 
 export interface RecoveryInfo {

@@ -110,3 +110,7 @@ dist/
 
 # Separate Electron host for the live development app
 .dev-runtime/
+
+# Local browser verification artifacts
+/.playwright-cli/
+/output/playwright/

@@ -5,6 +5,7 @@ import type { YearDataset } from './shared/types';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
+import './styles/connection.css';
 
 import AuthScreen from './components/auth/AuthScreen';
 import AuthUpdates from './components/auth/AuthUpdates';
@@ -22,6 +23,7 @@ import TasksPage from './components/pages/TasksPage';
 import AdminListPage, { type AdminItem } from './components/pages/AdminListPage';
 import DevPage from './components/pages/DevPage';
 import SettingsGeneral from './components/pages/settings/SettingsGeneral';
+import SettingsConnection from './components/pages/settings/SettingsConnection';
 import SettingsSecurity from './components/pages/settings/SettingsSecurity';
 import SettingsAbout from './components/pages/settings/SettingsAbout';
 import SettingsLogs from './components/pages/settings/SettingsLogs';
@@ -1123,6 +1125,12 @@ const App = () => {
   // — auth gate —
 
   if (authLoading || appReady.startupError || !appReady.configured || !appReady.unlocked) {
+    if (!authLoading && appReady.connectionMode === 'server') {
+      return <div className="auth-screen"><div className="auth-panel connection-auth">
+        <h1 className="cd-h1">ClearDeck verbinden</h1>
+        <SettingsConnection />
+      </div></div>;
+    }
     const authMode: 'setup' | 'login' = appReady.configured ? 'login' : 'setup';
     return (
       <>
@@ -1135,6 +1143,7 @@ const App = () => {
           globalError={appReady.startupError ?? error}
           configuredStorageMode={appReady.storageMode}
           footer={
+            <>
             <AuthUpdates
               status={updateStatus}
               version={appInfo?.version}
@@ -1142,6 +1151,11 @@ const App = () => {
               onDownload={handleDownloadUpdate}
               onInstall={handleInstallUpdate}
             />
+            {!authLoading && !appReady.startupError && <details className="connection-auth-option">
+              <summary>Vorhandenen Server verwenden</summary>
+              <SettingsConnection />
+            </details>}
+            </>
           }
         />
         <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
@@ -1213,6 +1227,10 @@ const App = () => {
       )}
 
       <main className="app-main">
+        {appReady.connectionMode === 'server' && <div className="connection-banner">
+          <span>{appReady.serverUrl} · {appReady.serverRole === 'reader' ? 'Nur lesen' : 'Änderungen werden online gespeichert'}</span>
+          <button type="button" className="btn" onClick={() => navigateToPage('settings')}>Datenablage</button>
+        </div>}
         {page === 'dashboard' && (
           <Dashboard
             year={year}
@@ -1525,7 +1543,16 @@ const App = () => {
           />
         )}
 
-        {page === 'security' && (
+        {page === 'security' && appReady.connectionMode === 'server' && (
+          <div className="cd-page cd-narrow">
+            <h1 className="cd-h1">Sicherheit &amp; Backup</h1>
+            <p>Der Server speichert den Bestand verschlüsselt. Für die Wiederherstellung brauchst du den Datenschlüssel und eine Sicherung.</p>
+            <p>Automatische Serversicherungen und die Kontoverwaltung übernimmt der Betreiber. Lokale Backup-Einstellungen gelten für den lokalen Bestand.</p>
+            <button className="btn" onClick={() => setExportOpen(true)}>Serverbestand exportieren</button>
+            <SettingsConnection />
+          </div>
+        )}
+        {page === 'security' && appReady.connectionMode !== 'server' && (
           <SettingsSecurity
             storageMode={storageMode}
             encryptionSetup={encryptionSetup}

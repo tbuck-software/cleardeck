@@ -1,4 +1,5 @@
 import { ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { isServerMode, runServerOperation, withCurrentConnection } from '../serverConnection';
 import {
   flushDatabase,
   getDb,
@@ -12,27 +13,16 @@ export const handleData = (
   channel: string,
   listener: (event: IpcMainInvokeEvent, ...args: any[]) => any,
 ): void => {
-  ipcMain.handle(channel, (event, ...args) => {
+  ipcMain.handle(channel, (event, ...args) => withCurrentConnection(async () => {
+    if (isServerMode()) return runServerOperation(channel, () => listener(event, ...args));
     const before = isDbOpen() && getStorageMode() === 'encrypted' ? getDb().serialize() : null;
-    let result;
     try {
-      result = listener(event, ...args);
-    } catch (error) {
-      if (before) restoreMemorySnapshot(before);
-      throw error;
-    }
-    if (result && typeof result.then === 'function') {
-      return result.then((value: unknown) => {
-        flushDatabase();
-        return value;
-      });
-    }
-    try {
+      const result = await listener(event, ...args);
       flushDatabase();
+      return result;
     } catch (error) {
       if (before) restoreMemorySnapshot(before);
       throw error;
     }
-    return result;
-  });
+  }));
 };

@@ -21,6 +21,11 @@ import { encryptBuffer } from '../crypto';
 let db: DatabaseType | null = null;
 let encryptionKey: Buffer | null = null;
 let storageMode: StorageMode = 'encrypted';
+let remoteDatabase = false;
+
+/** Remote snapshots live only in memory; local persistence must never receive them. */
+export const setRemoteDatabase = (value: boolean): void => { remoteDatabase = value; };
+export const isRemoteDatabase = (): boolean => remoteDatabase;
 
 /**
  * Get the current database instance
@@ -93,6 +98,7 @@ const encryptSnapshot = (bytes: Buffer): Buffer => {
 
 /** Persist without closing: every successful data IPC writes an encrypted snapshot. */
 export const flushDatabase = (): void => {
+  if (remoteDatabase) return;
   if (!db || storageMode !== 'encrypted') return;
   writeAtomic(getEncryptedDbPath(), encryptSnapshot(db.serialize()));
 };
@@ -105,8 +111,32 @@ export const restoreMemorySnapshot = (bytes: Buffer): void => {
   db = candidate;
 };
 
+/** Prepare SQLite before committing the selection, and roll back memory if that commit fails. */
+export const activateRemoteDatabase = (bytes: Buffer, key: Buffer, saveSelection: () => void): void => {
+  const candidate = new Database(bytes);
+  try { candidate.pragma('foreign_keys = ON'); }
+  catch (error) { candidate.close(); throw error; }
+  const previous = { db, encryptionKey, storageMode, remoteDatabase };
+  db = candidate;
+  encryptionKey = key;
+  storageMode = 'encrypted';
+  remoteDatabase = true;
+  try {
+    saveSelection();
+  } catch (error) {
+    db = previous.db;
+    encryptionKey = previous.encryptionKey;
+    storageMode = previous.storageMode;
+    remoteDatabase = previous.remoteDatabase;
+    candidate.close();
+    throw error;
+  }
+  previous.db?.close();
+};
+
 export const openDatabase = (options: { create?: boolean } = {}): void => {
   if (db) return;
+  if (remoteDatabase) throw new Error('Bitte zuerst mit dem Server verbinden.');
   ensureDataDir();
   const working = getWorkingDbPath();
   const encrypted = getEncryptedDbPath();
@@ -230,6 +260,7 @@ export const validateDatabase = (bytes: Buffer): Buffer => {
 
 /** Input has already been validated; preserve the live state if installation fails. */
 export const replaceDatabase = (bytes: Buffer): void => {
+  if (remoteDatabase) throw new Error('Lokaler Import ist im Serverbetrieb nicht verfügbar.');
   const previous = getDb().serialize();
   const candidate = new Database(bytes);
   candidate.pragma('foreign_keys = ON');
@@ -296,6 +327,7 @@ export const closeDb = (): void => {
  * Delete all database files
  */
 export const deleteDatabase = (): void => {
+  if (remoteDatabase) throw new Error('Lokales Löschen ist im Serverbetrieb nicht verfügbar.');
   const encryptedDbPath = getEncryptedDbPath();
   const workingDbPath = getWorkingDbPath();
   closeDb();
@@ -312,6 +344,7 @@ export const deleteDatabase = (): void => {
  * @returns Path to the backup file
  */
 export const backupDatabase = (): string => {
+  if (remoteDatabase) throw new Error('Lokale Sicherheitskopien sind im Serverbetrieb nicht verfügbar.');
   const dataDir = getDataDir();
   ensureDataDir();
   const backupsDir = path.join(dataDir, 'backups');

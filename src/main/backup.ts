@@ -13,6 +13,7 @@ import path from 'path';
 
 import { parseRecoveryKey } from './crypto';
 import { encodeBackup, decodeBackup } from './backupFormat';
+import { isRemoteDatabase } from './database/connection';
 import { writeAtomic } from './atomicFile';
 import {
   backupDatabase,
@@ -147,6 +148,7 @@ export const isAutoBackupDue = (
 /** Called on shutdown; never throws, so a missing NAS cannot block the quit. */
 export const runAutoBackupIfDue = async (): Promise<void> => {
   try {
+    if (isRemoteDatabase()) return;
     if (!isDbOpen()) return;
     if (!isAutoBackupDue(getBackupSettings())) return;
     await runBackup();

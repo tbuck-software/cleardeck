@@ -1,0 +1,25 @@
+.connection-settings {
+  margin: 20px 0 28px;
+  padding: 20px;
+  border: 1px solid var(--color-divider);
+  border-radius: 12px;
+  background: var(--color-bg);
+  text-align: left;
+}
+.connection-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.connection-heading h2 { margin: 0; }
+.connection-heading p { margin: 6px 0 16px; }
+.connection-heading .tag { flex-shrink: 0; }
+.connection-fields { border: 0; padding: 0; margin: 18px 0 0; min-width: 0; }
+.connection-fields .input { width: 100%; }
+.connection-fields label { line-height: 1.5; }
+.connection-fields input[type='checkbox'] { margin-right: 7px; }
+.connection-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.connection-current { display: flex; flex-direction: column; gap: 6px; overflow-wrap: anywhere; }
+.connection-transfer { border-top: 1px solid var(--color-divider); border-bottom: 1px solid var(--color-divider); padding: 16px 0; margin: 18px 0; }
+.connection-key { overflow-wrap: anywhere; margin: 12px 0; padding: 12px; background: var(--color-surface); border-radius: 6px; user-select: all; }
+.connection-error { color: var(--bad-800); line-height: 1.5; }
+.connection-auth { width: min(620px, calc(100vw - 40px)); max-width: 620px; }
+.connection-auth-option { margin-top: 20px; text-align: left; }
+.connection-auth-option summary { cursor: pointer; }
+.connection-banner { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 24px; border-bottom: 1px solid var(--color-divider); font-size: 13px; background: var(--color-bg); }

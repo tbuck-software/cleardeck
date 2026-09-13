@@ -1,4 +1,5 @@
 import type { StaffImportPreview, StaffImportRow } from './shared/staffImport';
+import type { ConnectServerInput, ServerConnection } from './shared/serverConnection';
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   BulkCompetencyChange,
@@ -56,6 +57,10 @@ import type {
 type ExportFormat = 'csv' | 'xlsx';
 
 export type Api = {
+  getServerConnection: () => Promise<ServerConnection>;
+  connectServer: (input: ConnectServerInput) => Promise<ServerConnection>;
+  useLocalConnection: () => Promise<void>;
+  refreshServer: () => Promise<void>;
   getAppState: () => Promise<AppState>;
   getAppInfo: () => Promise<AppInfo>;
   openExternal: (url: string) => Promise<boolean>;
@@ -377,6 +382,10 @@ export type Api = {
 };
 
 const api: Api = {
+  getServerConnection: () => ipcRenderer.invoke('server:state'),
+  connectServer: (input) => ipcRenderer.invoke('server:connect', input),
+  useLocalConnection: () => ipcRenderer.invoke('server:local'),
+  refreshServer: () => ipcRenderer.invoke('server:refresh'),
   getAppState: () => ipcRenderer.invoke('app:state'),
   getAppInfo: () => ipcRenderer.invoke('app:info'),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),

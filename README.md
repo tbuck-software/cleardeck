@@ -26,6 +26,10 @@ npm start
 
 Der erste Start fragt nach einem Passwort (setzt gleichzeitig den lokalen App-Schluessel). Danach kann die Jahresliste gefiltert, editiert und exportiert werden.
 
+## Optionaler Serverbetrieb
+
+Der lokale Betrieb bleibt die Voreinstellung. Für einen gemeinsam genutzten, selbst gehosteten Bestand beschreibt das [deutsche Server-Runbook](docs/server-mode.md) Einrichtung, Konten, Datenschlüssel, Migration sowie PostgreSQL-Sicherung und -Wiederherstellung. Der [Hosting- und Launch-Plan](docs/hosting-launch-plan.md) enthält die offenen technischen, Sicherheits- und Datenschutzprüfungen. ClearDeck betreibt derzeit keinen Hosted-Dienst.
+
 ## Release / Versionierung
 - `make release-patch` / `make release-minor` / `make release-major`: hebt die Semver-Version in `package.json` an, committet, taggt (`vX.Y.Z`) und baut die Artefakte via `npm run make`.
 - `make release`: baut nur die aktuell eingetragene Version (nuetzlich, wenn bereits ein Tag existiert).

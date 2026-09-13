@@ -1,0 +1,62 @@
+name: ClearDeck checks
+
+on:
+  pull_request:
+    paths:
+      - "server/**"
+      - "src/**"
+      - "scripts/**"
+      - "patches/**"
+      - "package*.json"
+      - "*config*"
+      - ".eslintrc*"
+      - ".github/workflows/server.yml"
+  push:
+    paths:
+      - "server/**"
+      - "src/**"
+      - "scripts/**"
+      - "patches/**"
+      - "package*.json"
+      - "*config*"
+      - ".eslintrc*"
+      - ".github/workflows/server.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tsc --noEmit
+      - run: npm run lint
+      # Match the release workflow: native installation on Node 22,
+      # snapshot tests with Node's SQLite API on 26.8.1.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.8.1
+      - run: npx vitest run
+
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run test:integration
