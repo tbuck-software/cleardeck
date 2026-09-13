@@ -19,7 +19,7 @@ GitHub bleibt der Downloadort. Ein separates öffentliches Repository oder ein z
 
 Bestehende Windows-Installationen benötigen einmalig den korrigierten Installer über ihrer bisherigen Version. Die ursprünglichen Pakete enthalten den inzwischen zur Sperrung eingereichten Token im Klartext innerhalb von `app.asar`. Verbliebene lokale Paketkopien bleiben für die Upgrade-Prüfung erhalten.
 
-Die nativen Windows-Prüfungen laufen noch. Geprüft werden die direkte Installation über einen aus dem Release-Tag rekonstruierten Stand 2.1.0, über den ursprünglichen Installer 2.2.0 und ein anschließendes In-App-Update von 2.2.1 auf einen ausschließlich für den Test gebauten Nachfolger. Erst erfolgreiche Paket- und Upgrade-Prüfungen erlauben die Veröffentlichung von 2.2.1. Der Test-Nachfolger 2.2.2 wird nicht veröffentlicht.
+Die nativen Windows-Prüfungen sind für den vollständigen PR-Stand bestanden. Geprüft wurden die direkte Installation über einen aus dem Release-Tag rekonstruierten Stand 2.1.0, über den ursprünglichen Installer 2.2.0 und ein anschließendes In-App-Update von 2.2.1 auf einen ausschließlich für den Test gebauten Nachfolger. Paket- und Upgrade-Prüfungen sind im [Windows-Testbericht](reviews/2026-09-13-windows-update-recovery.md) dokumentiert. Ein neuer Release ist noch nicht veröffentlicht. Das gebaute 2.2.2-Paket bleibt ausschließlich ein Testnachfolger.
 
 ## Bilder für den Serverbetrieb
 
