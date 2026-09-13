@@ -6,7 +6,7 @@ Stand: 06.09.2026. Recherche und Gestaltungsvorschlag, keine beschlossene Änder
 
 Bei einer Person sollen mehrere ausgewählte Kompetenzen dieselbe Stufe erhalten. Häufig betrifft dies eine Teilmenge; "Alle auswählen" ist die Abkürzung für den ausdrücklich genannten Fall langjähriger Mitarbeitender. Die betrachtete Liste umfasst ungefähr 66 bis 67 Einträge und hat keine Pagination. Vorschläge noch nicht zugeordneter Kompetenzen sind ein eigener Vorgang.
 
-Der Nutzer möchte die Einzelbearbeitung weiterhin durch Anklicken der Zeilenfläche öffnen. Der bereitgestellte [Leitfaden für Verwaltungsoberflächen](/Users/developer/.ai/skills/personal-skills/admin-interface-design/references/admin-interface-guide.md) verlangt unabhängige Checkboxen und Zeilenaktionen, erkennbaren Auswahlumfang sowie explizites Speichern und Abbrechen. Diese Projektvorgaben bestimmen die Übertragung der folgenden Beispiele.
+Die Einzelbearbeitung soll weiterhin durch Anklicken der Zeilenfläche geöffnet werden. Für die Oberfläche gelten unabhängige Checkboxen und Zeilenaktionen, ein erkennbarer Auswahlumfang sowie explizites Speichern und Abbrechen. Diese Projektvorgaben bestimmen die Übertragung der folgenden Beispiele.
 
 ## Wie andere Software die Aufgabe löst
 

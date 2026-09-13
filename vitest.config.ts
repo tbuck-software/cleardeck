@@ -3,7 +3,7 @@ import path from 'path';
 
 export default defineConfig({
   test: {
-    exclude: [...configDefaults.exclude, 'server/**'],
+    exclude: [...configDefaults.exclude, '.cache/**', 'server/**'],
     globals: true,
     environment: 'jsdom',
     setupFiles: './vitest.setup.ts',
@@ -14,4 +14,3 @@ export default defineConfig({
     },
   },
 });
-

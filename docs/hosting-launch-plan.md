@@ -10,6 +10,8 @@ Es gibt keinen von ClearDeck betriebenen Hosted-Dienst. Ein Betreiber verantwort
 
 ## Freigabestatus
 
+Die [Bereinigung vor der Veröffentlichung](publication-cleanup.md) dokumentiert die Entfernung privater Originalunterlagen, den korrigierten Update-Build und zurückgezogene Pakete. Die vollständige Entfernung alter PR-Referenzen und zwischengespeicherter Inhalte bei GitHub bleibt ein eigener Schritt vor dem öffentlichen Start.
+
 Der Servermodus darf als technische Vorschau in einem kontrollierten, privaten Setup getestet werden. Ein öffentlich erreichbarer oder produktiver Betrieb wartet auf die Gates unten. Das Repository bleibt bis zum Abschluss der Prüfungen privat.
 
 ## Technische Gates

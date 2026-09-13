@@ -1,65 +1,69 @@
-# Employee DB – Electron Desktop App
+# ClearDeck
 
-Lokale Team- und VZAE-Uebersicht als Electron-Desktop-App mit SQLite, Export (CSV/Excel) und Passwortschutz.
+ClearDeck ist eine Electron-Desktop-App für Teamverwaltung, historische Arbeitszeiten und Vollzeitäquivalente sowie Patientenübersichten, Pflegevisiten und Nachweise.
 
-## Features (Stand: Prototyp)
-- Historisierte Team-Tabelle (Eintritt, Austritt, Stellenanteil, Qualifikation, Quelle, Notiz, Dokumentenpfad).
-- Jahresfilter mit Status (aktiv, ausgeschieden) und VZAE-Berechnung je Qualifikation + Gesamt.
-- Historienpflege: mehrere Perioden pro Person moeglich (Toggle „Neue Historienperiode“).
-- Exporte: CSV oder Excel inkl. Aggregationen je Qualifikation.
-- Verweis auf Dokumentenpfad; Button oeffnet Datei/Ordner via Electron shell.
-- Lokale Verschluesselung: App-Schluessel wird aus Benutzerpasswort abgeleitet, Datenbank liegt verschluesselt im User-Data-Verzeichnis.
+## Datenablage
 
-## Projektstruktur
-- `docs/anforderungsdokument.md`: Anforderungen / Kontext.
-- `src/index.ts`: Main-Prozess (DB, Verschluesselung, IPC, Export).
-- `src/preload.ts`: IPC-Bruecke.
-- `src/renderer.tsx`: UI (React).
+Der lokale Betrieb bleibt Standard. Die App unterstützt eine verschlüsselte lokale Datenbank und einen ausdrücklich wählbaren unverschlüsselten Betrieb. Entwicklung und installierte App verwenden getrennte Datenverzeichnisse.
 
-## Setup & Start
-Voraussetzung: Node.js 18+.
+Der optionale Servermodus ist eine technische Vorschau für einen gemeinsamen Bestand auf mehreren Geräten. Er verwendet einen selbst betriebenen ClearDeck-Server mit PostgreSQL. Der Server speichert verschlüsselte Snapshots; der gemeinsame Datenschlüssel bleibt bei den Clients. Persönliche Konten erhalten Lese- oder Schreibrechte. Der Modus benötigt eine Verbindung zum Server und unterstützt Bestände bis 32 MiB.
 
-```bash
-npm install
+Unter **Einstellungen → Allgemein → Datenablage** lässt sich der Server verbinden. Eine Übertragung des lokalen Bestands muss ausdrücklich bestätigt werden. Beim Rückwechsel bleiben lokale Daten und Serverdaten getrennt.
+
+- [Server einrichten und bedienen](docs/server-mode.md)
+- [Hosting und nächste Schritte](docs/hosting-launch-plan.md)
+- [Datenübernahme und Sicherung](docs/betrieb/datenuebernahme-und-sicherung.md)
+
+## Entwicklung
+
+Die CI installiert die Abhängigkeiten mit Node.js 22. Docker wird zusätzlich für die PostgreSQL-Integrationstests benötigt.
+
+```sh
+npm ci
 npm start
 ```
 
-Der erste Start fragt nach einem Passwort (setzt gleichzeitig den lokalen App-Schluessel). Danach kann die Jahresliste gefiltert, editiert und exportiert werden.
+Für Aufnahmen und Bedienprüfungen gibt es ein getrenntes Profil mit vollständig synthetischen Daten:
 
-## Optionaler Serverbetrieb
+```sh
+npm run demo
+```
 
-Der lokale Betrieb bleibt die Voreinstellung. Für einen gemeinsam genutzten, selbst gehosteten Bestand beschreibt das [deutsche Server-Runbook](docs/server-mode.md) Einrichtung, Konten, Datenschlüssel, Migration sowie PostgreSQL-Sicherung und -Wiederherstellung. Der [Hosting- und Launch-Plan](docs/hosting-launch-plan.md) enthält die offenen technischen, Sicherheits- und Datenschutzprüfungen. ClearDeck betreibt derzeit keinen Hosted-Dienst.
+[Entwicklungsumgebung](docs/development.md) und [Demo-Profil](docs/betrieb/demo-profil.md) beschreiben Datenpfade, Start und Wiederverwendung.
 
-## Release / Versionierung
-- `make release-patch` / `make release-minor` / `make release-major`: hebt die Semver-Version in `package.json` an, committet, taggt (`vX.Y.Z`) und baut die Artefakte via `npm run make`.
-- `make release`: baut nur die aktuell eingetragene Version (nuetzlich, wenn bereits ein Tag existiert).
-- `make show-version`: zeigt die aktuelle Version an.
-- Releases pushen automatisch Commit + Tag ins Remote.
-- Voraussetzungen: sauberes Git-Working-Tree, installierte Dependencies (`npm install`). Artefakte landen unter `out/` (ignored).
+## Prüfungen
 
-### CI-Releases (GitHub Actions)
-- Workflow: `.github/workflows/release.yml` baut auf Tags (`v*`) für macOS, Windows und Linux und lädt die Artefakte als Release-Assets hoch.
-- Default: `SKIP_FUSES=1` im CI (kein Codesigning nötig). Für signierte Builds einfach die Variable entfernen/setzen und die jeweiligen Zertifikate/Notarisierungs-Secrets hinterlegen.
-- Linux benötigt `rpm`/`fakeroot` (wird im Workflow installiert); Windows/macOS nutzen die Standard-Forge-Maker (Squirrel/ZIP, ZIP).
+```sh
+npx tsc --noEmit
+npm run lint
+```
 
-## Datenablage & Verschluesselung
-- Produktionsdaten liegen unter `app.getPath('userData')/data` (OS-abhaengig).
-- `npm start` verwendet automatisch ein separates Dev-Profil unter `dev-ClearDeck/data`, damit lokale Dev-Starts und die installierte App unterschiedliche Daten halten.
-- Datenbank wird beim Schliessen in `employee.db.enc` (AES-GCM) verschluesselt. Entschluesselung nur nach Login.
-- Passwort wird nicht gespeichert; bei Verlust ist die DB nicht wiederherstellbar.
+Die Desktoptests verwenden Nodes SQLite-Snapshot-API. Wie in der CI nach der Installation auf Node.js 26.8.1 wechseln:
 
-## Wichtige NPM-Skripte
-- `make dev` / `npm start` – echte ClearDeck-Dev-App mit Live-Aktualisierung.
-- `make dev-updates` / `npm run dev:updates` – direkt zum Update-Beispiel mit separatem Testprofil.
-- Renderer und CSS aktualisieren sich beim Speichern. Für Main-Prozess-Änderungen im laufenden Terminal `rs` eingeben.
-- Start, Datenpfade und Trennung sind in [docs/development.md](docs/development.md) beschrieben.
-- `npm run make` – Paketieren (plattformabhaengig, erfordert System-Toolchain).
-- `npm run nuke:dev` – entfernt die Dev-Datenbank unter `dev-ClearDeck/data` nach Bestaetigung.
-- `npm run nuke:prod` – entfernt die Produktionsdatenbank unter `ClearDeck/data` nach Bestaetigung.
-- `npm run nuke:all` – entfernt Dev- und Prod-Daten nach Bestaetigung.
-- Mit `-- --yes` laeuft der jeweilige Nuke-Befehl ohne Rueckfrage.
+```sh
+npx vitest run
+```
 
-## Bekannte TODOs / Naechste Schritte
-- Optional: dedizierte Auto-Update-Pipeline und Installationspakete pro OS.
-- Tests (Unit/E2E) ergaenzen, Lint/Formatting-Konfiguration schaerfen.
-- Optional: SQLCipher statt App-seitiger AES-Verpackung.
+Servertests laufen separat unter Node.js 22 oder neuer:
+
+```sh
+npm --prefix server ci
+npm --prefix server test
+npm --prefix server run test:integration
+```
+
+## Dokumentation
+
+[docs/README.md](docs/README.md) führt zu Bedienhinweisen, Anforderungen, Architekturentscheidungen und Prüfberichten. Eine separate Dokumentationswebsite ist derzeit nicht eingerichtet.
+
+Personen in Demo-Profilen und Test-Fixtures sind synthetisch. Private Originalunterlagen gehören außerhalb des Repositorys; sie dürfen auch nicht in dessen Git-Historie übernommen werden.
+
+## Pakete und Updates
+
+`npm run make` erstellt lokale Installationspakete. Der geprüfte Releaseablauf ist in der [Release-Anleitung](.agents/skills/cleardeck-release/SKILL.md) beschrieben.
+
+Zugriffstokens dürfen nicht in App-Pakete eingebaut werden. Solange das Repository privat ist, erfolgt die Verteilung neuer Pakete manuell oder über einen separat eingerichteten Update-Feed. Der Stand der Bereinigung und die noch notwendigen Schritte werden im [Hosting- und Launch-Plan](docs/hosting-launch-plan.md) geführt.
+
+## Lizenz
+
+[MIT](LICENSE). Copyright-Hinweise und Lizenztext müssen bei der Weitergabe erhalten bleiben.
