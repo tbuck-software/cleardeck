@@ -2,9 +2,9 @@ name: Windows update recovery
 
 on:
   push:
-    branches: ['feature/server-mode']
     tags: ['v2.2.1']
-    paths-ignore: ['docs/**']
+  # Full package and native-upgrade checks are an explicit candidate gate.
+  # Everyday changes are checked on pull requests and main by server.yml.
   workflow_dispatch:
 
 permissions:
@@ -12,11 +12,12 @@ permissions:
 
 concurrency:
   group: windows-recovery-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,6 +35,7 @@ jobs:
   build:
     needs: checks
     runs-on: windows-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -74,6 +76,7 @@ jobs:
   baseline:
     needs: checks
     runs-on: windows-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
@@ -98,6 +101,7 @@ jobs:
   upgrade:
     needs: [build, baseline]
     runs-on: windows-latest
+    timeout-minutes: 15
     # GitHub exposes draft releases only to callers with repository push
     # access. The token is supplied solely to the original-baseline download.
     permissions:
@@ -188,4 +192,5 @@ jobs:
           NATIVE_WINDOWS_UPGRADES_VERIFIED: '1'
 
 # The 2.2.2 successor exists only to test the next in-app upgrade.
-# Branch runs publish nothing. Only the verified v2.2.1 tag can publish.
+# Manual candidate runs on branches publish nothing. Only the verified v2.2.1
+# tag can publish; its full checks, builds and native-upgrade matrix remain required.

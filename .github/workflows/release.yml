@@ -1,8 +1,7 @@
 name: Release
 
 on:
-  push:
-    branches: ['feat/update-download-flow']
+  # Package candidates deliberately; ordinary pushes use the code checks.
   workflow_dispatch:
 
 permissions:
@@ -10,11 +9,12 @@ permissions:
 
 concurrency:
   group: release-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -38,6 +38,7 @@ jobs:
       matrix:
         os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
