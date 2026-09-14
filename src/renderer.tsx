@@ -5,6 +5,7 @@ import type { YearDataset } from './shared/types';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
+import './styles/connection.css';
 
 import AuthScreen from './components/auth/AuthScreen';
 import AuthUpdates from './components/auth/AuthUpdates';
@@ -22,6 +23,8 @@ import TasksPage from './components/pages/TasksPage';
 import AdminListPage, { type AdminItem } from './components/pages/AdminListPage';
 import DevPage from './components/pages/DevPage';
 import SettingsGeneral from './components/pages/settings/SettingsGeneral';
+import SettingsConnections from './components/pages/settings/SettingsConnections';
+import { ServerConnectLink, ServerSignIn } from './components/auth/ServerAuth';
 import SettingsSecurity from './components/pages/settings/SettingsSecurity';
 import SettingsAbout from './components/pages/settings/SettingsAbout';
 import SettingsLogs from './components/pages/settings/SettingsLogs';
@@ -56,6 +59,7 @@ import ReportModal from './components/modals/ReportModal';
 
 import api from './services/api';
 import useAppLogic from './hooks/useAppLogic';
+import useServerSync from './hooks/useServerSync';
 import useViewport from './hooks/useViewport';
 import useQprData from './hooks/useQprData';
 import { deriveFteFromWeeklyHours, deriveWeeklyHoursFromFte } from './utils/fte';
@@ -265,6 +269,7 @@ const App = () => {
       reorderServiceDefinitions,
       openCreateServiceDefinition,
       openEditServiceDefinition,
+      refreshAll,
     },
   } = useAppLogic();
 
@@ -348,6 +353,101 @@ const App = () => {
   const [exportOpen, setExportOpen] = useState(false);
   const [restoreOpen, setRestoreOpen] = useState(false);
   const [restoreBusy, setRestoreBusy] = useState(false);
+  const [assignInstructionModal, setAssignInstructionModal] = useState<AssignInstructionModalState>(
+    emptyAssignInstructionModal(),
+  );
+  const [assignAlreadyOpenIds, setAssignAlreadyOpenIds] = useState<number[]>([]);
+  const editingProtectionRef = useRef(false);
+
+  const editingProtection = useMemo(() => {
+    const editPages: Page[] = [
+      'new',
+      'edit',
+      'patient-new',
+      'patient-edit',
+    ];
+    return (
+      editPages.includes(page) ||
+      loading ||
+      paletteOpen ||
+      reportOpen ||
+      qualificationModal.open ||
+      competencyModal.open ||
+      instructionModal.open ||
+      editModal.open ||
+      employeeCompetencyModal.open ||
+      employeeInstructionModal.open ||
+      suggestedCompetencyModal.open ||
+      eventModal.open ||
+      employmentAction.open ||
+      patientModal.open ||
+      patientVisitModal.open ||
+      serviceDefinitionModal.open ||
+      auditModal.open ||
+      assignInstructionModal.open ||
+      recoveryKeyModal.open ||
+      recoveryReset.open ||
+      encryptionSetup.open ||
+      passwordOpen ||
+      exportOpen ||
+      restoreOpen ||
+      staffImport !== null ||
+      auditView !== null ||
+      dayModalDate !== null ||
+      confirmState !== null
+    );
+  }, [
+    assignInstructionModal.open,
+    auditModal.open,
+    auditView,
+    competencyModal.open,
+    confirmState,
+    dayModalDate,
+    editModal.open,
+    employeeCompetencyModal.open,
+    employeeInstructionModal.open,
+    encryptionSetup.open,
+    eventModal.open,
+    employmentAction.open,
+    exportOpen,
+    instructionModal.open,
+    loading,
+    page,
+    paletteOpen,
+    patientModal.open,
+    patientVisitModal.open,
+    passwordOpen,
+    qualificationModal.open,
+    recoveryKeyModal.open,
+    recoveryReset.open,
+    reportOpen,
+    restoreOpen,
+    serviceDefinitionModal.open,
+    staffImport,
+    suggestedCompetencyModal.open,
+  ]);
+  editingProtectionRef.current = editingProtection;
+
+  const refreshVisibleData = useCallback(async () => {
+    if (editingProtectionRef.current) return;
+    const refreshed = await refreshAll({
+      shouldApply: () => !editingProtectionRef.current,
+    });
+    if (!refreshed) return;
+    if (editingProtectionRef.current) return;
+    setDirectoryDataset(refreshed.directoryDataset);
+    setCurrentDataset(refreshed.currentDataset);
+    if (editingProtectionRef.current) return;
+    await qprActions.refreshAll({ shouldApply: () => !editingProtectionRef.current });
+  }, [qprActions, refreshAll]);
+
+  useServerSync({
+    enabled: appReady.unlocked,
+    serverMode: appReady.connectionMode === 'server',
+    editing: editingProtection,
+    onRemoteChange: refreshVisibleData,
+    onError: handleError,
+  });
 
   const historyIndexRef = useRef(0);
   const restoringHistoryRef = useRef(false);
@@ -836,6 +936,7 @@ const App = () => {
         { page: 'instrs', label: 'Einweisungen' },
         { page: 'settings', label: 'Einstellungen' },
         { page: 'security', label: 'Sicherheit & Backup' },
+        { page: 'connections', label: 'Verbindungen' },
         { page: 'shortcuts', label: 'Tastenkürzel' },
         { page: 'logs', label: 'Logs & Diagnose' },
         { page: 'about', label: 'Über ClearDeck' },
@@ -927,11 +1028,6 @@ const App = () => {
       handleError(err);
     }
   };
-
-  const [assignInstructionModal, setAssignInstructionModal] = useState<AssignInstructionModalState>(
-    emptyAssignInstructionModal(),
-  );
-  const [assignAlreadyOpenIds, setAssignAlreadyOpenIds] = useState<number[]>([]);
 
   const closeInstructionModal = () =>
     setInstructionModal({
@@ -1123,6 +1219,9 @@ const App = () => {
   // — auth gate —
 
   if (authLoading || appReady.startupError || !appReady.configured || !appReady.unlocked) {
+    if (!authLoading && appReady.connectionMode === 'server') {
+      return <ServerSignIn />;
+    }
     const authMode: 'setup' | 'login' = appReady.configured ? 'login' : 'setup';
     return (
       <>
@@ -1135,6 +1234,7 @@ const App = () => {
           globalError={appReady.startupError ?? error}
           configuredStorageMode={appReady.storageMode}
           footer={
+            <>
             <AuthUpdates
               status={updateStatus}
               version={appInfo?.version}
@@ -1142,6 +1242,8 @@ const App = () => {
               onDownload={handleDownloadUpdate}
               onInstall={handleInstallUpdate}
             />
+            {!authLoading && !appReady.startupError && <ServerConnectLink />}
+            </>
           }
         />
         <ConfirmModal state={confirmState} onClose={() => setConfirmState(null)} />
@@ -1525,7 +1627,15 @@ const App = () => {
           />
         )}
 
-        {page === 'security' && (
+        {page === 'security' && appReady.connectionMode === 'server' && (
+          <div className="cd-page cd-narrow">
+            <h1 className="cd-h1">Sicherheit &amp; Backup</h1>
+            <p>Der ClearDeck-API-Server übernimmt Synchronisierung und serverseitige Backups.</p>
+            <p>Die lokale Kopie bleibt auf diesem Gerät. Ihre Verschlüsselung und lokale Backups stellst du hier ein.</p>
+            <button className="btn" onClick={() => setExportOpen(true)}>Serverbestand exportieren</button>
+          </div>
+        )}
+        {page === 'security' && appReady.connectionMode !== 'server' && (
           <SettingsSecurity
             storageMode={storageMode}
             encryptionSetup={encryptionSetup}
@@ -1564,6 +1674,8 @@ const App = () => {
             onFullReset={handleFullReset}
           />
         )}
+
+        {page === 'connections' && <SettingsConnections onNotice={setToastMessage} />}
 
         {page === 'about' && (
           <SettingsAbout
@@ -1795,7 +1907,7 @@ const App = () => {
 
       <BackupExportModal
         open={exportOpen}
-        encryptedAvailable={storageMode === 'encrypted'}
+        encryptedAvailable={appReady.connectionMode !== 'server' && storageMode === 'encrypted'}
         onExport={(mode) => {
           setExportOpen(false);
           void handleDbExport(mode);

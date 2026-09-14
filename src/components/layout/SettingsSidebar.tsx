@@ -6,6 +6,7 @@ import type { StorageMode } from '../../shared/types';
 const SETTINGS_NAV: { key: Page; label: string; icon: IconName }[] = [
   { key: 'settings', label: 'Allgemein', icon: 'settings' },
   { key: 'security', label: 'Sicherheit & Backup', icon: 'security' },
+  { key: 'connections', label: 'Verbindungen', icon: 'link' },
   { key: 'shortcuts', label: 'Tastenkürzel', icon: 'shortcuts' },
   { key: 'logs', label: 'Logs & Diagnose', icon: 'logs' },
   { key: 'about', label: 'Über ClearDeck', icon: 'about' },

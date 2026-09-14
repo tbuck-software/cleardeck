@@ -21,6 +21,7 @@ import { daysBetween } from '../../utils/qpr';
 import { localDate, requireDate, shiftDays } from '../../utils/calendarDate';
 import { contiguousEmploymentStart, employmentMessages } from '../../utils/employment';
 import { recordRepairEvent } from '../employmentRepairShared';
+import { nextDeviceId } from '../syncRecords';
 import {
   assertNoStrandedTerms,
   assertReportYear,
@@ -405,15 +406,17 @@ export const saveEmployee = (input: {
       );
     } else {
       employeeId = Number(
-        db
-          .prepare('INSERT INTO employees(name,note,birthDate,fte,weeklyHours) VALUES (?,?,?,?,?)')
-          .run(
-            input.name.trim(),
-            input.note ?? null,
-            birthDate,
-            input.fte,
-            input.weeklyHours ?? null,
-          ).lastInsertRowid,
+        nextDeviceId(db, 'employees'),
+      );
+      db.prepare(
+        'INSERT INTO employees(id,name,note,birthDate,fte,weeklyHours) VALUES (?,?,?,?,?,?)',
+      ).run(
+        employeeId,
+        input.name.trim(),
+        input.note ?? null,
+        birthDate,
+        input.fte,
+        input.weeklyHours ?? null,
       );
     }
     const existingPeriod = periodId ? loadPeriod(employeeId, periodId) : undefined;
@@ -446,25 +449,26 @@ export const saveEmployee = (input: {
       recordPeriodDateCorrection(before, bounds);
     } else {
       periodId = Number(
-        db
-          .prepare(
-            'INSERT INTO employment_periods(employeeId,startDate,endDate,qualification,note) VALUES (?,?,?,?,?)',
-          )
-          .run(
-            employeeId,
-            input.startDate,
-            input.endDate || null,
-            input.qualification,
-            input.periodNote ?? null,
-          ).lastInsertRowid,
+        nextDeviceId(db, 'employment_periods'),
+      );
+      db.prepare(
+        'INSERT INTO employment_periods(id,employeeId,startDate,endDate,qualification,note) VALUES (?,?,?,?,?,?)',
+      ).run(
+        periodId,
+        employeeId,
+        input.startDate,
+        input.endDate || null,
+        input.qualification,
+        input.periodNote ?? null,
       );
     }
     const existing = db
       .prepare(
-        'SELECT fte,weeklyHours,verified,effectiveFrom,sourceRef FROM employment_terms WHERE periodId=? ORDER BY effectiveFrom DESC LIMIT 1',
+        'SELECT id,fte,weeklyHours,verified,effectiveFrom,sourceRef FROM employment_terms WHERE periodId=? ORDER BY effectiveFrom DESC LIMIT 1',
       )
-      .get(periodId) as
+    .get(periodId) as
       | {
+          id: number;
           fte: number;
           weeklyHours: number | null;
           verified: number;
@@ -487,6 +491,10 @@ export const saveEmployee = (input: {
       if (effective < input.startDate || (input.endDate && effective > input.endDate))
         throw new Error('Stundenänderung muss innerhalb der Beschäftigungsperiode liegen.');
       const sourceRef = input.sourceRef?.trim() || null;
+      const effectiveTermId =
+        existing?.effectiveFrom === effective
+          ? existing.id
+          : nextDeviceId(db, 'employment_terms');
       const values = [
         periodId,
         effective,
@@ -496,11 +504,11 @@ export const saveEmployee = (input: {
         sourceRef,
       ];
       db.prepare(
-        'INSERT INTO employment_terms(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) VALUES (?,?,?,?,?,?) ON CONFLICT(periodId,effectiveFrom) DO UPDATE SET weeklyHours=excluded.weeklyHours,fte=excluded.fte,verified=excluded.verified,sourceRef=excluded.sourceRef',
-      ).run(...values);
+        'INSERT INTO employment_terms(id,periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) VALUES (?,?,?,?,?,?,?) ON CONFLICT(periodId,effectiveFrom) DO UPDATE SET weeklyHours=excluded.weeklyHours,fte=excluded.fte,verified=excluded.verified,sourceRef=excluded.sourceRef',
+      ).run(effectiveTermId, ...values);
       db.prepare(
-        'INSERT INTO employment_term_history(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) VALUES (?,?,?,?,?,?)',
-      ).run(...values);
+        'INSERT INTO employment_term_history(id,periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef) VALUES (?,?,?,?,?,?,?)',
+      ).run(nextDeviceId(db, 'employment_term_history'), ...values);
       if (existing)
         buildEmployeeChangeEvents({
           previous: existing,

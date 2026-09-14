@@ -4,7 +4,9 @@
  * Handles registration, login, and password recovery.
  */
 
-import { ipcMain, app, shell } from 'electron';
+import { ipcMain, app, shell, type IpcMainInvokeEvent } from 'electron';
+import { getServerConnection, isServerMode, isServerConnected, lockServer, withConnectionLock } from '../serverConnection';
+import { setRemoteDatabase } from '../database/connection';
 import crypto from 'crypto';
 
 import type { AppState, AppInfo, StorageMode } from '../../shared/types';
@@ -48,7 +50,7 @@ let unlocked = false;
  */
 let screenLocked = false;
 
-export const isUnlocked = (): boolean => unlocked;
+export const isUnlocked = (): boolean => isServerMode() ? isServerConnected() : unlocked;
 export const setUnlocked = (value: boolean): void => {
   unlocked = value;
 };
@@ -60,6 +62,18 @@ const getDefaultAppState = (): AppState => ({
 });
 
 const syncRuntimeState = (): AppState => {
+  try {
+    if (isServerMode()) {
+      setRemoteDatabase(true);
+      const connection = getServerConnection();
+      return {
+        configured: true, unlocked: isServerConnected(), storageMode: 'encrypted',
+        connectionMode: 'server', serverUrl: connection.url, serverRole: connection.role,
+      };
+    }
+  } catch (error) {
+    return { ...getDefaultAppState(), startupError: (error as Error).message };
+  }
   let config: AppConfig | null;
   try {
     config = readConfig();
@@ -106,15 +120,29 @@ const buildConfiguredState = (storageMode: StorageMode, isOpen: boolean): AppSta
   storageMode,
 });
 
+/** Serialize authentication with data work and isolate all local credentials from server mode. */
+const handleAuth = (channel: string, listener: (event: IpcMainInvokeEvent, ...args: any[]) => any): void => {
+  ipcMain.handle(channel, (event, ...args) => withConnectionLock(async () => {
+    if (channel !== 'app:state' && channel !== 'app:info' && channel !== 'app:openExternal' && isServerMode()) {
+      if (channel === 'auth:lock') {
+        await lockServer();
+        return syncRuntimeState();
+      }
+      throw new Error('Diese Funktion betrifft den lokalen Bestand. Bitte zuerst zum lokalen Betrieb wechseln.');
+    }
+    return listener(event, ...args);
+  }));
+};
+
 /**
  * Register all auth-related IPC handlers
  */
 export const registerAuthHandlers = (): void => {
   syncRuntimeState();
 
-  ipcMain.handle('app:state', (): AppState => syncRuntimeState());
+  handleAuth('app:state', (): AppState => syncRuntimeState());
 
-  ipcMain.handle(
+  handleAuth(
     'app:info',
     (): AppInfo => ({
       name: app.getName(),
@@ -122,7 +150,7 @@ export const registerAuthHandlers = (): void => {
       author: 'Torben Buck – tbuck software',
       email: 'mail@tbuck.de',
       github: 'https://github.com/Rasalas/employee-db',
-      license: 'Proprietär (Einzelnutzer-Lizenz)',
+      license: 'MIT',
       copyright: `© ${new Date().getFullYear()} tbuck software`,
       electronVersion: process.versions.electron,
       nodeVersion: process.versions.node,
@@ -131,13 +159,13 @@ export const registerAuthHandlers = (): void => {
     }),
   );
 
-  ipcMain.handle('app:openExternal', async (_event, url: string): Promise<boolean> => {
+  handleAuth('app:openExternal', async (_event, url: string): Promise<boolean> => {
     if (!url) return false;
     await shell.openExternal(url);
     return true;
   });
 
-  ipcMain.handle('auth:register', (_event, password: string): AppState => {
+  handleAuth('auth:register', (_event, password: string): AppState => {
     if (readConfig()) {
       throw new Error('Die App ist bereits eingerichtet. Bitte melde dich an.');
     }
@@ -170,7 +198,7 @@ export const registerAuthHandlers = (): void => {
     return buildConfiguredState('encrypted', true);
   });
 
-  ipcMain.handle('auth:registerPlain', (): AppState => {
+  handleAuth('auth:registerPlain', (): AppState => {
     if (readConfig()) {
       throw new Error('Die App ist bereits eingerichtet. Bitte melde dich an.');
     }
@@ -187,7 +215,7 @@ export const registerAuthHandlers = (): void => {
     return buildConfiguredState('plain', true);
   });
 
-  ipcMain.handle('auth:login', (_event, password: string): AppState => {
+  handleAuth('auth:login', (_event, password: string): AppState => {
     const config = readConfig();
     if (!config) {
       throw new Error('Die App wurde noch nicht eingerichtet. Bitte erstelle zuerst ein Passwort.');
@@ -261,7 +289,7 @@ export const registerAuthHandlers = (): void => {
    * lifted again by a button. The lock screen says so, so nobody mistakes it
    * for protection.
    */
-  ipcMain.handle('auth:lock', (): AppState => {
+  handleAuth('auth:lock', (): AppState => {
     const storageMode = getStorageMode();
     if (storageMode === 'plain') {
       screenLocked = true;
@@ -283,7 +311,7 @@ export const registerAuthHandlers = (): void => {
    * the data key — and leaves existing backups readable with the password they
    * were written under.
    */
-  ipcMain.handle(
+  handleAuth(
     'auth:changePassword',
     (
       _event,
@@ -330,7 +358,7 @@ export const registerAuthHandlers = (): void => {
     },
   );
 
-  ipcMain.handle('auth:recoveryKey', (): { recoveryKey: string; fingerprint: string } => {
+  handleAuth('auth:recoveryKey', (): { recoveryKey: string; fingerprint: string } => {
     const key = getEncryptionKey();
     if (getStorageMode() === 'plain') {
       throw new Error('Im unverschlüsselten Modus gibt es keinen Recovery Key.');
@@ -344,7 +372,7 @@ export const registerAuthHandlers = (): void => {
     };
   });
 
-  ipcMain.handle(
+  handleAuth(
     'auth:recover',
     (_event, payload: { recoveryKey: string; newPassword: string }): AppState => {
       const config = readConfig();
@@ -401,7 +429,7 @@ export const registerAuthHandlers = (): void => {
     },
   );
 
-  ipcMain.handle('auth:disableEncryption', (): AppState => {
+  handleAuth('auth:disableEncryption', (): AppState => {
     const config = readConfig();
     if (!config) {
       throw new Error('Die App wurde noch nicht eingerichtet.');
@@ -430,7 +458,7 @@ export const registerAuthHandlers = (): void => {
     return buildConfiguredState('plain', true);
   });
 
-  ipcMain.handle('auth:enableEncryption', (_event, password: string): AppState => {
+  handleAuth('auth:enableEncryption', (_event, password: string): AppState => {
     const config = readConfig();
     if (!config) {
       throw new Error('Die App wurde noch nicht eingerichtet.');
@@ -470,7 +498,7 @@ export const registerAuthHandlers = (): void => {
     return buildConfiguredState('encrypted', true);
   });
 
-  ipcMain.handle('app:reset', (): AppState => {
+  handleAuth('app:reset', (): AppState => {
     persistEncryptedDb();
     closeDb();
     archiveAppData();

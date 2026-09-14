@@ -1,5 +1,9 @@
 # Dokumentation
 
+- [Serverbetrieb](server-mode.md) erklärt Einrichtung und Wechsel der Datenablage.
+- [Hosting- und Launch-Plan](hosting-launch-plan.md) führt die verbleibenden Betriebs- und Veröffentlichungsschritte auf.
+- [Bereinigung vor der Veröffentlichung](publication-cleanup.md) beschreibt den bereinigten Buildweg und die noch erforderliche Entfernung alter GitHub-Referenzen.
+
 - [Anforderungen](anforderungsdokument.md) beschreiben die benötigten Arbeitsfälle.
 - [QPR-Recherche](research/qpr-teil-1a-ambulante-pflege-2026.md) beantwortet die sieben fachlichen Fragen mit Primärquellen und Fundstellen. Aussagen gelten für die jeweils angegebene Fassung.
 - [ADR 0001: QPR-Stichprobe, Pflegevisite und Prüfergebnisse](adr/0001-qpr-stichprobe-pflegevisite-und-pruefergebnisse.md) enthält die acht eingebrachten fachlichen Entscheidungen für ClearDeck. Es dokumentiert den Zielstand und offene Modellfragen, keinen Nachweis der Umsetzung.

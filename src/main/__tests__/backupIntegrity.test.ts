@@ -135,13 +135,13 @@ describe('backup integrity with real SQLite and filesystem', () => {
     expect((await restoreBackup(source)).saved).toBe(false);
     expect(marker()).toBe('current');
   });
-  it('rolls back memory and preserves disk when an acknowledged write cannot persist', () => {
+  it('rolls back memory and preserves disk when an acknowledged write cannot persist', async () => {
     const before = fs.readFileSync(getEncryptedDbPath());
     handleData('review:write', () => mark('unsaved'));
     vi.spyOn(fs, 'renameSync').mockImplementation(() => {
       throw new Error('Disk full');
     });
-    expect(() => runtime.handlers.get('review:write')!({})).toThrow('Disk full');
+    await expect(runtime.handlers.get('review:write')!({})).rejects.toThrow('Disk full');
     expect(marker()).toBe('old');
     expect(fs.readFileSync(getEncryptedDbPath())).toEqual(before);
   });

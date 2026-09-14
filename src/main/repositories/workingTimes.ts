@@ -2,6 +2,7 @@ import { getDb } from '../database/connection';
 import { requireDate, shiftDays } from '../../utils/calendarDate';
 import type { SaveWorkingTimeInput, WorkingTime } from '../../shared/types';
 import { updateEmployeeCache } from './employmentCore';
+import { nextDeviceId } from '../syncRecords';
 
 export const listWorkingTimes = (employeeId: number): WorkingTime[] => {
   const rows = getDb().prepare(`
@@ -68,11 +69,11 @@ export const saveWorkingTime = (input: SaveWorkingTimeInput): void => {
       db.prepare('UPDATE employment_terms SET periodId=?,effectiveFrom=?,weeklyHours=?,fte=?,verified=1 WHERE id=?')
         .run(periodId, input.effectiveFrom, input.weeklyHours, input.fte, previous.id);
     } else {
-      db.prepare('INSERT INTO employment_terms(periodId,effectiveFrom,weeklyHours,fte,verified) VALUES (?,?,?,?,1)')
-        .run(periodId, input.effectiveFrom, input.weeklyHours, input.fte);
+      db.prepare('INSERT INTO employment_terms(id,periodId,effectiveFrom,weeklyHours,fte,verified) VALUES (?,?,?,?,?,1)')
+        .run(nextDeviceId(db, 'employment_terms'), periodId, input.effectiveFrom, input.weeklyHours, input.fte);
     }
-    db.prepare(`INSERT INTO employment_term_history(periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef)
-      VALUES (?,?,?,?,1,?)`).run(periodId, input.effectiveFrom, input.weeklyHours, input.fte, previous?.sourceRef ?? null);
+    db.prepare(`INSERT INTO employment_term_history(id,periodId,effectiveFrom,weeklyHours,fte,verified,sourceRef)
+      VALUES (?,?,?,?,?,1,?)`).run(nextDeviceId(db, 'employment_term_history'), periodId, input.effectiveFrom, input.weeklyHours, input.fte, previous?.sourceRef ?? null);
     updateEmployeeCache(input.employeeId);
   })();
 };

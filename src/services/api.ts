@@ -29,6 +29,14 @@ async function call<T extends (...args: any[]) => any>(
 export type ExportFormat = 'csv' | 'xlsx';
 
 export const api = {
+  connection: {
+    get: () => call('getServerConnection', baseApi.getServerConnection),
+    connect: (input: Parameters<Api['connectServer']>[0]) => call('connectServer', baseApi.connectServer, input),
+    local: () => call('useLocalConnection', baseApi.useLocalConnection),
+    refresh: () => call('refreshServer', baseApi.refreshServer),
+    resolveConflict: (choice: 'server' | 'local') => call('resolveServerConflict', baseApi.resolveServerConflict, choice),
+    setEditing: (editing: boolean) => call('setServerEditing', baseApi.setServerEditing, editing),
+  },
   app: {
     getInfo: () => call('getAppInfo', baseApi.getAppInfo),
     openExternal: (url: string) => call('openExternal', baseApi.openExternal, url),
@@ -205,6 +213,9 @@ export const api = {
     check: (manual = false) => call('checkUpdates', baseApi.checkUpdates, manual),
     download: () => call('downloadUpdate', baseApi.downloadUpdate),
     install: () => call('installUpdate', baseApi.installUpdate),
+    getPreferences: () => call('getUpdatePreferences', baseApi.getUpdatePreferences),
+    savePreferences: (input: Parameters<Api['saveUpdatePreferences']>[0]) =>
+      call('saveUpdatePreferences', baseApi.saveUpdatePreferences, input),
     onStatus: (cb: (status: UpdateStatus) => void) => baseApi.onUpdateStatus(cb),
   },
   dev: {

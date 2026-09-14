@@ -1,61 +1,89 @@
-# Employee DB – Electron Desktop App
+# ClearDeck
 
-Lokale Team- und VZAE-Uebersicht als Electron-Desktop-App mit SQLite, Export (CSV/Excel) und Passwortschutz.
+ClearDeck ist eine Electron-Desktop-App für Teamverwaltung, historische Arbeitszeiten und Vollzeitäquivalente sowie Patientenübersichten, Pflegevisiten und Nachweise.
 
-## Features (Stand: Prototyp)
-- Historisierte Team-Tabelle (Eintritt, Austritt, Stellenanteil, Qualifikation, Quelle, Notiz, Dokumentenpfad).
-- Jahresfilter mit Status (aktiv, ausgeschieden) und VZAE-Berechnung je Qualifikation + Gesamt.
-- Historienpflege: mehrere Perioden pro Person moeglich (Toggle „Neue Historienperiode“).
-- Exporte: CSV oder Excel inkl. Aggregationen je Qualifikation.
-- Verweis auf Dokumentenpfad; Button oeffnet Datei/Ordner via Electron shell.
-- Lokale Verschluesselung: App-Schluessel wird aus Benutzerpasswort abgeleitet, Datenbank liegt verschluesselt im User-Data-Verzeichnis.
+## Datenablage
 
-## Projektstruktur
-- `docs/anforderungsdokument.md`: Anforderungen / Kontext.
-- `src/index.ts`: Main-Prozess (DB, Verschluesselung, IPC, Export).
-- `src/preload.ts`: IPC-Bruecke.
-- `src/renderer.tsx`: UI (React).
+Der lokale Betrieb bleibt Standard. Die App unterstützt eine verschlüsselte lokale Datenbank und einen ausdrücklich wählbaren unverschlüsselten Betrieb. Entwicklung und installierte App verwenden getrennte Datenverzeichnisse. Der lokale Bestand bleibt vom Serverbestand getrennt.
 
-## Setup & Start
-Voraussetzung: Node.js 18+.
+Der optionale Serverbetrieb ist eine technische Vorschau für einen gemeinsamen Bestand auf mehreren Geräten. Protokoll 2 und Schema 23 synchronisieren lesbare Datensätze mit PostgreSQL. Der Server hält die aktuellen Zeilen, einen Änderungsverlauf und Tombstones für Löschungen. Er erhält keinen verschlüsselten SQLite-Gesamtsnapshot und keinen gemeinsamen Datenschlüssel.
 
-```bash
-npm install
+Für eine ausdrückliche Rückmigration kann der Serverbestand als direkt lesbare SQLite-Datei exportiert werden. Eine portable verschlüsselte Client-Sicherung gibt es nicht, weil ihr lokaler Schlüssel an das Geräteprofil gebunden ist.
+
+Jedes Konto und Gerät besitzt für die Kombination aus Serveradresse und Benutzername eine eigene verschlüsselte lokale Arbeitskopie. Sie enthält die lokale SQLite-Datenbank, den bestätigten Serverstand und die Outbox. Diese Teile werden atomar gespeichert. Ein vom Gerät erzeugter lokaler Schlüssel wird mit dem geschützten Betriebssystemspeicher (`safeStorage`) umschlossen. Es gibt weder ein gemeinsames `dataKey` noch ein manuelles Schlüsselfeld.
+
+Der lokale verschlüsselte Cache ist auf 128 MiB begrenzt; v2-Synchronisationsanfragen sind auf 32 MiB begrenzt.
+
+Änderungen werden lokal sofort wirksam und anschließend so schnell wie möglich übertragen. Zusätzlich fragt der Client ungefähr alle drei Sekunden neue Deltas ab. Netzwerkzugriffe halten die lokale Datenbank-Sperre nicht. Bei einem Konflikt bleiben die wartenden Änderungen erhalten, bis der Benutzer die Serverversion übernimmt oder alle lokalen Änderungen erneut sendet.
+
+Unter **Einstellungen → Verbindungen** lassen sich `Serverbestand öffnen…` und `Lokalen Bestand auf Server übertragen…` getrennt starten. Nach einer erfolgreichen Online-Anmeldung ist `Offline öffnen` ausdrücklich möglich. Dafür prüft die App einen gespeicherten Passwortnachweis der letzten Online-Anmeldung. Bei einer fehlgeschlagenen Online-Anmeldung erfolgt kein automatischer Offline-Fallback. Passwort und Sitzungstoken bleiben nur im Speicher; eine Sitzung läuft nach acht Stunden ab.
+
+Der Server kennt die Rollen `admin`, `editor` und `reader`. Ein `admin` darf einen leeren Server initialisieren und verfügt zusätzlich über die normalen Lese- und Schreibrechte eines `editor`; für den normalen Schreibbetrieb werden persönliche `editor`-Konten empfohlen, `reader`-Konten lesen. Das erste Admin-Konto wird bei der Serverbereitstellung über die Server-CLI angelegt. Eine Admin-Oberfläche, MFA und mandanten- oder datensatzfeine Rechte sind noch nicht vorhanden. Ein von ClearDeck betriebener Hosted-Dienst und ein produktiver Server sind nicht eingerichtet.
+
+Das persönliche ClearDeck-Konto dient der Anmeldung in der Desktop-App. Der Verbindungsdialog fragt `Serveradresse`, `Benutzername` und `Passwort` ab; auf dem Sperrbildschirm steht nur noch das Passwort des bekannten Kontos aus. PostgreSQL- und andere SQL-Zugangsdaten werden ausschließlich auf dem Server verwaltet und nie in der App eingegeben. Einen voreingestellten Hosted-Dienst gibt es nicht. Nach der Erstinitialisierung meldet sich der normale Betrieb mit einem persönlichen `editor`- oder `reader`-Konto an; eine Selbstregistrierung gibt es nicht.
+
+- [Server einrichten und bedienen](docs/server-mode.md)
+- [Hosting und nächste Schritte](docs/hosting-launch-plan.md)
+- [Datenübernahme und Sicherung](docs/betrieb/datenuebernahme-und-sicherung.md)
+
+## Entwicklung
+
+Die CI installiert die Abhängigkeiten mit Node.js 22. Docker wird zusätzlich für die PostgreSQL-Integrationstests benötigt.
+
+```sh
+npm ci
 npm start
 ```
 
-Der erste Start fragt nach einem Passwort (setzt gleichzeitig den lokalen App-Schluessel). Danach kann die Jahresliste gefiltert, editiert und exportiert werden.
+Für Aufnahmen und Bedienprüfungen gibt es ein getrenntes Profil mit vollständig synthetischen Daten:
 
-## Release / Versionierung
-- `make release-patch` / `make release-minor` / `make release-major`: hebt die Semver-Version in `package.json` an, committet, taggt (`vX.Y.Z`) und baut die Artefakte via `npm run make`.
-- `make release`: baut nur die aktuell eingetragene Version (nuetzlich, wenn bereits ein Tag existiert).
-- `make show-version`: zeigt die aktuelle Version an.
-- Releases pushen automatisch Commit + Tag ins Remote.
-- Voraussetzungen: sauberes Git-Working-Tree, installierte Dependencies (`npm install`). Artefakte landen unter `out/` (ignored).
+```sh
+npm run demo
+```
 
-### CI-Releases (GitHub Actions)
-- Workflow: `.github/workflows/release.yml` baut auf Tags (`v*`) für macOS, Windows und Linux und lädt die Artefakte als Release-Assets hoch.
-- Default: `SKIP_FUSES=1` im CI (kein Codesigning nötig). Für signierte Builds einfach die Variable entfernen/setzen und die jeweiligen Zertifikate/Notarisierungs-Secrets hinterlegen.
-- Linux benötigt `rpm`/`fakeroot` (wird im Workflow installiert); Windows/macOS nutzen die Standard-Forge-Maker (Squirrel/ZIP, ZIP).
+Mit `make dev-server` startet dasselbe Demo-Profil zusammen mit einem lokalen ClearDeck-Server (PostgreSQL in Docker). Adresse, Konten und Passwort stehen im Terminal. `make dev-server-reset` leert den Server, damit eine Erstübertragung wieder möglich ist.
 
-## Datenablage & Verschluesselung
-- Produktionsdaten liegen unter `app.getPath('userData')/data` (OS-abhaengig).
-- `npm start` verwendet automatisch ein separates Dev-Profil unter `dev-ClearDeck/data`, damit lokale Dev-Starts und die installierte App unterschiedliche Daten halten.
-- Datenbank wird beim Schliessen in `employee.db.enc` (AES-GCM) verschluesselt. Entschluesselung nur nach Login.
-- Passwort wird nicht gespeichert; bei Verlust ist die DB nicht wiederherstellbar.
+[Entwicklungsumgebung](docs/development.md) und [Demo-Profil](docs/betrieb/demo-profil.md) beschreiben Datenpfade, Start und Wiederverwendung.
 
-## Wichtige NPM-Skripte
-- `make dev` / `npm start` – echte ClearDeck-Dev-App mit Live-Aktualisierung.
-- `make dev-updates` / `npm run dev:updates` – direkt zum Update-Beispiel mit separatem Testprofil.
-- Renderer und CSS aktualisieren sich beim Speichern. Für Main-Prozess-Änderungen im laufenden Terminal `rs` eingeben.
-- Start, Datenpfade und Trennung sind in [docs/development.md](docs/development.md) beschrieben.
-- `npm run make` – Paketieren (plattformabhaengig, erfordert System-Toolchain).
-- `npm run nuke:dev` – entfernt die Dev-Datenbank unter `dev-ClearDeck/data` nach Bestaetigung.
-- `npm run nuke:prod` – entfernt die Produktionsdatenbank unter `ClearDeck/data` nach Bestaetigung.
-- `npm run nuke:all` – entfernt Dev- und Prod-Daten nach Bestaetigung.
-- Mit `-- --yes` laeuft der jeweilige Nuke-Befehl ohne Rueckfrage.
+## Prüfungen
 
-## Bekannte TODOs / Naechste Schritte
-- Optional: dedizierte Auto-Update-Pipeline und Installationspakete pro OS.
-- Tests (Unit/E2E) ergaenzen, Lint/Formatting-Konfiguration schaerfen.
-- Optional: SQLCipher statt App-seitiger AES-Verpackung.
+```sh
+npx tsc --noEmit
+npm run lint
+```
+
+Die Desktoptests verwenden Nodes SQLite-Snapshot-API. Wie in der CI nach der Installation auf Node.js 26.8.1 wechseln:
+
+```sh
+npx vitest run
+```
+
+Servertests laufen separat unter Node.js 22 oder neuer:
+
+```sh
+npm --prefix server ci
+npm --prefix server test
+npm --prefix server run test:integration
+```
+
+Der aktuelle vollständige Prüfstand umfasst 610 erfolgreiche Desktoptests in 92 Dateien; `npx tsc --noEmit` und `npm run lint` waren erfolgreich. `npm test` im Serverpaket meldete neun bestandene und zwei übersprungene Tests; `npm run test:integration` gegen reales PostgreSQL war mit zwei von zwei Fällen erfolgreich. Der Docker-Image-Build war erfolgreich.
+
+Der native Electron-Lauf mit 1.405 synthetischen Zeilen bestätigte Bootstrap mit Revision 1, die lokale Änderung von 36 auf 37 über Neustart und ausdrückliches `Offline öffnen`, den Reconnect mit Revision 2 sowie einen echten CAS-Konflikt zwischen 38 und 39. Die ausstehende Änderung blieb erhalten; die Recovery-Kopie wurde verschlüsselt mit Zeitstempel und UUID angelegt. Nach der Konfliktentscheidung zeigte die App wieder die Serverversion 38 mit Status `Synchronisiert`; der bestätigte Rückwechsel zum lokalen Bestand zeigte den ursprünglichen Wert 36. Zusätzlich wies die Desktop-App einen Editor vor dem Datenupload mit der Admin-Anforderung ab; der separate API-Test bestätigte die entsprechende 403-Antwort, und PostgreSQL blieb bei `initialized=false`, Revision 0. Der anschließende Admin-Lauf übertrug 1.405 Zeilen und bestätigte `initialized=true`, Revision 1.
+
+Die v2-Client- und Serverläufe einschließlich Admin-Erstinitialisierung, Nicht-Admin-Sperre und persönlicher Editor-/Reader-Anmeldung sind damit dokumentiert. Vor einem breiteren Einsatz bleiben die operative TLS- und Zertifikatserneuerungsprüfung, eine geprüfte PostgreSQL-Backup- und Restore-Strecke, eine unabhängige Sicherheitsprüfung sowie eine verbindliche Richtlinie für Offline-Kopien nach Kontowiderruf offen.
+
+## Dokumentation
+
+[docs/README.md](docs/README.md) führt zu Bedienhinweisen, Anforderungen, Architekturentscheidungen und Prüfberichten. Eine separate Dokumentationswebsite ist derzeit nicht eingerichtet.
+
+Personen in Demo-Profilen und Test-Fixtures sind synthetisch. Private Originalunterlagen gehören außerhalb des Repositorys; sie dürfen auch nicht in dessen Git-Historie übernommen werden.
+
+## Pakete und Updates
+
+`npm run make` erstellt lokale Installationspakete. Der geprüfte Releaseablauf ist in der [Release-Anleitung](.agents/skills/cleardeck-release/SKILL.md) beschrieben.
+
+Zugriffstokens dürfen nicht in App-Pakete eingebaut werden. Solange das Repository privat ist, erfolgt die Verteilung neuer Pakete manuell oder über einen separat eingerichteten Update-Feed. Der Stand der Bereinigung und die noch notwendigen Schritte werden im [Hosting- und Launch-Plan](docs/hosting-launch-plan.md) geführt.
+
+## Lizenz
+
+[MIT](LICENSE). Copyright-Hinweise und Lizenztext müssen bei der Weitergabe erhalten bleiben.

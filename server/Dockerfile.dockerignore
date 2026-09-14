@@ -1,0 +1,11 @@
+# Send only the server runtime and its shared schema to the Docker builder.
+**
+!server/
+!server/package.json
+!server/package-lock.json
+!server/LICENSE
+!server/src/
+!server/src/**
+!src/
+!src/shared/
+!src/shared/syncSchema.json

@@ -1,0 +1,64 @@
+{
+  "commit": "f93c26d1bd3076dbbf8b63a33ab978e42c492231",
+  "run": "https://github.com/Rasalas/employee-db/actions/runs/34763861960",
+  "version": "2.2.1",
+  "nativeUpgrades": [
+    {
+      "from": "2.1.0",
+      "to": "2.2.1",
+      "configPreserved": true,
+      "dataPreserved": true,
+      "settingsPreserved": true,
+      "userPreferencesPreserved": true,
+      "schema": "23",
+      "automaticMigrationBackups": 1
+    },
+    {
+      "from": "2.2.0",
+      "to": "2.2.1",
+      "configPreserved": true,
+      "dataPreserved": true,
+      "settingsPreserved": true,
+      "userPreferencesPreserved": true,
+      "schema": "23",
+      "automaticMigrationBackups": 0
+    },
+    {
+      "from": "2.2.1",
+      "to": "2.2.2",
+      "configPreserved": true,
+      "dataPreserved": true,
+      "settingsPreserved": true,
+      "userPreferencesPreserved": true,
+      "schema": "23",
+      "automaticMigrationBackups": 0
+    }
+  ],
+  "assets": [
+    {
+      "name": "latest.yml",
+      "bytes": 9616,
+      "sha256": "d2529e00f317f3905d47ffa3541670ebff44a86260b22ae26c3b79d51420079e"
+    },
+    {
+      "name": "ClearDeck-2.2.1-Setup.exe",
+      "bytes": 136615424,
+      "sha256": "6ec2228d26c0d4f00431ddc7505b90ad292c44bee1e92cf39e89ffdb9c2141f2"
+    },
+    {
+      "name": "RELEASES",
+      "bytes": 80,
+      "sha256": "c95847fe808c73248b6b42f32428beaeb9a24c4d320f4c67441674dd2d8b76f6"
+    },
+    {
+      "name": "cleardeck-2.2.1-full.nupkg",
+      "bytes": 135856422,
+      "sha256": "2fa6ca213275a2d36c0033878da98c8068a63f359b9cac64456092f52a6153ac"
+    },
+    {
+      "name": "ClearDeck-win32-x64-2.2.1.zip",
+      "bytes": 140572404,
+      "sha256": "39db11529342ee885eed7b306a75cb5d218c678edeb15d5d88c4614fce9b9416"
+    }
+  ]
+}

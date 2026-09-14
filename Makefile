@@ -1,12 +1,19 @@
 VERSION_CMD=node -p "require('./package.json').version"
 
-.PHONY: dev dev-updates ensure-clean show-version build allow allow-out reseed-dev reseed-prod release release-patch release-minor release-major
+.PHONY: dev dev-updates dev-server dev-server-reset ensure-clean show-version build allow allow-out reseed-dev reseed-prod release release-patch release-minor release-major
 
 dev:
 	@npm start
 
 dev-updates:
 	@npm run dev:updates
+
+# Demo app with a local ClearDeck server (needs Docker)
+dev-server:
+	@node ./scripts/start-dev-server.cjs
+
+dev-server-reset:
+	@node ./scripts/start-dev-server.cjs --reset
 
 # Fail fast if there are uncommitted changes
 ensure-clean:

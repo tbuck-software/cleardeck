@@ -4,11 +4,19 @@ Die App prüft beim Start, stündlich und beim Aktivieren des Fensters auf Updat
 
 Nach dem Download startet „Update installieren und neu starten“ die Installation. Die App zeigt währenddessen „Neustart wird vorbereitet“. Ein erneuter Klick löst keine zweite Installation aus. Fensterwechsel überschreiben weder einen laufenden Download noch eine bereitliegende Installation oder deren Fehler. Fehler bleiben mit kopierbaren Details und einem Knopf zum Wiederholen des fehlgeschlagenen Schritts sichtbar. Sidebar, Einstellungen und Anmeldebildschirm verwenden dieselbe Anzeige.
 
-## Private Feeds und pausierte Veröffentlichung
+## GitHub-Updates nach der einmaligen Windows-Umstellung
 
-Bei einem privaten GitHub-Feed liest der Hauptprozess `GH_TOKEN` erst zur Laufzeit. `UPDATE_FEED_URL` kann weiterhin einen eigenen generischen Feed vorgeben. Der Webpack-Build und `npm run make` erhalten kein Zugriffstoken; dadurch wird kein Token in JavaScript, `app.asar` oder einem Installer eingebettet. Ohne Laufzeittoken bleibt ein privater GitHub-Feed absichtlich nicht verfügbar und die App fordert zur manuellen Installation auf.
+Unter Einstellungen → Verbindungen → Update-Quelle ändern steht ein Feld für den GitHub-Link, vorbelegt mit `https://github.com/Rasalas/employee-db`. Darunter lässt sich bei Bedarf ein persönlicher Zugriffstoken hinterlegen. Öffentliche Releases sind ohne Token erreichbar. Für private Releases braucht der Token Leserechte auf die Inhalte des gewählten Repositorys. Der Token wird auf dem jeweiligen Gerät mit dem geschützten Speicher des Betriebssystems verschlüsselt und nicht im Installer ausgeliefert. Die App zeigt nach dem Speichern nur an, dass ein Token hinterlegt ist. Er kann in den Einstellungen wieder entfernt werden.
 
-Der Release-Workflow baut derzeit nur prüfbare Windows-/Linux-Kandidaten und scannt die Auslieferungsdateien auf bekannte GitHub-Tokenformate. Automatische Veröffentlichung und das Wiederverwenden des alten Mac-Feeds sind pausiert, bis ein neu gebautes, signiertes Mac-Paket und sein nativer Updateweg vollständig geprüft sind. Betroffene macOS-Installationen benötigen bis dahin eine manuelle Installation; ein automatisches Updateangebot für diesen Feed ist nicht zugesichert.
+Ein ungültiger oder nicht mehr berechtigter Token soll bei der Updateprüfung einen erneuten Versuch ohne Anmeldung erlauben. Ist das Repository inzwischen öffentlich, bleibt der Updateweg damit nutzbar. Bleibt es privat, wird weiterhin ein gültiger Zugriff benötigt. Das Umbenennen eines Repositorys behebt einen ungültigen Token nicht; die Update-Quelle kann stattdessen auf den neuen Namen eingestellt werden. Beim Wechsel der Quelle wird ein bisheriger gespeicherter Token nicht ungefragt für ein anderes Repository übernommen.
+
+Die vorherigen Windows-Pakete enthalten ein inzwischen zur Sperrung eingereichtes Token. Sie senden es weiterhin an GitHub und wechseln bei einem Fehler nicht automatisch zu einem Zugriff ohne Anmeldung. Deshalb reicht die spätere Veröffentlichung des Repositorys für diese Installationen nicht aus. Die einmalige Korrektur erfolgt durch die Installation des neuen Windows-Installers über die vorhandene Version. Vorher ClearDeck schließen; eine Deinstallation oder Datenübernahme per Export und Import ist nicht vorgesehen.
+
+Der Eigentümer kann dem einzelnen Nutzer den Installer direkt geben oder einen privaten GitHub-Release bereitstellen. Das Repository kann privat bleiben. Eine Umstellung auf öffentlich nimmt ausschließlich der Eigentümer selbst vor.
+
+`UPDATE_FEED_URL` kann für einen eigenen generischen Feed weiterhin zur Laufzeit gesetzt werden. Der Build erhält keine Zugriffstokens. Die Paketprüfung untersucht auch den Inhalt von `app.asar` auf bekannte Tokenformate.
+
+Der Workflow `windows-recovery.yml` prüft die direkte Installation über 2.1.0 und 2.2.0 sowie ein anschließendes Update aus der korrigierten App auf einen nur für den Test gebauten Nachfolger. Branchläufe veröffentlichen nichts. Erst der Tag `v2.2.1` führt nach erneuter erfolgreicher Prüfung zur Veröffentlichung der Windows-Dateien; zuvor werden die hochgeladenen Dateien erneut heruntergeladen und geprüft. Der frühere Mac-Feed wird nicht wiederverwendet; die Windows-Reparatur liefert kein neues Mac-Paket aus.
 
 ## Änderungen seit der installierten Version
 

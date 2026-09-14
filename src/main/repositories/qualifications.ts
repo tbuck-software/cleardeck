@@ -7,6 +7,7 @@
 import type { QualificationType } from '../../shared/types';
 
 import { getDb } from '../database/connection';
+import { nextDeviceId } from '../syncRecords';
 
 /**
  * List all qualification types
@@ -31,9 +32,10 @@ export const addQualification = (name: string, note?: string | null): Qualificat
     mx: number | null;
   };
   const nextSort = (maxSort.mx ?? 0) + 1;
+  const id = nextDeviceId(db, 'qualification_types');
   db.prepare(
-    'INSERT INTO qualification_types (name, sortOrder, note) VALUES (@name, @sortOrder, @note)',
-  ).run({ name: trimmed, sortOrder: nextSort, note: note ?? null });
+    'INSERT INTO qualification_types (id, name, sortOrder, note) VALUES (@id, @name, @sortOrder, @note)',
+  ).run({ id, name: trimmed, sortOrder: nextSort, note: note ?? null });
   return listQualifications();
 };
 
@@ -76,5 +78,4 @@ export const deleteQualification = (id: number): QualificationType[] => {
   db.prepare('DELETE FROM qualification_types WHERE id = ?').run(id);
   return listQualifications();
 };
-
 

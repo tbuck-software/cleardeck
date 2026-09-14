@@ -34,12 +34,13 @@ export type Page =
   | 'comps'
   | 'instrs'
   | 'security'
+  | 'connections'
   | 'about'
   | 'logs'
   | 'shortcuts';
 
 /** Pages that live behind the Einstellungen sidebar rather than the main nav. */
-export const SETTINGS_PAGES: Page[] = ['settings', 'security', 'about', 'logs', 'shortcuts'];
+export const SETTINGS_PAGES: Page[] = ['settings', 'security', 'connections', 'about', 'logs', 'shortcuts'];
 
 /** Filter for the Patient:innen list — 'D' means "has an aufwändige HKP code". */
 export type TeilgruppeFilter = 'archived' | 'all' | 'A' | 'B' | 'C' | 'D';

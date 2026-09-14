@@ -88,7 +88,7 @@ const SettingsAbout = ({
         </div>
         <div>
           <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>Lizenz</div>
-          <div style={{ fontWeight: 600 }}>{appInfo?.license ?? 'Proprietär'}</div>
+          <div style={{ fontWeight: 600 }}>{appInfo?.license ?? 'MIT'}</div>
           {appInfo?.copyright && (
             <div style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>
               {appInfo.copyright}

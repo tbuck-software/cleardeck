@@ -12,6 +12,7 @@ import { localDate } from '../../utils/calendarDate';
 import type { Database as DatabaseType } from 'better-sqlite3';
 import { nextDueDate } from '../../utils/instructionSchedule';
 import type { CareLevel } from '../../shared/types';
+import { nextDeviceId } from '../syncRecords';
 
 type PeriodSeed = {
   startDate: string;
@@ -765,8 +766,8 @@ export const seedDatabase = (db: DatabaseType): void => {
 
     const insertQualification = db.prepare(
       `
-      INSERT INTO qualification_types (name, sortOrder, note)
-      VALUES (@name, @sortOrder, @note)
+      INSERT INTO qualification_types (id, name, sortOrder, note)
+      VALUES (@id, @name, @sortOrder, @note)
       ON CONFLICT(name) DO UPDATE SET
         sortOrder = excluded.sortOrder,
         note = excluded.note
@@ -799,37 +800,40 @@ export const seedDatabase = (db: DatabaseType): void => {
         sortOrder: 5,
         note: 'Interne Zusatzrolle fuer Onboarding und Kompetenzfreigaben.',
       },
-    ].forEach((qualification) => insertQualification.run(qualification));
+    ].forEach((qualification) =>
+      insertQualification.run({ id: nextDeviceId(db, 'qualification_types'), ...qualification }),
+    );
 
     db.prepare(
       `
-      INSERT OR IGNORE INTO competency_definitions (code, name, category, relevance, sortOrder, note)
-      VALUES ('QM-01', 'Toursoftware sicher bedienen', 'Digital', 'Alle', 999, 'Dokumentation, Terminpflege und mobile Rueckmeldungen.')
+      INSERT OR IGNORE INTO competency_definitions (id, code, name, category, relevance, sortOrder, note)
+      VALUES (?, 'QM-01', 'Toursoftware sicher bedienen', 'Digital', 'Alle', 999, 'Dokumentation, Terminpflege und mobile Rueckmeldungen.')
     `,
-    ).run();
+    ).run(nextDeviceId(db, 'competency_definitions'));
 
     db.prepare(
       `
-      INSERT OR IGNORE INTO instruction_definitions (topic, legalBasis, note, sortOrder)
-      VALUES ('Toursoftware 2026', 'interne Richtlinie', 'Einweisung in mobile Dokumentation und Rueckmeldelogik.', 999)
+      INSERT OR IGNORE INTO instruction_definitions (id, topic, legalBasis, note, sortOrder)
+      VALUES (?, 'Toursoftware 2026', 'interne Richtlinie', 'Einweisung in mobile Dokumentation und Rueckmeldelogik.', 999)
     `,
-    ).run();
+    ).run(nextDeviceId(db, 'instruction_definitions'));
 
     const insertEmployee = db.prepare(
       `
-      INSERT INTO employees (name, note, weeklyHours, fte, birthDate, department)
-      VALUES (@name, @note, @weeklyHours, @fte, @birthDate, @department)
+      INSERT INTO employees (id, name, note, weeklyHours, fte, birthDate, department)
+      VALUES (@id, @name, @note, @weeklyHours, @fte, @birthDate, @department)
     `,
     );
     const insertPeriod = db.prepare(
       `
-      INSERT INTO employment_periods (employeeId, startDate, endDate, qualification, note)
-      VALUES (@employeeId, @startDate, @endDate, @qualification, @note)
+      INSERT INTO employment_periods (id, employeeId, startDate, endDate, qualification, note)
+      VALUES (@id, @employeeId, @startDate, @endDate, @qualification, @note)
     `,
     );
     const insertEvent = db.prepare(
       `
       INSERT INTO employee_events (
+        id,
         employeeId,
         eventDate,
         type,
@@ -841,6 +845,7 @@ export const seedDatabase = (db: DatabaseType): void => {
         expiresAt
       )
       VALUES (
+        @id,
         @employeeId,
         @eventDate,
         @type,
@@ -856,34 +861,37 @@ export const seedDatabase = (db: DatabaseType): void => {
     const insertPatient = db.prepare(
       `
       INSERT INTO patients
-        (name, birthDate, diagnosis, note, contact, admissionDate,
+        (id, name, birthDate, diagnosis, note, contact, admissionDate,
          cognitionImpaired, mobilityImpaired, hkpCode, intensiveCare, careLevel,
          serviceScopeSource)
       VALUES
-        (@name, @birthDate, @diagnosis, @note, @contact, @admissionDate,
+        (@id, @name, @birthDate, @diagnosis, @note, @contact, @admissionDate,
          @cognitionImpaired, @mobilityImpaired, @hkpCode, @intensiveCare, @careLevel,
          'services')
     `,
     );
     const insertVisit = db.prepare(
       `
-      INSERT INTO patient_visits (patientId, visitDate, actionNeeded, comment)
-      VALUES (@patientId, @visitDate, @actionNeeded, @comment)
+      INSERT INTO patient_visits (id, patientId, visitDate, actionNeeded, comment)
+      VALUES (@id, @patientId, @visitDate, @actionNeeded, @comment)
     `,
     );
 
     employees.forEach((employee) => {
-      const employeeId = insertEmployee.run({
+      const employeeId = nextDeviceId(db, 'employees');
+      insertEmployee.run({
+        id: employeeId,
         name: employee.name,
         note: employee.note ?? null,
         weeklyHours: employee.weeklyHours,
         fte: employee.fte,
         birthDate: employee.birthDate ?? null,
         department: employee.department,
-      }).lastInsertRowid as number;
+      });
 
       employee.periods.forEach((period) => {
         insertPeriod.run({
+          id: nextDeviceId(db, 'employment_periods'),
           employeeId,
           startDate: period.startDate,
           endDate: period.endDate ?? null,
@@ -895,6 +903,7 @@ export const seedDatabase = (db: DatabaseType): void => {
       const firstPeriod = employee.periods[0];
       if (firstPeriod) {
         insertEvent.run({
+          id: nextDeviceId(db, 'employee_events'),
           employeeId,
           eventDate: firstPeriod.startDate,
           type: 'join',
@@ -910,6 +919,7 @@ export const seedDatabase = (db: DatabaseType): void => {
       const lastPeriod = employee.periods[employee.periods.length - 1];
       if (lastPeriod?.endDate) {
         insertEvent.run({
+          id: nextDeviceId(db, 'employee_events'),
           employeeId,
           eventDate: lastPeriod.endDate,
           type: 'leave',
@@ -924,6 +934,7 @@ export const seedDatabase = (db: DatabaseType): void => {
 
       employee.extraEvents?.forEach((event) => {
         insertEvent.run({
+          id: nextDeviceId(db, 'employee_events'),
           employeeId,
           eventDate: event.eventDate,
           type: event.type,
@@ -938,7 +949,9 @@ export const seedDatabase = (db: DatabaseType): void => {
     });
 
     patients.forEach((patient) => {
-      const patientId = insertPatient.run({
+      const patientId = nextDeviceId(db, 'patients');
+      insertPatient.run({
+        id: patientId,
         name: patient.name,
         birthDate: patient.birthDate ?? null,
         diagnosis: patient.diagnosis ?? null,
@@ -952,10 +965,11 @@ export const seedDatabase = (db: DatabaseType): void => {
         hkpCode: patient.hkpCode ?? null,
         intensiveCare: patient.intensiveCare ?? null,
         careLevel: patient.careLevel ?? null,
-      }).lastInsertRowid as number;
+      });
 
       patient.visits.forEach((visit) => {
         insertVisit.run({
+          id: nextDeviceId(db, 'patient_visits'),
           patientId,
           visitDate: visit.visitDate,
           actionNeeded: visit.actionNeeded ? 1 : 0,
@@ -992,6 +1006,7 @@ export const seedDatabase = (db: DatabaseType): void => {
     const insertEmployeeCompetency = db.prepare(
       `
       INSERT OR REPLACE INTO employee_competencies (
+        id,
         employeeId,
         competencyDefinitionId,
         level,
@@ -999,13 +1014,14 @@ export const seedDatabase = (db: DatabaseType): void => {
         approvedBy,
         note
       )
-      VALUES (@employeeId, @competencyDefinitionId, @level, @approvedAt, @approvedBy, @note)
+      VALUES (@id, @employeeId, @competencyDefinitionId, @level, @approvedAt, @approvedBy, @note)
     `,
     );
 
     const insertEmployeeInstruction = db.prepare(
       `
       INSERT OR REPLACE INTO employee_instructions (
+        id,
         employeeId,
         instructionDefinitionId,
         dueDate,
@@ -1013,7 +1029,7 @@ export const seedDatabase = (db: DatabaseType): void => {
         conductedBy,
         note
       )
-      VALUES (@employeeId, @instructionDefinitionId, @dueDate, @completedAt, @conductedBy, @note)
+      VALUES (@id, @employeeId, @instructionDefinitionId, @dueDate, @completedAt, @conductedBy, @note)
     `,
     );
 
@@ -1040,6 +1056,7 @@ export const seedDatabase = (db: DatabaseType): void => {
           : null;
 
         insertEmployeeCompetency.run({
+          id: nextDeviceId(db, 'employee_competencies'),
           employeeId: employeeRow.id,
           competencyDefinitionId,
           level,
@@ -1074,6 +1091,7 @@ export const seedDatabase = (db: DatabaseType): void => {
           : null;
 
         insertEmployeeInstruction.run({
+          id: nextDeviceId(db, 'employee_instructions'),
           employeeId: employeeRow.id,
           instructionDefinitionId,
           dueDate,
@@ -1095,6 +1113,7 @@ export const seedDatabase = (db: DatabaseType): void => {
           const followUp = nextDueDate(interval, employeeSeed.birthDate ?? null, completedAt);
           if (followUp) {
             insertEmployeeInstruction.run({
+              id: nextDeviceId(db, 'employee_instructions'),
               employeeId: employeeRow.id,
               instructionDefinitionId,
               dueDate: followUp,

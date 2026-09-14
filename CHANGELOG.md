@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [2.2.1]
+
+- Windows-Installation aktualisieren und vorhandene Daten sowie Anmeldung weiterverwenden.
+- Öffentliche und private GitHub-Updates mit einstellbarer Quelle und optionalem Zugangstoken nutzen.
+
 ## [2.2.0]
 
 - Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.

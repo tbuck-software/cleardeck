@@ -1,6 +1,7 @@
 import type { ServiceDefinition, ServiceType } from '../../shared/types';
 import { SERVICE_TYPES } from '../../shared/services';
 import { getDb } from '../database/connection';
+import { nextDeviceId } from '../syncRecords';
 
 type ServiceDefinitionRow = Omit<ServiceDefinition, 'active'> & { active: number };
 
@@ -51,10 +52,11 @@ export const addServiceDefinition = (input: {
   const maxSort = db.prepare('SELECT MAX(sortOrder) as mx FROM service_definitions').get() as {
     mx: number | null;
   };
+  const id = nextDeviceId(db, 'service_definitions');
   try {
     db.prepare(
-      'INSERT INTO service_definitions(name,serviceType,active,sortOrder) VALUES (?,?,1,?)',
-    ).run(name, serviceType, (maxSort.mx ?? 0) + 1);
+      'INSERT INTO service_definitions(id,name,serviceType,active,sortOrder) VALUES (?,?,?,1,?)',
+    ).run(id, name, serviceType, (maxSort.mx ?? 0) + 1);
   } catch (error) {
     if (String(error).toLowerCase().includes('unique'))
       throw new Error('Diese Leistung gibt es im Katalog bereits.');

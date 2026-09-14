@@ -22,6 +22,7 @@ import { prepareDevelopmentScenario } from './main/devScenario';
 import { configureUserDataPath } from './main/appPaths';
 import { persistEncryptedDb } from './main/database/connection';
 import { runAutoBackupIfDue } from './main/backup';
+import { isServerMode, lockServer, withConnectionLock } from './main/serverConnection';
 import { configureExternalLinkHandling } from './main/externalLinks';
 import { registerAllHandlers, initAutoUpdater } from './main/ipc';
 
@@ -93,11 +94,17 @@ app.on('ready', () => {
 let shuttingDown = false;
 
 export const shutdown = async (): Promise<void> => {
-  try {
-    await runAutoBackupIfDue();
-  } finally {
-    persistEncryptedDb();
-  }
+  await withConnectionLock(async () => {
+    if (isServerMode()) {
+      await lockServer();
+      return;
+    }
+    try {
+      await runAutoBackupIfDue();
+    } finally {
+      persistEncryptedDb();
+    }
+  });
 };
 
 app.on('window-all-closed', () => {

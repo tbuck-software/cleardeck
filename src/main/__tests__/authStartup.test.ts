@@ -44,47 +44,49 @@ describe('authentication startup with existing local data', () => {
     fs.rmSync(runtime.root, { recursive: true, force: true });
   });
 
-  it('allows setup only for a new data directory', () => {
+  it('allows setup only for a new data directory', async () => {
     registerAuthHandlers();
-    expect(invoke('app:state')).toEqual({ configured: false, unlocked: false, storageMode: 'encrypted' });
+    expect(await invoke('app:state')).toEqual({ configured: false, unlocked: false, storageMode: 'encrypted' });
   });
 
-  it.each(['', '{broken', '{}', 'null', '[]', '{"storageMode":"unknown"}'])('does not report first setup for an unreadable config: %j', (content) => {
+  it.each(['', '{broken', '{}', 'null', '[]', '{"storageMode":"unknown"}'])('does not report first setup for an unreadable config: %j', async (content) => {
     fs.writeFileSync(getConfigPath(), content);
     registerAuthHandlers();
-    expect(invoke('app:state')).toMatchObject({ unlocked: false, startupError: expect.stringContaining('config.json') });
+    expect(await invoke('app:state')).toMatchObject({ unlocked: false, startupError: expect.stringContaining('config.json') });
     expect(fs.readFileSync(getConfigPath(), 'utf8')).toBe(content);
-    expect(() => invoke('auth:register', 'new password')).toThrow(/config.json/);
-    expect(() => invoke('auth:registerPlain')).toThrow(/config.json/);
+    await expect(invoke('auth:register', 'new password')).rejects.toThrow(/config.json/);
+    await expect(invoke('auth:registerPlain')).rejects.toThrow(/config.json/);
   });
 
-  it.each(['encrypted', 'working'])('blocks setup when config is missing but the %s database exists', (kind) => {
+  it.each(['encrypted', 'working'])('blocks setup when config is missing but the %s database exists', async (kind) => {
     const dbPath = kind === 'encrypted' ? getEncryptedDbPath() : getWorkingDbPath();
     fs.writeFileSync(dbPath, 'existing data');
     registerAuthHandlers();
-    expect(invoke('app:state')).toMatchObject({ unlocked: false, startupError: expect.any(String) });
+    expect(await invoke('app:state')).toMatchObject({ unlocked: false, startupError: expect.any(String) });
     for (const channel of ['auth:register', 'auth:registerPlain']) {
-      expect(() => invoke(channel, 'new password')).toThrow(/Konfiguration|Daten/);
+      await expect(invoke(channel, 'new password')).rejects.toThrow(/Konfiguration|Daten/);
     }
     expect(fs.existsSync(getConfigPath())).toBe(false);
     expect(fs.readFileSync(dbPath, 'utf8')).toBe('existing data');
     expect(openDatabase).not.toHaveBeenCalled();
   });
 
-  it('preserves login for a valid legacy encrypted config', () => {
+  it('preserves login for a valid legacy encrypted config', async () => {
     fs.writeFileSync(getConfigPath(), JSON.stringify({
       salt: 'salt', passwordHash: 'hash', encryptedKey: 'key', keyIv: 'iv', keyTag: 'tag', configVersion: 2,
     }));
     registerAuthHandlers();
-    expect(invoke('app:state')).toEqual({ configured: true, unlocked: false, storageMode: 'encrypted' });
+    expect(await invoke('app:state')).toEqual({ configured: true, unlocked: false, storageMode: 'encrypted' });
   });
 
-  it('does not treat a permission failure as a missing config', () => {
+  it('does not treat a permission failure as a missing config', async () => {
     registerAuthHandlers();
-    vi.spyOn(fs, 'readFileSync').mockImplementationOnce(() => {
-      throw Object.assign(new Error('Access denied'), { code: 'EACCES' });
+    const read = fs.readFileSync;
+    vi.spyOn(fs, 'readFileSync').mockImplementation((file, ...args) => {
+      if (file === getConfigPath()) throw Object.assign(new Error('Access denied'), { code: 'EACCES' });
+      return read(file, ...args as [any]);
     });
-    expect(invoke('app:state')).toMatchObject({ startupError: expect.stringContaining('nicht gelesen') });
+    expect(await invoke('app:state')).toMatchObject({ startupError: expect.stringContaining('nicht gelesen') });
   });
 
   it('blocks setup if only a SQLite journal or unfinished config write remains', () => {
@@ -96,10 +98,10 @@ describe('authentication startup with existing local data', () => {
     }
   });
 
-  it('allows starting without a password for a valid plain config', () => {
+  it('allows starting without a password for a valid plain config', async () => {
     writeConfig({ storageMode: 'plain', configVersion: 3 });
     registerAuthHandlers();
-    expect(invoke('app:state')).toEqual({ configured: true, unlocked: true, storageMode: 'plain' });
+    expect(await invoke('app:state')).toEqual({ configured: true, unlocked: true, storageMode: 'plain' });
   });
 
   it('keeps the old config intact when writing the replacement is interrupted', () => {

@@ -8,6 +8,7 @@ import { localDate, requireDate } from '../../utils/calendarDate';
 import type { EmployeeEvent, EmployeeEventType, UpcomingEvent } from '../../shared/types';
 
 import { getDb } from '../database/connection';
+import { nextDeviceId } from '../syncRecords';
 
 /**
  * Parse a raw event row from the database
@@ -96,9 +97,10 @@ export const saveEvent = (input: {
     });
   } else {
     db.prepare(
-      `INSERT INTO employee_events (employeeId, eventDate, type, title, details, meta, previousValue, newValue, expiresAt)
-       VALUES (@employeeId, @eventDate, @type, @title, @details, @meta, @previousValue, @newValue, @expiresAt)`,
+      `INSERT INTO employee_events (id, employeeId, eventDate, type, title, details, meta, previousValue, newValue, expiresAt)
+       VALUES (@id, @employeeId, @eventDate, @type, @title, @details, @meta, @previousValue, @newValue, @expiresAt)`,
     ).run({
+      id: nextDeviceId(db, 'employee_events'),
       employeeId: input.employeeId,
       eventDate: input.eventDate,
       type: input.type,

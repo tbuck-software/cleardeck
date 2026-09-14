@@ -1,4 +1,9 @@
 import type { StaffImportPreview, StaffImportRow } from './shared/staffImport';
+import type { ConnectServerInput, ServerConnection } from './shared/serverConnection';
+import type {
+  SaveUpdatePreferencesInput,
+  UpdatePreferences,
+} from './shared/updatePreferences';
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   BulkCompetencyChange,
@@ -56,6 +61,12 @@ import type {
 type ExportFormat = 'csv' | 'xlsx';
 
 export type Api = {
+  getServerConnection: () => Promise<ServerConnection>;
+  connectServer: (input: ConnectServerInput) => Promise<ServerConnection>;
+  useLocalConnection: () => Promise<void>;
+  refreshServer: () => Promise<void>;
+  resolveServerConflict: (choice: 'server' | 'local') => Promise<void>;
+  setServerEditing: (editing: boolean) => Promise<void>;
   getAppState: () => Promise<AppState>;
   getAppInfo: () => Promise<AppInfo>;
   openExternal: (url: string) => Promise<boolean>;
@@ -265,6 +276,8 @@ export type Api = {
   checkUpdates: (manual?: boolean) => Promise<boolean>;
   downloadUpdate: () => Promise<boolean>;
   installUpdate: () => Promise<boolean>;
+  getUpdatePreferences: () => Promise<UpdatePreferences>;
+  saveUpdatePreferences: (input: SaveUpdatePreferencesInput) => Promise<UpdatePreferences>;
   onUpdateStatus: (cb: (status: UpdateStatus) => void) => () => void;
   getDevTables: () => Promise<Record<string, Record<string, unknown>[]>>;
   // Dashboard widgets
@@ -377,6 +390,12 @@ export type Api = {
 };
 
 const api: Api = {
+  getServerConnection: () => ipcRenderer.invoke('server:state'),
+  connectServer: (input) => ipcRenderer.invoke('server:connect', input),
+  useLocalConnection: () => ipcRenderer.invoke('server:local'),
+  refreshServer: () => ipcRenderer.invoke('server:refresh'),
+  resolveServerConflict: (choice) => ipcRenderer.invoke('server:resolve', choice),
+  setServerEditing: (editing) => ipcRenderer.invoke('server:editing', editing),
   getAppState: () => ipcRenderer.invoke('app:state'),
   getAppInfo: () => ipcRenderer.invoke('app:info'),
   openExternal: (url) => ipcRenderer.invoke('app:openExternal', url),
@@ -474,6 +493,8 @@ const api: Api = {
   checkUpdates: (manual = false) => ipcRenderer.invoke('updates:check', manual),
   downloadUpdate: () => ipcRenderer.invoke('updates:download'),
   installUpdate: () => ipcRenderer.invoke('updates:install'),
+  getUpdatePreferences: () => ipcRenderer.invoke('updates:getPreferences'),
+  saveUpdatePreferences: (input) => ipcRenderer.invoke('updates:savePreferences', input),
   onUpdateStatus: (cb) => {
     const listener = (_event: Electron.IpcRendererEvent, status: UpdateStatus) => cb(status);
     ipcRenderer.on('updates:status', listener);
