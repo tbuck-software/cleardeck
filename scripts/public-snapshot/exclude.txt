@@ -1,0 +1,18 @@
+# Paths (files or directories) removed from the public snapshot.
+scripts/public-snapshot
+
+# Customer communication and internal requirements
+docs/research/cleardeck-berufliche-anforderungen-2026-09-06.md
+docs/anforderungsdokument.md
+
+# Internal process records: token incident, private runs, release evidence
+docs/publication-cleanup.md
+docs/reviews
+
+# One-off recovery path bound to the private 2.2.0 draft
+.github/workflows/windows-recovery.yml
+.github/workflows/windows-update-smoke.yml
+scripts/publish-windows-recovery.cjs
+
+# Pending decision: rights to the template
+docs/Einarbeitung_Kompetenzmatrix.xlsx

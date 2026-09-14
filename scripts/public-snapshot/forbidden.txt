@@ -1,0 +1,11 @@
+# Extended regexes that must not appear in the public snapshot.
+Rasalas
+employee-db
+VA-HYG-003
+WhatsApp
+Visicare|Pflegecampus
+ghp_[A-Za-z0-9]{36}
+github_pat_[A-Za-z0-9_]{20,}
+BEGIN [A-Z ]*PRIVATE KEY
+/Users/|/Volumes/|C:\\Users\\
+publication-cleanup\.md|docs/reviews/|anforderungsdokument\.md
