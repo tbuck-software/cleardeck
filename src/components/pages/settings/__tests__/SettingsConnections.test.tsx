@@ -104,7 +104,8 @@ describe('Datenablage', () => {
     await waitFor(() => expect(connection.refresh).toHaveBeenCalledOnce());
     expect(changed).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: /Anmeldung ändern/ }));
-    expect(screen.getByLabelText('Serveradresse')).toHaveValue('https://example.org');
+    expect(screen.queryByLabelText('Serveradresse')).not.toBeInTheDocument();
+    expect(screen.getByText(/Server example\.org/)).toBeInTheDocument();
     expect(screen.getByLabelText('Benutzername')).toHaveValue('maria');
   });
 
@@ -154,6 +155,8 @@ describe('Datenablage', () => {
     fireEvent.click(rows[0]);
     const dialog = screen.getByRole('dialog', { name: 'Erneut anmelden' });
     expect(within(dialog).getByLabelText('Benutzername')).toHaveValue('maria');
+    expect(within(dialog).queryByLabelText('Serveradresse')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Ändern' })).not.toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Abbrechen' }));
     fireEvent.click(screen.getByRole('button', { name: /Serverversion übernehmen/ }));
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Serverversion übernehmen' }));

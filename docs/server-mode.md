@@ -92,7 +92,7 @@ Das Deaktivieren löscht die Sitzungen des Kontos. Bereits heruntergeladene loka
 
 ## Mit der Desktop-App verbinden
 
-Der Verbindungsdialog fragt `Serveradresse`, `Benutzername` und `Passwort` ab. Die Adresse wird auf den Ursprung gekürzt; entfernte Server brauchen HTTPS. Der Sperrbildschirm zeigt die gemerkte Adresse und das Konto und bietet `Offline öffnen`, `Anderer Server…` und `Zum lokalen Bestand wechseln`. Die Zugangsdaten gehören zum persönlichen ClearDeck-Konto, nicht zum PostgreSQL-Betrieb.
+Beim ersten Verbinden fragt der Dialog `Serveradresse`, `Benutzername` und `Passwort` ab. Danach tritt die Adresse zurück: `Anmeldung ändern…` zeigt sie nur als Zeile mit `Ändern`, `Erneut anmelden…` und der Sperrbildschirm nennen sie lediglich. Die Adresse wird auf den Ursprung gekürzt; entfernte Server brauchen HTTPS. Der Sperrbildschirm zeigt die gemerkte Adresse und das Konto und bietet `Offline öffnen`, `Anderer Server…` und `Zum lokalen Bestand wechseln`. Die Zugangsdaten gehören zum persönlichen ClearDeck-Konto, nicht zum PostgreSQL-Betrieb.
 
 ### Einen lokalen Bestand übertragen
 

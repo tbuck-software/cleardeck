@@ -34,7 +34,7 @@ describe('ServerConnectModal', () => {
       <ServerConnectModal variant="login" initialUrl="https://example.org" initialUsername="maria" onClose={vi.fn()} onConnected={vi.fn()} />,
     );
     const dialog = screen.getByRole('dialog', { name: 'Anmeldung ändern' });
-    expect(within(dialog).getByLabelText('Serveradresse')).toHaveValue('https://example.org');
+    expect(within(dialog).queryByLabelText('Serveradresse')).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText('Benutzername')).toHaveValue('maria');
     fireEvent.change(within(dialog).getByLabelText('Passwort'), { target: { value: 'personal-password' } });
 
@@ -56,5 +56,28 @@ describe('ServerConnectModal', () => {
 
     await waitFor(() => expect(onConnected).toHaveBeenCalledOnce());
     expect(apiMock.connection.connect.mock.calls[0][0]).not.toHaveProperty('dataKey');
+  });
+
+  it('keeps a known address behind „Ändern“ and submits the edited one', async () => {
+    render(
+      <ServerConnectModal variant="login" initialUrl="https://example.org" initialUsername="maria" onClose={vi.fn()} onConnected={vi.fn()} />,
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Anmeldung ändern' });
+    expect(within(dialog).getByText(/Server example\.org/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Ändern' }));
+    fireEvent.change(within(dialog).getByLabelText('Serveradresse'), { target: { value: 'https://other.example/' } });
+    fireEvent.change(within(dialog).getByLabelText('Passwort'), { target: { value: 'personal-password' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Anmelden' }));
+    await waitFor(() => expect(apiMock.connection.connect).toHaveBeenCalledWith(expect.objectContaining({ url: 'https://other.example' })));
+  });
+
+  it('does not offer to change the server when signing in again', () => {
+    render(
+      <ServerConnectModal variant="relogin" initialUrl="https://example.org" initialUsername="maria" onClose={vi.fn()} onConnected={vi.fn()} />,
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Erneut anmelden' });
+    expect(within(dialog).getByText(/Bei example\.org\./)).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText('Serveradresse')).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole('button', { name: 'Ändern' })).not.toBeInTheDocument();
   });
 });

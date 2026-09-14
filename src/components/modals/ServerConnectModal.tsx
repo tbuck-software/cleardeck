@@ -123,13 +123,17 @@ type ServerConnectFieldsProps = {
   form: ServerConnectForm;
   /** Focus the password when address and account are already known. */
   rememberedAccount: boolean;
-  /** The lock screen names the server in its subtitle instead. */
-  showAddress?: boolean;
+  /**
+   * `field` for first-time setup, `summary` keeps a known address out of the way
+   * behind „Ändern“, `hidden` when the surrounding screen already names the server.
+   */
+  address?: 'field' | 'summary' | 'hidden';
   usernameHint?: string;
 };
 
-export const ServerConnectFields = ({ form, rememberedAccount, showAddress = true, usernameHint }: ServerConnectFieldsProps) => {
+export const ServerConnectFields = ({ form, rememberedAccount, address = 'field', usernameHint }: ServerConnectFieldsProps) => {
   const passwordRef = useRef<HTMLInputElement>(null);
+  const [editingAddress, setEditingAddress] = useState(false);
   // Runs after the dialog's own first-field focus.
   useEffect(() => {
     if (!rememberedAccount) return;
@@ -137,30 +141,33 @@ export const ServerConnectFields = ({ form, rememberedAccount, showAddress = tru
     return () => cancelAnimationFrame(frame);
   }, [rememberedAccount]);
 
+  const addressField = (
+    <div className="field">
+      <label htmlFor="server-url">Serveradresse</label>
+      <input
+        id="server-url"
+        className="input"
+        type="url"
+        placeholder="https://cleardeck.meine-firma.de"
+        value={form.url}
+        onChange={(event) => form.setUrl(event.target.value)}
+        onBlur={() => {
+          try {
+            if (form.url.trim()) form.setUrl(normalizeServerAddress(form.url));
+          } catch {
+            // Reported on submit; keep the typed value editable.
+          }
+        }}
+        autoFocus={address === 'summary'}
+        autoCapitalize="none"
+        spellCheck={false}
+      />
+    </div>
+  );
+
   return (
     <fieldset disabled={form.busy}>
-      {showAddress && (
-        <div className="field">
-          <label htmlFor="server-url">Serveradresse</label>
-          <input
-            id="server-url"
-            className="input"
-            type="url"
-            placeholder="https://cleardeck.meine-firma.de"
-            value={form.url}
-            onChange={(event) => form.setUrl(event.target.value)}
-            onBlur={() => {
-              try {
-                if (form.url.trim()) form.setUrl(normalizeServerAddress(form.url));
-              } catch {
-                // Reported on submit; keep the typed value editable.
-              }
-            }}
-            autoCapitalize="none"
-            spellCheck={false}
-          />
-        </div>
-      )}
+      {address === 'field' && addressField}
       <div className="cd-field-grid">
         <div className="field">
           <label htmlFor="server-username">Benutzername</label>
@@ -172,6 +179,17 @@ export const ServerConnectFields = ({ form, rememberedAccount, showAddress = tru
         </div>
       </div>
       {usernameHint && <p className="cd-muted-13">{usernameHint}</p>}
+      {address === 'summary' &&
+        (editingAddress || !form.url ? (
+          addressField
+        ) : (
+          <p className="cd-muted-13 connection-server-line">
+            Server {displayServerAddress(form.url)} ·{' '}
+            <button type="button" className="cd-link" onClick={() => setEditingAddress(true)}>
+              Ändern
+            </button>
+          </p>
+        ))}
     </fieldset>
   );
 };
@@ -182,6 +200,10 @@ const ServerConnectModal = ({ onClose, ...options }: ServerConnectModalProps) =>
   const form = useServerConnectForm(options);
   if (!options.variant) return null;
   const copy = COPY[options.variant];
+  const subtitle =
+    options.variant === 'relogin' && options.initialUrl
+      ? `Bei ${displayServerAddress(options.initialUrl)}. ${copy.subtitle}`
+      : copy.subtitle;
 
   return (
     <Dialog
@@ -189,7 +211,7 @@ const ServerConnectModal = ({ onClose, ...options }: ServerConnectModalProps) =>
       manageFocus
       width={520}
       title={copy.title}
-      subtitle={copy.subtitle}
+      subtitle={subtitle}
       primaryLabel={form.busy ? 'Verbinde …' : copy.primary}
       primaryDisabled={!form.complete || form.busy}
       onPrimary={() => void form.submit()}
@@ -205,6 +227,7 @@ const ServerConnectModal = ({ onClose, ...options }: ServerConnectModalProps) =>
         <ServerConnectFields
           form={form}
           rememberedAccount={Boolean(options.initialUrl && options.initialUsername)}
+          address={options.variant === 'relogin' ? 'hidden' : options.variant === 'login' ? 'summary' : 'field'}
           usernameHint={options.variant === 'transfer' ? 'Für die Erstübertragung ist ein Administratorkonto erforderlich.' : undefined}
         />
         {/* Enter submits; the visible action lives in the dialog footer. */}

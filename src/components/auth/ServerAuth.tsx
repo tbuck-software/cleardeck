@@ -66,7 +66,7 @@ export const ServerSignIn = () => {
         </div>
         <ServerConnectFields
           form={form}
-          showAddress={false}
+          address="hidden"
           rememberedAccount={Boolean(connection?.url && connection.username)}
         />
         {shownError && (

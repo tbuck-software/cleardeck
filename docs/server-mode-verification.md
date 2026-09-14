@@ -38,7 +38,7 @@ Die überarbeiteten Verbindungen stehen unter Einstellungen → Verbindungen. Ei
 - Anmeldung abgelaufen: Erneut anmelden…, bei wartenden Änderungen zusätzlich Serverversion übernehmen…
 - Immer: Zum lokalen Bestand wechseln… mit Hinweis auf wartende Änderungen
 
-Der Verbindungsdialog fragt Serveradresse, Benutzername und Passwort in einem Schritt ab und prüft die Adresse vor dem Serverkontakt. Ein Datenschlüssel wird nicht abgefragt. Der Sperrbildschirm im Serverbetrieb nennt Server und wartende Änderungen, fragt nur Benutzername und Passwort ab und bietet darunter Offline öffnen (nur für das gemerkte Konto), Anderer Server… und Zum lokalen Bestand wechseln. Die lokale Bestandsübertragung weist auf das erforderliche Admin-Konto hin; ein Nicht-Admin darf vor dem Datenupload nicht initialisieren.
+Beim ersten Verbinden fragt der Dialog Serveradresse, Benutzername und Passwort in einem Schritt ab und prüft die Adresse vor dem Serverkontakt. Bei Anmeldung ändern… steht die bekannte Adresse nur als Zeile mit Ändern; Erneut anmelden… zeigt kein Adressfeld. Ein Datenschlüssel wird nicht abgefragt. Der Sperrbildschirm im Serverbetrieb nennt Server und wartende Änderungen, fragt nur Benutzername und Passwort ab und bietet darunter Offline öffnen (nur für das gemerkte Konto), Anderer Server… und Zum lokalen Bestand wechseln. Die lokale Bestandsübertragung weist auf das erforderliche Admin-Konto hin; ein Nicht-Admin darf vor dem Datenupload nicht initialisieren.
 
 ## Historische Evidenz des v1-Snapshot-Servers
 
