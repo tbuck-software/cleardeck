@@ -18,7 +18,7 @@ Die App-Administration umfasst derzeit das Anlegen, Deaktivieren und Ändern von
 
 Die [Bereinigung vor der Veröffentlichung](publication-cleanup.md) dokumentiert die abgeschlossene Entfernung privater Originalunterlagen, die Token-Bereinigung und die historischen Windows-Prüfungen. Die dort verlinkten Serveraufnahmen und der alte Serverprüfbericht beschreiben den v1-Snapshot-Stand vom 13.09.2026. Sie belegen die neue Row-Transaction-API nicht.
 
-Das Repository bleibt privat. Es gibt in diesem Arbeitsstand keine Umbenennung, keine öffentliche Veröffentlichung und keinen neuen Release. Die Änderung der Sichtbarkeit und ein späterer Release bleiben der letzte Schritt des Eigentümers.
+Das Repository bleibt privat. Es liegt seit dem 14.09.2026 unter `tbuck-software/cleardeck`. Es gibt in diesem Arbeitsstand keine Umbenennung des Produkts, keine öffentliche Veröffentlichung und keinen neuen Release. Die Änderung der Sichtbarkeit und ein späterer Release bleiben der letzte Schritt des Eigentümers.
 
 ## Offene Freigabegates
 
@@ -172,7 +172,7 @@ Die Reihenfolge danach ist fest:
 
 1. Die aktuellen Test- und Restore-Ergebnisse werden eingetragen.
 2. Die Dokumentation wird gegen das tatsächlich ausgelieferte Protokoll-2- und Compose-Setup geprüft.
-3. Der Eigentümer entscheidet über einen Release und eine mögliche Umbenennung.
+3. Der Eigentümer entscheidet über einen Release und eine mögliche Umbenennung des Produkts.
 4. Der Eigentümer veröffentlicht das Repository zuletzt selbst.
 
 Es gibt keinen automatischen Schritt, der einen Hosted-Dienst bereitstellt, das Repository umbenennt, es öffentlich schaltet oder einen Release veröffentlicht.

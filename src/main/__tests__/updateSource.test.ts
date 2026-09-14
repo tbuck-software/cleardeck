@@ -8,7 +8,7 @@ describe('resolveUpdateSource', () => {
       resolveUpdateSource({
         updateFeedUrl: 'https://updates.example.com',
         ghToken: 'token',
-        packagedConfig: { provider: 'github', owner: 'Rasalas', repo: 'employee-db', private: true },
+        packagedConfig: { provider: 'github', owner: 'tbuck-software', repo: 'cleardeck', private: true },
       }),
     ).toEqual({
       kind: 'generic',
@@ -20,12 +20,12 @@ describe('resolveUpdateSource', () => {
     expect(
       resolveUpdateSource({
         ghToken: 'token',
-        packagedConfig: { provider: 'github', owner: 'Rasalas', repo: 'employee-db', private: true },
+        packagedConfig: { provider: 'github', owner: 'tbuck-software', repo: 'cleardeck', private: true },
       }),
     ).toEqual({
       kind: 'github',
-      owner: 'Rasalas',
-      repo: 'employee-db',
+      owner: 'tbuck-software',
+      repo: 'cleardeck',
       private: true,
       token: 'token',
     });
@@ -35,7 +35,7 @@ describe('resolveUpdateSource', () => {
     expect(
       resolveUpdateSource({
         ghToken: 'ghp_public-feed-must-not-use-this-token',
-        packagedConfig: { provider: 'github', owner: 'Rasalas', repo: 'employee-db', private: false },
+        packagedConfig: { provider: 'github', owner: 'tbuck-software', repo: 'cleardeck', private: false },
       }),
     ).toEqual({ kind: 'packaged' });
   });
@@ -44,7 +44,7 @@ describe('resolveUpdateSource', () => {
     expect(
       resolveUpdateSource({
         ghToken: 'ghp_public-feed-must-not-use-this-token',
-        packagedConfig: { provider: 'github', owner: 'Rasalas', repo: 'employee-db' },
+        packagedConfig: { provider: 'github', owner: 'tbuck-software', repo: 'cleardeck' },
       }),
     ).toEqual({ kind: 'packaged' });
   });
@@ -52,7 +52,7 @@ describe('resolveUpdateSource', () => {
   it('faellt auf packaged config zurueck, wenn sie ohne Token nutzbar ist', () => {
     expect(
       resolveUpdateSource({
-        packagedConfig: { provider: 'github', owner: 'Rasalas', repo: 'employee-db', private: false },
+        packagedConfig: { provider: 'github', owner: 'tbuck-software', repo: 'cleardeck', private: false },
       }),
     ).toEqual({ kind: 'packaged' });
   });
@@ -60,7 +60,7 @@ describe('resolveUpdateSource', () => {
   it('meldet private GitHub Releases ohne Token als manuellen Update-Fall', () => {
     expect(
       resolveUpdateSource({
-        packagedConfig: { provider: 'github', owner: 'Rasalas', repo: 'employee-db', private: true },
+        packagedConfig: { provider: 'github', owner: 'tbuck-software', repo: 'cleardeck', private: true },
       }),
     ).toEqual({
       kind: 'unavailable',
@@ -72,12 +72,12 @@ describe('resolveUpdateSource', () => {
     expect(
       resolveUpdateSource({
         ghToken: 'private-runtime-token',
-        packagedConfig: { provider: 'github', owner: 'Rasalas', repo: 'employee-db', private: true },
+        packagedConfig: { provider: 'github', owner: 'tbuck-software', repo: 'cleardeck', private: true },
       }),
     ).toEqual({
       kind: 'github',
-      owner: 'Rasalas',
-      repo: 'employee-db',
+      owner: 'tbuck-software',
+      repo: 'cleardeck',
       private: true,
       token: 'private-runtime-token',
     });
@@ -88,7 +88,7 @@ describe('resolveUpdateSource', () => {
       resolveUpdateSource({
         ghToken: 'inherited-environment-token',
         runtimeCredentials: { owner: 'Someone', repo: 'renamed-app' },
-        packagedConfig: { provider: 'github', owner: 'Rasalas', repo: 'employee-db', private: false },
+        packagedConfig: { provider: 'github', owner: 'tbuck-software', repo: 'cleardeck', private: false },
       }),
     ).toEqual({ kind: 'github', owner: 'Someone', repo: 'renamed-app', private: false });
   });
@@ -98,7 +98,7 @@ describe('resolveUpdateSource', () => {
       resolveUpdateSource({
         ghToken: 'inherited-environment-token',
         runtimeCredentials: { owner: 'Someone', repo: 'renamed-app', token: 'local-token' },
-        packagedConfig: { provider: 'github', owner: 'Rasalas', repo: 'employee-db', private: false },
+        packagedConfig: { provider: 'github', owner: 'tbuck-software', repo: 'cleardeck', private: false },
       }),
     ).toEqual({
       kind: 'github',
@@ -114,7 +114,7 @@ describe('resolveUpdateSource', () => {
       resolveUpdateSource({
         ghToken: 'inherited-environment-token',
         runtimeCredentials: { owner: 'Someone', repo: 'renamed-app' },
-        packagedConfig: { provider: 'github', owner: 'Rasalas', repo: 'employee-db', private: true },
+        packagedConfig: { provider: 'github', owner: 'tbuck-software', repo: 'cleardeck', private: true },
       }),
     ).toEqual({ kind: 'github', owner: 'Someone', repo: 'renamed-app', private: false });
   });

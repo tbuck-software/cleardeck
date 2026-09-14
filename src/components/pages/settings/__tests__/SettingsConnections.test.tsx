@@ -40,7 +40,7 @@ beforeEach(() => {
   connection.get.mockResolvedValue({ mode: 'local', connected: false });
   connection.connect.mockResolvedValue({ mode: 'server', connected: true });
   connection.resolveConflict.mockResolvedValue(undefined);
-  updates.getPreferences.mockResolvedValue({ repositoryUrl: 'https://github.com/Rasalas/employee-db', hasToken: false });
+  updates.getPreferences.mockResolvedValue({ repositoryUrl: 'https://github.com/tbuck-software/cleardeck', hasToken: false });
 });
 
 describe('Datenablage', () => {
@@ -226,17 +226,17 @@ describe('Updates', () => {
   });
 
   it('keeps a saved token when the field stays empty and removes it explicitly', async () => {
-    updates.getPreferences.mockResolvedValue({ repositoryUrl: 'https://github.com/Rasalas/employee-db', hasToken: true });
-    updates.savePreferences.mockResolvedValue({ repositoryUrl: 'https://github.com/Rasalas/employee-db', hasToken: true });
+    updates.getPreferences.mockResolvedValue({ repositoryUrl: 'https://github.com/tbuck-software/cleardeck', hasToken: true });
+    updates.savePreferences.mockResolvedValue({ repositoryUrl: 'https://github.com/tbuck-software/cleardeck', hasToken: true });
     renderPage();
     let dialog = await openUpdateSource();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Speichern' }));
-    await waitFor(() => expect(updates.savePreferences).toHaveBeenCalledWith({ repositoryUrl: 'https://github.com/Rasalas/employee-db' }));
+    await waitFor(() => expect(updates.savePreferences).toHaveBeenCalledWith({ repositoryUrl: 'https://github.com/tbuck-software/cleardeck' }));
 
-    updates.savePreferences.mockResolvedValue({ repositoryUrl: 'https://github.com/Rasalas/employee-db', hasToken: false });
+    updates.savePreferences.mockResolvedValue({ repositoryUrl: 'https://github.com/tbuck-software/cleardeck', hasToken: false });
     dialog = await openUpdateSource();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Token entfernen' }));
-    await waitFor(() => expect(updates.savePreferences).toHaveBeenLastCalledWith({ repositoryUrl: 'https://github.com/Rasalas/employee-db', token: '' }));
+    await waitFor(() => expect(updates.savePreferences).toHaveBeenLastCalledWith({ repositoryUrl: 'https://github.com/tbuck-software/cleardeck', token: '' }));
   });
 
   it('shows cleaned API errors inside the dialog', async () => {

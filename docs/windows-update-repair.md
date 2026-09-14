@@ -28,7 +28,7 @@ Die heruntergeladene EXE stimmt mit der SHA-512 im Manifest und der SHA-256 aus 
 
 ## Windows-Prüfung
 
-[Erfolgreicher GitHub-Actions-Lauf](https://github.com/Rasalas/employee-db/actions/runs/33978923134) auf einer temporären `windows-latest`-VM:
+[Erfolgreicher GitHub-Actions-Lauf](https://github.com/tbuck-software/cleardeck/actions/runs/33978923134) auf einer temporären `windows-latest`-VM:
 
 1. Originalen Installer 1.7.1 aus dem privaten Release installieren.
 2. Synthetische gesperrte Konfiguration und Datenbankdatei unter `%APPDATA%\ClearDeck\data` ablegen und ihre Hashes erfassen.
@@ -51,7 +51,7 @@ Diese Quellcodeänderungen sind von der sofort wirksamen Metadatenreparatur getr
 
 ## Ergänzter Test des echten alten Update-Knopfs
 
-[Erfolgreicher UI-Test für 1.7.1 und 1.7.2](https://github.com/Rasalas/employee-db/actions/runs/33982051559) auf jeweils einer eigenen GitHub-Windows-VM:
+[Erfolgreicher UI-Test für 1.7.1 und 1.7.2](https://github.com/tbuck-software/cleardeck/actions/runs/33982051559) auf jeweils einer eigenen GitHub-Windows-VM:
 
 1. Nur den originalen alten Installer herunterladen und installieren.
 2. Die alte App über ihre sichtbare Oberfläche mit einem synthetischen Testpasswort einrichten.

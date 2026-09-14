@@ -33,7 +33,7 @@ const setupName = `ClearDeck-${version}-Setup.exe`;
 const packageName = `cleardeck-${version}-full.nupkg`;
 const setupBytes = Buffer.from('Windows setup fixture');
 const setupSha512 = crypto.createHash('sha512').update(setupBytes).digest('base64');
-const appUpdate = 'provider: github\nowner: Rasalas\nrepo: employee-db\nprivate: false\n';
+const appUpdate = 'provider: github\nowner: tbuck-software\nrepo: cleardeck\nprivate: false\n';
 
 const zip = (source: string, output: string) =>
   execFileSync('zip', ['-qr', output, '.'], { cwd: source, stdio: 'ignore' });
@@ -108,7 +108,7 @@ it('uses the actual private GitHub provider against a local fixture', async () =
 
   expect(result.provider).toBe('github');
   expect(result.private).toBe(true);
-  expect(result.artifactUrl).toContain(`/api/v3/repos/Rasalas/employee-db/releases/assets/${setupName}`);
+  expect(result.artifactUrl).toContain(`/api/v3/repos/tbuck-software/cleardeck/releases/assets/${setupName}`);
   expect(result.releaseNotes).toEqual(manifest().releaseNotes);
   expect(result.requests).toHaveLength(3);
   expect(result.requests.every((request: { authorization: boolean }) => request.authorization)).toBe(true);
@@ -151,8 +151,8 @@ it('verifies the portable ZIP and Squirrel package app.asar payloads', async () 
   const result = await verifyWindowsRecovery(artifactRoot, version);
   expect(result.bundle.portable.updateConfig).toEqual({
     provider: 'github',
-    owner: 'Rasalas',
-    repo: 'employee-db',
+    owner: 'tbuck-software',
+    repo: 'cleardeck',
     private: false,
   });
   expect(result.bundle.portable.appAsar.sha256).toBe(result.bundle.squirrel.appAsar.sha256);

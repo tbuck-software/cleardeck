@@ -195,13 +195,13 @@ describe('update lifecycle', () => {
     const previousToken = process.env.GH_TOKEN;
     process.env.GH_TOKEN = 'stale-environment-token';
     mocks.getPackagedUpdateConfig.mockReturnValue({
-      provider: 'github', owner: 'Rasalas', repo: 'employee-db', private: false,
+      provider: 'github', owner: 'tbuck-software', repo: 'cleardeck', private: false,
     });
     try {
       const updater = await import('../updater');
       updater.initAutoUpdater(window);
       expect(mocks.updater.setFeedURL).toHaveBeenCalledWith({
-        provider: 'github', owner: 'Rasalas', repo: 'employee-db', private: false, requestHeaders: {},
+        provider: 'github', owner: 'tbuck-software', repo: 'cleardeck', private: false, requestHeaders: {},
       });
     } finally {
       if (previousToken === undefined) delete process.env.GH_TOKEN;

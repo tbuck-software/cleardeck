@@ -4,7 +4,7 @@ import { configureExternalLinkHandling, shouldOpenExternally } from '../external
 
 describe('shouldOpenExternally', () => {
   it('erkennt externe http(s)-links gegenueber der lokalen app-origin', () => {
-    expect(shouldOpenExternally('https://github.com/Rasalas/employee-db', 'http://localhost:3000')).toBe(true);
+    expect(shouldOpenExternally('https://github.com/tbuck-software/cleardeck', 'http://localhost:3000')).toBe(true);
     expect(shouldOpenExternally('http://localhost:3000/settings', 'http://localhost:3000')).toBe(false);
   });
 
@@ -31,8 +31,8 @@ describe('configureExternalLinkHandling', () => {
 
     configureExternalLinkHandling(window as never, 'http://localhost:3000', openExternal);
 
-    expect(openHandler?.({ url: 'https://github.com/Rasalas/employee-db' })).toEqual({ action: 'deny' });
-    expect(openExternal).toHaveBeenCalledWith('https://github.com/Rasalas/employee-db');
+    expect(openHandler?.({ url: 'https://github.com/tbuck-software/cleardeck' })).toEqual({ action: 'deny' });
+    expect(openExternal).toHaveBeenCalledWith('https://github.com/tbuck-software/cleardeck');
   });
 
   it('blockiert same-window-navigation zu externen links und laesst interne in ruhe', () => {
@@ -51,9 +51,9 @@ describe('configureExternalLinkHandling', () => {
 
     configureExternalLinkHandling(window as never, 'http://localhost:3000', openExternal);
 
-    listeners.get('will-navigate')?.({ preventDefault }, 'https://github.com/Rasalas/employee-db');
+    listeners.get('will-navigate')?.({ preventDefault }, 'https://github.com/tbuck-software/cleardeck');
     expect(preventDefault).toHaveBeenCalledTimes(1);
-    expect(openExternal).toHaveBeenCalledWith('https://github.com/Rasalas/employee-db');
+    expect(openExternal).toHaveBeenCalledWith('https://github.com/tbuck-software/cleardeck');
 
     listeners.get('will-navigate')?.({ preventDefault }, 'http://localhost:3000/settings');
     expect(preventDefault).toHaveBeenCalledTimes(1);

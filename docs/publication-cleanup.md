@@ -1,6 +1,6 @@
 # Bereinigung vor der Veröffentlichung
 
-Stand: 14.09.2026. Das Repository bleibt privat. Es gibt keine Umbenennung, keine öffentliche Veröffentlichung und keinen neuen Release. Die Änderung der Sichtbarkeit nimmt der Eigentümer zuletzt selbst vor, nachdem die verbliebenen Schritte abgeschlossen sind.
+Stand: 14.09.2026. Das Repository bleibt privat. Am 14.09.2026 wurde es von `Rasalas/employee-db` nach `tbuck-software/cleardeck` übertragen; der Produktname ClearDeck bleibt. Es gibt keine öffentliche Veröffentlichung und keinen neuen Release. Die Änderung der Sichtbarkeit nimmt der Eigentümer zuletzt selbst vor, nachdem die verbliebenen Schritte abgeschlossen sind.
 
 ## Inhalt und Build
 
@@ -13,9 +13,9 @@ Stand: 14.09.2026. Das Repository bleibt privat. Es gibt keine Umbenennung, kein
 
 ## Windows-Updates
 
-Die Korrektur ist Teil des gemeinsamen [PRs #45](https://github.com/Rasalas/employee-db/pull/45), der als Ready markiert ist. Der zusätzliche Draft #46 wurde nach dem Zusammenführen geschlossen. Die Windows-Prüfung vom 13.09.2026 bezog sich auf den damaligen UI- und v1-Snapshot-Stand des Commits d3309bf. Sie prüft den aktuellen Protokoll-2-Stand nicht. Version 2.2.1 enthält unter Einstellungen → Verbindungen → Update-Quelle ändern… ein Feld für den GitHub-Link, vorbelegt mit `https://github.com/Rasalas/employee-db`. Öffentliche Releases benötigen keinen Token. Für private Releases kann auf dem jeweiligen Gerät ein persönlicher Token mit Leserechten geschützt gespeichert werden. Ein abgewiesener Token erlaubt einen erneuten Versuch ohne Anmeldung. Ein gemeinsames Geheimnis wird nicht mehr im Paket ausgeliefert.
+Die Korrektur ist Teil des gemeinsamen [PRs #45](https://github.com/tbuck-software/cleardeck/pull/45), der als Ready markiert ist. Der zusätzliche Draft #46 wurde nach dem Zusammenführen geschlossen. Die Windows-Prüfung vom 13.09.2026 bezog sich auf den damaligen UI- und v1-Snapshot-Stand des Commits d3309bf. Sie prüft den aktuellen Protokoll-2-Stand nicht. Version 2.2.1 enthält unter Einstellungen → Verbindungen → Update-Quelle ändern… ein Feld für den GitHub-Link, vorbelegt mit `https://github.com/tbuck-software/cleardeck`. Öffentliche Releases benötigen keinen Token. Für private Releases kann auf dem jeweiligen Gerät ein persönlicher Token mit Leserechten geschützt gespeichert werden. Ein abgewiesener Token erlaubt einen erneuten Versuch ohne Anmeldung. Ein gemeinsames Geheimnis wird nicht mehr im Paket ausgeliefert.
 
-GitHub bleibt der Downloadort. Ein separates öffentliches Repository oder ein zusätzlicher Webserver ist dafür nicht erforderlich. Über eine Umbenennung und die spätere Veröffentlichung entscheidet weiterhin ausschließlich der Eigentümer.
+GitHub bleibt der Downloadort. Ein separates öffentliches Repository oder ein zusätzlicher Webserver ist dafür nicht erforderlich. Über eine Umbenennung des Produkts und die spätere Veröffentlichung entscheidet weiterhin ausschließlich der Eigentümer.
 
 Bestehende Windows-Installationen benötigen einmalig den korrigierten Installer über ihrer bisherigen Version. Die ursprünglichen Pakete enthalten den inzwischen zur Sperrung eingereichten Token im Klartext innerhalb von `app.asar`. Verbliebene lokale Paketkopien bleiben für die Upgrade-Prüfung erhalten.
 

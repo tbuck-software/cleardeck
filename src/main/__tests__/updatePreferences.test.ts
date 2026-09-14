@@ -81,7 +81,7 @@ describe('update preferences', () => {
     saveUpdatePreferences({ repositoryUrl: DEFAULT_UPDATE_REPOSITORY_URL, token });
 
     expect(
-      saveUpdatePreferences({ repositoryUrl: 'https://github.com/Rasalas/employee-db' }),
+      saveUpdatePreferences({ repositoryUrl: 'https://github.com/tbuck-software/cleardeck' }),
     ).toEqual({ repositoryUrl: DEFAULT_UPDATE_REPOSITORY_URL, hasToken: true });
 
     expect(
@@ -102,7 +102,7 @@ describe('update preferences', () => {
     expect(
       saveUpdatePreferences({ repositoryUrl: DEFAULT_UPDATE_REPOSITORY_URL, token: '' }),
     ).toEqual({ repositoryUrl: DEFAULT_UPDATE_REPOSITORY_URL, hasToken: false });
-    expect(readUpdateCredentials()).toEqual({ owner: 'Rasalas', repo: 'employee-db' });
+    expect(readUpdateCredentials()).toEqual({ owner: 'tbuck-software', repo: 'cleardeck' });
   });
 
   it('does not fall back to plaintext storage when safeStorage is unavailable', () => {
@@ -125,19 +125,19 @@ describe('update preferences', () => {
   });
 
   it('accepts only a direct HTTPS github.com repository URL', () => {
-    expect(parseGitHubRepositoryUrl('https://github.com/Rasalas/employee-db.git/')).toEqual({
-      owner: 'Rasalas',
-      repo: 'employee-db',
+    expect(parseGitHubRepositoryUrl('https://github.com/tbuck-software/cleardeck.git/')).toEqual({
+      owner: 'tbuck-software',
+      repo: 'cleardeck',
     });
 
     for (const repositoryUrl of [
-      'http://github.com/Rasalas/employee-db',
-      'https://github.com.evil.example/Rasalas/employee-db',
-      'https://attacker@github.com/Rasalas/employee-db',
-      'https://github.com/Rasalas/employee-db?download=1',
-      'https://github.com/Rasalas/employee-db/../other',
-      'https://github.com/Rasalas/employee-db/issue/1',
-      'https://github.com/Rasalas/employee db',
+      'http://github.com/tbuck-software/cleardeck',
+      'https://github.com.evil.example/tbuck-software/cleardeck',
+      'https://attacker@github.com/tbuck-software/cleardeck',
+      'https://github.com/tbuck-software/cleardeck?download=1',
+      'https://github.com/tbuck-software/cleardeck/../other',
+      'https://github.com/tbuck-software/cleardeck/issue/1',
+      'https://github.com/tbuck-software/clear deck',
     ]) {
       expect(() => parseGitHubRepositoryUrl(repositoryUrl)).toThrow();
     }
