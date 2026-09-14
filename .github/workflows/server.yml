@@ -10,7 +10,7 @@ on:
       - "package*.json"
       - "*config*"
       - ".eslintrc*"
-      - ".github/workflows/server.yml"
+      - ".github/workflows/**"
   push:
     # Feature branches are checked by pull_request; do not run both events.
     branches: [main]
@@ -22,7 +22,7 @@ on:
       - "package*.json"
       - "*config*"
       - ".eslintrc*"
-      - ".github/workflows/server.yml"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
