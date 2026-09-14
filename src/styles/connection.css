@@ -18,3 +18,5 @@
 .connection-consent { align-items: flex-start; line-height: 1.45; }
 .connection-consent .dot { margin-top: 2px; }
 .connection-auth-option { margin-top: 12px; }
+.connection-auth-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
+.connection-status-block { display: flex; flex-direction: column; gap: 6px; }

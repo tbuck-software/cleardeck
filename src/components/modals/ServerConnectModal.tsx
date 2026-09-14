@@ -3,7 +3,7 @@ import Dialog from '../ui/Dialog';
 import api from '../../services/api';
 import { userFacingErrorMessage } from '../../utils/errorMessage';
 
-export type ServerConnectVariant = 'open' | 'transfer' | 'login';
+export type ServerConnectVariant = 'open' | 'transfer' | 'login' | 'relogin';
 
 const COPY: Record<ServerConnectVariant, { title: string; subtitle: string; primary: string }> = {
   open: {
@@ -14,25 +14,19 @@ const COPY: Record<ServerConnectVariant, { title: string; subtitle: string; prim
   transfer: {
     title: 'Lokalen Bestand übertragen',
     subtitle:
-      'Der gesamte lokale Bestand einschließlich Klientendaten wird auf einen leeren Server übertragen. Die lokale Kopie bleibt erhalten. Dafür ist ein Administratorkonto erforderlich.',
+      'Der gesamte lokale Bestand einschließlich Klientendaten wird auf einen leeren Server übertragen. Die lokale Kopie bleibt erhalten.',
     primary: 'Übertragen und verbinden',
   },
   login: {
     title: 'Anmeldung ändern',
-    subtitle: '',
+    subtitle: 'Mit einem anderen Konto oder Server anmelden.',
     primary: 'Anmelden',
   },
-};
-
-type FormOptions = {
-  variant: ServerConnectVariant | null;
-  initialUrl?: string;
-  initialUsername?: string;
-  onConnected: () => void;
-};
-
-type SubmitOptions = {
-  offline?: boolean;
+  relogin: {
+    title: 'Erneut anmelden',
+    subtitle: 'Wartende Änderungen bleiben erhalten und werden nach der Anmeldung übertragen.',
+    primary: 'Anmelden',
+  },
 };
 
 export const normalizeServerAddress = (value: string): string => {
@@ -42,7 +36,7 @@ export const normalizeServerAddress = (value: string): string => {
   try {
     address = new URL(input);
   } catch {
-    throw new Error('Bitte eine gültige Serveradresse eingeben.');
+    throw new Error('Bitte eine gültige Serveradresse eingeben, zum Beispiel https://cleardeck.meine-firma.de.');
   }
   if (
     address.username ||
@@ -60,72 +54,55 @@ export const normalizeServerAddress = (value: string): string => {
   return address.origin;
 };
 
-const displayServerAddress = (value: string): string =>
-  value.replace(/^https?:\/\//, '').replace(/\/$/, '');
+export const displayServerAddress = (value?: string): string =>
+  (value ?? '').replace(/^https?:\/\//, '').replace(/\/$/, '');
 
-/** One connect attempt; secrets are reset whenever the form (re)opens. */
+type FormOptions = {
+  variant: ServerConnectVariant | null;
+  initialUrl?: string;
+  initialUsername?: string;
+  onConnected: () => void;
+};
+
+/** One connect attempt; the password is reset whenever the form (re)opens. */
 export const useServerConnectForm = ({ variant, initialUrl = '', initialUsername = '', onConnected }: FormOptions) => {
-  const [url, setUrlState] = useState('');
+  const [url, setUrl] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [addressOpen, setAddressOpen] = useState(false);
-  const [addressDraft, setAddressDraft] = useState('');
-  const [addressError, setAddressError] = useState<string | null>(null);
-  const transfer = variant === 'transfer';
 
   useEffect(() => {
     if (!variant) return;
-    setUrlState(initialUrl);
+    setUrl(initialUrl);
     setUsername(initialUsername);
     setPassword('');
     setError(null);
-    setAddressOpen(false);
-    setAddressDraft(initialUrl);
-    setAddressError(null);
   }, [variant, initialUrl, initialUsername]);
 
   const complete = Boolean(url.trim() && username.trim() && password);
 
-  const openAddressEditor = () => {
-    setAddressDraft(url);
-    setAddressError(null);
-    setAddressOpen(true);
-  };
-
-  const cancelAddressEditor = () => {
-    setAddressOpen(false);
-    setAddressError(null);
-  };
-
-  const applyAddressEditor = (): boolean => {
-    try {
-      const normalized = normalizeServerAddress(addressDraft);
-      if (normalized !== url) {
-        setPassword('');
-        setError(null);
-      }
-      setUrlState(normalized);
-      setAddressOpen(false);
-      setAddressError(null);
-      return true;
-    } catch (failure) {
-      setAddressError(failure instanceof Error ? failure.message : 'Die Serveradresse ist ungültig.');
-      return false;
+  const submit = async ({ offline = false } = {}) => {
+    if (busy) return;
+    if (!complete) {
+      setError(offline ? 'Bitte das Passwort deiner letzten Online-Anmeldung eingeben.' : 'Bitte alle Felder ausfüllen.');
+      return;
     }
-  };
-
-  const submit = async ({ offline = false }: SubmitOptions = {}) => {
-    if (!complete || busy) return;
+    let address: string;
+    try {
+      address = normalizeServerAddress(url);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Die Serveradresse ist ungültig.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
       await api.connection.connect({
-        url: url.trim(),
+        url: address,
         username: username.trim(),
         password,
-        initialize: transfer,
+        initialize: variant === 'transfer',
         ...(offline ? { offline: true } : {}),
       });
       onConnected();
@@ -137,33 +114,23 @@ export const useServerConnectForm = ({ variant, initialUrl = '', initialUsername
     }
   };
 
-  return {
-    transfer,
-    url,
-    setUrl: setUrlState,
-    username,
-    setUsername,
-    password,
-    setPassword,
-    busy,
-    error,
-    complete,
-    submit,
-    addressOpen,
-    addressDraft,
-    setAddressDraft,
-    addressError,
-    openAddressEditor,
-    cancelAddressEditor,
-    applyAddressEditor,
-  };
+  return { url, setUrl, username, setUsername, password, setPassword, busy, error, setError, complete, submit };
 };
 
 export type ServerConnectForm = ReturnType<typeof useServerConnectForm>;
 
-export const ServerConnectFields = ({ form, rememberedAccount }: { form: ServerConnectForm; rememberedAccount: boolean }) => {
+type ServerConnectFieldsProps = {
+  form: ServerConnectForm;
+  /** Focus the password when address and account are already known. */
+  rememberedAccount: boolean;
+  /** The lock screen names the server in its subtitle instead. */
+  showAddress?: boolean;
+  usernameHint?: string;
+};
+
+export const ServerConnectFields = ({ form, rememberedAccount, showAddress = true, usernameHint }: ServerConnectFieldsProps) => {
   const passwordRef = useRef<HTMLInputElement>(null);
-  // Runs after the dialog's own first-field focus, so a known account lands on the password.
+  // Runs after the dialog's own first-field focus.
   useEffect(() => {
     if (!rememberedAccount) return;
     const frame = requestAnimationFrame(() => passwordRef.current?.focus());
@@ -172,6 +139,28 @@ export const ServerConnectFields = ({ form, rememberedAccount }: { form: ServerC
 
   return (
     <fieldset disabled={form.busy}>
+      {showAddress && (
+        <div className="field">
+          <label htmlFor="server-url">Serveradresse</label>
+          <input
+            id="server-url"
+            className="input"
+            type="url"
+            placeholder="https://cleardeck.meine-firma.de"
+            value={form.url}
+            onChange={(event) => form.setUrl(event.target.value)}
+            onBlur={() => {
+              try {
+                if (form.url.trim()) form.setUrl(normalizeServerAddress(form.url));
+              } catch {
+                // Reported on submit; keep the typed value editable.
+              }
+            }}
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+        </div>
+      )}
       <div className="cd-field-grid">
         <div className="field">
           <label htmlFor="server-username">Benutzername</label>
@@ -182,57 +171,8 @@ export const ServerConnectFields = ({ form, rememberedAccount }: { form: ServerC
           <input id="server-password" ref={passwordRef} className="input" type="password" autoComplete="current-password" value={form.password} onChange={(event) => form.setPassword(event.target.value)} />
         </div>
       </div>
-      <div className="connection-status" style={{ justifyContent: 'space-between', gap: 10 }}>
-        <span className="cd-muted-14" title={form.url}>
-          {form.url ? displayServerAddress(form.url) : 'Noch nicht eingerichtet'}
-        </span>
-        <button type="button" className="cd-link" onClick={form.openAddressEditor}>
-          {form.url ? 'Server ändern…' : 'Server einrichten…'}
-        </button>
-      </div>
+      {usernameHint && <p className="cd-muted-13">{usernameHint}</p>}
     </fieldset>
-  );
-};
-
-export const ServerAddressDialog = ({ form }: { form: ServerConnectForm }) => {
-  if (!form.addressOpen) return null;
-  const hasAddress = Boolean(form.url.trim());
-  const title = hasAddress ? 'Serveradresse ändern' : 'Server einrichten';
-  return (
-    <Dialog
-      open
-      manageFocus
-      width={520}
-      title={title}
-      primaryLabel="Übernehmen"
-      primaryDisabled={!form.addressDraft.trim()}
-      onPrimary={() => form.applyAddressEditor()}
-      onClose={form.cancelAddressEditor}
-    >
-      <form
-        className="connection-fields"
-        onSubmit={(event) => {
-          event.preventDefault();
-          form.applyAddressEditor();
-        }}
-      >
-        <div className="field">
-          <label htmlFor="server-address-draft">Serveradresse</label>
-          <input
-            id="server-address-draft"
-            className="input"
-            type="url"
-            placeholder="https://cleardeck.meine-firma.de"
-            value={form.addressDraft}
-            onChange={(event) => form.setAddressDraft(event.target.value)}
-            autoCapitalize="none"
-            spellCheck={false}
-          />
-        </div>
-        {form.addressError && <p role="alert" className="cd-notice cd-notice-bad">{form.addressError}</p>}
-        <button type="submit" hidden />
-      </form>
-    </Dialog>
   );
 };
 
@@ -241,7 +181,6 @@ type ServerConnectModalProps = FormOptions & { onClose: () => void };
 const ServerConnectModal = ({ onClose, ...options }: ServerConnectModalProps) => {
   const form = useServerConnectForm(options);
   if (!options.variant) return null;
-  if (form.addressOpen) return <ServerAddressDialog form={form} />;
   const copy = COPY[options.variant];
 
   return (
@@ -263,7 +202,11 @@ const ServerConnectModal = ({ onClose, ...options }: ServerConnectModalProps) =>
           void form.submit();
         }}
       >
-        <ServerConnectFields form={form} rememberedAccount={Boolean(options.initialUrl && options.initialUsername)} />
+        <ServerConnectFields
+          form={form}
+          rememberedAccount={Boolean(options.initialUrl && options.initialUsername)}
+          usernameHint={options.variant === 'transfer' ? 'Für die Erstübertragung ist ein Administratorkonto erforderlich.' : undefined}
+        />
         {/* Enter submits; the visible action lives in the dialog footer. */}
         <button type="submit" hidden />
       </form>

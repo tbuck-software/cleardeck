@@ -92,7 +92,7 @@ Das Deaktivieren löscht die Sitzungen des Kontos. Bereits heruntergeladene loka
 
 ## Mit der Desktop-App verbinden
 
-Im Verbindungsdialog stehen `Benutzername` und `Passwort` im Vordergrund. Die Adresse wird separat über `Server einrichten…` oder `Server ändern…` gesetzt; dort gibt es das Feld `Serveradresse`. Die Zugangsdaten gehören zum persönlichen ClearDeck-Konto, nicht zum PostgreSQL-Betrieb.
+Der Verbindungsdialog fragt `Serveradresse`, `Benutzername` und `Passwort` ab. Die Adresse wird auf den Ursprung gekürzt; entfernte Server brauchen HTTPS. Der Sperrbildschirm zeigt die gemerkte Adresse und das Konto und bietet `Offline öffnen`, `Anderer Server…` und `Zum lokalen Bestand wechseln`. Die Zugangsdaten gehören zum persönlichen ClearDeck-Konto, nicht zum PostgreSQL-Betrieb.
 
 ### Einen lokalen Bestand übertragen
 
@@ -138,8 +138,8 @@ Der Server verwendet einen Compare-and-Swap-Vergleich je Datensatz. Eine Transak
 
 Wenn eine Transaktion wegen einer veralteten Datensatzversion abgewiesen wird, bleibt die gesamte Outbox erhalten und der Client zeigt den Status Konflikt. Die Einstellungen bieten dafür die aktuellen Aktionen:
 
-- Konflikt lösen: Serverversion übernehmen… erstellt zuerst eine verschlüsselte Recovery-Kopie. Danach übernimmt der Client die aktuelle Serverversion und verwirft alle wartenden lokalen Änderungen.
-- Konflikt lösen: Lokale Änderungen erneut senden… erstellt ebenfalls die Recovery-Kopie und reicht alle wartenden lokalen Änderungen gegen den aktuellen Serverstand erneut ein. Einzelne Änderungen können dabei weiterhin abgewiesen werden.
+- Serverversion übernehmen… erstellt zuerst eine verschlüsselte Recovery-Kopie. Danach übernimmt der Client die aktuelle Serverversion und verwirft alle wartenden lokalen Änderungen.
+- Lokale Änderungen erneut senden… (nur editor und admin) erstellt ebenfalls die Recovery-Kopie und reicht alle wartenden lokalen Änderungen gegen den aktuellen Serverstand erneut ein. Einzelne Änderungen können dabei weiterhin abgewiesen werden.
 
 Automatisch zusammengeführt werden nur Änderungen an unabhängigen Datensätzen. Änderungen an demselben Datensatz benötigen eine ausdrückliche Entscheidung. Die Recovery-Kopie wird vor der Entscheidung im lokalen Arbeitskopie-Verzeichnis geschrieben. Sie erhält einen Zeitstempel und eine UUID, ist verschlüsselt und bleibt an das Geräteprofil gebunden. Eine eigene Oberfläche zum Auffinden oder Wiederherstellen dieser Kopien gibt es noch nicht.
 

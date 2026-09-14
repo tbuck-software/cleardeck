@@ -10,6 +10,7 @@ const SERVER_PORT = 8787;
 const DATABASE_URL = `postgresql://cleardeck:cleardeck-dev@127.0.0.1:${PG_PORT}/cleardeck`;
 const PASSWORD = 'cleardeck-dev-passwort';
 const ACCOUNTS = [
+  ['dev-admin', 'admin'],
   ['dev-editor', 'editor'],
   ['dev-reader', 'reader'],
 ];
@@ -71,7 +72,7 @@ async function main() {
   console.log(`
 ClearDeck-Dev-Server
   Serveradresse  http://127.0.0.1:${SERVER_PORT}
-  Konten         dev-editor (bearbeiten), dev-reader (nur lesen)
+  Konten         dev-admin (Erstübertragung), dev-editor (bearbeiten), dev-reader (nur lesen)
   Passwort       ${PASSWORD}
   Leerer Server  make dev-server-reset
 `);

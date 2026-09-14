@@ -2,42 +2,64 @@ import React, { useEffect, useState } from 'react';
 import api from '../../../services/api';
 import SettingsRow from '../../ui/SettingsRow';
 import ConfirmModal from '../../modals/ConfirmModal';
-import ServerConnectModal, { type ServerConnectVariant } from '../../modals/ServerConnectModal';
+import ServerConnectModal, { displayServerAddress, type ServerConnectVariant } from '../../modals/ServerConnectModal';
 import UpdateSourceModal from '../../modals/UpdateSourceModal';
 import type { ConfirmState } from '../../../types/ui';
-import type { ServerConnection, SyncStatus } from '../../../shared/serverConnection';
+import type { ServerConnection, ServerRole, SyncStatus } from '../../../shared/serverConnection';
 import type { UpdatePreferences } from '../../../shared/updatePreferences';
 import { userFacingErrorMessage } from '../../../utils/errorMessage';
+import { switchToLocalConfirm, waitingChangesLabel } from '../../../utils/serverConnectionCopy';
 
-const displayUrl = (value?: string) => (value ?? '').replace(/^https?:\/\//, '').replace(/\/$/, '');
 const reload = () => window.location.reload();
+const POLL_MS = 3000;
 
-type ConflictChoice = 'server' | 'local';
+type NoticeKind = 'bad' | 'accent' | 'neutral';
 
-const STATUS_COPY: Record<SyncStatus, { label: string; tagClass: string }> = {
-  synced: { label: 'Synchronisiert', tagClass: 'tag-accent-2' },
-  pending: { label: 'Ausstehende Änderungen', tagClass: 'tag-accent' },
-  offline: { label: 'Offline', tagClass: 'tag-neutral' },
-  syncing: { label: 'Synchronisierung läuft', tagClass: 'tag-accent' },
-  conflict: { label: 'Konflikt', tagClass: 'tag-bad' },
-  'auth-required': { label: 'Anmeldung erforderlich', tagClass: 'tag-neutral' },
-  error: { label: 'Synchronisierungsfehler', tagClass: 'tag-bad' },
+const STATUS: Record<SyncStatus, { label: string; tag: string; notice?: NoticeKind }> = {
+  synced: { label: 'Synchronisiert', tag: 'tag-accent-2' },
+  syncing: { label: 'Synchronisierung läuft', tag: 'tag-accent' },
+  pending: { label: 'Ausstehende Änderungen', tag: 'tag-accent' },
+  offline: { label: 'Offline', tag: 'tag-neutral', notice: 'neutral' },
+  conflict: { label: 'Konflikt', tag: 'tag-bad', notice: 'bad' },
+  'auth-required': { label: 'Anmeldung erforderlich', tag: 'tag-bad', notice: 'accent' },
+  error: { label: 'Synchronisierungsfehler', tag: 'tag-bad', notice: 'bad' },
+};
+
+const ROLE_LABEL: Record<ServerRole, string> = {
+  admin: 'Administration',
+  editor: 'Lesen und bearbeiten',
+  reader: 'Nur lesen',
 };
 
 const syncStatusOf = (snapshot: ServerConnection): SyncStatus => {
-  if (snapshot.mode !== 'server') return 'synced';
-  if (snapshot.syncStatus && snapshot.syncStatus in STATUS_COPY) return snapshot.syncStatus;
+  if (snapshot.syncStatus && snapshot.syncStatus in STATUS) return snapshot.syncStatus;
   return snapshot.connected ? 'synced' : 'auth-required';
 };
 
-const formatLastSyncedAt = (value?: string) => {
-  if (!value) return null;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('de-DE');
+const noticeText = (status: SyncStatus, snapshot: ServerConnection, pending: number): string | null => {
+  switch (status) {
+    case 'offline':
+      return 'Der Server ist nicht erreichbar. Änderungen werden auf diesem Gerät gespeichert und später übertragen.';
+    case 'conflict':
+      return `${pending === 1 ? 'Eine lokale Änderung passt' : `${pending} lokale Änderungen passen`} nicht mehr zum Serverstand. Entscheide, welche Version gilt.`;
+    case 'auth-required':
+      return pending > 0
+        ? `Die Anmeldung ist abgelaufen. ${waitingChangesLabel(pending)} auf Übertragung, bis du dich erneut anmeldest.`
+        : 'Die Anmeldung ist abgelaufen. Melde dich erneut an, um weiter zu synchronisieren.';
+    case 'error':
+      return snapshot.syncError ?? 'Die letzte Synchronisierung ist fehlgeschlagen.';
+    default:
+      return null;
+  }
 };
 
-const pendingLabel = (count: number) =>
-  count === 1 ? '1 ausstehende lokale Änderung' : `${count} ausstehende lokale Änderungen`;
+const formatDateTime = (value?: string) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+};
 
 type SettingsConnectionsProps = {
   onNotice: (message: string) => void;
@@ -66,11 +88,10 @@ const SettingsConnections = ({ onNotice, onDataSourceChanged = reload }: Setting
         if (mounted) setError(userFacingErrorMessage(failure));
       }
     };
-
     void readConnection();
     const interval = window.setInterval(() => {
       void readConnection();
-    }, 3000);
+    }, POLL_MS);
     return () => {
       mounted = false;
       window.clearInterval(interval);
@@ -81,67 +102,55 @@ const SettingsConnections = ({ onNotice, onDataSourceChanged = reload }: Setting
     api.updates.getPreferences().then(setUpdates).catch((failure) => setError(userFacingErrorMessage(failure)));
   }, []);
 
-  const perform = async (action: () => Promise<unknown>, reloadAfter = false) => {
+  /** Sync actions update the snapshot in place; switching the data source reloads the app. */
+  const perform = async (action: () => Promise<unknown>, { reloadAfter = false, optimistic = false } = {}) => {
     setBusy(true);
     setError(null);
+    if (optimistic) setConnection((current) => (current ? { ...current, syncStatus: 'syncing' } : current));
     try {
       await action();
-      if (!reloadAfter) {
-        // refresh/resolveConflict mutate the main-process snapshot but return no state.
-        setConnection(await api.connection.get());
-      }
       if (reloadAfter) onDataSourceChanged();
+      else setConnection(await api.connection.get());
     } catch (failure) {
       const message = userFacingErrorMessage(failure);
       setError(message);
-      setConnection((current) => {
-        if (!current || current.mode !== 'server' || syncStatusOf(current) !== 'syncing') return current;
-        return { ...current, syncStatus: 'error', syncError: message };
-      });
+      if (optimistic) {
+        setConnection((current) => (current ? { ...current, syncStatus: 'error', syncError: message } : current));
+      }
     } finally {
       setBusy(false);
     }
   };
 
-  const server = connection?.mode === 'server';
-  const role = connection?.role;
-  const roleLabel = role === 'admin'
-    ? 'Administration'
-    : role === 'editor'
-      ? 'Lesen und bearbeiten'
-      : role === 'reader'
-        ? 'Nur lesen'
-        : null;
-  const syncStatus = connection && server ? syncStatusOf(connection) : null;
-  const statusCopy = syncStatus ? STATUS_COPY[syncStatus] : null;
-  const pendingChanges = connection?.pendingChanges ?? 0;
-  const lastSyncedAt = formatLastSyncedAt(connection?.lastSyncedAt);
-  const canResolveQueue = Boolean(
-    connection &&
-      pendingChanges > 0 &&
-      (syncStatus === 'conflict' || syncStatus === 'auth-required'),
-  );
+  const server = connection?.mode === 'server' ? connection : null;
+  const status = server ? syncStatusOf(server) : null;
+  const pending = server?.pendingChanges ?? 0;
+  const canWrite = server?.role === 'editor' || server?.role === 'admin';
+  const needsSignIn = Boolean(server && (!server.connected || status === 'auth-required'));
+  const notice = server && status ? noticeText(status, server, pending) : null;
 
-  const synchronizeNow = () => {
-    setConnection((current) => (current ? { ...current, syncStatus: 'syncing' } : current));
-    void perform(() => api.connection.refresh());
-  };
-
-  const requestConflictResolution = (choice: ConflictChoice) => {
+  const requestConflictResolution = (choice: 'server' | 'local') => {
     const serverChoice = choice === 'server';
+    const scope = pending === 1 ? 'die ausstehende lokale Änderung' : `ALLE ${pending} ausstehenden lokalen Änderungen`;
     setConfirm({
       title: serverChoice ? 'Serverversion übernehmen?' : 'Lokale Änderungen erneut senden?',
       message: serverChoice
-        ? 'Diese Aktion betrifft ALLE ausstehenden lokalen Änderungen. ClearDeck erstellt zuerst eine Wiederherstellungssicherung und verwirft danach die ausstehenden Änderungen, bevor der Serverbestand übernommen wird.'
-        : 'Diese Aktion betrifft ALLE ausstehenden lokalen Änderungen. ClearDeck reicht sie gegen die neuesten Serverversionen erneut ein. Einzelne Änderungen können weiterhin abgelehnt werden.',
+        ? `Das betrifft ${scope}. ClearDeck legt zuerst eine Wiederherstellungssicherung an, verwirft sie dann und übernimmt den Serverstand.`
+        : `Das betrifft ${scope}. ClearDeck legt zuerst eine Wiederherstellungssicherung an und reicht sie gegen die neuesten Serverversionen erneut ein. Einzelne Änderungen können weiterhin abgelehnt werden.`,
       confirmLabel: serverChoice ? 'Serverversion übernehmen' : 'Lokale Änderungen erneut senden',
       danger: serverChoice,
-      onConfirm: () => {
-        setConnection((current) => (current ? { ...current, syncStatus: 'syncing' } : current));
-        return perform(() => api.connection.resolveConflict(choice));
-      },
+      onConfirm: () => perform(() => api.connection.resolveConflict(choice), { optimistic: true }),
     });
   };
+
+  const discardRow = (
+    <SettingsRow
+      title="Serverversion übernehmen…"
+      note={`Sichert und verwirft ${pending === 1 ? 'die ausstehende Änderung' : `${pending} ausstehende Änderungen`}`}
+      disabled={busy}
+      onClick={() => requestConflictResolution('server')}
+    />
+  );
 
   return (
     <div className="cd-page cd-narrow">
@@ -162,102 +171,113 @@ const SettingsConnections = ({ onNotice, onDataSourceChanged = reload }: Setting
           Datenablage
         </h2>
         {!connection && !error && <span role="status" className="cd-muted-14">Lädt …</span>}
-        {connection && (
-          <div className="connection-status">
-            {server ? (
-              <>
-                <span className="tag tag-neutral">Server</span>
-                {statusCopy && <span className={`tag ${statusCopy.tagClass}`}>{statusCopy.label}</span>}
-              </>
-            ) : (
-              <span className="tag tag-neutral">Lokal</span>
-            )}
-            <span className="cd-muted-14">
-              {server
-                ? [displayUrl(connection.url), connection.username, connection.connected && roleLabel]
-                    .filter(Boolean)
-                    .join(' · ')
-                : 'Der Bestand liegt auf diesem Gerät.'}
-            </span>
-            {server && pendingChanges > 0 && (
-              <span className="cd-muted-13">{pendingLabel(pendingChanges)}</span>
-            )}
-            {server && lastSyncedAt && (
-              <span className="cd-muted-13">Zuletzt synchronisiert: {lastSyncedAt}</span>
-            )}
-          </div>
-        )}
-
-        {server && connection?.syncError && (
-          <p className="cd-muted-13" style={{ margin: 0 }}>
-            {connection.syncError}
-          </p>
-        )}
 
         {connection && !server && (
-          <div className="connection-rows">
-            <SettingsRow
-              title="Serverbestand öffnen…"
-              note="Mit einem eingerichteten ClearDeck-Server verbinden"
-              onClick={() => setConnectVariant('open')}
-            />
-            <SettingsRow
-              title="Lokalen Bestand auf Server übertragen…"
-              note="Nur bei leerem Server · die lokale Kopie bleibt erhalten"
-              onClick={() => setConnectVariant('transfer')}
-            />
-          </div>
+          <>
+            <div className="connection-status">
+              <span className="tag tag-neutral">Lokal</span>
+              <span className="cd-muted-14">Der Bestand liegt auf diesem Gerät.</span>
+            </div>
+            <div className="connection-rows">
+              <SettingsRow
+                title="Serverbestand öffnen…"
+                note="Mit deinem Konto bei einem eingerichteten ClearDeck-Server anmelden"
+                onClick={() => setConnectVariant('open')}
+              />
+              <SettingsRow
+                title="Lokalen Bestand auf Server übertragen…"
+                note="Nur auf einen leeren Server, mit Administratorkonto · die lokale Kopie bleibt erhalten"
+                onClick={() => setConnectVariant('transfer')}
+              />
+            </div>
+          </>
         )}
 
-        {server && (
-          <div className="connection-rows">
-            {connection.connected && (
-              <SettingsRow
-                title={busy ? 'Synchronisiere …' : 'Jetzt synchronisieren'}
-                note="Lokale Änderungen senden und neue Änderungen abrufen"
-                disabled={busy}
-                onClick={synchronizeNow}
-              />
+        {server && status && (
+          <>
+            <div className="connection-status-block">
+              <div className="connection-status">
+                <span className={`tag ${STATUS[status].tag}`}>{STATUS[status].label}</span>
+                <span className="cd-muted-14">
+                  {[displayServerAddress(server.url), server.username, server.role && ROLE_LABEL[server.role]]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              </div>
+              {(server.lastSyncedAt || (pending > 0 && status !== 'conflict' && status !== 'auth-required')) && (
+                <span className="cd-muted-13">
+                  {[
+                    server.lastSyncedAt && `Zuletzt synchronisiert ${formatDateTime(server.lastSyncedAt)}`,
+                    pending > 0 && status !== 'conflict' && status !== 'auth-required' && waitingChangesLabel(pending),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              )}
+            </div>
+
+            {notice && STATUS[status].notice && (
+              <p role={STATUS[status].notice === 'neutral' ? 'status' : 'alert'} className={`cd-notice cd-notice-${STATUS[status].notice}`} style={{ margin: 0 }}>
+                {notice}
+              </p>
             )}
-            <SettingsRow
-              title={connection.connected ? 'Anmeldung ändern…' : 'Beim Server anmelden…'}
-              note="Anderes Konto oder anderen Server verwenden"
-              disabled={busy}
-              onClick={() => setConnectVariant('login')}
-            />
-            {canResolveQueue && (
-              <>
-                <SettingsRow
-                  title={syncStatus === 'auth-required' ? 'Serverstand übernehmen…' : 'Konflikt lösen: Serverversion übernehmen…'}
-                  note="Erstellt eine Wiederherstellungssicherung und verwirft danach alle ausstehenden lokalen Änderungen."
-                  disabled={busy}
-                  onClick={() => requestConflictResolution('server')}
-                />
-                {(role === 'editor' || role === 'admin') && (
+
+            <div className="connection-rows">
+              {status === 'conflict' && pending > 0 && (
+                <>
+                  {discardRow}
+                  {canWrite && (
+                    <SettingsRow
+                      title="Lokale Änderungen erneut senden…"
+                      note="Gegen den aktuellen Serverstand; einzelne Änderungen können abgelehnt werden"
+                      disabled={busy}
+                      onClick={() => requestConflictResolution('local')}
+                    />
+                  )}
+                </>
+              )}
+
+              {needsSignIn ? (
+                <>
                   <SettingsRow
-                    title="Konflikt lösen: Lokale Änderungen erneut senden…"
-                    note="Reicht alle ausstehenden lokalen Änderungen gegen die neuesten Serverversionen erneut ein."
+                    title="Erneut anmelden…"
+                    note={`Mit deinem Konto bei ${displayServerAddress(server.url)}`}
                     disabled={busy}
-                    onClick={() => requestConflictResolution('local')}
+                    onClick={() => setConnectVariant('relogin')}
                   />
-                )}
-              </>
-            )}
-            <SettingsRow
-              title="Zum lokalen Bestand wechseln…"
-              note="Den bisherigen lokalen Bestand auf diesem Gerät öffnen"
-              disabled={busy}
-              onClick={() =>
-                setConfirm({
-                  title: 'Zum lokalen Bestand wechseln?',
-                  message:
-                    'Der lokale Bestand dieses Geräts wird geöffnet. Serverarbeitsbereiche und ausstehende Änderungen bleiben dem jeweiligen Konto zugeordnet; Serverdaten werden nicht in den lokalen Bestand übertragen.',
-                  confirmLabel: 'Lokalen Bestand öffnen',
-                  onConfirm: () => void perform(() => api.connection.local(), true),
-                })
-              }
-            />
-          </div>
+                  {status === 'auth-required' && pending > 0 && discardRow}
+                </>
+              ) : (
+                <>
+                  {status !== 'conflict' && (
+                    <SettingsRow
+                      title={busy ? 'Synchronisiere …' : status === 'offline' || status === 'error' ? 'Erneut versuchen' : 'Jetzt synchronisieren'}
+                      note={canWrite ? 'Wartende Änderungen senden und neue abrufen' : 'Neue Änderungen vom Server abrufen'}
+                      disabled={busy}
+                      onClick={() => void perform(() => api.connection.refresh(), { optimistic: true })}
+                    />
+                  )}
+                  <SettingsRow
+                    title="Anmeldung ändern…"
+                    note="Anderes Konto oder anderen Server verwenden"
+                    disabled={busy}
+                    onClick={() => setConnectVariant('login')}
+                  />
+                </>
+              )}
+
+              <SettingsRow
+                title="Zum lokalen Bestand wechseln…"
+                note="Den bisherigen Bestand auf diesem Gerät öffnen"
+                disabled={busy}
+                onClick={() =>
+                  setConfirm(
+                    switchToLocalConfirm(pending, () => void perform(() => api.connection.local(), { reloadAfter: true })),
+                  )
+                }
+              />
+            </div>
+          </>
         )}
       </section>
 
@@ -268,7 +288,7 @@ const SettingsConnections = ({ onNotice, onDataSourceChanged = reload }: Setting
         {updates && (
           <div className="connection-status">
             <span className="cd-muted-14">
-              {displayUrl(updates.repositoryUrl)}
+              {displayServerAddress(updates.repositoryUrl)}
               {updates.hasToken ? ' · Token gespeichert' : ''}
             </span>
           </div>
@@ -285,8 +305,8 @@ const SettingsConnections = ({ onNotice, onDataSourceChanged = reload }: Setting
 
       <ServerConnectModal
         variant={connectVariant}
-        initialUrl={connectVariant === 'login' ? connection?.url : undefined}
-        initialUsername={connectVariant === 'login' ? connection?.username : undefined}
+        initialUrl={connectVariant === 'login' || connectVariant === 'relogin' ? server?.url : undefined}
+        initialUsername={connectVariant === 'login' || connectVariant === 'relogin' ? server?.username : undefined}
         onClose={() => setConnectVariant(null)}
         onConnected={onDataSourceChanged}
       />

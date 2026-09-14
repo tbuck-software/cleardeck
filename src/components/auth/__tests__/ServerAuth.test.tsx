@@ -37,8 +37,9 @@ describe('ServerSignIn', () => {
     render(<ServerSignIn />);
 
     expect(await screen.findByRole('button', { name: 'Offline öffnen' })).toBeInTheDocument();
-    expect(screen.getByText('example.org')).toBeInTheDocument();
+    expect(screen.getByText(/Serverbestand auf example\.org · 2 Änderungen warten/)).toBeInTheDocument();
     expect(screen.queryByLabelText('Datenschlüssel')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Serveradresse')).not.toBeInTheDocument();
     fillPassword();
     fireEvent.click(screen.getByRole('button', { name: 'Offline öffnen' }));
 
@@ -55,7 +56,7 @@ describe('ServerSignIn', () => {
     apiMock.connection.connect.mockRejectedValue(new Error('Anmeldung fehlgeschlagen'));
     render(<ServerSignIn />);
     await screen.findByRole('button', { name: 'Offline öffnen' });
-    expect(screen.getByText('example.org')).toBeInTheDocument();
+    expect(screen.getByText(/Serverbestand auf example\.org · 2 Änderungen warten/)).toBeInTheDocument();
     fillPassword();
     fireEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
 
@@ -67,5 +68,27 @@ describe('ServerSignIn', () => {
       password: 'personal-password',
       initialize: false,
     });
+  });
+});
+
+describe('ServerSignIn secondary actions', () => {
+  it('hides offline opening for another account', async () => {
+    render(<ServerSignIn />);
+    await screen.findByRole('button', { name: 'Offline öffnen' });
+    fireEvent.change(screen.getByLabelText('Benutzername'), { target: { value: 'someone-else' } });
+    expect(screen.queryByRole('button', { name: 'Offline öffnen' })).not.toBeInTheDocument();
+  });
+
+  it('asks for the password before opening offline', async () => {
+    render(<ServerSignIn />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Offline öffnen' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Passwort deiner letzten Online-Anmeldung');
+    expect(apiMock.connection.connect).not.toHaveBeenCalled();
+  });
+
+  it('opens a different server in a dialog', async () => {
+    render(<ServerSignIn />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Anderer Server…' }));
+    expect(screen.getByRole('dialog', { name: 'Serverbestand öffnen' })).toBeInTheDocument();
   });
 });
