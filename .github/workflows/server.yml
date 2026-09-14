@@ -10,8 +10,10 @@ on:
       - "package*.json"
       - "*config*"
       - ".eslintrc*"
-      - ".github/workflows/server.yml"
+      - ".github/workflows/**"
   push:
+    # Feature branches are checked by pull_request; do not run both events.
+    branches: [main]
     paths:
       - "server/**"
       - "src/**"
@@ -20,15 +22,20 @@ on:
       - "package*.json"
       - "*config*"
       - ".eslintrc*"
-      - ".github/workflows/server.yml"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   desktop:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -47,6 +54,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: server

@@ -2,14 +2,13 @@ name: Windows update smoke test
 
 on:
   workflow_dispatch:
-  push:
-    branches: ['feat/fix-windows-updates']
-    paths:
-      - '.github/workflows/windows-update-smoke.yml'
-      - 'scripts/test-windows-update.ps1'
 
 permissions:
   contents: read
+
+concurrency:
+  group: windows-update-smoke-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   installed-update:
