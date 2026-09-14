@@ -149,7 +149,7 @@ export const registerAuthHandlers = (): void => {
       version: appVersion(),
       author: 'Torben Buck – tbuck software',
       email: 'mail@tbuck.de',
-      github: 'https://github.com/Rasalas/employee-db',
+      github: 'https://github.com/tbuck-software/cleardeck',
       license: 'MIT',
       copyright: `© ${new Date().getFullYear()} tbuck software`,
       electronVersion: process.versions.electron,

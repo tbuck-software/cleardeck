@@ -20,7 +20,7 @@ export type UpdateCredentials = {
   token?: string;
 };
 
-export const DEFAULT_UPDATE_OWNER = 'Rasalas';
-export const DEFAULT_UPDATE_REPO = 'employee-db';
+export const DEFAULT_UPDATE_OWNER = 'tbuck-software';
+export const DEFAULT_UPDATE_REPO = 'cleardeck';
 export const DEFAULT_UPDATE_REPOSITORY_URL =
   `https://github.com/${DEFAULT_UPDATE_OWNER}/${DEFAULT_UPDATE_REPO}`;

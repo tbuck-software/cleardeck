@@ -15,7 +15,7 @@ Vollständige Paketbauten und native Windows-Upgrades laufen gezielt:
 Ein Windows-Recovery-Kandidat wird ausdrücklich auf dem zu prüfenden Branch gestartet:
 
 ```sh
-gh workflow run windows-recovery.yml --repo Rasalas/employee-db --ref <Kandidatenbranch>
+gh workflow run windows-recovery.yml --repo tbuck-software/cleardeck --ref <Kandidatenbranch>
 ```
 
 Vor einem Release muss dieser vollständige Kandidatenlauf erfolgreich sein. Der Tag-Lauf behält sämtliche Prüfungen, Paketbauten, die Baseline und die native Upgradematrix als Voraussetzungen für `publish`. Neue Branch-Prüfläufe können ältere ablösen; ein laufender Tag-Release wird dadurch nicht abgebrochen. Der reine Paketworkflow veröffentlicht weiterhin nichts. Die bestehenden Grenzen des Wiederherstellungswegs bleiben unverändert.

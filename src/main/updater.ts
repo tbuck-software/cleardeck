@@ -132,8 +132,8 @@ const configureUpdateSource = (): void => {
     if (packagedConfig?.provider === 'github') {
       autoUpdater.setFeedURL({
         provider: 'github',
-        owner: packagedConfig.owner || 'Rasalas',
-        repo: packagedConfig.repo || 'employee-db',
+        owner: packagedConfig.owner || 'tbuck-software',
+        repo: packagedConfig.repo || 'cleardeck',
         private: false,
         requestHeaders: {},
       });

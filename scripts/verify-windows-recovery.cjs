@@ -17,8 +17,8 @@ const { GitHubProvider } = require('electron-updater/out/providers/GitHubProvide
 const { PrivateGitHubProvider } = require('electron-updater/out/providers/PrivateGitHubProvider');
 const { configureRequestOptionsFromUrl } = require('builder-util-runtime');
 
-const DEFAULT_OWNER = 'Rasalas';
-const DEFAULT_REPO = 'employee-db';
+const DEFAULT_OWNER = 'tbuck-software';
+const DEFAULT_REPO = 'cleardeck';
 const TOKEN_PATTERN = /(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{20,}/;
 
 function listFiles(root) {

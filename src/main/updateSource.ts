@@ -32,8 +32,8 @@ export type UpdateSourceInput = {
 const MANUAL_UPDATE_REASON =
   'Auto-Updates sind fuer private Releases ohne Zugriffstoken nicht verfuegbar. Bitte die neue Version manuell installieren.';
 
-const DEFAULT_GITHUB_OWNER = 'Rasalas';
-const DEFAULT_GITHUB_REPO = 'employee-db';
+const DEFAULT_GITHUB_OWNER = 'tbuck-software';
+const DEFAULT_GITHUB_REPO = 'cleardeck';
 
 /**
  * Keep a generic feed usable while making credentials safe for UI and log

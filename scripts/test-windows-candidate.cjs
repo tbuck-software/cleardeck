@@ -19,7 +19,7 @@ const oldVersion = process.env.OLD_VERSION;
 const targetVersion = process.env.TARGET_VERSION || require('../package.json').version;
 const fullSnapshotVersions = new Set(['2.0.0', '2.1.0', '2.2.0', '2.2.1']);
 const fixtureVersion = oldVersion === '2.2.1' ? '2.2.0' : oldVersion;
-const updateRepositoryUrl = 'https://github.com/Rasalas/employee-db';
+const updateRepositoryUrl = 'https://github.com/tbuck-software/cleardeck';
 const updateFixtureToken = 'fixture-private-runtime-token';
 const hash = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 const quote = (identifier) => `"${String(identifier).replaceAll('"', '""')}"`;
