@@ -238,7 +238,7 @@ export const buildDashboardTasks = ({
       id: `instruction-${instruction.id}`,
       title: `${instruction.employeeName} — ${instruction.topic}: ${state}`,
       sub: instruction.evidenceMissing
-        ? 'Durchführung erfasst; Beleg in Pflegecampus / Personalakte fehlt im Register'
+        ? 'Durchführung erfasst; Beleg aus Schulungsplattform oder Personalakte fehlt im Register'
         : instruction.dueDate
           ? `Fällig ${formatDate(instruction.dueDate)}`
           : 'Zuordnung ohne Termin',

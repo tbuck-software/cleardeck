@@ -15,4 +15,4 @@ Generation on 6 September 2026: extract the release tag, run that tag's authenti
 
 Run: `npm test -- --run src/main/__tests__/upgradeCompatibility.test.ts`.
 
-The native runtime matrix additionally tested the original releases' password/key/configuration format, crash leftovers and profiles with no employees. Its results and limits are in [the upgrade report](../../../../docs/reviews/2026-09-06-upgrade-171-180-und-design.md).
+The native runtime matrix additionally tested the original releases' password/key/configuration format, crash leftovers and profiles with no employees.

@@ -1,6 +1,6 @@
 # Unterweisungsintervalle gehören an die Definition, nicht an die App
 
-Stand: 05.09.2026. Bezug: [Recherche zu Wiederholungsintervallen](../research/unterweisungsintervalle-ambulante-pflege.md), dort sind alle Fundstellen im Wortlaut belegt.
+Stand: 05.09.2026. Bezug: [Recherche zu Wiederholungsintervallen](../fachwissen/unterweisungsintervalle-ambulante-pflege.md), dort sind alle Fundstellen im Wortlaut belegt.
 
 Anlass war eine Entwurfsvorlage, die im Einweisungsdialog pauschal „Nach Abschluss automatisch in 12 Monaten wieder fällig" anbot. Die Recherche zeigt, dass diese Zahl für einen erheblichen Teil des mitgelieferten Katalogs falsch ist — in beide Richtungen. Dieses ADR hält die daraus abgeleiteten Produktentscheidungen fest. Es trifft keine Rechtsaussagen; die stehen in der Recherche.
 

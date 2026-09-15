@@ -448,7 +448,7 @@ def build_info_sheet(ws, col_kat):
 
 
 if __name__ == "__main__":
-    out = sys.argv[1] if len(sys.argv) > 1 else "docs/QPR-Klientenliste-2026.xlsx"
+    out = sys.argv[1] if len(sys.argv) > 1 else "docs/internal/anforderungen/QPR-Klientenliste-2026.xlsx"
     if len(sys.argv) > 2:
         DATA_ROWS = int(sys.argv[2])
         DATA_END = DATA_START + DATA_ROWS - 1

@@ -76,7 +76,7 @@ Ausgewählte Screenshots liegen unter [assets/2026-09-06-design](assets/2026-09-
 ## Automatisierte Regression und Build
 
 - `npm test -- --run`: 297 Tests in 53 Dateien bestanden.
-- Davon neun neue Upgrade-Regressionstests mit [Originalschema-Fixtures](../../src/main/__tests__/fixtures/README.md), zusätzlich zu zehn vorhandenen Backup-Integritätstests.
+- Davon neun neue Upgrade-Regressionstests mit [Originalschema-Fixtures](../../../src/main/__tests__/fixtures/README.md), zusätzlich zu zehn vorhandenen Backup-Integritätstests.
 - `npx tsc --noEmit` und `npm run lint`: bestanden.
 - Renderer-/Preload-Webpack-Build: bestanden.
 - `git diff --check`: bestanden.
@@ -85,8 +85,8 @@ Ausgewählte Screenshots liegen unter [assets/2026-09-06-design](assets/2026-09-
 
 Die lokale Paketversion ist noch 1.8.0. Erst ein veröffentlichtes Release mit höherer Version kann installierten 1.8.0-Clients als Update angeboten werden. In dieser Arbeit wurden weder Version noch Release veröffentlicht.
 
-Für Windows gibt es bereits einen [separaten erfolgreichen Test des alten Update-Knopfs von 1.7.1/1.7.2 nach 1.8.0](../windows-update-repair.md). Er belegt den damaligen Installerwechsel und die reparierten Metadaten, nicht den nächsten Installer mit diesen neuen Datenbankänderungen. Dieser neue Installer wurde hier nicht gebaut und auf Windows installiert.
+Für Windows gibt es bereits einen [separaten erfolgreichen Test des alten Update-Knopfs von 1.7.1/1.7.2 nach 1.8.0](../vorfaelle/windows-update-repair.md). Er belegt den damaligen Installerwechsel und die reparierten Metadaten, nicht den nächsten Installer mit diesen neuen Datenbankänderungen. Dieser neue Installer wurde hier nicht gebaut und auf Windows installiert.
 
-Für macOS ist ein [konkreter Signaturfehler der alten Auslieferung](../mac-update-repair.md) dokumentiert. Ein Developer-ID-signierter neuer Release und dessen Kompatibilität mit den alten installierten Clients wurden nicht nachgewiesen. Ein ausschließlich automatischer Mac-Installationsweg kann deshalb aktuell nicht zugesagt werden. Falls für betroffene Clients einmalig eine manuelle Programminstallation nötig wird, bedeutet dies nicht, dass die Daten manuell exportiert oder importiert werden müssen.
+Für macOS ist ein [konkreter Signaturfehler der alten Auslieferung](../vorfaelle/mac-update-repair.md) dokumentiert. Ein Developer-ID-signierter neuer Release und dessen Kompatibilität mit den alten installierten Clients wurden nicht nachgewiesen. Ein ausschließlich automatischer Mac-Installationsweg kann deshalb aktuell nicht zugesagt werden. Falls für betroffene Clients einmalig eine manuelle Programminstallation nötig wird, bedeutet dies nicht, dass die Daten manuell exportiert oder importiert werden müssen.
 
-Die [Betriebsanleitung](../betrieb/datenuebernahme-und-sicherung.md) trennt daher normales Update, Gerätewechsel/Wiederherstellung und Erstimport einer Personal-Tabelle ausdrücklich.
+Die [Betriebsanleitung](../../anleitung/datenuebernahme-und-sicherung.md) trennt daher normales Update, Gerätewechsel/Wiederherstellung und Erstimport einer Personal-Tabelle ausdrücklich.

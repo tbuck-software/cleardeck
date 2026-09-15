@@ -6,7 +6,7 @@ Diese Entscheidungssammlung hält den eingebrachten fachlichen Zielstand für Cl
 
 **Dokumentationsstatus:** Übernommener fachlicher Entscheidungsstand mit offenen technischen Detailfragen. Aussagen über die App beschreiben die beabsichtigte Gestaltung; dieses ADR bestätigt keinen abgeschlossenen Implementierungsstand. Die acht Entscheidungen sind hier als zusammengehöriges ADR dokumentiert.
 
-Die [QPR-Recherche](../research/qpr-teil-1a-ambulante-pflege-2026.md) enthält die geprüften Richtlinienangaben und deren Fundstellen. Dieses ADR ergänzt die daraus abgeleiteten Produktentscheidungen, insbesondere Farben, Datenfelder, Pflegevisitenintervall und Ergebnisanzeige. Diese Produktentscheidungen sind keine Vorgaben der QPR.
+Die [QPR-Recherche](../fachwissen/qpr-teil-1a-ambulante-pflege-2026.md) enthält die geprüften Richtlinienangaben und deren Fundstellen. Dieses ADR ergänzt die daraus abgeleiteten Produktentscheidungen, insbesondere Farben, Datenfelder, Pflegevisitenintervall und Ergebnisanzeige. Diese Produktentscheidungen sind keine Vorgaben der QPR.
 
 ## 1. Teilgruppen A–D sind Stichproben-Merkmale, keine Bewertung
 
@@ -87,7 +87,7 @@ Die nachfolgenden offenen Punkte und Modellhinweise dokumentieren den eingebrach
 - Prüfergebnisse werden als interne Zusammenfassung mit Referenz zum vollständigen Originalbericht erfasst. Ein noch nicht abgeglichener Eintrag ist ein Entwurf; leere Ergebnisse ergeben kein A. Der vollständige Prüfbogen mit Einzelbefunden bleibt im Originalbericht zugänglich, statt in der App unvollständig nachgebildet zu werden.
 - Geplante Pflegevisiten zählen erst nach bestätigter Durchführung. Offene Maßnahmen erhalten Zuständigkeit, Termin und eine ausdrückliche Erledigung. Neue Visiten schließen ältere Maßnahmen nicht automatisch.
 
-Ein besonderes Pflegevisitenintervall pro Teilgruppe bleibt eine mögliche betriebliche Entscheidung. Es wird nicht als QPR-Vorgabe ergänzt. Der geprüfte Implementierungsstand steht im [Behebungsbericht](../reviews/2026-09-06-cleardeck-behebung.md).
+Ein besonderes Pflegevisitenintervall pro Teilgruppe bleibt eine mögliche betriebliche Entscheidung. Es wird nicht als QPR-Vorgabe ergänzt.
 
 ## Offene Punkte des eingebrachten Stands
 

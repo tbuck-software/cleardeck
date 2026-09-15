@@ -181,7 +181,7 @@ INSERT INTO employee_competencies ("id","employeeId","competencyDefinitionId","s
 INSERT INTO instruction_definitions ("id","topic","legalBasis","note","sortOrder") VALUES (1,'Erstunterweisung Arbeitsschutz','ArbSchG § 12','',1);
 INSERT INTO instruction_definitions ("id","topic","legalBasis","note","sortOrder") VALUES (2,'Brandschutzunterweisung','ArbStättV','',2);
 INSERT INTO instruction_definitions ("id","topic","legalBasis","note","sortOrder") VALUES (3,'Hygieneunterweisung (jährlich)','IfSG / KRINKO','',3);
-INSERT INTO instruction_definitions ("id","topic","legalBasis","note","sortOrder") VALUES (4,'MRSA - Standard Umgang & Schutz','VA-HYG-003','',4);
+INSERT INTO instruction_definitions ("id","topic","legalBasis","note","sortOrder") VALUES (4,'MRSA - Standard Umgang & Schutz','interner Hygieneplan','',4);
 INSERT INTO instruction_definitions ("id","topic","legalBasis","note","sortOrder") VALUES (5,'Datenschutz-Grundunterweisung','DSGVO / BDSG','',5);
 INSERT INTO instruction_definitions ("id","topic","legalBasis","note","sortOrder") VALUES (6,'Schweigepflicht (§ 203 StGB)','§ 203 StGB','',6);
 INSERT INTO instruction_definitions ("id","topic","legalBasis","note","sortOrder") VALUES (7,'Reanimationstraining (BLS/AED)','interne Richtlinie','',7);

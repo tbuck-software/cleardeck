@@ -17,7 +17,7 @@ Die beschriebenen Probleme mit Excel betreffen insbesondere mehrdimensionale Bez
 
 Gespräche im Mai 2026 über Mitarbeitervisiten, frei gestaltbare Auditformulare, Rollen, Signaturen und Personalaktenexport können eine gesonderte App betreffen. Sie erweitern den ClearDeck-Auftrag nicht automatisch. Mitarbeitervisite und Pflegevisite bei Klientinnen oder Klienten bleiben verschiedene Begriffe.
 
-Offen bleiben die verbindliche Berechnung von Teilmonaten/Jahresdurchschnitten, historische Belegquellen, genaue Kompetenzstufen und Bestätigungsrollen sowie der betrieblich verbindliche Nachweiskatalog. Genannte Schulungsintervalle müssen anhand ihrer tatsächlichen Rechts- oder Betriebsgrundlage geprüft werden. Für die QPR gelten die [Primärquellen der gesonderten Recherche](qpr-teil-1a-ambulante-pflege-2026.md), nicht die im Gespräch verwendeten Kurzbeschreibungen.
+Offen bleiben die verbindliche Berechnung von Teilmonaten/Jahresdurchschnitten, historische Belegquellen, genaue Kompetenzstufen und Bestätigungsrollen sowie der betrieblich verbindliche Nachweiskatalog. Genannte Schulungsintervalle müssen anhand ihrer tatsächlichen Rechts- oder Betriebsgrundlage geprüft werden. Für die QPR gelten die [Primärquellen der gesonderten Recherche](../../fachwissen/qpr-teil-1a-ambulante-pflege-2026.md), nicht die im Gespräch verwendeten Kurzbeschreibungen.
 
 ## Ergänzungen aus Originaldateien und Audioauswertung
 

@@ -76,7 +76,7 @@ export const defaultInstructionCatalog = [
   { topic: 'Erstunterweisung Arbeitsschutz', legalBasis: 'ArbSchG § 12 / DGUV V1 § 4', note: '', intervalMonths: 12, intervalSource: 'norm' },
   { topic: 'Brandschutzunterweisung', legalBasis: 'ArbStättV § 6 / ASR A2.2', note: '', intervalMonths: 12, intervalSource: 'norm' },
   { topic: 'Hygieneunterweisung (jährlich)', legalBasis: 'BioStoffV § 14 / TRBA 250', note: '', intervalMonths: 12, intervalSource: 'norm' },
-  { topic: 'MRSA - Standard Umgang & Schutz', legalBasis: 'VA-HYG-003', note: '' },
+  { topic: 'MRSA - Standard Umgang & Schutz', legalBasis: 'interner Hygieneplan', note: '' },
   { topic: 'Datenschutz-Grundunterweisung', legalBasis: 'DSGVO / BDSG', note: '' },
   { topic: 'Schweigepflicht (§ 203 StGB)', legalBasis: '§ 203 StGB', note: '' },
   { topic: 'Reanimationstraining (BLS/AED)', legalBasis: 'interne Richtlinie', note: '' },
@@ -95,7 +95,7 @@ export const defaultInstructionCatalog = [
   { topic: 'Pflegegradmanagement & Begutachtung', legalBasis: 'SGB XI § 18', note: '' },
   { topic: 'Abrechnungssystem SGB XI / LK', legalBasis: 'SGB XI', note: '' },
 
-  // Ergaenzt nach der Recherche vom 05.09.2026 (docs/research/unterweisungs-
+  // Ergaenzt nach der Recherche vom 05.09.2026 (docs/fachwissen/unterweisungs-
   // intervalle-ambulante-pflege.md): Pflichten mit belegtem Intervall, die im
   // ursprünglichen Katalog fehlten.
   {

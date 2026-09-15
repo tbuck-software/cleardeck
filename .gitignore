@@ -2,8 +2,8 @@
 *.opus
 *.docx
 *.xlsx
-!/docs/Einarbeitung_Kompetenzmatrix.xlsx
-!/docs/QPR-Klientenliste-2026.xlsx
+!/docs/internal/anforderungen/Einarbeitung_Kompetenzmatrix.xlsx
+!/docs/internal/anforderungen/QPR-Klientenliste-2026.xlsx
 interview/
 audio/
 /docs/private/

@@ -28,7 +28,7 @@ Der GitHub-Release-Text verwendet aus derselben Datei nur die Notizen der veröf
 
 ## Grenzen der Prüfung
 
-Die Datenbank wird nach einem Update beim ersten Öffnen automatisch weitergeführt. Aus den Original-Tags 1.7.1 und 1.8.0 erzeugte Profile wurden einschließlich bisherigem Passwort, Historie, automatischer Migrationssicherung, Fehlerabbruch und erneutem Öffnen geprüft. Ein manueller Export, Import oder ein manuelles Backup ist dafür keine Voraussetzung. Die [Upgrade-Matrix und der Designabgleich vom 06.09.2026](reviews/2026-09-06-upgrade-171-180-und-design.md) dokumentieren Methode und Ergebnisse.
+Die Datenbank wird nach einem Update beim ersten Öffnen automatisch weitergeführt. Aus den Original-Tags 1.7.1 und 1.8.0 erzeugte Profile wurden einschließlich bisherigem Passwort, Historie, automatischer Migrationssicherung, Fehlerabbruch und erneutem Öffnen geprüft. Ein manueller Export, Import oder ein manuelles Backup ist dafür keine Voraussetzung.
 
 Der untersuchte Arbeitsstand trägt noch Paketversion 1.8.0 und ist nicht veröffentlicht. Ein späteres Update für bereits installierte 1.8.0-Clients muss eine höhere Versionsnummer erhalten. Die erfolgreichen Datenbanktests sind kein Nachweis eines neuen signierten Installers.
 

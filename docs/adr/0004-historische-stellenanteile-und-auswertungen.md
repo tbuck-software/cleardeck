@@ -1,6 +1,6 @@
 # Stellenanteile zeitbezogen belegen und Auswertungsarten benennen
 
-Stand: 06.09.2026. [Berufliche Anforderungen und Originalvorlagen](../research/cleardeck-berufliche-anforderungen-2026-09-06.md) verlangen historische Beschäftigung und enthalten eine taggewichtete Periodenrechnung. Die verbindliche Kennzahl des späteren Berichtsempfängers ist noch offen.
+Stand: 06.09.2026. Die [Anforderungen](../anforderungen.md) und die ursprünglichen Vorlagen verlangen historische Beschäftigung und enthalten eine taggewichtete Periodenrechnung. Die verbindliche Kennzahl des späteren Berichtsempfängers ist noch offen.
 
 Stunden und VZÄ werden deshalb mit Wirksamkeitsdatum je Beschäftigungsperiode geführt. Der Erfassungszeitpunkt ist davon getrennt. Rückdatierte Korrekturen bleiben in einer Historie nachvollziehbar. Aus alten globalen Feldern übernommene Werte bleiben als Altdaten erkennbar.
 

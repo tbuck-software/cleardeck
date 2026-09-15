@@ -34,7 +34,7 @@ Die folgenden Punkte sind die eigene Ableitung aus Aufgabe, Projektvorgaben und 
 
 ## Fachliche Grenze: dieselbe Zahl ist nicht dieselbe Aussage
 
-Der gelesene Code unterscheidet `legacy` und `practice-v1`. Im alten Modell bezeichnet Stufe 5 "Kann anleiten". Im neuen Modell ist Stufe 6 der Abschluss; die Speicherung verlangt dafür Bestätigungsdatum und verantwortliche Person. Die älteren Texte und die neuere Einarbeitungsanforderung sind auch in der [Anforderungsrecherche](cleardeck-berufliche-anforderungen-2026-09-06.md) getrennt dokumentiert. [ADR 0003](../adr/0003-unterweisungsnachweise-und-einarbeitung.md) hält die Unterscheidung fest; eine genauere fachliche Benennung der neuen Stufen 1 bis 5 ist damit nicht gesichert. Codefundstellen: [Stufenauswahl](../../src/components/ui/CompetencyLevelPicker.tsx) und [Speicherung und Validierung](../../src/main/repositories/competencies.ts).
+Der gelesene Code unterscheidet `legacy` und `practice-v1`. Im alten Modell bezeichnet Stufe 5 "Kann anleiten". Im neuen Modell ist Stufe 6 der Abschluss; die Speicherung verlangt dafür Bestätigungsdatum und verantwortliche Person. Die älteren Texte und die neuere Einarbeitungsanforderung sind auch in den [Anforderungen](../anforderungen.md) getrennt beschrieben. [ADR 0003](../adr/0003-unterweisungsnachweise-und-einarbeitung.md) hält die Unterscheidung fest; eine genauere fachliche Benennung der neuen Stufen 1 bis 5 ist damit nicht gesichert. Codefundstellen: [Stufenauswahl](../../src/components/ui/CompetencyLevelPicker.tsx) und [Speicherung und Validierung](../../src/main/repositories/competencies.ts).
 
 Eine Sammeländerung darf deshalb weder Altstufe 5 automatisch in neue Stufe 6 übersetzen noch beide Modelle unter einer einzigen unbeschrifteten "5" zusammenfassen. Das ist eine fachliche Modellfrage, die allgemeine Verwaltungssoftware nicht beantwortet.
 
@@ -53,4 +53,4 @@ Als Abnahmefälle eignen sich eine freie Auswahl von drei aus 67 Kompetenzen, al
 
 ## Nachfolgende Umsetzung
 
-Am 07.09.2026 wurde die Umsetzung beauftragt und im Arbeitsstand ergänzt. Die ursprünglichen Quellenbefunde und Vorschläge oben bleiben als Recherche nachvollziehbar. Der [Bedienweg](../betrieb/kompetenzen-gemeinsam-aendern.md) und [ADR 0003](../adr/0003-unterweisungsnachweise-und-einarbeitung.md) dokumentieren den gewählten Umfang. Die vorhandenen Modelle bleiben erhalten; ein langfristiger Modellwechsel wurde damit nicht beschlossen.
+Am 07.09.2026 wurde die Umsetzung beauftragt und im Arbeitsstand ergänzt. Die ursprünglichen Quellenbefunde und Vorschläge oben bleiben als Recherche nachvollziehbar. Der [Bedienweg](../anleitung/kompetenzen-gemeinsam-aendern.md) und [ADR 0003](../adr/0003-unterweisungsnachweise-und-einarbeitung.md) dokumentieren den gewählten Umfang. Die vorhandenen Modelle bleiben erhalten; ein langfristiger Modellwechsel wurde damit nicht beschlossen.

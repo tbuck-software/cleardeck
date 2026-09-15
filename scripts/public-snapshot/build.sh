@@ -37,6 +37,36 @@ else
   rm -f "$out.findings.txt"
 fi
 
+documents="$(cd "$out" && find . -type f \( -iname '*.xlsx' -o -iname '*.xls' -o -iname '*.docx' -o -iname '*.csv' -o -iname '*.pdf' -o -iname '*.opus' -o -iname '*.m4a' \) | sed 's#^\./##')"
+if [ -n "$documents" ]; then
+  echo "Office, audio or data files in snapshot:"
+  echo "$documents"
+  status=1
+fi
+
+broken="$(cd "$out" && python3 - <<'EOF'
+import os, re
+for root, _, names in os.walk('.'):
+    if '/node_modules' in root or '/.git' in root:
+        continue
+    for name in names:
+        if not name.endswith('.md'):
+            continue
+        path = os.path.join(root, name)
+        for m in re.finditer(r'(?:\]\(|src="|href=")([^)"\s]+)', open(path, encoding='utf-8').read()):
+            target = m.group(1)
+            if re.match(r'^[a-z]+:', target) or target.startswith('#'):
+                continue
+            if not os.path.exists(os.path.join(os.path.dirname(path), target.split('#')[0])):
+                print(f'{path[2:]} -> {target}')
+EOF
+)"
+if [ -n "$broken" ]; then
+  echo "Broken relative links:"
+  echo "$broken"
+  status=1
+fi
+
 if command -v gitleaks > /dev/null; then
   gitleaks detect --no-git --no-banner -s "$out" || status=1
 else

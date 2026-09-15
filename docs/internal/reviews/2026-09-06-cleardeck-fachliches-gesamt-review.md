@@ -216,7 +216,7 @@ Bei „Stattdessen Datei wählen“ aktualisiert der erfolgreiche Import außerd
 
 ### F27 · P2 · „Verschlüsselt“ schützt die offene Arbeitsdatei nicht
 
-Fundstelle: [connection.ts:96](https://github.com/Rasalas/employee-db/blob/main/src/main/database/connection.ts#L96), [connection.ts:147](https://github.com/Rasalas/employee-db/blob/main/src/main/database/connection.ts#L147), [Anforderungsdokument](https://github.com/Rasalas/employee-db/blob/main/docs/anforderungsdokument.md).
+Fundstelle: [connection.ts:96](https://github.com/Rasalas/employee-db/blob/main/src/main/database/connection.ts#L96), [connection.ts:147](https://github.com/Rasalas/employee-db/blob/main/src/main/database/connection.ts#L147), [Anforderungsdokument](https://github.com/Rasalas/employee-db/blob/main/docs/internal/anforderungen/anforderungsdokument.md).
 
 Während der Benutzung liegt die entschlüsselte SQLite-Datenbank als Datei auf dem Datenträger. Verschlüsselung und Entfernung der Klartextdatei erfolgen beim Persistieren/Sperren/Beenden. Ein Prozessabbruch kann sie zurücklassen. Das widerspricht der dokumentierten Anforderung „Nutzung im Arbeitsspeicher, kein Klartext-Storage“.
 
@@ -242,7 +242,7 @@ Jede Person ohne Kontakttext erzeugt „Bevollmächtigte/Betreuung fehlt“, obw
 
 ## Fachliche Prüfung der Dokumente
 
-Die QPR-Recherche bleibt als ausdrücklich auf die Originalfassung bezogene Recherche sinnvoll. Die Produktentscheidungen gehören weiterhin nach `docs/adr`; die Recherche nach `docs/research`. Ein ADR belegt eine Entscheidung, aber nicht deren fachliche Richtigkeit oder Implementierung. Dieses Gesamt-Review gehört deshalb nach `docs/reviews`.
+Die QPR-Recherche bleibt als ausdrücklich auf die Originalfassung bezogene Recherche sinnvoll. Die Produktentscheidungen gehören weiterhin nach `docs/adr`; die Recherche nach `docs/research`. Ein ADR belegt eine Entscheidung, aber nicht deren fachliche Richtigkeit oder Implementierung. Dieses Gesamt-Review gehört deshalb nach `docs/internal/reviews`.
 
 | Dokument/Aussage | Ergebnis des unabhängigen Abgleichs |
 | --- | --- |
@@ -265,7 +265,7 @@ Die folgenden Punkte sind begründete Gestaltungsurteile. Sie sind weder eigenst
 
 ### Den historischen Personalnachweis als Kern zuerst verlässlich machen
 
-Das [Anforderungsdokument](https://github.com/Rasalas/employee-db/blob/main/docs/anforderungsdokument.md) beschreibt einen konkreten Schmerz: Stellenanteile und Beschäftigung vergangener Jahre müssen aus verstreuten Unterlagen rekonstruiert werden. Dafür sind Jahreswahl, Qualifikationsgruppen, Perioden und Excel-Export die richtigen Bausteine. F04–F07 betreffen aber genau dieses Nutzenversprechen. Zusätzliche QM-Dashboards gleichen die fehlende historische Verlässlichkeit nicht aus.
+Das [Anforderungsdokument](https://github.com/Rasalas/employee-db/blob/main/docs/internal/anforderungen/anforderungsdokument.md) beschreibt einen konkreten Schmerz: Stellenanteile und Beschäftigung vergangener Jahre müssen aus verstreuten Unterlagen rekonstruiert werden. Dafür sind Jahreswahl, Qualifikationsgruppen, Perioden und Excel-Export die richtigen Bausteine. F04–F07 betreffen aber genau dieses Nutzenversprechen. Zusätzliche QM-Dashboards gleichen die fehlende historische Verlässlichkeit nicht aus.
 
 Ich würde zuerst einen nachvollziehbaren Ablauf abschließen: Person erfassen, Eintritt dokumentieren, Stundenänderung mit Wirksamkeitsdatum, Austritt/Wiedereintritt, geprüftes Berichtjahr, Export mit Rechenbasis. Die App muss nicht zu einer Lohnabrechnung werden. Sie braucht für ihre eigene Kennzahl jedoch ausreichend Zeitbezug.
 
@@ -321,7 +321,7 @@ Ausgeführt wurden `npx vitest run`: 46 Testdateien, 253 Tests bestanden, und `n
 
 Für die laufende Prüfung wurden Renderer und Preload aus dem aktuellen Quellstand in ein temporäres Verzeichnis gebaut. Electron startete mit einem eigens angelegten `appData`-Verzeichnis. Die Oberfläche wurde über ihre tatsächlichen Bedienelemente und Electron DevTools-Protokoll angesprochen. Weder vorhandene produktive Profile noch reale Personenbestände wurden verwendet. Die von der App selbst erzeugten Demopersonen dienten nur im isolierten Testprofil als Testdaten.
 
-Die ergänzenden [Reproduktionsergebnisse](https://github.com/Rasalas/employee-db/blob/main/docs/reviews/2026-09-06-cleardeck-fachliches-review-evidence.json) enthalten synthetische Repository-Fälle, Backup-Fälle und bestätigte Beobachtungen aus der Oberfläche. Der SQLite-Test verwendete die echten Migrationen und Repositories mit einem kleinen Adapter für `node:sqlite`. Er ist kein Ersatz für sämtliche Tests mit dem produktiven `better-sqlite3`-Treiber. Die Oberfläche lief zusätzlich mit dem tatsächlichen Electron-/Datenbankweg.
+Die ergänzenden [Reproduktionsergebnisse](https://github.com/Rasalas/employee-db/blob/main/docs/internal/reviews/2026-09-06-cleardeck-fachliches-review-evidence.json) enthalten synthetische Repository-Fälle, Backup-Fälle und bestätigte Beobachtungen aus der Oberfläche. Der SQLite-Test verwendete die echten Migrationen und Repositories mit einem kleinen Adapter für `node:sqlite`. Er ist kein Ersatz für sämtliche Tests mit dem produktiven `better-sqlite3`-Treiber. Die Oberfläche lief zusätzlich mit dem tatsächlichen Electron-/Datenbankweg.
 
 ## Empfohlene Reihenfolge
 
