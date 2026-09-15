@@ -1,0 +1,7 @@
+# Reviewed false positives: <path><TAB><fixed substring of the matching line>
+docs/anleitung/windows-startup-recovery.md	C:\Users\<Benutzer>
+src/main/__tests__/diagnostics.test.ts	/Users/
+src/main/__tests__/backup.test.ts	/Volumes/NAS/ClearDeck
+src/main/__tests__/dataArchive.test.ts	employee-db-archive-
+.gitignore	!/docs/internal/anforderungen/
+scripts/build-qpr-klientenliste.py	docs/internal/anforderungen/QPR-Klientenliste-2026.xlsx

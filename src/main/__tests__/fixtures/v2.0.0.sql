@@ -192,7 +192,7 @@ CREATE TABLE instruction_definitions (
 INSERT INTO "instruction_definitions" VALUES(1,'Erstunterweisung Arbeitsschutz','ArbSchG § 12 / DGUV V1 § 4','',1,12,'norm',1);
 INSERT INTO "instruction_definitions" VALUES(2,'Brandschutzunterweisung','ArbStättV § 6 / ASR A2.2','',2,12,'norm',1);
 INSERT INTO "instruction_definitions" VALUES(3,'Hygieneunterweisung (jährlich)','BioStoffV § 14 / TRBA 250; Hygieneplan zusätzlich IfSG § 35','',3,12,'norm',1);
-INSERT INTO "instruction_definitions" VALUES(4,'MRSA - Standard Umgang & Schutz','VA-HYG-003','',4,NULL,NULL,0);
+INSERT INTO "instruction_definitions" VALUES(4,'MRSA - Standard Umgang & Schutz','interner Hygieneplan','',4,NULL,NULL,0);
 INSERT INTO "instruction_definitions" VALUES(5,'Datenschutz-Grundunterweisung','DSGVO / BDSG','',5,NULL,NULL,0);
 INSERT INTO "instruction_definitions" VALUES(6,'Schweigepflicht (§ 203 StGB)','§ 203 StGB','',6,NULL,NULL,0);
 INSERT INTO "instruction_definitions" VALUES(7,'Reanimationstraining (BLS/AED)','interne Richtlinie','',7,NULL,NULL,0);

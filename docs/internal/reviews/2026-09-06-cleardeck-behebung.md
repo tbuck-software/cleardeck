@@ -12,7 +12,7 @@ Die Originalvorlage berechnet einen taggewichteten Periodenanteil. Bereits gewic
 
 Die praktische Einarbeitung verwendet Stufen 1 bis 5 für laufende Einarbeitung und Stufe 6 für den bestätigten Abschluss. Frühere Stufen 0 bis 5 bleiben als Altmodell erkennbar. Ein Abschluss ersetzt keine gesetzliche oder vertragliche Einsatzberechtigung. Employee DB ist der frühere Name derselben App ClearDeck.
 
-Herleitung: [berufliche Anforderungen](../research/cleardeck-berufliche-anforderungen-2026-09-06.md), [ADR 0003](../adr/0003-unterweisungsnachweise-und-einarbeitung.md), [ADR 0004](../adr/0004-historische-stellenanteile-und-auswertungen.md).
+Herleitung: [berufliche Anforderungen](../anforderungen/kundengespraeche-2026-09-06.md), [ADR 0003](../../adr/0003-unterweisungsnachweise-und-einarbeitung.md), [ADR 0004](../../adr/0004-historische-stellenanteile-und-auswertungen.md).
 
 ## Zuordnung aller Befunde
 
@@ -84,4 +84,4 @@ Die [Prüfübersicht als JSON](2026-09-06-cleardeck-behebung-evidence.json) enth
 - Die Dateiauswahl wurde bei den Export-/Importprüfungen im Testprozess auf temporäre Pfade gelenkt. Formulare, IPC, Datenbank, Parser und Dateischreiben liefen tatsächlich. Der native Betriebssystem-Dateidialog selbst war nicht Gegenstand dieser Prüfung.
 - Reale Daten der privaten Quellunterlagen und Schlüssel wurden nicht in die Ergebnisartefakte übernommen.
 
-Kein Windows- oder macOS-Installationspaket wurde neu veröffentlicht. Ein vollständiger Test mit dem tatsächlichen produktiven Altbestand und den Verträgen des Dienstes ist damit nicht behauptet. Für die erste Übernahme gilt die [Betriebsanleitung](../betrieb/datenuebernahme-und-sicherung.md).
+Kein Windows- oder macOS-Installationspaket wurde neu veröffentlicht. Ein vollständiger Test mit dem tatsächlichen produktiven Altbestand und den Verträgen des Dienstes ist damit nicht behauptet. Für die erste Übernahme gilt die [Betriebsanleitung](../../anleitung/datenuebernahme-und-sicherung.md).

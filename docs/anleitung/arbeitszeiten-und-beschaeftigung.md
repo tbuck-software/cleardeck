@@ -21,4 +21,4 @@ Das Gültigkeitsdatum muss innerhalb einer Beschäftigungsperiode liegen. Der pa
 
 Arbeitszeiten gelten mit dem Speichern als korrekte Eingaben. Eine Prüf-Checkbox und ein Belegfeld gibt es dafür nicht. In der Historie stehen die gültigen Arbeitszeitabschnitte. Frühere Korrekturfassungen bleiben intern gespeichert; sie erscheinen dort nicht zusätzlich als „Arbeitszeit erfasst“.
 
-Hintergrund: [ADR 0004](../adr/0004-historische-stellenanteile-und-auswertungen.md), [Fehlerprüfung und Bedienwünsche](../reviews/2026-09-06-arbeitszeit-und-kompetenzbedienung.md).
+Hintergrund: [ADR 0004](../adr/0004-historische-stellenanteile-und-auswertungen.md).

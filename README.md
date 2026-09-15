@@ -22,9 +22,8 @@ Der Server kennt die Rollen `admin`, `editor` und `reader`. Ein `admin` darf ein
 
 Das persönliche ClearDeck-Konto dient der Anmeldung in der Desktop-App. Der Verbindungsdialog fragt `Serveradresse`, `Benutzername` und `Passwort` ab; auf dem Sperrbildschirm steht nur noch das Passwort des bekannten Kontos aus. PostgreSQL- und andere SQL-Zugangsdaten werden ausschließlich auf dem Server verwaltet und nie in der App eingegeben. Einen voreingestellten Hosted-Dienst gibt es nicht. Nach der Erstinitialisierung meldet sich der normale Betrieb mit einem persönlichen `editor`- oder `reader`-Konto an; eine Selbstregistrierung gibt es nicht.
 
-- [Server einrichten und bedienen](docs/server-mode.md)
-- [Hosting und nächste Schritte](docs/hosting-launch-plan.md)
-- [Datenübernahme und Sicherung](docs/betrieb/datenuebernahme-und-sicherung.md)
+- [Server einrichten und bedienen](docs/server/server-mode.md)
+- [Datenübernahme und Sicherung](docs/anleitung/datenuebernahme-und-sicherung.md)
 
 ## Entwicklung
 
@@ -43,7 +42,7 @@ npm run demo
 
 Mit `make dev-server` startet dasselbe Demo-Profil zusammen mit einem lokalen ClearDeck-Server (PostgreSQL in Docker). Adresse, Konten und Passwort stehen im Terminal. `make dev-server-reset` leert den Server, damit eine Erstübertragung wieder möglich ist.
 
-[Entwicklungsumgebung](docs/development.md) und [Demo-Profil](docs/betrieb/demo-profil.md) beschreiben Datenpfade, Start und Wiederverwendung.
+[Entwicklungsumgebung](docs/entwicklung/development.md) und [Demo-Profil](docs/anleitung/demo-profil.md) beschreiben Datenpfade, Start und Wiederverwendung.
 
 ## Prüfungen
 
@@ -74,15 +73,15 @@ Die v2-Client- und Serverläufe einschließlich Admin-Erstinitialisierung, Nicht
 
 ## Dokumentation
 
-[docs/README.md](docs/README.md) führt zu Bedienhinweisen, Anforderungen, Architekturentscheidungen und Prüfberichten. Eine separate Dokumentationswebsite ist derzeit nicht eingerichtet.
+[docs/README.md](docs/README.md) führt zu Anleitungen, Anforderungen, Architekturentscheidungen und Fachwissen. Eine separate Dokumentationswebsite ist derzeit nicht eingerichtet.
 
 Personen in Demo-Profilen und Test-Fixtures sind synthetisch. Private Originalunterlagen gehören außerhalb des Repositorys; sie dürfen auch nicht in dessen Git-Historie übernommen werden.
 
 ## Pakete und Updates
 
-`npm run make` erstellt lokale Installationspakete. Der geprüfte Releaseablauf ist in der [Release-Anleitung](.agents/skills/cleardeck-release/SKILL.md) beschrieben.
+`npm run make` erstellt lokale Installationspakete.
 
-Zugriffstokens dürfen nicht in App-Pakete eingebaut werden. Solange das Repository privat ist, erfolgt die Verteilung neuer Pakete manuell oder über einen separat eingerichteten Update-Feed. Der Stand der Bereinigung und die noch notwendigen Schritte werden im [Hosting- und Launch-Plan](docs/hosting-launch-plan.md) geführt.
+Zugriffstokens dürfen nicht in App-Pakete eingebaut werden. Solange das Repository privat ist, erfolgt die Verteilung neuer Pakete manuell oder über einen separat eingerichteten Update-Feed.
 
 ## Lizenz
 

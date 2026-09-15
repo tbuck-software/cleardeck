@@ -24,7 +24,7 @@ Die Pfade ergeben sich aus `src/main/appPaths.ts` und den Electron-Vorgaben für
 
 ## Kann ein veröffentlichtes Update das ohne Nutzeraktion lösen?
 
-Der anschließend gemeldete Update-Fehler in 1.7.1 wurde separat untersucht und im veröffentlichten Release behoben. Siehe [Windows-Update-Reparatur](windows-update-repair.md). Die relevanten Eigenschaften des vorhandenen Auslieferungswegs sind:
+Der anschließend gemeldete Update-Fehler in 1.7.1 wurde separat untersucht und im veröffentlichten Release behoben. Die relevanten Eigenschaften des vorhandenen Auslieferungswegs sind:
 
 - Die Prüfung läuft beim Laden, beim Fensterfokus und stündlich, auch vor der Anmeldung. Der Nutzer muss die App dafür geöffnet haben.
 - Downloads sind automatisch aktiviert. Installation beim Beenden ist ausdrücklich deaktiviert. `quitAndInstall()` wird erst durch eine Nutzeraktion aufgerufen.

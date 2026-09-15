@@ -10,7 +10,7 @@ Alte, fachlich nicht eindeutig zuordenbare Angaben werden erhalten und zur Prüf
 
 Schlägt eine Migration fehl, wird der ursprüngliche Bestand nicht durch eine teilweise umgestellte Datenbank ersetzt. Fehlt zu einer vorhandenen Konfiguration die Datenbank, meldet die App einen Fehler und legt keinen leeren Ersatzbestand an.
 
-Dieser Ablauf setzt voraus, dass die neue App tatsächlich installiert wurde. Für alte macOS-Releases besteht ein gesondertes [Signaturproblem beim automatischen Installer](../mac-update-repair.md). Die erfolgreiche Datenmigration behebt dieses Problem nicht. Der [Upgrade-Prüfbericht](../reviews/2026-09-06-upgrade-171-180-und-design.md) trennt die geprüfte Datenübernahme von noch ausstehenden Installerprüfungen.
+Dieser Ablauf setzt voraus, dass die neue App tatsächlich installiert wurde. Für alte macOS-Releases besteht ein gesondertes Signaturproblem beim automatischen Installer. Die erfolgreiche Datenmigration behebt dieses Problem nicht.
 
 ## Gerätewechsel oder Wiederherstellung einer Sicherung
 
@@ -48,7 +48,7 @@ Der Excel-Nachweis enthält Zusammenfassung und Einzelabschnitte. Fehlende oder 
 
 ## Nachweise und Einarbeitung
 
-Bei Unterweisungen Durchführung, Inhalt, durchführende Person und Nachweisverweis erfassen. Der Verweis kann auf Pflegecampus, eine Personalakte oder ein Dokument zeigen. Er ersetzt keine erforderliche Unterschrift. Eine automatische Wiedervorlage ist ein eigener offener Eintrag. Den Durchführungstag zu korrigieren passt den automatisch verknüpften Folgetermin an; ausdrücklich manuell gesetzte Termine bleiben bestehen.
+Bei Unterweisungen Durchführung, Inhalt, durchführende Person und Nachweisverweis erfassen. Der Verweis kann auf eine Schulungsplattform, eine Personalakte oder ein Dokument zeigen. Er ersetzt keine erforderliche Unterschrift. Eine automatische Wiedervorlage ist ein eigener offener Eintrag. Den Durchführungstag zu korrigieren passt den automatisch verknüpften Folgetermin an; ausdrücklich manuell gesetzte Termine bleiben bestehen.
 
 Praktische Einarbeitung endet mit Stufe 6 sowie Bestätigungsdatum und bestätigender Person. Stufen 1 bis 5 gelten als laufend. Einen alten Stufenstand erst nach fachlicher Prüfung neu einstufen. Vertragliche Einsatzberechtigungen ergeben sich nicht allein aus der Stufe.
 

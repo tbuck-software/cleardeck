@@ -197,62 +197,62 @@
   "screenshots": [
     {
       "view": "team",
-      "path": "docs/reviews/assets/2026-09-06-design/team.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/team.png",
       "sha256": "d16a386b9060b87d92e6838ed7665d5509ec307ef28c5d3508c6c6e3af7ee00f"
     },
     {
       "view": "history",
-      "path": "docs/reviews/assets/2026-09-06-design/history.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/history.png",
       "sha256": "f75bd3b7dc25a92600e074811ef19e6a5912a02daa26ff23ee1f3fdcbaf4012a"
     },
     {
       "view": "employee-edit",
-      "path": "docs/reviews/assets/2026-09-06-design/employee-edit.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/employee-edit.png",
       "sha256": "0921babd76c84883dce447ec2e93b699af14d7174880fbb0cd263c388c9b3793"
     },
     {
       "view": "instruction-edit",
-      "path": "docs/reviews/assets/2026-09-06-design/instruction-edit.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/instruction-edit.png",
       "sha256": "1d273bf1716806cdc2b855af45fe228e774797bfc36ab098438404f54b2a8db1"
     },
     {
       "view": "competency",
-      "path": "docs/reviews/assets/2026-09-06-design/competency.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/competency.png",
       "sha256": "eb0db4605488fbe3a07737e7e0ccc7224930ff545eef5648c486f25c35d4a749"
     },
     {
       "view": "patient-edit-bottom",
-      "path": "docs/reviews/assets/2026-09-06-design/patient-edit-bottom.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/patient-edit-bottom.png",
       "sha256": "2f23b4c7079485e5bfb5dd7f182dfcf3c290d196f3c864bcedc83bf910e1bca7"
     },
     {
       "view": "visit-action",
-      "path": "docs/reviews/assets/2026-09-06-design/visit-action.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/visit-action.png",
       "sha256": "f08eca43fc3742a21c334cc2c9d7c1485e0391b215c9e390807835aa280eb4a9"
     },
     {
       "view": "audit",
-      "path": "docs/reviews/assets/2026-09-06-design/audit.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/audit.png",
       "sha256": "383c8a32431a3ab48178521ee5472ebd66bfa96ff94128ee2abe977fdf4e7d76"
     },
     {
       "view": "report",
-      "path": "docs/reviews/assets/2026-09-06-design/report.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/report.png",
       "sha256": "bbcf395f356488f37e2183de60c54fe5335ff02d14ec525ee8e139e7fcfed0d1"
     },
     {
       "view": "import",
-      "path": "docs/reviews/assets/2026-09-06-design/import.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/import.png",
       "sha256": "e8f28a201f4c361937548e06a03bcce2bbdc64944b4658ab4f211d45c93efe61"
     },
     {
       "view": "restore",
-      "path": "docs/reviews/assets/2026-09-06-design/restore.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/restore.png",
       "sha256": "48d05429a047555b9b32f142eef695c5df64c6c864be58636e719abc0d10b00c"
     },
     {
       "view": "catalog-edit",
-      "path": "docs/reviews/assets/2026-09-06-design/catalog-edit.png",
+      "path": "docs/internal/reviews/assets/2026-09-06-design/catalog-edit.png",
       "sha256": "cd171fc39ccefa3c6b5fc00b335eef8b7aaccf801278b1d2359e3ce828c54ac1"
     }
   ],

@@ -34,4 +34,4 @@ Ein Testlauf veröffentlicht keine App. Version 2.2.2 ist ausschließlich ein Te
 
 Die Tests wurden nicht auf dem Gerät des bestehenden Nutzers ausgeführt. Ein öffentlicher Live-Feed wird erst möglich, wenn der Eigentümer das Repository selbst öffentlich stellt. Der private Betrieb bleibt möglich; dafür muss der Nutzer nach der einmaligen Installation seinen Zugriffstoken in den Einstellungen hinterlegen. Ein neuer Mac- oder Linux-Installer ist nicht Teil dieses Windows-Nachweises.
 
-Der optionale Serverbetrieb und seine noch offenen Betriebs- und Datenschutzaufgaben stehen im [Hosting- und Launch-Plan](../hosting-launch-plan.md). Die [Bereinigung vor der Veröffentlichung](../publication-cleanup.md) dokumentiert auch die verbleibenden GitHub-internen Altansichten.
+Der optionale Serverbetrieb und seine noch offenen Betriebs- und Datenschutzaufgaben stehen im [Hosting- und Launch-Plan](../betrieb/hosting-launch-plan.md). Die [Bereinigung vor der Veröffentlichung](../vorfaelle/publication-cleanup.md) dokumentiert auch die verbleibenden GitHub-internen Altansichten.

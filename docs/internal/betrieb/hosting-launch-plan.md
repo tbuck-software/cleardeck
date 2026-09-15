@@ -16,7 +16,7 @@ Die App-Administration umfasst derzeit das Anlegen, Deaktivieren und Ändern von
 
 ## Freigabestatus
 
-Die [Bereinigung vor der Veröffentlichung](publication-cleanup.md) dokumentiert die abgeschlossene Entfernung privater Originalunterlagen, die Token-Bereinigung und die historischen Windows-Prüfungen. Die dort verlinkten Serveraufnahmen und der alte Serverprüfbericht beschreiben den v1-Snapshot-Stand vom 13.09.2026. Sie belegen die neue Row-Transaction-API nicht.
+Die [Bereinigung vor der Veröffentlichung](../vorfaelle/publication-cleanup.md) dokumentiert die abgeschlossene Entfernung privater Originalunterlagen, die Token-Bereinigung und die historischen Windows-Prüfungen. Die dort verlinkten Serveraufnahmen und der alte Serverprüfbericht beschreiben den v1-Snapshot-Stand vom 13.09.2026. Sie belegen die neue Row-Transaction-API nicht.
 
 Das Repository bleibt privat. Es liegt seit dem 14.09.2026 unter `tbuck-software/cleardeck`. Es gibt in diesem Arbeitsstand keine Umbenennung des Produkts, keine öffentliche Veröffentlichung und keinen neuen Release. Die Änderung der Sichtbarkeit und ein späterer Release bleiben der letzte Schritt des Eigentümers.
 

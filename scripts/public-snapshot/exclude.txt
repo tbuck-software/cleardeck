@@ -1,0 +1,13 @@
+# Paths (files or directories) removed from the public snapshot.
+scripts/public-snapshot
+docs/internal
+
+# Release process bound to the private feed and internal reports
+.agents
+.claude
+AGENTS.md
+
+# One-off recovery path bound to the private 2.2.0 draft
+.github/workflows/windows-recovery.yml
+.github/workflows/windows-update-smoke.yml
+scripts/publish-windows-recovery.cjs
