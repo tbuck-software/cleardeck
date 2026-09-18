@@ -1,6 +1,6 @@
 # Kompetenzvorlagen, Ticket #33
 
-Stand: 18.09.2026. Lokaler Arbeitsstand, noch nicht veröffentlicht. Keine verbindlichen HKP-Leistungsfreigaben importiert.
+Stand: 18.09.2026. Die geprüfte Umsetzung wurde anschließend mit [Windows 2.2.1 veröffentlicht](2026-09-18-release-2.2.1.md). Keine verbindlichen HKP-Leistungsfreigaben importiert.
 
 ## Umsetzung
 

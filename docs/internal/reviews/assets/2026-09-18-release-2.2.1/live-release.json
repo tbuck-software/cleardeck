@@ -1,0 +1,16 @@
+{
+  "release": {
+    "isDraft": false,
+    "publishedAt": "2026-09-18T21:41:04Z",
+    "tagName": "v2.2.1",
+    "url": "https://github.com/tbuck-software/cleardeck/releases/tag/v2.2.1"
+  },
+  "sha256": {
+    "cleardeck-2.2.1-full.nupkg": "5300bc8c71dcc008aa00a1e5254818bd56042871bec38c68e3611110eaa04fe6",
+    "RELEASES": "f4af8dfba6decf45bdccf2c8f9adfe44c1c9d88298fb707475ec98be2902202e",
+    "latest.yml": "819d09d9bd9a8c80835f3fca2e3bd598735bf9f3bcc5451a2646481c78aa243c",
+    "ClearDeck-win32-x64-2.2.1.zip": "a0afff6cdaf110334c95623d2100e11b2152e28227f8eafd7be4f0c72e17438b",
+    "ClearDeck-2.2.1-Setup.exe": "ab0f2a97e9a2636b1ed123af60c232ea6823d7aa5020ff32b14d626e8e550571"
+  },
+  "matchesTestedTagBuild": true
+}
