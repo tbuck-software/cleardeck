@@ -46,22 +46,20 @@ const EmployeeCompetencies = ({
         <div>
           <h3 className="cd-h3">Kompetenzmatrix</h3>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           {availableCompetencyCount === 0 && (
             <span className="cd-muted-13">Alle Kompetenzen des Katalogs sind zugeordnet.</span>
           )}
-          {suggestedCompetencyCount > 0 && (
-            <button
+          <button
               type="button"
-              className="btn btn-secondary"
+              className="btn btn-primary"
               onClick={onOpenSuggestedCompetencies}
             >
-              {suggestedCompetencyCount} Vorschläge aus Qualifikation
-            </button>
-          )}
+              Kompetenzen aus Vorlage{suggestedCompetencyCount > 0 ? ` · ${suggestedCompetencyCount} Vorschläge` : ''}
+          </button>
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-secondary"
             disabled={availableCompetencyCount === 0}
             onClick={onAddCompetency}
           >

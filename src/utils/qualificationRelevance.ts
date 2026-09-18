@@ -6,7 +6,7 @@ export const deriveQualificationTags = (qualification: string): Set<string> => {
 
   if (!value) return tags;
 
-  const assistant = /1[- ](?:jährig|jaehrig)|pflegehilf|pflegeassist|helfer/.test(value);
+  const assistant = /1[- ](?:jährig|jaehrig)|pflegehilf|pflege(?:fach)?assist|helfer/.test(value);
   if (
     !assistant &&
     (value.includes('pflegefach') ||
@@ -16,6 +16,8 @@ export const deriveQualificationTags = (qualification: string): Set<string> => {
   ) {
     tags.add('Nur PFK');
   }
+
+  if (/pflege(?:fach)?assist/.test(value)) tags.add('Nur PFA');
 
   if (
     value.includes('pflegehilf') ||

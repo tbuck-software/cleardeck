@@ -1834,10 +1834,17 @@ const App = () => {
       />
       <RecommendedCompetenciesModal
         state={suggestedCompetencyModal}
-        definitions={suggestedCompetencyDefinitions}
+        definitions={competencyDefinitions}
+        qualifications={qualifications.map((entry) => entry.name)}
+        employeeQualification={selectedEmployee?.qualification ?? ''}
+        assignedIds={employeeCompetencies.map((entry) => entry.competencyDefinitionId)}
+        busy={loading}
+        onQualificationChange={(qualification) => setSuggestedCompetencyModal({
+          open: true, qualification, selectedDefinitionIds: [],
+        })}
         onToggle={toggleSuggestedCompetencySelection}
         onSelectAll={selectAllSuggestedCompetencies}
-        onClose={() => setSuggestedCompetencyModal({ open: false, selectedDefinitionIds: [] })}
+        onClose={() => { if (!loading) setSuggestedCompetencyModal({ open: false, selectedDefinitionIds: [] }); }}
         onSave={handleAddRecommendedCompetencies}
       />
 

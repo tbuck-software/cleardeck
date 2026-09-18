@@ -118,6 +118,8 @@ export const api = {
       call('reorderCompetencyDefinitions', baseApi.reorderCompetencyDefinitions, ids),
     listEmployee: (employeeId: number) =>
       call('listEmployeeCompetencies', baseApi.listEmployeeCompetencies, employeeId),
+    assignEmployee: (input: Parameters<Api['assignEmployeeCompetencies']>[0]) =>
+      call('assignEmployeeCompetencies', baseApi.assignEmployeeCompetencies, input),
     bulkChange: (input: Parameters<Api['bulkChangeCompetencies']>[0]) =>
       call('bulkChangeCompetencies', baseApi.bulkChangeCompetencies, input),
     saveEmployee: (input: Parameters<Api['saveEmployeeCompetency']>[0]) =>

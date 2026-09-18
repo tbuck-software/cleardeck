@@ -4,6 +4,8 @@
 
 ## [2.2.1]
 
+- Kompetenzen nach Berufsgruppe gemeinsam zuordnen und vorhandene Bewertungen erhalten.
+- Pflegefachassistenz bei Kompetenzvorlagen getrennt von Pflegefachkräften berücksichtigen.
 - Windows-Installation aktualisieren und vorhandene Daten sowie Anmeldung weiterverwenden.
 - Öffentliche und private GitHub-Updates mit einstellbarer Quelle und optionalem Zugangstoken nutzen.
 

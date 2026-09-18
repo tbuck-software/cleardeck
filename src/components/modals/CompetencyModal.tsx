@@ -46,7 +46,7 @@ const CompetencyModal = ({ state, onChange, onClose, onSave, onDelete }: Compete
         />
       </div>
       <div className="field cd-field-wide">
-        <label htmlFor="competency-relevance">Relevanz</label>
+        <label htmlFor="competency-relevance">Berufsgruppen-Vorlage</label>
         <select
           id="competency-relevance"
           className="input"
@@ -55,6 +55,7 @@ const CompetencyModal = ({ state, onChange, onClose, onSave, onDelete }: Compete
         >
           <option value="Alle">Alle</option>
           <option value="Nur PFK">Nur PFK</option>
+          <option value="Nur PFA">Pflegeassistenz / Pflegefachassistenz</option>
           <option value="Nur PHK">Nur PHK</option>
           <option value="Azubi">Azubi</option>
           <option value="Praxisanleitung">Praxisanleitung</option>

@@ -234,6 +234,7 @@ export type EmployeeInstructionModalState = {
 
 export type SuggestedCompetencyModalState = {
   open: boolean;
+  qualification?: string;
   selectedDefinitionIds: number[];
 };
 

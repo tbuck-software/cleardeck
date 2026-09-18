@@ -117,7 +117,7 @@ describe('EmployeeDetail', () => {
     fireEvent.click(screen.getByText('Kompetenz hinzufügen'));
     expect(onAddCompetency).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByText('2 Vorschläge aus Qualifikation'));
+    fireEvent.click(screen.getByText('Kompetenzen aus Vorlage · 2 Vorschläge'));
     expect(onOpenSuggestedCompetencies).toHaveBeenCalledTimes(1);
   });
 

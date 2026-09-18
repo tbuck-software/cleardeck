@@ -166,6 +166,7 @@ export type Api = {
   deleteCompetencyDefinition: (id: number) => Promise<CompetencyDefinition[]>;
   reorderCompetencyDefinitions: (ids: number[]) => Promise<CompetencyDefinition[]>;
   listEmployeeCompetencies: (employeeId: number) => Promise<EmployeeCompetency[]>;
+  assignEmployeeCompetencies: (input: { employeeId: number; competencyDefinitionIds: number[] }) => Promise<EmployeeCompetency[]>;
   bulkChangeCompetencies: (input: BulkCompetencyChange) => Promise<EmployeeCompetency[]>;
   saveEmployeeCompetency: (input: {
     stageScheme?: 'legacy' | 'practice-v1';
@@ -448,6 +449,7 @@ const api: Api = {
     ipcRenderer.invoke('competencies:reorderDefinitions', { ids }),
   listEmployeeCompetencies: (employeeId) =>
     ipcRenderer.invoke('competencies:listEmployee', { employeeId }),
+  assignEmployeeCompetencies: (input) => ipcRenderer.invoke('competencies:assignEmployee', input),
   bulkChangeCompetencies: (input) => ipcRenderer.invoke('competencies:bulkChange', input),
   saveEmployeeCompetency: (input) => ipcRenderer.invoke('competencies:saveEmployee', input),
   deleteEmployeeCompetency: (employeeId, competencyDefinitionId) =>

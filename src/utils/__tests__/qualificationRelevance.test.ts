@@ -14,6 +14,13 @@ describe('qualification relevance helpers', () => {
     expect(matchesQualificationRelevance('Pflegehilfskraft', 'Nur PHK')).toBe(true);
   });
 
+  it.each(['Pflegefachassistenz', 'Pflegefachassistent', 'Pflegeassistenz'])(
+    'unterscheidet %s von Pflegefachkräften', (qualification) => {
+      expect(matchesQualificationRelevance(qualification, 'Nur PFK')).toBe(false);
+      expect(matchesQualificationRelevance(qualification, 'Nur PFA')).toBe(true);
+    },
+  );
+
   it('laesst allgemeine kompetenzen immer zu', () => {
     expect(matchesQualificationRelevance('Pflegefachkraft', 'Alle')).toBe(true);
     expect(matchesQualificationRelevance('Pflegefachkraft', null)).toBe(true);

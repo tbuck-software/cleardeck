@@ -9,7 +9,7 @@ import type { EmployeeWithPeriod, YearDataset } from '../../shared/types';
 vi.mock('../../services/api', () => ({
   default: {
     employees: { save: vi.fn(), list: vi.fn(), listPeriods: vi.fn(), listEvents: vi.fn() },
-    competencies: { listEmployee: vi.fn().mockResolvedValue([]) },
+    competencies: { listEmployee: vi.fn().mockResolvedValue([]), assignEmployee: vi.fn() },
     instructions: { listEmployee: vi.fn().mockResolvedValue([]) },
   },
 }));
@@ -158,5 +158,46 @@ describe('working-time edits', () => {
     expect(api.employees.save).toHaveBeenLastCalledWith(expect.objectContaining({
       periodId: 10, startDate: '2024-09-01', hoursEffectiveFrom: '2025-01-01', updateHours: true,
     }));
+  });
+});
+
+
+describe('competency templates', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('selects a reviewed alternative group and submits the set in a single request', async () => {
+    const { result } = createHook();
+    act(() => {
+      result.current.setters.setSelectedEmployee({ ...employee, qualification: 'Pflegefachkraft' });
+      result.current.setters.setCompetencyDefinitions([
+        { id: 1, name: 'Allgemein', relevance: 'Alle' },
+        { id: 2, name: 'Fachkraft', relevance: 'Nur PFK' },
+        { id: 3, name: 'Assistenz', relevance: 'Nur PFA' },
+      ]);
+    });
+    act(() => result.current.actions.openSuggestedCompetencyModal());
+    expect(result.current.state.suggestedCompetencyModal.qualification).toBe('Pflegefachkraft');
+    act(() => result.current.setters.setSuggestedCompetencyModal({
+      open: true, qualification: 'Pflegefachassistenz', selectedDefinitionIds: [],
+    }));
+    act(() => result.current.actions.selectAllSuggestedCompetencies());
+    expect(result.current.state.suggestedCompetencyModal.selectedDefinitionIds).toEqual([1, 3]);
+    vi.mocked(api.competencies.assignEmployee).mockResolvedValue([]);
+    await act(() => result.current.actions.handleAddRecommendedCompetencies());
+    expect(api.competencies.assignEmployee).toHaveBeenCalledExactlyOnceWith({ employeeId: 1, competencyDefinitionIds: [1, 3] });
+    expect(result.current.state.suggestedCompetencyModal.open).toBe(false);
+    expect(result.current.state.selectedEmployee?.qualification).toBe('Pflegefachkraft');
+  });
+
+  it('keeps the chosen group and selection available after a failed save', async () => {
+    const { result } = createHook();
+    const state = { open: true, qualification: 'Pflegefachassistenz', selectedDefinitionIds: [3] };
+    act(() => {
+      result.current.setters.setSelectedEmployee(employee);
+      result.current.setters.setSuggestedCompetencyModal(state);
+    });
+    vi.mocked(api.competencies.assignEmployee).mockRejectedValue(new Error('Speicherfehler'));
+    await act(() => result.current.actions.handleAddRecommendedCompetencies());
+    expect(result.current.state.suggestedCompetencyModal).toEqual(state);
   });
 });
