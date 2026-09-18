@@ -271,6 +271,36 @@ export const saveEmployeeCompetency = (
   return listEmployeeCompetencies(input.employeeId);
 };
 
+/** Add a reviewed set without changing assessments created since the preview opened. */
+export const assignEmployeeCompetencies = (input: {
+  employeeId: number;
+  competencyDefinitionIds: number[];
+}): EmployeeCompetency[] => {
+  const db = getDb();
+  if (
+    !Number.isSafeInteger(input.employeeId) ||
+    !Array.isArray(input.competencyDefinitionIds) ||
+    !input.competencyDefinitionIds.length ||
+    input.competencyDefinitionIds.some((id) => !Number.isSafeInteger(id))
+  ) throw new Error('Bitte eine Person und Kompetenzen auswählen.');
+
+  db.transaction(() => {
+    if (!db.prepare('SELECT 1 FROM employees WHERE id=?').get(input.employeeId))
+      throw new Error('Die Person ist nicht mehr vorhanden.');
+    const exists = db.prepare('SELECT 1 FROM competency_definitions WHERE id=?');
+    const assigned = db.prepare(
+      'SELECT 1 FROM employee_competencies WHERE employeeId=? AND competencyDefinitionId=?',
+    );
+    for (const competencyDefinitionId of new Set(input.competencyDefinitionIds)) {
+      if (!exists.get(competencyDefinitionId))
+        throw new Error('Eine ausgewählte Kompetenz ist nicht mehr im Katalog vorhanden.');
+      if (assigned.get(input.employeeId, competencyDefinitionId)) continue;
+      writeEmployeeCompetency({ employeeId: input.employeeId, competencyDefinitionId });
+    }
+  })();
+  return listEmployeeCompetencies(input.employeeId);
+};
+
 export const bulkChangeCompetencies = (input: BulkCompetencyChange): EmployeeCompetency[] => {
   const db = getDb();
   if (!Number.isInteger(input.employeeId) || !Array.isArray(input.changes) || !input.changes.length)

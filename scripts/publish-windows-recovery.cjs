@@ -37,7 +37,7 @@ async function main() {
   if (existing && !existing.isDraft) throw Error('Release already published; refusing mutation.');
   const notes = path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'cleardeck-windows-recovery-notes.md');
   execFileSync(process.execPath, ['scripts/release-notes.js', notes]);
-  fs.appendFileSync(notes, '\nNur Windows. Für die einmalige Umstellung ClearDeck schließen und den neuen Installer über die vorhandene Version installieren. Passwort und Daten bleiben erhalten. Bei einem privaten GitHub-Repository anschließend unter Einstellungen → Über ClearDeck → Update-Quelle einen persönlichen Zugriffstoken mit Leserechten hinterlegen.\n');
+  fs.appendFileSync(notes, '\nNur Windows. Für die einmalige Umstellung ClearDeck schließen und den neuen Installer über die vorhandene Version installieren. Passwort und Daten bleiben erhalten. Bei einem privaten GitHub-Repository anschließend unter Einstellungen → Verbindungen → Update-Quelle ändern einen persönlichen Zugriffstoken mit Leserechten hinterlegen.\n');
   if (!existing)
     gh(['release', 'create', tag, '--verify-tag', '--draft', '--title', tag, '--notes-file', notes]);
   else gh(['release', 'edit', tag, '--notes-file', notes]);

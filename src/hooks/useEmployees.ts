@@ -641,9 +641,15 @@ const useEmployees = ({
       (definition) =>
         definition.id &&
         !assignedDefinitionIds.has(definition.id) &&
-        matchesQualificationRelevance(selectedEmployee.qualification, definition.relevance),
+        matchesQualificationRelevance(
+          suggestedCompetencyModal.qualification ?? selectedEmployee.qualification,
+          definition.relevance,
+        ),
     );
-  }, [competencyDefinitions, employeeCompetencies, selectedEmployee]);
+  }, [
+    competencyDefinitions, employeeCompetencies, selectedEmployee,
+    suggestedCompetencyModal.qualification,
+  ]);
 
   const handleSaveEmployeeCompetency = useCallback(async () => {
     if (!selectedEmployee?.id || !employeeCompetencyModal.competencyDefinitionId) return;
@@ -684,18 +690,13 @@ const useEmployees = ({
   }, [employeeCompetencyModal.competencyDefinitionId, handleError, selectedEmployee, setToast]);
 
   const openSuggestedCompetencyModal = useCallback(() => {
-    const recommendedDefinitions = getRecommendedCompetencyDefinitions();
-    if (recommendedDefinitions.length === 0) {
-      setToast('Keine passenden Kompetenzen zur Qualifikation gefunden.');
-      setTimeout(() => setToast(null), 2000);
-      return;
-    }
-
+    if (!selectedEmployee?.id) return;
     setSuggestedCompetencyModal({
       open: true,
+      qualification: selectedEmployee.qualification,
       selectedDefinitionIds: [],
     });
-  }, [getRecommendedCompetencyDefinitions, setToast]);
+  }, [selectedEmployee]);
 
   const toggleSuggestedCompetencySelection = useCallback((definitionId: number) => {
     setSuggestedCompetencyModal((prev) => ({
@@ -729,20 +730,13 @@ const useEmployees = ({
 
     setLoading(true);
     try {
-      let list: EmployeeCompetency[] = employeeCompetencies;
-      for (const competencyDefinitionId of selectedDefinitionIds) {
-        list = await api.competencies.saveEmployee({
-          employeeId: selectedEmployee.id,
-          competencyDefinitionId,
-          level: null,
-          approvedAt: null,
-          approvedBy: null,
-          note: null,
-        });
-      }
+      const list = await api.competencies.assignEmployee({
+        employeeId: selectedEmployee.id,
+        competencyDefinitionIds: selectedDefinitionIds,
+      });
       setEmployeeCompetencies(list);
       setSuggestedCompetencyModal(emptySuggestedCompetencyModal());
-      setToast(`${selectedDefinitionIds.length} Kompetenzen hinzugefügt.`);
+      setToast('Auswahl übernommen. Neue Kompetenzen sind offen.');
       setTimeout(() => setToast(null), 2000);
     } catch (err) {
       handleError(err);
@@ -750,7 +744,6 @@ const useEmployees = ({
       setLoading(false);
     }
   }, [
-    employeeCompetencies,
     handleError,
     selectedEmployee,
     setSuggestedCompetencyModal,

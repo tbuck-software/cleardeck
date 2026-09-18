@@ -63,6 +63,7 @@ import {
   listCompetencyDefinitions,
   listEmployeeCompetencies,
   reorderCompetencyDefinitions,
+  assignEmployeeCompetencies,
   bulkChangeCompetencies,
   saveEmployeeCompetency,
   updateCompetencyDefinition,
@@ -376,6 +377,11 @@ export const registerDataHandlers = (): void => {
   handleData('competencies:reorderDefinitions', (_event, { ids }: { ids: number[] }) => {
     ensureDbReady();
     return reorderCompetencyDefinitions(ids);
+  });
+
+  handleData('competencies:assignEmployee', (_event, input: Parameters<typeof assignEmployeeCompetencies>[0]) => {
+    ensureDbReady();
+    return assignEmployeeCompetencies(input);
   });
 
   handleData('competencies:bulkChange', (_event, input: BulkCompetencyChange) => {
