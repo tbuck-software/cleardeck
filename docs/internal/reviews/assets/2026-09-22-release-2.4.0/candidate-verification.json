@@ -1,0 +1,552 @@
+{
+  "version": "2.4.0",
+  "artifacts": {
+    "version": "2.4.0",
+    "manifest": {
+      "name": "latest.yml",
+      "path": "ClearDeck-2.4.0-Setup.exe",
+      "files": [
+        {
+          "url": "ClearDeck-2.4.0-Setup.exe",
+          "sha512": "3QAlkPYPGg4xvYmNPp77N8aFHiTMqNzK+Sx7Yr5APIjiNBD8fshgbem/ZYLKEeDI2m7MZ1IW39tjRXCCe42hmw==",
+          "size": 136647680
+        }
+      ],
+      "releaseNotes": [
+        {
+          "version": "2.4.0",
+          "note": "- HKP-Katalog mit 50 Leistungen nach Berufsgruppe ergänzen, ohne vorhandene Bewertungen zu verändern.\r\n- Berufsgruppen und betrieblichen Prüfstatus je Kompetenz bearbeiten; Quellen und Bedingungen nachlesen."
+        },
+        {
+          "version": "2.3.0",
+          "note": "- Auffällige Beschäftigungsdaten zentral unter Datenprüfung finden und bereinigen.\r\n- Jahres-VZÄ per Monatsenddurchschnitt berechnen; taggewichtete Berechnung bleibt wählbar.\r\n- Berechnungsart zentral für Dashboard, Jahrestabelle und Exporte einstellen."
+        },
+        {
+          "version": "2.2.1",
+          "note": "- Kompetenzen nach Berufsgruppe gemeinsam zuordnen und vorhandene Bewertungen erhalten.\r\n- Pflegefachassistenz bei Kompetenzvorlagen getrennt von Pflegefachkräften berücksichtigen.\r\n- Windows-Installation aktualisieren und vorhandene Daten sowie Anmeldung weiterverwenden.\r\n- Öffentliche und private GitHub-Updates mit einstellbarer Quelle und optionalem Zugangstoken nutzen."
+        },
+        {
+          "version": "2.2.0",
+          "note": "- Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.\r\n- Vereinbarte Leistungen je Patient:in auswählen; die MD-Personenliste ergibt sich daraus.\r\n- Leistungskatalog unter Verwaltung pflegen.\r\n- Auffällige Beschäftigungsdaten als Aufgaben sehen und direkt in der Historie bereinigen; doppelte Personen zusammenführen.\r\n- VZÄ früherer Beschäftigungen korrigieren, ohne Perioden zu ändern.\r\n- Pflegegrad „unbekannt“ und „kein Pflegegrad“ getrennt erfassen.\r\n- Eintritt und Beschäftigungsverlauf eindeutig anzeigen.\r\n- Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.\r\n- Einheitliche Listen mit klarer Bedienung auf allen Seiten.\r\n- Mitarbeiterliste über das Menü der Teamseite übernehmen."
+        },
+        {
+          "version": "2.1.0",
+          "note": "- Arbeitszeiten direkt in der Historie ergänzen und korrigieren.\r\n- Frühere Arbeitszeitdaten nach einer Eintrittskorrektur sofort auswählen.\r\n- Einfacheres Arbeitszeitformular ohne zusätzliche Prüf-Checkbox.\r\n- Kompetenzstufen für ausgewählte oder alle Kompetenzen gemeinsam ändern."
+        },
+        {
+          "version": "2.0.0",
+          "note": "- Übersichtlichere Oberfläche mit Hilfe direkt am Formular.\r\n- Offene Aufgaben und Fristen auf einen Blick.\r\n- Personen und Funktionen schnell finden.\r\n- Bessere Bedienung in kleinen Fenstern.\r\n- Patientenlisten flexibel sortieren.\r\n- Arbeitszeiten und Beschäftigungsverläufe nachvollziehen.\r\n- Genauere Jahresauswertungen und Exporte.\r\n- Personaldaten mit Vorschau aus Excel oder CSV übernehmen.\r\n- Einweisungen und Nachweise gezielt nachverfolgen.\r\n- Einarbeitung und Kompetenzen im Blick behalten.\r\n- Pflegemerkmale und Pflegeleistungen genauer erfassen.\r\n- Personenlisten für die Pflegeprüfung exportieren.\r\n- Pflegevisiten und offene Maßnahmen nachverfolgen.\r\n- Prüfergebnisse mit Originalberichten verknüpfen.\r\n- Bestehende Daten automatisch übernehmen und sichern.\r\n- Sicherungen einfacher verwalten und wiederherstellen.\r\n- Updates mit Fortschrittsanzeige herunterladen und installieren."
+        },
+        {
+          "version": "1.8.0",
+          "note": "- Überarbeitete Einstellungen mit eigenen Bereichen für Qualifikationen, Kompetenzen und Einweisungen.\r\n- Links zu Hilfe und Releases öffnen sich im externen Browser.\r\n- Detaillierte Kennzahlen im Dashboard zeigen fehlende Nachweise und den Stand der Kompetenzen.\r\n- Kompetenzabzeichen und ein Kompetenzpass geben je Teammitglied Auskunft über vorhandene Fähigkeiten.\r\n- Kompetenzstufen lassen sich in einem interaktiven Auswahlfeld bearbeiten.\r\n- Eine Kompetenzmatrix und die Verwaltung von Einweisungen ergänzen die Nachweisübersicht.\r\n- Vereinheitlichte Dialoge und verständlichere Hinweise bei der Anmeldung.\r\n- Die lokale Datenbank kann auch ohne Verschlüsselung verwendet werden.\r\n- Überarbeitete Funktionen zum Zurücksetzen lokaler Daten und zum Laden von Demodaten.\r\n- Änderungen an Wochenstunden und VZÄ werden historisiert.\r\n- Einstellungen zeigen installierte und angebotene Update-Versionen getrennt an.\r\n- Korrigierte Auswahl der Update-Quelle, wenn keine Umgebungsvariable gesetzt ist."
+        },
+        {
+          "version": "1.7.2",
+          "note": "- Angepasste App-Paketierung für Windows-Updates mit Squirrel."
+        },
+        {
+          "version": "1.7.1",
+          "note": "- Überarbeitete Bereinigung und Aufbewahrung von Build-Dateien bei der Veröffentlichung."
+        },
+        {
+          "version": "1.7.0",
+          "note": "- Patient:innen in einem eigenen Dialog anlegen und bearbeiten.\r\n- Geburtstage und Besuche von Patient:innen erscheinen im Kalender.\r\n- Verbesserte Eingabe von Geburtsdaten und einheitliche Datumsanzeige.\r\n- Kürzere Aufbewahrung von Build-Dateien verhindert Speicherprobleme bei der Veröffentlichung."
+        },
+        {
+          "version": "1.6.0",
+          "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+        },
+        {
+          "version": "1.5.0",
+          "note": "- Patient:innenverwaltung mit Besuchsdokumentation und Bewertung nach QPR 2026.\r\n- Kalender mit Monats-, Wochen- und Jahresansicht sowie Ereignisfiltern.\r\n- Kommende Termine, Geburtstage und Jubiläen werden im Dashboard angezeigt.\r\n- Verbesserte Anordnung der Dashboard-Karten auf verschiedenen Bildschirmgrößen.\r\n- Die zwischenzeitliche Abteilungsverwaltung wurde wieder entfernt.\r\n- Eine Content Security Policy begrenzt die im App-Fenster zulässigen Inhalte.\r\n- Ergänzte Projektkonfiguration für Build, Typprüfung und Codeprüfung."
+        },
+        {
+          "version": "1.4.12",
+          "note": "- Überarbeitete Darstellung des Logos in Sidebar und Infobereich."
+        },
+        {
+          "version": "1.4.11",
+          "note": "- Korrigierte Erkennung des App-Namens bei der macOS-Paketierung."
+        },
+        {
+          "version": "1.4.10",
+          "note": "- Ergänzte lokale Signierung der macOS-App beim Erstellen der Pakete."
+        },
+        {
+          "version": "1.4.9",
+          "note": "- Eigener Installationsschritt für die Anwendung von Abhängigkeitspatches."
+        },
+        {
+          "version": "1.4.8",
+          "note": "- Unterstützung für Abhängigkeitspatches im Build ergänzt."
+        },
+        {
+          "version": "1.4.7",
+          "note": "- Präzisere Beschreibung der Teamübersicht und ergänztes App-Symbol."
+        },
+        {
+          "version": "1.4.6",
+          "note": "- Verbesserte Auswahl der Installationsdateien für Update-Metadaten.\r\n- Der Release-Befehl erzeugt die Update-Metadaten mit."
+        },
+        {
+          "version": "1.4.5",
+          "note": "- GitHub-Update-Konfiguration wird im App-Paket mitgeliefert."
+        },
+        {
+          "version": "1.4.4",
+          "note": "- App-Symbole und typisierte Bildimporte ergänzt."
+        },
+        {
+          "version": "1.4.3",
+          "note": "- ClearDeck-Logo in Sidebar und Einstellungen ergänzt."
+        },
+        {
+          "version": "1.4.2",
+          "note": "- Name der ausführbaren Datei auf ClearDeck umgestellt."
+        },
+        {
+          "version": "1.4.1",
+          "note": "- Update-Metadaten werden bei der Veröffentlichung automatisch erzeugt.\r\n- Sidebar an kleinere Bildschirmgrößen angepasst."
+        },
+        {
+          "version": "1.4.0",
+          "note": "- Employee DB heißt jetzt ClearDeck.\r\n- Überarbeiteter Infobereich mit Version, Systeminformationen, Lizenz und Kontakt zum Entwickler.\r\n- Verbesserte Darstellung der Support-Verknüpfung."
+        },
+        {
+          "version": "1.3.3",
+          "note": "- Authentifizierter Zugriff auf Updates aus dem privaten GitHub-Repository ergänzt."
+        },
+        {
+          "version": "1.3.2",
+          "note": "- Abhängigkeit zur Verarbeitung der Update-Metadaten aktualisiert."
+        },
+        {
+          "version": "1.3.1",
+          "note": "- Zusätzliche Teamdaten und Qualifikationen in der Teamtabelle ergänzt."
+        },
+        {
+          "version": "1.3.0",
+          "note": "- Neue Dialoge zum Anlegen und Bearbeiten von Teammitgliedern.\r\n- Überarbeitete Detailansicht mit chronologischer Darstellung, Ereignissymbolen und Qualifikationen.\r\n- Sortierbare Teamtabelle und verbesserte Formular-, Fokus- und Scroll-Darstellung.\r\n- Überarbeitete Einstellungen mit Tabs für Datenbank, Qualifikationen und System.\r\n- Qualifikationsübersicht und verbesserte Karten im Dashboard.\r\n- Einheitliche Bezeichnung „Team“ sowie überarbeitete Sidebar.\r\n- VZÄ-Berechnung ergänzt und auf maximal 1 je Person begrenzt.\r\n- Qualifikationen und Notizen werden Beschäftigungszeiträumen zugeordnet; vereinfachte Verwaltung dieser Zeiträume.\r\n- Neue Teammitglieder erhalten automatisch ein Eintrittsereignis.\r\n- Ereignisse nutzen vorgegebene Bezeichnungen statt freier Titel.\r\n- Nicht mehr verwendete Teamdatenfelder und überflüssige Statushinweise entfernt.\r\n- Versionierte Datenbankmigrationen, reparierte Datenbankverknüpfungen und Werkzeuge zur Datenbankinspektion.\r\n- Überarbeitete Datenbankverbindung, Verschlüsselung und Beispieldaten.\r\n- Zentralisierte API-Aufrufe und aufgeteilte Logik für Teamverwaltung, Bestätigungen, Wiederherstellung und Updates.\r\n- Automatisierte Tests und Typkonfiguration ergänzt.\r\n- macOS-Installation als DMG ergänzt."
+        },
+        {
+          "version": "1.2.0",
+          "note": "- Wiederherstellungsschlüssel anzeigen und für die Passwortwiederherstellung verwenden."
+        },
+        {
+          "version": "1.1.8",
+          "note": "- Korrigierte API-Anbindung für Update-Status und Update-Prüfung."
+        },
+        {
+          "version": "1.1.7",
+          "note": "- Update-Hinweis mit Zurückstellfunktion in der Sidebar.\r\n- Korrigierte Markierung der Navigation beim Anzeigen und Bearbeiten von Teammitgliedern."
+        },
+        {
+          "version": "1.1.6",
+          "note": "- Korrigierte Schreibberechtigungen beim Veröffentlichen von Releases."
+        },
+        {
+          "version": "1.1.5",
+          "note": "- Windows-kompatible Build-Konfiguration und angepasster Name der ausführbaren Datei."
+        },
+        {
+          "version": "1.1.4",
+          "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+        },
+        {
+          "version": "1.1.3",
+          "note": "- Überarbeitete Versionsvergabe und Tag-Erstellung beim Veröffentlichen."
+        }
+      ]
+    },
+    "artifacts": {
+      "setup": {
+        "name": "ClearDeck-2.4.0-Setup.exe",
+        "size": 136647680,
+        "sha512": "3QAlkPYPGg4xvYmNPp77N8aFHiTMqNzK+Sx7Yr5APIjiNBD8fshgbem/ZYLKEeDI2m7MZ1IW39tjRXCCe42hmw=="
+      },
+      "package": {
+        "name": "cleardeck-2.4.0-full.nupkg",
+        "size": 135888680,
+        "sha1": "8c6178c2772b4d885a01601fdc3d413d4a059c3b"
+      },
+      "releases": {
+        "name": "RELEASES",
+        "size": 80,
+        "entries": [
+          {
+            "sha1": "8c6178c2772b4d885a01601fdc3d413d4a059c3b",
+            "name": "cleardeck-2.4.0-full.nupkg",
+            "size": 135888680
+          }
+        ]
+      }
+    }
+  },
+  "bundle": {
+    "portable": {
+      "source": "ClearDeck-win32-x64-2.4.0.zip",
+      "appAsar": {
+        "archive": "app.asar",
+        "scannedFiles": 9,
+        "sha256": "ac896dec2c037fb546b18f9bc3c59684522e5072aaad258f6f6fd6256fe0cbee"
+      },
+      "updateConfig": {
+        "provider": "github",
+        "owner": "tbuck-software",
+        "repo": "cleardeck",
+        "private": false
+      }
+    },
+    "squirrel": {
+      "source": "cleardeck-2.4.0-full.nupkg",
+      "appAsar": {
+        "archive": "app.asar",
+        "scannedFiles": 9,
+        "sha256": "ac896dec2c037fb546b18f9bc3c59684522e5072aaad258f6f6fd6256fe0cbee"
+      },
+      "updateConfig": {
+        "provider": "github",
+        "owner": "tbuck-software",
+        "repo": "cleardeck",
+        "private": false
+      }
+    }
+  },
+  "feed": {
+    "provider": "github",
+    "owner": "tbuck-software",
+    "repo": "cleardeck",
+    "private": false,
+    "version": "2.4.0",
+    "artifactUrl": "http://127.0.0.1:50196/tbuck-software/cleardeck/releases/download/v2.4.0/ClearDeck-2.4.0-Setup.exe",
+    "releaseNotes": [
+      {
+        "version": "2.4.0",
+        "note": "- HKP-Katalog mit 50 Leistungen nach Berufsgruppe ergänzen, ohne vorhandene Bewertungen zu verändern.\r\n- Berufsgruppen und betrieblichen Prüfstatus je Kompetenz bearbeiten; Quellen und Bedingungen nachlesen."
+      },
+      {
+        "version": "2.3.0",
+        "note": "- Auffällige Beschäftigungsdaten zentral unter Datenprüfung finden und bereinigen.\r\n- Jahres-VZÄ per Monatsenddurchschnitt berechnen; taggewichtete Berechnung bleibt wählbar.\r\n- Berechnungsart zentral für Dashboard, Jahrestabelle und Exporte einstellen."
+      },
+      {
+        "version": "2.2.1",
+        "note": "- Kompetenzen nach Berufsgruppe gemeinsam zuordnen und vorhandene Bewertungen erhalten.\r\n- Pflegefachassistenz bei Kompetenzvorlagen getrennt von Pflegefachkräften berücksichtigen.\r\n- Windows-Installation aktualisieren und vorhandene Daten sowie Anmeldung weiterverwenden.\r\n- Öffentliche und private GitHub-Updates mit einstellbarer Quelle und optionalem Zugangstoken nutzen."
+      },
+      {
+        "version": "2.2.0",
+        "note": "- Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.\r\n- Vereinbarte Leistungen je Patient:in auswählen; die MD-Personenliste ergibt sich daraus.\r\n- Leistungskatalog unter Verwaltung pflegen.\r\n- Auffällige Beschäftigungsdaten als Aufgaben sehen und direkt in der Historie bereinigen; doppelte Personen zusammenführen.\r\n- VZÄ früherer Beschäftigungen korrigieren, ohne Perioden zu ändern.\r\n- Pflegegrad „unbekannt“ und „kein Pflegegrad“ getrennt erfassen.\r\n- Eintritt und Beschäftigungsverlauf eindeutig anzeigen.\r\n- Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.\r\n- Einheitliche Listen mit klarer Bedienung auf allen Seiten.\r\n- Mitarbeiterliste über das Menü der Teamseite übernehmen."
+      },
+      {
+        "version": "2.1.0",
+        "note": "- Arbeitszeiten direkt in der Historie ergänzen und korrigieren.\r\n- Frühere Arbeitszeitdaten nach einer Eintrittskorrektur sofort auswählen.\r\n- Einfacheres Arbeitszeitformular ohne zusätzliche Prüf-Checkbox.\r\n- Kompetenzstufen für ausgewählte oder alle Kompetenzen gemeinsam ändern."
+      },
+      {
+        "version": "2.0.0",
+        "note": "- Übersichtlichere Oberfläche mit Hilfe direkt am Formular.\r\n- Offene Aufgaben und Fristen auf einen Blick.\r\n- Personen und Funktionen schnell finden.\r\n- Bessere Bedienung in kleinen Fenstern.\r\n- Patientenlisten flexibel sortieren.\r\n- Arbeitszeiten und Beschäftigungsverläufe nachvollziehen.\r\n- Genauere Jahresauswertungen und Exporte.\r\n- Personaldaten mit Vorschau aus Excel oder CSV übernehmen.\r\n- Einweisungen und Nachweise gezielt nachverfolgen.\r\n- Einarbeitung und Kompetenzen im Blick behalten.\r\n- Pflegemerkmale und Pflegeleistungen genauer erfassen.\r\n- Personenlisten für die Pflegeprüfung exportieren.\r\n- Pflegevisiten und offene Maßnahmen nachverfolgen.\r\n- Prüfergebnisse mit Originalberichten verknüpfen.\r\n- Bestehende Daten automatisch übernehmen und sichern.\r\n- Sicherungen einfacher verwalten und wiederherstellen.\r\n- Updates mit Fortschrittsanzeige herunterladen und installieren."
+      },
+      {
+        "version": "1.8.0",
+        "note": "- Überarbeitete Einstellungen mit eigenen Bereichen für Qualifikationen, Kompetenzen und Einweisungen.\r\n- Links zu Hilfe und Releases öffnen sich im externen Browser.\r\n- Detaillierte Kennzahlen im Dashboard zeigen fehlende Nachweise und den Stand der Kompetenzen.\r\n- Kompetenzabzeichen und ein Kompetenzpass geben je Teammitglied Auskunft über vorhandene Fähigkeiten.\r\n- Kompetenzstufen lassen sich in einem interaktiven Auswahlfeld bearbeiten.\r\n- Eine Kompetenzmatrix und die Verwaltung von Einweisungen ergänzen die Nachweisübersicht.\r\n- Vereinheitlichte Dialoge und verständlichere Hinweise bei der Anmeldung.\r\n- Die lokale Datenbank kann auch ohne Verschlüsselung verwendet werden.\r\n- Überarbeitete Funktionen zum Zurücksetzen lokaler Daten und zum Laden von Demodaten.\r\n- Änderungen an Wochenstunden und VZÄ werden historisiert.\r\n- Einstellungen zeigen installierte und angebotene Update-Versionen getrennt an.\r\n- Korrigierte Auswahl der Update-Quelle, wenn keine Umgebungsvariable gesetzt ist."
+      },
+      {
+        "version": "1.7.2",
+        "note": "- Angepasste App-Paketierung für Windows-Updates mit Squirrel."
+      },
+      {
+        "version": "1.7.1",
+        "note": "- Überarbeitete Bereinigung und Aufbewahrung von Build-Dateien bei der Veröffentlichung."
+      },
+      {
+        "version": "1.7.0",
+        "note": "- Patient:innen in einem eigenen Dialog anlegen und bearbeiten.\r\n- Geburtstage und Besuche von Patient:innen erscheinen im Kalender.\r\n- Verbesserte Eingabe von Geburtsdaten und einheitliche Datumsanzeige.\r\n- Kürzere Aufbewahrung von Build-Dateien verhindert Speicherprobleme bei der Veröffentlichung."
+      },
+      {
+        "version": "1.6.0",
+        "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+      },
+      {
+        "version": "1.5.0",
+        "note": "- Patient:innenverwaltung mit Besuchsdokumentation und Bewertung nach QPR 2026.\r\n- Kalender mit Monats-, Wochen- und Jahresansicht sowie Ereignisfiltern.\r\n- Kommende Termine, Geburtstage und Jubiläen werden im Dashboard angezeigt.\r\n- Verbesserte Anordnung der Dashboard-Karten auf verschiedenen Bildschirmgrößen.\r\n- Die zwischenzeitliche Abteilungsverwaltung wurde wieder entfernt.\r\n- Eine Content Security Policy begrenzt die im App-Fenster zulässigen Inhalte.\r\n- Ergänzte Projektkonfiguration für Build, Typprüfung und Codeprüfung."
+      },
+      {
+        "version": "1.4.12",
+        "note": "- Überarbeitete Darstellung des Logos in Sidebar und Infobereich."
+      },
+      {
+        "version": "1.4.11",
+        "note": "- Korrigierte Erkennung des App-Namens bei der macOS-Paketierung."
+      },
+      {
+        "version": "1.4.10",
+        "note": "- Ergänzte lokale Signierung der macOS-App beim Erstellen der Pakete."
+      },
+      {
+        "version": "1.4.9",
+        "note": "- Eigener Installationsschritt für die Anwendung von Abhängigkeitspatches."
+      },
+      {
+        "version": "1.4.8",
+        "note": "- Unterstützung für Abhängigkeitspatches im Build ergänzt."
+      },
+      {
+        "version": "1.4.7",
+        "note": "- Präzisere Beschreibung der Teamübersicht und ergänztes App-Symbol."
+      },
+      {
+        "version": "1.4.6",
+        "note": "- Verbesserte Auswahl der Installationsdateien für Update-Metadaten.\r\n- Der Release-Befehl erzeugt die Update-Metadaten mit."
+      },
+      {
+        "version": "1.4.5",
+        "note": "- GitHub-Update-Konfiguration wird im App-Paket mitgeliefert."
+      },
+      {
+        "version": "1.4.4",
+        "note": "- App-Symbole und typisierte Bildimporte ergänzt."
+      },
+      {
+        "version": "1.4.3",
+        "note": "- ClearDeck-Logo in Sidebar und Einstellungen ergänzt."
+      },
+      {
+        "version": "1.4.2",
+        "note": "- Name der ausführbaren Datei auf ClearDeck umgestellt."
+      },
+      {
+        "version": "1.4.1",
+        "note": "- Update-Metadaten werden bei der Veröffentlichung automatisch erzeugt.\r\n- Sidebar an kleinere Bildschirmgrößen angepasst."
+      },
+      {
+        "version": "1.4.0",
+        "note": "- Employee DB heißt jetzt ClearDeck.\r\n- Überarbeiteter Infobereich mit Version, Systeminformationen, Lizenz und Kontakt zum Entwickler.\r\n- Verbesserte Darstellung der Support-Verknüpfung."
+      },
+      {
+        "version": "1.3.3",
+        "note": "- Authentifizierter Zugriff auf Updates aus dem privaten GitHub-Repository ergänzt."
+      },
+      {
+        "version": "1.3.2",
+        "note": "- Abhängigkeit zur Verarbeitung der Update-Metadaten aktualisiert."
+      },
+      {
+        "version": "1.3.1",
+        "note": "- Zusätzliche Teamdaten und Qualifikationen in der Teamtabelle ergänzt."
+      },
+      {
+        "version": "1.3.0",
+        "note": "- Neue Dialoge zum Anlegen und Bearbeiten von Teammitgliedern.\r\n- Überarbeitete Detailansicht mit chronologischer Darstellung, Ereignissymbolen und Qualifikationen.\r\n- Sortierbare Teamtabelle und verbesserte Formular-, Fokus- und Scroll-Darstellung.\r\n- Überarbeitete Einstellungen mit Tabs für Datenbank, Qualifikationen und System.\r\n- Qualifikationsübersicht und verbesserte Karten im Dashboard.\r\n- Einheitliche Bezeichnung „Team“ sowie überarbeitete Sidebar.\r\n- VZÄ-Berechnung ergänzt und auf maximal 1 je Person begrenzt.\r\n- Qualifikationen und Notizen werden Beschäftigungszeiträumen zugeordnet; vereinfachte Verwaltung dieser Zeiträume.\r\n- Neue Teammitglieder erhalten automatisch ein Eintrittsereignis.\r\n- Ereignisse nutzen vorgegebene Bezeichnungen statt freier Titel.\r\n- Nicht mehr verwendete Teamdatenfelder und überflüssige Statushinweise entfernt.\r\n- Versionierte Datenbankmigrationen, reparierte Datenbankverknüpfungen und Werkzeuge zur Datenbankinspektion.\r\n- Überarbeitete Datenbankverbindung, Verschlüsselung und Beispieldaten.\r\n- Zentralisierte API-Aufrufe und aufgeteilte Logik für Teamverwaltung, Bestätigungen, Wiederherstellung und Updates.\r\n- Automatisierte Tests und Typkonfiguration ergänzt.\r\n- macOS-Installation als DMG ergänzt."
+      },
+      {
+        "version": "1.2.0",
+        "note": "- Wiederherstellungsschlüssel anzeigen und für die Passwortwiederherstellung verwenden."
+      },
+      {
+        "version": "1.1.8",
+        "note": "- Korrigierte API-Anbindung für Update-Status und Update-Prüfung."
+      },
+      {
+        "version": "1.1.7",
+        "note": "- Update-Hinweis mit Zurückstellfunktion in der Sidebar.\r\n- Korrigierte Markierung der Navigation beim Anzeigen und Bearbeiten von Teammitgliedern."
+      },
+      {
+        "version": "1.1.6",
+        "note": "- Korrigierte Schreibberechtigungen beim Veröffentlichen von Releases."
+      },
+      {
+        "version": "1.1.5",
+        "note": "- Windows-kompatible Build-Konfiguration und angepasster Name der ausführbaren Datei."
+      },
+      {
+        "version": "1.1.4",
+        "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+      },
+      {
+        "version": "1.1.3",
+        "note": "- Überarbeitete Versionsvergabe und Tag-Erstellung beim Veröffentlichen."
+      }
+    ],
+    "requests": [
+      {
+        "path": "/tbuck-software/cleardeck/releases.atom",
+        "authorization": false
+      },
+      {
+        "path": "/api/v3/repos/tbuck-software/cleardeck/releases/latest",
+        "authorization": false
+      },
+      {
+        "path": "/tbuck-software/cleardeck/releases/download/v2.4.0/latest.yml",
+        "authorization": false
+      }
+    ]
+  },
+  "privateFeed": {
+    "provider": "github",
+    "owner": "tbuck-software",
+    "repo": "cleardeck",
+    "private": true,
+    "version": "2.4.0",
+    "artifactUrl": "http://127.0.0.1:50198/api/v3/repos/tbuck-software/cleardeck/releases/assets/ClearDeck-2.4.0-Setup.exe",
+    "releaseNotes": [
+      {
+        "version": "2.4.0",
+        "note": "- HKP-Katalog mit 50 Leistungen nach Berufsgruppe ergänzen, ohne vorhandene Bewertungen zu verändern.\r\n- Berufsgruppen und betrieblichen Prüfstatus je Kompetenz bearbeiten; Quellen und Bedingungen nachlesen."
+      },
+      {
+        "version": "2.3.0",
+        "note": "- Auffällige Beschäftigungsdaten zentral unter Datenprüfung finden und bereinigen.\r\n- Jahres-VZÄ per Monatsenddurchschnitt berechnen; taggewichtete Berechnung bleibt wählbar.\r\n- Berechnungsart zentral für Dashboard, Jahrestabelle und Exporte einstellen."
+      },
+      {
+        "version": "2.2.1",
+        "note": "- Kompetenzen nach Berufsgruppe gemeinsam zuordnen und vorhandene Bewertungen erhalten.\r\n- Pflegefachassistenz bei Kompetenzvorlagen getrennt von Pflegefachkräften berücksichtigen.\r\n- Windows-Installation aktualisieren und vorhandene Daten sowie Anmeldung weiterverwenden.\r\n- Öffentliche und private GitHub-Updates mit einstellbarer Quelle und optionalem Zugangstoken nutzen."
+      },
+      {
+        "version": "2.2.0",
+        "note": "- Austritt erfassen und Qualifikation zum Stichtag wechseln, ohne Arbeitszeiten zu verlieren.\r\n- Vereinbarte Leistungen je Patient:in auswählen; die MD-Personenliste ergibt sich daraus.\r\n- Leistungskatalog unter Verwaltung pflegen.\r\n- Auffällige Beschäftigungsdaten als Aufgaben sehen und direkt in der Historie bereinigen; doppelte Personen zusammenführen.\r\n- VZÄ früherer Beschäftigungen korrigieren, ohne Perioden zu ändern.\r\n- Pflegegrad „unbekannt“ und „kein Pflegegrad“ getrennt erfassen.\r\n- Eintritt und Beschäftigungsverlauf eindeutig anzeigen.\r\n- Kompetenzen und Einweisungen über ein Suchfeld statt langer Auswahllisten wählen.\r\n- Einheitliche Listen mit klarer Bedienung auf allen Seiten.\r\n- Mitarbeiterliste über das Menü der Teamseite übernehmen."
+      },
+      {
+        "version": "2.1.0",
+        "note": "- Arbeitszeiten direkt in der Historie ergänzen und korrigieren.\r\n- Frühere Arbeitszeitdaten nach einer Eintrittskorrektur sofort auswählen.\r\n- Einfacheres Arbeitszeitformular ohne zusätzliche Prüf-Checkbox.\r\n- Kompetenzstufen für ausgewählte oder alle Kompetenzen gemeinsam ändern."
+      },
+      {
+        "version": "2.0.0",
+        "note": "- Übersichtlichere Oberfläche mit Hilfe direkt am Formular.\r\n- Offene Aufgaben und Fristen auf einen Blick.\r\n- Personen und Funktionen schnell finden.\r\n- Bessere Bedienung in kleinen Fenstern.\r\n- Patientenlisten flexibel sortieren.\r\n- Arbeitszeiten und Beschäftigungsverläufe nachvollziehen.\r\n- Genauere Jahresauswertungen und Exporte.\r\n- Personaldaten mit Vorschau aus Excel oder CSV übernehmen.\r\n- Einweisungen und Nachweise gezielt nachverfolgen.\r\n- Einarbeitung und Kompetenzen im Blick behalten.\r\n- Pflegemerkmale und Pflegeleistungen genauer erfassen.\r\n- Personenlisten für die Pflegeprüfung exportieren.\r\n- Pflegevisiten und offene Maßnahmen nachverfolgen.\r\n- Prüfergebnisse mit Originalberichten verknüpfen.\r\n- Bestehende Daten automatisch übernehmen und sichern.\r\n- Sicherungen einfacher verwalten und wiederherstellen.\r\n- Updates mit Fortschrittsanzeige herunterladen und installieren."
+      },
+      {
+        "version": "1.8.0",
+        "note": "- Überarbeitete Einstellungen mit eigenen Bereichen für Qualifikationen, Kompetenzen und Einweisungen.\r\n- Links zu Hilfe und Releases öffnen sich im externen Browser.\r\n- Detaillierte Kennzahlen im Dashboard zeigen fehlende Nachweise und den Stand der Kompetenzen.\r\n- Kompetenzabzeichen und ein Kompetenzpass geben je Teammitglied Auskunft über vorhandene Fähigkeiten.\r\n- Kompetenzstufen lassen sich in einem interaktiven Auswahlfeld bearbeiten.\r\n- Eine Kompetenzmatrix und die Verwaltung von Einweisungen ergänzen die Nachweisübersicht.\r\n- Vereinheitlichte Dialoge und verständlichere Hinweise bei der Anmeldung.\r\n- Die lokale Datenbank kann auch ohne Verschlüsselung verwendet werden.\r\n- Überarbeitete Funktionen zum Zurücksetzen lokaler Daten und zum Laden von Demodaten.\r\n- Änderungen an Wochenstunden und VZÄ werden historisiert.\r\n- Einstellungen zeigen installierte und angebotene Update-Versionen getrennt an.\r\n- Korrigierte Auswahl der Update-Quelle, wenn keine Umgebungsvariable gesetzt ist."
+      },
+      {
+        "version": "1.7.2",
+        "note": "- Angepasste App-Paketierung für Windows-Updates mit Squirrel."
+      },
+      {
+        "version": "1.7.1",
+        "note": "- Überarbeitete Bereinigung und Aufbewahrung von Build-Dateien bei der Veröffentlichung."
+      },
+      {
+        "version": "1.7.0",
+        "note": "- Patient:innen in einem eigenen Dialog anlegen und bearbeiten.\r\n- Geburtstage und Besuche von Patient:innen erscheinen im Kalender.\r\n- Verbesserte Eingabe von Geburtsdaten und einheitliche Datumsanzeige.\r\n- Kürzere Aufbewahrung von Build-Dateien verhindert Speicherprobleme bei der Veröffentlichung."
+      },
+      {
+        "version": "1.6.0",
+        "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+      },
+      {
+        "version": "1.5.0",
+        "note": "- Patient:innenverwaltung mit Besuchsdokumentation und Bewertung nach QPR 2026.\r\n- Kalender mit Monats-, Wochen- und Jahresansicht sowie Ereignisfiltern.\r\n- Kommende Termine, Geburtstage und Jubiläen werden im Dashboard angezeigt.\r\n- Verbesserte Anordnung der Dashboard-Karten auf verschiedenen Bildschirmgrößen.\r\n- Die zwischenzeitliche Abteilungsverwaltung wurde wieder entfernt.\r\n- Eine Content Security Policy begrenzt die im App-Fenster zulässigen Inhalte.\r\n- Ergänzte Projektkonfiguration für Build, Typprüfung und Codeprüfung."
+      },
+      {
+        "version": "1.4.12",
+        "note": "- Überarbeitete Darstellung des Logos in Sidebar und Infobereich."
+      },
+      {
+        "version": "1.4.11",
+        "note": "- Korrigierte Erkennung des App-Namens bei der macOS-Paketierung."
+      },
+      {
+        "version": "1.4.10",
+        "note": "- Ergänzte lokale Signierung der macOS-App beim Erstellen der Pakete."
+      },
+      {
+        "version": "1.4.9",
+        "note": "- Eigener Installationsschritt für die Anwendung von Abhängigkeitspatches."
+      },
+      {
+        "version": "1.4.8",
+        "note": "- Unterstützung für Abhängigkeitspatches im Build ergänzt."
+      },
+      {
+        "version": "1.4.7",
+        "note": "- Präzisere Beschreibung der Teamübersicht und ergänztes App-Symbol."
+      },
+      {
+        "version": "1.4.6",
+        "note": "- Verbesserte Auswahl der Installationsdateien für Update-Metadaten.\r\n- Der Release-Befehl erzeugt die Update-Metadaten mit."
+      },
+      {
+        "version": "1.4.5",
+        "note": "- GitHub-Update-Konfiguration wird im App-Paket mitgeliefert."
+      },
+      {
+        "version": "1.4.4",
+        "note": "- App-Symbole und typisierte Bildimporte ergänzt."
+      },
+      {
+        "version": "1.4.3",
+        "note": "- ClearDeck-Logo in Sidebar und Einstellungen ergänzt."
+      },
+      {
+        "version": "1.4.2",
+        "note": "- Name der ausführbaren Datei auf ClearDeck umgestellt."
+      },
+      {
+        "version": "1.4.1",
+        "note": "- Update-Metadaten werden bei der Veröffentlichung automatisch erzeugt.\r\n- Sidebar an kleinere Bildschirmgrößen angepasst."
+      },
+      {
+        "version": "1.4.0",
+        "note": "- Employee DB heißt jetzt ClearDeck.\r\n- Überarbeiteter Infobereich mit Version, Systeminformationen, Lizenz und Kontakt zum Entwickler.\r\n- Verbesserte Darstellung der Support-Verknüpfung."
+      },
+      {
+        "version": "1.3.3",
+        "note": "- Authentifizierter Zugriff auf Updates aus dem privaten GitHub-Repository ergänzt."
+      },
+      {
+        "version": "1.3.2",
+        "note": "- Abhängigkeit zur Verarbeitung der Update-Metadaten aktualisiert."
+      },
+      {
+        "version": "1.3.1",
+        "note": "- Zusätzliche Teamdaten und Qualifikationen in der Teamtabelle ergänzt."
+      },
+      {
+        "version": "1.3.0",
+        "note": "- Neue Dialoge zum Anlegen und Bearbeiten von Teammitgliedern.\r\n- Überarbeitete Detailansicht mit chronologischer Darstellung, Ereignissymbolen und Qualifikationen.\r\n- Sortierbare Teamtabelle und verbesserte Formular-, Fokus- und Scroll-Darstellung.\r\n- Überarbeitete Einstellungen mit Tabs für Datenbank, Qualifikationen und System.\r\n- Qualifikationsübersicht und verbesserte Karten im Dashboard.\r\n- Einheitliche Bezeichnung „Team“ sowie überarbeitete Sidebar.\r\n- VZÄ-Berechnung ergänzt und auf maximal 1 je Person begrenzt.\r\n- Qualifikationen und Notizen werden Beschäftigungszeiträumen zugeordnet; vereinfachte Verwaltung dieser Zeiträume.\r\n- Neue Teammitglieder erhalten automatisch ein Eintrittsereignis.\r\n- Ereignisse nutzen vorgegebene Bezeichnungen statt freier Titel.\r\n- Nicht mehr verwendete Teamdatenfelder und überflüssige Statushinweise entfernt.\r\n- Versionierte Datenbankmigrationen, reparierte Datenbankverknüpfungen und Werkzeuge zur Datenbankinspektion.\r\n- Überarbeitete Datenbankverbindung, Verschlüsselung und Beispieldaten.\r\n- Zentralisierte API-Aufrufe und aufgeteilte Logik für Teamverwaltung, Bestätigungen, Wiederherstellung und Updates.\r\n- Automatisierte Tests und Typkonfiguration ergänzt.\r\n- macOS-Installation als DMG ergänzt."
+      },
+      {
+        "version": "1.2.0",
+        "note": "- Wiederherstellungsschlüssel anzeigen und für die Passwortwiederherstellung verwenden."
+      },
+      {
+        "version": "1.1.8",
+        "note": "- Korrigierte API-Anbindung für Update-Status und Update-Prüfung."
+      },
+      {
+        "version": "1.1.7",
+        "note": "- Update-Hinweis mit Zurückstellfunktion in der Sidebar.\r\n- Korrigierte Markierung der Navigation beim Anzeigen und Bearbeiten von Teammitgliedern."
+      },
+      {
+        "version": "1.1.6",
+        "note": "- Korrigierte Schreibberechtigungen beim Veröffentlichen von Releases."
+      },
+      {
+        "version": "1.1.5",
+        "note": "- Windows-kompatible Build-Konfiguration und angepasster Name der ausführbaren Datei."
+      },
+      {
+        "version": "1.1.4",
+        "note": "- Neue Paketversion ohne zusätzliche Funktionsänderungen."
+      },
+      {
+        "version": "1.1.3",
+        "note": "- Überarbeitete Versionsvergabe und Tag-Erstellung beim Veröffentlichen."
+      }
+    ],
+    "requests": [
+      {
+        "path": "/api/v3/repos/tbuck-software/cleardeck/releases/latest",
+        "authorization": true
+      },
+      {
+        "path": "/api/v3/repos/tbuck-software/cleardeck/releases/assets/latest.yml",
+        "authorization": true
+      },
+      {
+        "path": "/api/v3/repos/tbuck-software/cleardeck/releases/assets/ClearDeck-2.4.0-Setup.exe",
+        "authorization": true
+      }
+    ]
+  }
+}
