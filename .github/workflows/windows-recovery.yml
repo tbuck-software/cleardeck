@@ -2,7 +2,7 @@ name: Windows update recovery
 
 on:
   push:
-    tags: ['v2.2.1']
+    tags: ['v2.3.0']
   # Full package and native-upgrade checks are an explicit candidate gate.
   # Everyday changes are checked on pull requests and main by server.yml.
   workflow_dispatch:
@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ['2.2.1', '2.2.2']
+        version: ['2.3.0', '2.3.1']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,8 +48,8 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Set test-only successor version
-        if: matrix.version == '2.2.2'
-        run: npm version 2.2.2 --no-git-tag-version --ignore-scripts
+        if: matrix.version == '2.3.1'
+        run: npm version 2.3.1 --no-git-tag-version --ignore-scripts
       - name: Build Windows package without update credentials
         run: npm run make
         env:
@@ -111,17 +111,21 @@ jobs:
       matrix:
         include:
           - from: '2.1.0'
-            to: '2.2.1'
+            to: '2.3.0'
             mode: manual
             baseline: windows-baseline-2.1.0
           - from: '2.2.0'
-            to: '2.2.1'
+            to: '2.3.0'
             mode: manual
             baseline: original-release
           - from: '2.2.1'
-            to: '2.2.2'
+            to: '2.3.0'
             mode: update
-            baseline: windows-recovery-2.2.1
+            baseline: original-release
+          - from: '2.3.0'
+            to: '2.3.1'
+            mode: update
+            baseline: windows-recovery-2.3.0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -138,17 +142,22 @@ jobs:
         with:
           name: ${{ matrix.baseline }}
           path: baseline
-      - name: Obtain original 2.2.0 installer from private draft
+      - name: Obtain original released installer and check archived digest
         if: matrix.baseline == 'original-release'
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           New-Item -ItemType Directory -Path baseline | Out-Null
-          gh release download v2.2.0 --pattern ClearDeck-2.2.0-Setup.exe --dir baseline
+          $baselineVersion = '${{ matrix.from }}'
+          gh release download "v$baselineVersion" --pattern "ClearDeck-$baselineVersion-Setup.exe" --dir baseline
           if ($LASTEXITCODE -ne 0) { throw 'Original baseline download failed.' }
-          $digest = (Get-FileHash baseline/ClearDeck-2.2.0-Setup.exe -Algorithm SHA256).Hash.ToLowerInvariant()
-          if ($digest -ne '28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784') {
+          $expected = @{
+            '2.2.0' = '28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784'
+            '2.2.1' = 'ab0f2a97e9a2636b1ed123af60c232ea6823d7aa5020ff32b14d626e8e550571'
+          }
+          $digest = (Get-FileHash "baseline/ClearDeck-$baselineVersion-Setup.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+          if (!$expected.ContainsKey($baselineVersion) -or $digest -ne $expected[$baselineVersion]) {
             throw 'Original installer does not match the archived release digest.'
           }
       - uses: actions/setup-node@v4
@@ -169,7 +178,7 @@ jobs:
           retention-days: 7
 
   publish:
-    if: github.ref == 'refs/tags/v2.2.1'
+    if: github.ref == 'refs/tags/v2.3.0'
     needs: [checks, build, baseline, upgrade]
     runs-on: windows-latest
     permissions:
@@ -183,7 +192,7 @@ jobs:
       - run: npm ci
       - uses: actions/download-artifact@v4
         with:
-          name: windows-recovery-2.2.1
+          name: windows-recovery-2.3.0
           path: release-files
       - name: Verify uploaded draft before publishing Windows recovery
         run: node scripts/publish-windows-recovery.cjs release-files
@@ -191,6 +200,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NATIVE_WINDOWS_UPGRADES_VERIFIED: '1'
 
-# The 2.2.2 successor exists only to test the next in-app upgrade.
-# Manual candidate runs on branches publish nothing. Only the verified v2.2.1
+# The 2.3.1 successor exists only to test the next in-app upgrade.
+# Manual candidate runs on branches publish nothing. Only the verified v2.3.0
 # tag can publish; its full checks, builds and native-upgrade matrix remain required.

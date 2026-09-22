@@ -14,10 +14,10 @@ const hashes = (root) => Object.fromEntries(listFiles(root)
 
 async function main() {
   const tag = `v${version}`;
-  if (version !== '2.2.1' || process.env.GITHUB_REF !== `refs/tags/${tag}`)
-    throw Error('Windows recovery publishing requires the matching v2.2.1 tag.');
+  if (version !== '2.3.0' || process.env.GITHUB_REF !== `refs/tags/${tag}`)
+    throw Error('Windows recovery publishing requires the matching v2.3.0 tag.');
   if (process.env.NATIVE_WINDOWS_UPGRADES_VERIFIED !== '1')
-    throw Error('The three native Windows upgrade jobs must pass before publishing.');
+    throw Error('All four native Windows upgrade jobs must pass before publishing.');
   if (!process.argv[2]) throw Error('Windows artifact directory required.');
   const root = path.resolve(process.argv[2]);
   await verifyWindowsRecovery(root, version);
@@ -37,7 +37,7 @@ async function main() {
   if (existing && !existing.isDraft) throw Error('Release already published; refusing mutation.');
   const notes = path.join(process.env.RUNNER_TEMP || os.tmpdir(), 'cleardeck-windows-recovery-notes.md');
   execFileSync(process.execPath, ['scripts/release-notes.js', notes]);
-  fs.appendFileSync(notes, '\nNur Windows. Für die einmalige Umstellung ClearDeck schließen und den neuen Installer über die vorhandene Version installieren. Passwort und Daten bleiben erhalten. Bei einem privaten GitHub-Repository anschließend unter Einstellungen → Verbindungen → Update-Quelle ändern einen persönlichen Zugriffstoken mit Leserechten hinterlegen.\n');
+  fs.appendFileSync(notes, '\nNur Windows. Von 2.1.0 und 2.2.0 den Installer über die vorhandene Version installieren. Ab 2.2.1 ist das Update aus der App mit eingerichtetem GitHub-Zugriff möglich. Passwort und Daten bleiben erhalten.\n');
   if (!existing)
     gh(['release', 'create', tag, '--verify-tag', '--draft', '--title', tag, '--notes-file', notes]);
   else gh(['release', 'edit', tag, '--notes-file', notes]);

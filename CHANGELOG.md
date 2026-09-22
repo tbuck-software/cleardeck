@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [2.3.0]
+
+- Auffällige Beschäftigungsdaten zentral unter Datenprüfung finden und bereinigen.
+- Jahres-VZÄ per Monatsenddurchschnitt berechnen; taggewichtete Berechnung bleibt wählbar.
+- Berechnungsart zentral für Dashboard, Jahrestabelle und Exporte einstellen.
+
 ## [2.2.1]
 
 - Kompetenzen nach Berufsgruppe gemeinsam zuordnen und vorhandene Bewertungen erhalten.
