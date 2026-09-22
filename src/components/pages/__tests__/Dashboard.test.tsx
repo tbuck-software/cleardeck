@@ -225,3 +225,17 @@ describe('Dashboard', () => {
     expect(onOpenTarget).toHaveBeenCalledWith({ kind: 'employee', id: 9 });
   });
 });
+
+
+it('uses the historical annual qualification totals and all employed people as the mean denominator', () => {
+  renderDashboard({ totalFte: 0.5, totalHeadcount: 2, dataset: {
+    ...sampleDataset,
+    annualSummary: { method: 'month-end-average', unverifiedHoursCount: 1,
+      aggregation: { totalFte: 0.5, totalHeadcount: 1, categories: [{ qualification: 'Historische Pflegehilfe', headcount: 1, fte: 0.5 }] } },
+  } });
+  expect(screen.getByText('Jahres-VZÄ gesamt').previousSibling).toHaveTextContent('0,50');
+  expect(screen.getByText('Ø Jahres-VZÄ je Person').previousSibling).toHaveTextContent('0,25');
+  expect(screen.getByText('Historische Pflegehilfe')).toBeInTheDocument();
+  expect(screen.queryByText('Admin')).not.toBeInTheDocument();
+  expect(screen.getByText(/Vorläufig:/)).toBeInTheDocument();
+});

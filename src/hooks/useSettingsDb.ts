@@ -1,3 +1,4 @@
+import type { AnnualFteMethod } from '../shared/annualFte';
 import { useCallback, useEffect, useState } from 'react';
 import api from '../services/api';
 import { userFacingErrorMessage } from '../utils/errorMessage';
@@ -6,7 +7,7 @@ import type { ConfirmActionOptions, EncryptionSetupState } from '../types/ui';
 
 type UseSettingsDbParams = {
   year: number;
-  refreshDataset: (targetYear: number) => Promise<void>;
+  refreshDataset: (targetYear: number, throwOnError?: boolean) => Promise<void>;
   onError: (err: unknown) => void;
   onToast: (msg: string | null, timeout?: number) => void;
   confirmAction: (
@@ -31,6 +32,7 @@ const useSettingsDb = ({
   onAuthStateChange,
   onOpenRecoveryKey,
 }: UseSettingsDbParams) => {
+  const [annualFteSaving, setAnnualFteSaving] = useState(false);
   const [baseHours, setBaseHours] = useState<number>(36);
   const [baseHoursInput, setBaseHoursInput] = useState<string>('36');
   const [dbMessage, setDbMessage] = useState<string | null>(null);
@@ -66,6 +68,19 @@ const useSettingsDb = ({
       onError(err);
     }
   }, [baseHoursInput, hydrateBaseHours, onError, onToast]);
+
+  const handleSaveAnnualFteMethod = useCallback(async (method: AnnualFteMethod) => {
+    setAnnualFteSaving(true);
+    try {
+      await api.settings.setAnnualFteMethod(method);
+      await refreshDataset(year, true);
+      onToast('Berechnung der Jahres-VZÄ gespeichert.');
+    } catch (err) {
+      onError(err);
+    } finally {
+      setAnnualFteSaving(false);
+    }
+  }, [year, refreshDataset, onError, onToast]);
 
   const handleDbExport = useCallback(
     async (mode: 'encrypted' | 'plain') => {
@@ -319,6 +334,7 @@ const useSettingsDb = ({
 
   return {
     state: {
+      annualFteSaving,
       baseHours,
       baseHoursInput,
       dbMessage,
@@ -338,6 +354,7 @@ const useSettingsDb = ({
       hydrateBaseHours,
       hydrateFromApi,
       handleSaveBaseHoursValue,
+      handleSaveAnnualFteMethod,
       handleDbExport,
       handleDbImport,
       handleDropDatabase,

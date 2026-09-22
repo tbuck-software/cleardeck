@@ -1,3 +1,4 @@
+import { DEFAULT_ANNUAL_FTE_METHOD } from './shared/annualFte';
 import StaffImportModal from './components/modals/StaffImportModal';
 import type { StaffImportPreview } from './shared/staffImport';
 import { localDate } from './utils/calendarDate';
@@ -115,6 +116,7 @@ const App = () => {
       dataset,
       baseHours,
       baseHoursInput,
+      annualFteSaving,
       qualifications,
       competencyDefinitions,
       instructionDefinitions,
@@ -235,6 +237,7 @@ const App = () => {
       handleDbExport,
       handleDbImport,
       handleSaveBaseHoursValue,
+      handleSaveAnnualFteMethod,
       handleDropDatabase,
       handleFullReset,
       handleCheckUpdates,
@@ -297,6 +300,10 @@ const App = () => {
   const [reportOpen, setReportOpen] = useState(false);
   const [reportYear, setReportYear] = useState(currentYear - 1);
   const [reportMode, setReportMode] = useState<'stichtag' | 'year-average' | 'month-end-average'>('month-end-average');
+  const openAnnualReport = useCallback(() => {
+    setReportMode(dataset?.annualSummary?.method ?? DEFAULT_ANNUAL_FTE_METHOD);
+    setReportOpen(true);
+  }, [dataset?.annualSummary?.method]);
   const [reportDataset, setReportDataset] = useState<YearDataset | null>(null);
   useEffect(() => {
     if (!reportOpen || !appReady.unlocked) return;
@@ -947,7 +954,7 @@ const App = () => {
       ];
 
       const paletteActions: { label: string; run: () => void }[] = [
-        { label: 'Jahresnachweis erstellen', run: (): void => setReportOpen(true) },
+        { label: 'Jahresnachweis erstellen', run: (): void => openAnnualReport() },
         { label: 'Person anlegen', run: openCreateModal },
         { label: 'Patient:in anlegen', run: openCreatePatientModal },
         {
@@ -1007,6 +1014,7 @@ const App = () => {
     },
     [
       dataset?.employees,
+      openAnnualReport,
       patients,
       navigateToEmployee,
       navigateToPatient,
@@ -1342,7 +1350,7 @@ const App = () => {
             onOpenEvent={(event) => void openEvent(event)}
             onOpenReport={() => {
               setReportYear(year - 1);
-              setReportOpen(true);
+              openAnnualReport();
             }}
             onGoCalendar={() => navigateToPage('calendar')}
             onOpenTasks={() => navigateToPage('tasks')}
@@ -1377,6 +1385,7 @@ const App = () => {
               void window.api.chooseStaffImport().then(setStaffImport).catch(handleError)
             }
             year={year}
+            annualFteMethod={dataset?.annualSummary?.method}
             directoryMode={directoryMode}
             onDirectoryModeChange={setDirectoryMode}
             years={years}
@@ -1416,7 +1425,7 @@ const App = () => {
             }
             onOpenReport={() => {
               setReportYear(year);
-              setReportOpen(true);
+              openAnnualReport();
             }}
             onCreate={openCreateModal}
             onSelect={(employee) => void navigateToEmployee(employee)}
@@ -1632,6 +1641,9 @@ const App = () => {
 
         {page === 'settings' && (
           <SettingsGeneral
+            annualFteMethod={dataset?.annualSummary?.method ?? DEFAULT_ANNUAL_FTE_METHOD}
+            annualFteSaving={annualFteSaving}
+            onAnnualFteMethodChange={handleSaveAnnualFteMethod}
             baseHoursInput={baseHoursInput}
             careSettings={careSettings}
             onBaseHoursInputChange={setBaseHoursInput}

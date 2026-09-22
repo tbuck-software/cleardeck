@@ -1,3 +1,4 @@
+import type { AnnualFteMethod } from './shared/annualFte';
 import type { StaffImportPreview, StaffImportRow } from './shared/staffImport';
 import type { ConnectServerInput, ServerConnection } from './shared/serverConnection';
 import type {
@@ -265,6 +266,7 @@ export type Api = {
   }) => Promise<void>;
   deleteDatabase: () => Promise<boolean>;
   resetApp: () => Promise<AppState>;
+  setAnnualFteMethod: (method: AnnualFteMethod) => Promise<AnnualFteMethod>;
   getBaseHours: () => Promise<number>;
   setBaseHours: (hours: number) => Promise<number>;
   getStorageMode: () => Promise<StorageMode>;
@@ -482,6 +484,7 @@ const api: Api = {
   applyReconcilePeriods: (input) => ipcRenderer.invoke('employment:applyReconcile', input),
   deleteDatabase: () => ipcRenderer.invoke('db:delete'),
   resetApp: () => ipcRenderer.invoke('app:reset'),
+  setAnnualFteMethod: (method) => ipcRenderer.invoke('settings:setAnnualFteMethod', { method }),
   getBaseHours: () => ipcRenderer.invoke('settings:getBaseHours'),
   setBaseHours: (hours) => ipcRenderer.invoke('settings:setBaseHours', { hours }),
   getStorageMode: () =>

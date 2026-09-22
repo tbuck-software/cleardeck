@@ -114,12 +114,14 @@ describe('syncRecords', () => {
   it('captures rows with canonical keys and excludes local settings', () => {
     const db = database();
     db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES ('baseHours','40')").run();
+    db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES ('annualFteMethod','year-average')").run();
     db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES ('hiddenEventTypes','[\"leave\"]')").run();
     db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES ('backupFolder','/private')").run();
     employee(db, 'Alice', 41);
 
     const records = captureRecords(db as never);
     expect(records.some((record) => record.table === 'settings' && record.key === '["baseHours"]')).toBe(true);
+    expect(records.some((record) => record.table === 'settings' && record.key === '["annualFteMethod"]')).toBe(true);
     expect(records.some((record) => record.row.key === 'hiddenEventTypes')).toBe(false);
     expect(records.some((record) => record.row.key === 'backupFolder')).toBe(false);
     expect(records.find((record) => record.table === 'employees' && record.key === '[41]')).toMatchObject({

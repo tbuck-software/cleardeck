@@ -1,3 +1,4 @@
+import type { AnnualFteMethod } from '../../shared/annualFte';
 import { saveWorkingTime } from '../repositories/workingTimes';
 import { recordDeparture, switchQualification } from '../repositories/employmentActions';
 import { chooseStaffImport, commitStaffImport } from '../staffImport';
@@ -81,6 +82,7 @@ import {
   updateInstructionDefinition,
 } from '../repositories/instructions';
 import {
+  setAnnualFteMethod,
   getBaseHours,
   setBaseHours,
   getHiddenEventTypes,
@@ -594,6 +596,11 @@ export const registerDataHandlers = (): void => {
   );
 
   // Settings
+  handleData('settings:setAnnualFteMethod', (_event, { method }: { method: AnnualFteMethod }) => {
+    ensureDbReady();
+    return setAnnualFteMethod(method);
+  });
+
   handleData('settings:getBaseHours', () => {
     ensureDbReady();
     return getBaseHours();

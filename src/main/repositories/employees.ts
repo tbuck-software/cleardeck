@@ -1,3 +1,4 @@
+import { getAnnualFteMethod } from './settings';
 import { requireBirthDate } from '../../utils/calendarDate';
 /**
  * Employee Repository
@@ -271,7 +272,32 @@ export const getYearDataset = (
     employees.push(mapEmployeePeriod(db, row, year, endIso, employmentStartByPeriod));
   }
   employees.sort((a, b) => a.name.localeCompare(b.name, 'de'));
+  let annualSummary: YearDataset['annualSummary'];
+  if (mode === 'year') {
+    const method = getAnnualFteMethod();
+    const annual = getYearDataset(year, method);
+    const contributions = new Map<number, { fte: number; missing: boolean; verified: boolean }>();
+    for (const segment of annual.employees) {
+      const contribution = contributions.get(segment.id!) ?? { fte: 0, missing: false, verified: true };
+      contribution.fte += segment.fte;
+      contribution.missing ||= !!segment.hoursMissing;
+      contribution.verified &&= !!segment.hoursVerified;
+      contributions.set(segment.id!, contribution);
+    }
+    for (const employee of employees) {
+      const contribution = contributions.get(employee.id!);
+      employee.annualFte = contribution?.fte ?? 0;
+      employee.annualFteMissing = contribution?.missing ?? false;
+      employee.annualFteVerified = contribution?.verified ?? true;
+    }
+    annualSummary = {
+      method,
+      aggregation: annual.aggregation,
+      unverifiedHoursCount: annual.unverifiedHoursCount ?? 0,
+    };
+  }
   return {
+    annualSummary,
     employees,
     availableYears,
     aggregation: buildAggregation(employees),
