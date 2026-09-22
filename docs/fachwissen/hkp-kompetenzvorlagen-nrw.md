@@ -36,3 +36,8 @@ Die folgenden Punkte sind Produktentscheidungen aus den Befunden:
 5. Eine vorbelegte rechtliche NRW-Matrix wird erst nach Abgleich mit der vollständigen anwendbaren Anlage 10 ab 2023, Anlage 11 und relevanten Ergänzungen freigegeben. Bis dahin bleiben betriebliche Vorlagen konfigurierbar; die technische Funktion kann unabhängig davon fertiggestellt werden.
 
 Offen bleiben der konkrete Vertragsbeitritt und die vollständigen aktuellen Anlagen. Eine heutige leistungsgenaue Freigabe lässt sich aus den öffentlich geprüften Unterlagen nicht abschließend ableiten.
+
+
+## Fotoabgleich vom 22.09.2026
+
+Die gesuchte Kompetenzmatrix liegt inzwischen als Foto vor. Sie hat vier Berufsgruppenspalten einschließlich einer eigenen Pflegefachassistenzspalte. Der [zeilenweise Katalogabgleich](kompetenzmatrix-foto-katalogabgleich.md) dokumentiert lesbare Zuordnungen, Teiltreffer, fehlende Katalogthemen und die gezielt noch benötigten Ausschnitte. Die historische dreispaltige Fassung von 2022 wird nicht zur Ergänzung unlesbarer Stellen verwendet. Die regionale Einordnung ist anhand des nachgereichten Logos und der öffentlichen Unternehmensseite auf NRW eingegrenzt; der konkrete Vertrag bleibt unbestätigt.
