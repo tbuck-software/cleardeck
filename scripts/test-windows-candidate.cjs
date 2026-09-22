@@ -478,6 +478,7 @@ async function run() {
       await annualSelect.waitFor();
       assert.equal(await annualSelect.inputValue(), annualMethod);
       await page.screenshot({ path: path.join(result, 'einstellungen.png'), animations: 'disabled' });
+      await page.getByRole('button', { name: 'Zurück', exact: true }).first().click();
       await page.getByRole('button', { name: 'Kompetenzen', exact: true }).click();
       await page.getByRole('button', { name: 'HKP-Katalog ergänzen', exact: true }).click();
       await page.getByLabel('Berufsgruppe', { exact: true }).selectOption('HKP G3');
