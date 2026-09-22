@@ -23,7 +23,7 @@ type SettingsSidebarProps = {
 
 const SettingsSidebar = ({ current, wide, storageMode, onNavigate, onLeave, onLock }: SettingsSidebarProps) => (
   <aside className="app-sidebar" data-wide={wide}>
-    <button type="button" className="cd-nav cd-nav-muted app-sidebar-back" onClick={onLeave}>
+    <button type="button" className="cd-nav cd-nav-muted app-sidebar-back" aria-label="Zurück" onClick={onLeave}>
       <Icon name="arrowLeft" />
       {wide && <span>Zurück</span>}
     </button>
@@ -35,6 +35,7 @@ const SettingsSidebar = ({ current, wide, storageMode, onNavigate, onLeave, onLo
         type="button"
         className="cd-nav"
         aria-current={current === entry.key ? 'page' : undefined}
+        aria-label={entry.label}
         title={wide ? undefined : entry.label}
         onClick={() => onNavigate(entry.key)}
       >
@@ -45,11 +46,11 @@ const SettingsSidebar = ({ current, wide, storageMode, onNavigate, onLeave, onLo
 
     <div style={{ flex: 1 }} />
 
-    <button type="button" className="cd-nav" onClick={onLeave}>
+    <button type="button" className="cd-nav" aria-label="Zurück" onClick={onLeave}>
       <Icon name="arrowLeft" />
       {wide && <span style={{ flex: 1 }}>Zurück</span>}
     </button>
-    <button type="button" className="cd-nav cd-nav-muted" onClick={onLock}>
+    <button type="button" className="cd-nav cd-nav-muted" aria-label={storageMode === 'encrypted' ? 'Sperren' : 'Verdecken'} onClick={onLock}>
       <Icon name={storageMode === 'encrypted' ? 'lock' : 'eyeOff'} />
       {wide && <span>{storageMode === 'encrypted' ? 'Sperren' : 'Verdecken'}</span>}
     </button>
