@@ -1,3 +1,4 @@
+import { annualFteLabel } from '../shared/annualFte';
 import type { YearDataset } from '../shared/types';
 /**
  * Workbook building and writing.
@@ -69,21 +70,25 @@ export const buildPersonListWorkbook = (patients: Patient[]): XLSX.WorkBook => {
 /** The report and its individual rows travel together in the exported workbook. */
 export const buildEmployeeWorkbook = (dataset: YearDataset, year: number): XLSX.WorkBook => {
   const workbook = XLSX.utils.book_new();
+  const annual = dataset.annualSummary;
+  const reportMode = annual?.method ?? dataset.reportMode;
+  const aggregation = annual?.aggregation ?? dataset.aggregation;
+  const unverifiedCount = annual?.unverifiedHoursCount ?? dataset.unverifiedHoursCount;
   const summary: (string | number)[][] = [
-    ['Berichtsjahr', dataset.reportMode === 'directory' ? 'Gesamtliste' : year],
+    ['Berichtsjahr', reportMode === 'directory' ? 'Gesamtliste' : year],
     [
       'Auswertung',
-      dataset.reportMode === 'directory'
+      reportMode === 'directory'
         ? 'Gesamtliste aller Beschäftigten; letzter erfasster Stand, keine Jahreskennzahl'
-        : dataset.reportMode === 'stichtag'
+        : reportMode === 'stichtag'
           ? `Stichtag 31.12.${year}`
-          : dataset.reportMode === 'month-end-average'
+          : reportMode === 'month-end-average'
             ? 'Durchschnitt aus 12 Monatsenden; Summe der gültigen Stellenanteile an den zwölf Monatsenden / 12; ohne gesonderte SGB-XI-Aufteilung'
-          : dataset.reportMode === 'year-average'
+          : reportMode === 'year-average'
             ? 'Taggewichteter Jahresdurchschnitt; inklusive Tage / Kalendertage des Jahres'
             : 'Im Jahr beschäftigt; letzter Stellenanteil des Jahres',
     ],
-    ...(dataset.reportMode === 'month-end-average' ? [['Personenzählung', 'Unterschiedliche Personen an mindestens einem Monatsende, je Qualifikation einmal; kein Monatsdurchschnitt']] : []),
+    ...(reportMode === 'month-end-average' ? [['Personenzählung', 'Unterschiedliche Personen an mindestens einem Monatsende, je Qualifikation einmal; kein Monatsdurchschnitt']] : []),
     ['Bezugswochenstunden', dataset.baseHours ?? 'nicht angegeben'],
     [
       'Betriebliche VZÄ-Regel',
@@ -91,24 +96,25 @@ export const buildEmployeeWorkbook = (dataset: YearDataset, year: number): XLSX.
     ],
     [
       'Status',
-      dataset.unverifiedHoursCount
-        ? `Vorläufig: ${dataset.unverifiedHoursCount} unbestätigte Altwerte`
+      unverifiedCount
+        ? `Vorläufig: ${unverifiedCount} unbestätigte Altwerte`
         : 'Erfasste Stellenanteile bestätigt',
     ],
     [
       'Fehlende Stellenanteile',
-      dataset.employees.some((e) => e.hoursMissing)
+      dataset.employees.some((e) => annual ? e.annualFteMissing : e.hoursMissing)
         ? 'Unbekannte Abschnitte fehlen in der vorläufigen Summe; kein bestätigter Nullwert'
         : 'Alle Abschnitte mit erfasstem Stellenanteil',
     ],
+    ...(annual ? [['Personen im Jahr beschäftigt', dataset.aggregation.totalHeadcount], ['Team-Liste', 'Eine Zeile je Person; Jahres-VZÄ über alle Abschnitte. Qualifikation und Wochenstunden zeigen den letzten Stand im Jahr. Qualifikationsgruppen im Jahresnachweis werden zeitanteilig zugeordnet.']] : []),
     ['Vertragsformular', 'Betrieblich zu prüfen'],
     [],
-    ...(dataset.reportMode === 'directory'
-      ? [['Personen gesamt', dataset.aggregation.totalHeadcount]]
+    ...(reportMode === 'directory'
+      ? [['Personen gesamt', aggregation.totalHeadcount]]
       : [
-          ['Qualifikation', dataset.reportMode === 'month-end-average' ? 'Personen an Monatsenden' : 'Personen', 'VZÄ'],
-          ...dataset.aggregation.categories.map((c) => [c.qualification, c.headcount, c.fte]),
-          ['Gesamt', dataset.aggregation.totalHeadcount, dataset.aggregation.totalFte],
+          ['Qualifikation', reportMode === 'month-end-average' ? 'Personen an Monatsenden' : 'Personen', 'VZÄ'],
+          ...aggregation.categories.map((c) => [c.qualification, c.headcount, c.fte]),
+          ['Gesamt', aggregation.totalHeadcount, aggregation.totalFte],
         ]),
   ];
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summary), 'Jahresnachweis');
@@ -118,9 +124,14 @@ export const buildEmployeeWorkbook = (dataset: YearDataset, year: number): XLSX.
       dataset.employees.map((e) => ({
         Name: e.name,
         Qualifikation: e.qualification,
-        VZÄ: e.hoursMissing ? '' : e.fte,
+        VZÄ: (annual ? e.annualFteMissing : e.hoursMissing) ? '' : (e.annualFte ?? e.fte),
+        ...(annual ? {
+          'Berechnung Jahres-VZÄ': annualFteLabel(annual.method),
+          'Stellenanteil letzter Stand im Jahr': e.hoursMissing ? '' : e.fte,
+          'Stand Qualifikation und Wochenstunden': 'Letzter erfasster Stand im Jahr',
+        } : {}),
         'Ungewichteter Stellenanteil': e.unweightedFte ?? '',
-        ...(dataset.reportMode === 'month-end-average'
+        ...(annual ? {} : reportMode === 'month-end-average'
           ? { 'Berücksichtigte Monatsenden': e.reportMonthEnds?.join(', ') ?? '',
               'Anzahl Monatsenden': e.reportMonthEnds?.length ?? 0 }
           : { 'Kalendertage im Abschnitt': e.reportDays ?? '' }),
@@ -130,7 +141,7 @@ export const buildEmployeeWorkbook = (dataset: YearDataset, year: number): XLSX.
         'Ende Abschnitt': e.endDate ?? '',
         Personalbeleg: e.sourceRef ?? '',
         'Stellenanteil gültig ab': e.hoursEffectiveFrom ?? '',
-        'Stellenanteil bestätigt': e.hoursVerified ? 'Ja' : 'Ungeprüfter Altwert',
+        'Stellenanteil bestätigt': (annual ? e.annualFteVerified : e.hoursVerified) ? 'Ja' : 'Ungeprüfter oder fehlender Wert',
         Notiz: e.note ?? '',
       })),
     ),

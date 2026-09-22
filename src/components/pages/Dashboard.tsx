@@ -1,3 +1,4 @@
+import { annualFteLabel } from '../../shared/annualFte';
 import { localDate } from '../../utils/calendarDate';
 import React from 'react';
 import Segmented from '../ui/Segmented';
@@ -100,14 +101,12 @@ const Dashboard = ({
   });
 
   const employees = dataset?.employees ?? [];
-  const withHours = employees.filter((employee) => employee.weeklyHours != null);
   // Eintritt ist der Beginn der zusammenhängenden Beschäftigung, nicht der
   // Beginn eines neuen Abschnitts innerhalb des Jahres.
   const newHires = employees.filter((employee) =>
     employee.employmentStartDate.startsWith(String(year)),
   ).length;
   const leavers = employees.filter((employee) => employee.endDate?.startsWith(String(year))).length;
-  const fullTime = employees.filter((employee) => (employee.fte ?? 0) >= 1).length;
   // The preview is a working queue: only open tasks, newest urgency first.
   // Ticking one removes it and pulls the next in, which is the whole point at
   // a few hundred open items.
@@ -116,13 +115,16 @@ const Dashboard = ({
   const preview = openTasks.slice(0, TASK_PREVIEW_COUNT);
   const remaining = openTaskCount - preview.length;
 
-  const categories = dataset?.aggregation.categories ?? [];
+  const annual = dataset?.annualSummary;
+  const categories = (annual?.aggregation ?? dataset?.aggregation)?.categories ?? [];
+  const methodLabel = annual ? annualFteLabel(annual.method) : `Basis ${baseHours} Std./Woche`;
+  const provisional = annual && (annual.unverifiedHoursCount > 0 || employees.some(e => e.annualFteMissing));
 
   const kpis = [
     {
       value: fte2(totalFte),
-      label: 'VZÄ gesamt',
-      sub: `Basis ${baseHours} Std./Woche`,
+      label: annual ? 'Jahres-VZÄ gesamt' : 'VZÄ gesamt',
+      sub: methodLabel,
       color: 'var(--color-accent-700)',
     },
     {
@@ -132,9 +134,9 @@ const Dashboard = ({
       color: 'var(--color-text)',
     },
     {
-      value: fte2(totalFte / Math.max(1, withHours.length)),
-      label: 'Ø VZÄ je Person',
-      sub: `${fullTime} in Vollzeit`,
+      value: fte2(totalFte / Math.max(1, totalHeadcount)),
+      label: annual ? 'Ø Jahres-VZÄ je Person' : 'Ø VZÄ je Person',
+      sub: 'über alle im Jahr Beschäftigten',
       color: 'var(--color-text)',
     },
     {
@@ -219,7 +221,7 @@ const Dashboard = ({
       <div className="cd-two-col">
         <section>
           <h3 className="cd-h3">
-            VZÄ je Qualifikation <span className="cd-h3-note">· {year}</span>
+            {annual ? 'Jahres-VZÄ' : 'VZÄ'} je Qualifikation <span className="cd-h3-note">· {year}</span>
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {categories.map((category, index) => (
@@ -247,7 +249,10 @@ const Dashboard = ({
             )}
           </div>
           <p className="cd-muted-13" style={{ margin: '14px 0 0' }}>
-            Basis {baseHours} Std./Woche.{' '}
+            {methodLabel}. Basis {baseHours} Std./Woche.
+            {annual?.method === 'month-end-average' && ' Personen zählen je Qualifikation an mindestens einem Monatsende; insgesamt jede Person einmal.'}
+            {annual && ' Qualifikationswechsel werden zeitanteilig berücksichtigt.'}
+            {provisional && ' Vorläufig: fehlende Stellenanteile fehlen in der Summe; unbestätigte Altwerte bitte prüfen.'}{' '}
             <button type="button" className="cd-link" onClick={onOpenReport}>
               Jahresnachweis {year - 1} erstellen →
             </button>

@@ -1,3 +1,4 @@
+import { annualFteLabel, type AnnualFteMethod } from '../../shared/annualFte';
 import { localDate } from '../../utils/calendarDate';
 import React, { useMemo, useState } from 'react';
 import Icon, { MoreIcon } from '../ui/Icon';
@@ -30,6 +31,7 @@ const statusTag = (employee: EmployeeWithPeriod, today: string): [string, string
 type EmployeeListProps = {
   year: number;
   years: number[];
+  annualFteMethod?: AnnualFteMethod;
   directoryMode?: boolean;
   onDirectoryModeChange?: (value: boolean) => void;
   search: string;
@@ -53,6 +55,7 @@ type EmployeeListProps = {
 const EmployeeList = ({
   year,
   years,
+  annualFteMethod,
   directoryMode = false,
   onDirectoryModeChange,
   search,
@@ -79,7 +82,7 @@ const EmployeeList = ({
     const value = (employee: EmployeeWithPeriod): string | number => {
       switch (sort.key) {
         case 'fte':
-          return employee.fte ?? -1;
+          return (directoryMode ? employee.fte : employee.annualFte ?? employee.fte) ?? -1;
         case 'weeklyHours':
           return employee.weeklyHours ?? -1;
         case 'startDate':
@@ -97,7 +100,7 @@ const EmployeeList = ({
           : String(va).localeCompare(String(vb), 'de');
       return cmp * sort.dir;
     });
-  }, [filteredEmployees, sort]);
+  }, [filteredEmployees, sort, directoryMode]);
 
   const columns: DataTableColumn<EmployeeWithPeriod, SortKey>[] = [
     {
@@ -137,15 +140,19 @@ const EmployeeList = ({
     },
     {
       key: 'fte',
-      label: 'VZÄ',
+      label: directoryMode ? 'VZÄ' : 'Jahres-VZÄ',
       align: 'right',
       compact: true,
-      cell: (employee) => <strong>{employee.hoursMissing ? '—' : fte2(employee.fte)}</strong>,
+      cell: (employee) => {
+        const missing = directoryMode ? employee.hoursMissing : employee.annualFteMissing ?? employee.hoursMissing;
+        const value = directoryMode ? employee.fte : employee.annualFte ?? employee.fte;
+        return <strong title={missing ? 'Unvollständig: Stellenanteile fehlen im Jahresverlauf.' : undefined}>{missing ? '—' : fte2(value)}</strong>;
+      },
     },
   ];
 
   const totalHours = rows.reduce((sum, employee) => sum + (employee.weeklyHours ?? 0), 0);
-  const shownFte = rows.reduce((sum, employee) => sum + (employee.fte ?? 0), 0);
+  const shownFte = rows.reduce((sum, employee) => sum + ((directoryMode ? employee.fte : employee.annualFte ?? employee.fte) ?? 0), 0);
 
   const toggleSort = (key: SortKey) =>
     setSort((current) => ({ key, dir: current.key === key ? ((current.dir * -1) as 1 | -1) : 1 }));
@@ -160,8 +167,16 @@ const EmployeeList = ({
           <p className="cd-muted" style={{ margin: '4px 0 0' }}>
             {directoryMode
               ? `${filteredEmployees.length} jemals beschäftigte Personen · jeweils letzter erfasster Stand`
-              : `${filteredEmployees.length} Personen im Jahr ${year} · ${fte2(totalFte)} VZÄ gesamt`}
+              : `${filteredEmployees.length} Personen im Jahr ${year} · ${fte2(totalFte)} Jahres-VZÄ gesamt`}
           </p>
+          {!directoryMode && annualFteMethod && (
+            <p className="cd-muted-13" style={{ margin: '6px 0 0' }}>
+              {annualFteLabel(annualFteMethod)}. Qualifikation und Wochenstunden zeigen den letzten Stand im Jahr;
+              Jahres-VZÄ berücksichtigen den gesamten Jahresverlauf.
+              {filteredEmployees.some(e => e.annualFteMissing || e.annualFteVerified === false) &&
+                ' Vorläufig: fehlende Stellenanteile fehlen in der Summe; unbestätigte Altwerte bitte prüfen.'}
+            </p>
+          )}
         </div>
         <div className="cd-actions">
           <ActionMenu
@@ -281,7 +296,7 @@ const EmployeeList = ({
           compactFooter={
             <>
               <span>{rows.length} Personen</span>
-              <strong>{directoryMode ? 'Letzter Stand je Person' : `${fte2(shownFte)} VZÄ`}</strong>
+              <strong>{directoryMode ? 'Letzter Stand je Person' : `${fte2(shownFte)} Jahres-VZÄ`}</strong>
             </>
           }
         />

@@ -1,3 +1,4 @@
+import type { AnnualFteMethod } from './annualFte';
 export type Qualification =
   | '3-jährig examiniert'
   | '1-jährig examiniert'
@@ -144,6 +145,10 @@ export interface EmployeeWithPeriod extends Employee {
   }[];
   hoursVerified?: boolean;
   hoursMissing?: boolean;
+  /** Annual contribution for the year table; fte remains the working-time snapshot. */
+  annualFte?: number;
+  annualFteMissing?: boolean;
+  annualFteVerified?: boolean;
   reportDays?: number;
   reportMonthEnds?: string[];
   unweightedFte?: number | null;
@@ -210,6 +215,11 @@ export interface Aggregation {
 }
 
 export interface YearDataset {
+  annualSummary?: {
+    method: AnnualFteMethod;
+    aggregation: Aggregation;
+    unverifiedHoursCount: number;
+  };
   availableYears?: number[];
   reportMode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'month-end-average' | 'directory';
   referenceDate?: string;

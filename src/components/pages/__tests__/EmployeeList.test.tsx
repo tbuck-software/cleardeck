@@ -190,3 +190,27 @@ describe('EmployeeList', () => {
     expect(cells[cells.length - 1].textContent).toBe('aktiv');
   });
 });
+
+
+it('shows and sorts annual contributions while opening the unchanged working-time snapshot', () => {
+  const onSelect = vi.fn();
+  const rows = [
+    { ...employees[0], annualFte: 0.2 },
+    { ...employees[1], annualFte: 0.4 },
+  ];
+  renderList({ filteredEmployees: rows, totalFte: 0.6, annualFteMethod: 'month-end-average', onSelect });
+  expect(screen.getByText('0,20')).toBeInTheDocument();
+  expect(screen.getByText('0,40')).toBeInTheDocument();
+  expect(screen.getByText('0,60')).toBeInTheDocument();
+  fireEvent.click(screen.getByRole('button', { name: 'Jahres-VZÄ' }));
+  expect(document.querySelector('tbody tr')).toHaveTextContent('Anna Beispiel');
+  fireEvent.click(screen.getByText('Anna Beispiel'));
+  expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ fte: 0.8, annualFte: 0.2 }));
+});
+
+it('keeps the directory on working-time snapshots', () => {
+  renderList({ directoryMode: true, filteredEmployees: [{ ...employees[0], annualFte: 0.2 }] });
+  expect(screen.getByRole('button', { name: 'VZÄ' })).toBeInTheDocument();
+  expect(screen.getByText('0,80')).toBeInTheDocument();
+  expect(screen.queryByText('0,20')).not.toBeInTheDocument();
+});

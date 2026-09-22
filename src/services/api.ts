@@ -1,3 +1,4 @@
+import type { AnnualFteMethod } from '../shared/annualFte';
 import type { Api } from '../preload';
 import type { UpdateStatus } from '../shared/types';
 
@@ -198,6 +199,7 @@ export const api = {
       call('applyReconcilePeriods', baseApi.applyReconcilePeriods, input),
   },
   settings: {
+    setAnnualFteMethod: (method: AnnualFteMethod) => call('setAnnualFteMethod', baseApi.setAnnualFteMethod, method),
     getBaseHours: () => call('getBaseHours', baseApi.getBaseHours),
     setBaseHours: (hours: number) => call('setBaseHours', baseApi.setBaseHours, hours),
     getStorageMode: () => call('getStorageMode', baseApi.getStorageMode),

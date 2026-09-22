@@ -177,12 +177,13 @@ const useEmployees = ({
   });
 
   const refreshDataset = useCallback(
-    async (targetYear: number) => {
+    async (targetYear: number, throwOnError = false) => {
       setLoading(true);
       try {
         const data = await api.employees.list(targetYear);
         setDataset(data);
       } catch (err) {
+        if (throwOnError) throw err;
         handleError(err);
       } finally {
         setLoading(false);
@@ -1065,9 +1066,9 @@ const useEmployees = ({
   const averageFte = useMemo(() => {
     const headcount = dataset?.aggregation.totalHeadcount ?? 0;
     if (!headcount) return 0;
-    return dataset.aggregation.totalFte / headcount;
+    return (dataset.annualSummary?.aggregation.totalFte ?? dataset.aggregation.totalFte) / headcount;
   }, [dataset]);
-  const totalFte = dataset?.aggregation.totalFte ?? 0;
+  const totalFte = dataset?.annualSummary?.aggregation.totalFte ?? dataset?.aggregation.totalFte ?? 0;
   const totalHeadcount = dataset?.aggregation.totalHeadcount ?? 0;
 
   const crumbs = useCallback((): { label: string; page?: Page }[] => {

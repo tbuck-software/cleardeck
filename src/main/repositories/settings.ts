@@ -1,3 +1,4 @@
+import { DEFAULT_ANNUAL_FTE_METHOD, type AnnualFteMethod } from '../../shared/annualFte';
 /**
  * Settings Repository
  *
@@ -146,4 +147,18 @@ export const setBackupSettings = (next: Partial<BackupSettings>): BackupSettings
   if (next.lastBackupError !== undefined) writeSetting('backupLastError', next.lastBackupError);
   if (next.lastBackupAt !== undefined) writeSetting('backupLastAt', next.lastBackupAt);
   return getBackupSettings();
+};
+
+
+export const getAnnualFteMethod = (): AnnualFteMethod => {
+  const value = readSetting('annualFteMethod');
+  return value === 'year-average' ? value : DEFAULT_ANNUAL_FTE_METHOD;
+};
+
+export const setAnnualFteMethod = (method: AnnualFteMethod): AnnualFteMethod => {
+  if (method !== 'year-average' && method !== 'month-end-average') {
+    throw new Error('Ungültige Berechnungsart für Jahres-VZÄ.');
+  }
+  writeSetting('annualFteMethod', method);
+  return method;
 };

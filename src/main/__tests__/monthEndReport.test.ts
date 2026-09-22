@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { getAnnualFteMethod, setAnnualFteMethod } from '../repositories/settings';
 import SqliteAdapter from './sqliteAdapter';
 import { runMigrations } from '../database/migrations';
 import { getYearDataset, saveEmployee } from '../repositories/employees';
@@ -87,4 +88,73 @@ it('exports the formula, person-count meaning and exact month ends with the repo
   expect(XLSX.utils.sheet_to_json(workbook.Sheets.Team)).toEqual([
     expect.objectContaining({ 'Berücksichtigte Monatsenden': '2025-02-28, 2025-03-31', 'Anzahl Monatsenden': 2, VZÄ: dataset.employees[0].fte }),
   ]);
+});
+
+
+describe('saved annual FTE method', () => {
+  it('defaults to month ends, persists the alternative, and rejects invalid values', () => {
+    expect(getAnnualFteMethod()).toBe('month-end-average');
+    setAnnualFteMethod('year-average');
+    expect(db.prepare("SELECT value FROM settings WHERE key='annualFteMethod'").get()).toEqual({ value: 'year-average' });
+    expect(getYearDataset(2025).annualSummary?.method).toBe('year-average');
+    expect(() => setAnnualFteMethod('invalid' as never)).toThrow('Ungültige');
+    expect(getAnnualFteMethod()).toBe('year-average');
+  });
+
+  it('keeps working-time snapshots separate and exports the same annual contributions as the year table', () => {
+    const person = saveEmployee(base).employees[0];
+    saveWorkingTime({ employeeId: person.id!, effectiveFrom: '2025-03-01', weeklyHours: 36, fte: 1 });
+    for (const method of ['month-end-average', 'year-average'] as const) {
+      setAnnualFteMethod(method);
+      const dataset = getYearDataset(2025);
+      const expected = method === 'month-end-average' ? (2 * 0.8 + 10) / 12 : (59 * 0.8 + 306) / 365;
+      expect(dataset.employees[0]).toMatchObject({ fte: 1, weeklyHours: 36, annualFteMissing: false, annualFteVerified: true });
+      expect(dataset.employees[0].annualFte).toBeCloseTo(expected, 12);
+      expect(dataset.annualSummary?.aggregation).toEqual(getYearDataset(2025, method).aggregation);
+      const workbook = buildEmployeeWorkbook(dataset, 2025);
+      const rows = XLSX.utils.sheet_to_json<Record<string, string | number>>(workbook.Sheets.Team);
+      expect(rows[0].VZÄ).toBeCloseTo(expected, 12);
+      expect(rows[0]['Stellenanteil letzter Stand im Jahr']).toBe(1);
+      expect(rows[0]['Berechnung Jahres-VZÄ']).toContain(method === 'month-end-average' ? 'Monatsenden' : 'Taggewichteter');
+      expect(XLSX.utils.sheet_to_csv(workbook.Sheets.Team)).toContain('Berechnung Jahres-VZÄ');
+      expect(XLSX.utils.sheet_to_json(workbook.Sheets.Jahresnachweis, { header: 1 })).toContainEqual(['Gesamt', 1, 0.97]);
+      expect(getYearDataset(2025, 'directory').employees[0]).toMatchObject({ fte: 1 });
+      expect(getYearDataset(2025, 'directory').annualSummary).toBeUndefined();
+    }
+  });
+
+  it('retains short employment in the year list with zero monthly contribution and keeps report overrides local', () => {
+    saveEmployee({ ...base, startDate: '2025-04-01', endDate: '2025-04-29', fte: 1 });
+    expect(getYearDataset(2025).employees[0]).toMatchObject({ annualFte: 0, fte: 1, annualFteMissing: false });
+    expect(getYearDataset(2025).aggregation.totalHeadcount).toBe(1);
+    expect(getYearDataset(2025).annualSummary?.aggregation.totalHeadcount).toBe(0);
+    expect(getYearDataset(2025, 'year-average').aggregation.totalFte).toBe(0.08);
+    expect(getAnnualFteMethod()).toBe('month-end-average');
+    setAnnualFteMethod('year-average');
+    expect(getYearDataset(2025).employees[0].annualFte).toBeCloseTo(29 / 365, 12);
+  });
+
+  it('assigns historical qualification contributions rather than grouping the latest working-time snapshots', () => {
+    const person = saveEmployee({ ...base, qualification: 'Pflegehilfe', endDate: '2025-06-29', fte: 1 }).employees[0];
+    saveEmployee({ ...base, id: person.id, startDate: '2025-06-30', qualification: 'Pflegefachkraft', fte: 1 });
+    const dataset = getYearDataset(2025);
+    expect(dataset.employees).toHaveLength(1);
+    expect(dataset.employees[0]).toMatchObject({ qualification: 'Pflegefachkraft', annualFte: 1 });
+    expect(dataset.annualSummary?.aggregation.categories).toEqual(expect.arrayContaining([
+      { qualification: 'Pflegehilfe', headcount: 1, fte: 0.42 },
+      { qualification: 'Pflegefachkraft', headcount: 1, fte: 0.58 },
+    ]));
+  });
+
+  it('flags missing historical hours even when the latest working-time snapshot is complete', () => {
+    const person = saveEmployee(base).employees[0];
+    db.prepare('DELETE FROM employment_terms WHERE periodId=?').run(person.periodId);
+    saveWorkingTime({ employeeId: person.id!, effectiveFrom: '2025-03-01', weeklyHours: 36, fte: 1 });
+    const dataset = getYearDataset(2025);
+    expect(dataset.employees[0]).toMatchObject({ hoursMissing: false, hoursVerified: true, annualFteMissing: true, annualFteVerified: false });
+    expect(dataset.annualSummary?.unverifiedHoursCount).toBe(1);
+    const workbook = buildEmployeeWorkbook(dataset, 2025);
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets.Team)[0]).toMatchObject({ VZÄ: '' });
+    expect(XLSX.utils.sheet_to_json(workbook.Sheets.Jahresnachweis, { header: 1 })).toContainEqual(['Fehlende Stellenanteile', expect.stringContaining('vorläufigen Summe')]);
+  });
 });
