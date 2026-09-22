@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 23,
+  "schemaVersion": 24,
   "settings": {
     "sharedKeys": [
       "baseHours",
@@ -192,7 +192,9 @@
         { "name": "note", "type": "TEXT", "notNull": false, "default": null },
         { "name": "code", "type": "TEXT", "notNull": false, "default": null },
         { "name": "category", "type": "TEXT", "notNull": false, "default": "'Allgemein'" },
-        { "name": "relevance", "type": "TEXT", "notNull": false, "default": "'Alle'" }
+        { "name": "relevance", "type": "TEXT", "notNull": false, "default": "'Alle'" },
+        { "name": "templateKey", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "reviewStatus", "type": "TEXT", "notNull": false, "default": null }
       ],
       "primaryKey": ["id"],
       "foreignKeys": [],
@@ -200,7 +202,7 @@
       "indexes": [
         { "name": "idx_competency_definitions_sort", "columns": ["sortOrder"], "unique": false, "sql": "CREATE INDEX idx_competency_definitions_sort ON competency_definitions(sortOrder)" }
       ],
-      "createSql": "CREATE TABLE competency_definitions (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, sortOrder INTEGER, note TEXT, code TEXT, category TEXT DEFAULT 'Allgemein', relevance TEXT DEFAULT 'Alle')"
+      "createSql": "CREATE TABLE competency_definitions (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, sortOrder INTEGER, note TEXT, code TEXT, category TEXT DEFAULT 'Allgemein', relevance TEXT DEFAULT 'Alle', templateKey TEXT, reviewStatus TEXT)"
     },
     {
       "name": "employee_competencies",

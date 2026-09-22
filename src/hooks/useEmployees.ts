@@ -437,6 +437,7 @@ const useEmployees = ({
             category: competencyModal.category,
             relevance: competencyModal.relevance,
             note: competencyModal.note,
+            reviewStatus: competencyModal.reviewStatus,
           })
         : await api.competencies.addDefinition({
             code: competencyModal.code,
@@ -444,6 +445,7 @@ const useEmployees = ({
             category: competencyModal.category,
             relevance: competencyModal.relevance,
             note: competencyModal.note,
+            reviewStatus: competencyModal.reviewStatus,
           });
       setCompetencyDefinitions(list);
       const edits: Record<number, string> = {};

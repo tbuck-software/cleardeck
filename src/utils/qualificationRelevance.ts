@@ -58,6 +58,8 @@ export const matchesQualificationRelevance = (
   if (!rule || rule === 'Alle') return true;
 
   const tags = deriveQualificationTags(qualification);
+  const hkpGroup = deriveHkpGroup(qualification);
+  if (hkpGroup) tags.add(hkpGroup);
   if (tags.has(rule)) return true;
 
   return rule
@@ -65,4 +67,18 @@ export const matchesQualificationRelevance = (
     .map((part) => part.trim())
     .filter(Boolean)
     .some((part) => tags.has(part));
+};
+
+/** Deliberately narrower than the legacy tags: generic assistants/helpers stay unclassified. */
+export const deriveHkpGroup = (qualification: string): string | undefined => {
+  const value = normalize(qualification);
+  const explicit = /^hkp g[1-4]$/.test(value);
+  if (explicit) return qualification.trim().toUpperCase();
+  if (/azubi|auszub|schüler|schueler|student/.test(value)) return undefined;
+  if (/krankenpflege(?:helfer|assisten)|medizinische.{0,2}fachangestellte|arzthelfer|^mfa$/.test(value)) return 'HKP G2';
+  if (/pflegefachassist/.test(value)) return 'HKP G3';
+  if (/altenpflegehelf|heilerziehungspfleg|familienpfleg|rettungsassisten|ambulante.{0,3}pflegeassist/.test(value)) return 'HKP G4';
+  if (/helfer|assist|hilf|betreuung/.test(value)) return undefined;
+  if (/pflegefach(?:kraft|frau|mann|person)|krankenschwester|krankenpfleger|kinderkrankenpfleger|altenpfleger|notfallsanitäter|notfallsanitaeter|3[- ](?:jährig|jaehrig)/.test(value)) return 'HKP G1';
+  return undefined;
 };

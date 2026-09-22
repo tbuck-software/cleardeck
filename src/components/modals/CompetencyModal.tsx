@@ -1,4 +1,5 @@
 import React from 'react';
+import CompetencyRelevanceField from '../ui/CompetencyRelevanceField';
 import Dialog from '../ui/Dialog';
 import Segmented from '../ui/Segmented';
 import type { CompetencyModalState } from '../../types/ui';
@@ -46,21 +47,7 @@ const CompetencyModal = ({ state, onChange, onClose, onSave, onDelete }: Compete
         />
       </div>
       <div className="field cd-field-wide">
-        <label htmlFor="competency-relevance">Berufsgruppen-Vorlage</label>
-        <select
-          id="competency-relevance"
-          className="input"
-          value={state.relevance}
-          onChange={(event) => onChange({ relevance: event.target.value })}
-        >
-          <option value="Alle">Alle</option>
-          <option value="Nur PFK">Nur PFK</option>
-          <option value="Nur PFA">Pflegeassistenz / Pflegefachassistenz</option>
-          <option value="Nur PHK">Nur PHK</option>
-          <option value="Azubi">Azubi</option>
-          <option value="Praxisanleitung">Praxisanleitung</option>
-          <option value="QMB">QMB</option>
-        </select>
+        <CompetencyRelevanceField value={state.relevance} onChange={(relevance) => onChange({ relevance })} />
       </div>
       <div className="field cd-field-wide">
         <label htmlFor="competency-name">Bezeichnung</label>
@@ -72,6 +59,15 @@ const CompetencyModal = ({ state, onChange, onClose, onSave, onDelete }: Compete
           onChange={(event) => onChange({ value: event.target.value })}
         />
       </div>
+    </div>
+    <div className="field">
+      <label htmlFor="competency-review">Prüfstatus der Vorlage</label>
+      <select id="competency-review" className="input" value={state.reviewStatus ?? ''}
+        onChange={(event) => onChange({ reviewStatus: (event.target.value || null) as CompetencyModalState['reviewStatus'] })}>
+        <option value="">Nicht erfasst</option>
+        <option value="pending">Ungeprüft</option>
+        <option value="reviewed">Betrieblich geprüft</option>
+      </select>
     </div>
     <div className="field">
       <label htmlFor="competency-note">Notiz</label>

@@ -149,12 +149,14 @@ export type Api = {
   setServiceDefinitionActive: (id: number, active: boolean) => Promise<ServiceDefinition[]>;
   reorderServiceDefinitions: (ids: number[]) => Promise<ServiceDefinition[]>;
   listCompetencyDefinitions: () => Promise<CompetencyDefinition[]>;
+  importHkpCompetencyDefinitions: (keys: string[]) => Promise<CompetencyDefinition[]>;
   addCompetencyDefinition: (input: {
     code?: string | null;
     name: string;
     category?: string | null;
     relevance?: string | null;
     note?: string | null;
+    reviewStatus?: CompetencyDefinition['reviewStatus'];
   }) => Promise<CompetencyDefinition[]>;
   updateCompetencyDefinition: (input: {
     id: number;
@@ -163,6 +165,7 @@ export type Api = {
     category?: string | null;
     relevance?: string | null;
     note?: string | null;
+    reviewStatus?: CompetencyDefinition['reviewStatus'];
   }) => Promise<CompetencyDefinition[]>;
   deleteCompetencyDefinition: (id: number) => Promise<CompetencyDefinition[]>;
   reorderCompetencyDefinitions: (ids: number[]) => Promise<CompetencyDefinition[]>;
@@ -444,6 +447,7 @@ const api: Api = {
     ipcRenderer.invoke('services:setActive', { id, active }),
   reorderServiceDefinitions: (ids) => ipcRenderer.invoke('services:reorder', { ids }),
   listCompetencyDefinitions: () => ipcRenderer.invoke('competencies:listDefinitions'),
+  importHkpCompetencyDefinitions: (keys) => ipcRenderer.invoke('competencies:importHkp', keys),
   addCompetencyDefinition: (input) => ipcRenderer.invoke('competencies:addDefinition', input),
   updateCompetencyDefinition: (input) => ipcRenderer.invoke('competencies:updateDefinition', input),
   deleteCompetencyDefinition: (id) => ipcRenderer.invoke('competencies:deleteDefinition', { id }),

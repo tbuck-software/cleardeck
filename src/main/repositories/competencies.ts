@@ -1,3 +1,4 @@
+import { hkpCatalog, findExistingHkpDefinition } from '../../shared/hkpCatalog';
 import type {
   BulkCompetencyChange,
   CompetencyDefinition,
@@ -11,6 +12,8 @@ import { nextDeviceId } from '../syncRecords';
 const normalizeDefinitionRows = (rows: any[]): CompetencyDefinition[] =>
   rows.map((row) => ({
     id: row.id,
+    templateKey: row.templateKey ?? null,
+    reviewStatus: row.reviewStatus ?? null,
     code: row.code ?? null,
     name: row.name,
     category: row.category ?? 'Allgemein',
@@ -24,7 +27,7 @@ export const listCompetencyDefinitions = (): CompetencyDefinition[] => {
   const rows = db
     .prepare(
       `
-      SELECT id, code, name, category, relevance, sortOrder, note
+      SELECT id, code, name, category, relevance, sortOrder, note, templateKey, reviewStatus
       FROM competency_definitions
       ORDER BY sortOrder ASC, id ASC
     `,
@@ -33,13 +36,16 @@ export const listCompetencyDefinitions = (): CompetencyDefinition[] => {
   return normalizeDefinitionRows(rows);
 };
 
-export const addCompetencyDefinition = (input: {
+const insertCompetencyDefinition = (input: {
+  templateKey?: string | null;
+  reviewStatus?: CompetencyDefinition['reviewStatus'];
   code?: string | null;
   name: string;
   category?: string | null;
   relevance?: string | null;
   note?: string | null;
-}): CompetencyDefinition[] => {
+}): void => {
+  validateReviewStatus(input.reviewStatus);
   const db = getDb();
   const trimmed = input.name.trim();
   if (!trimmed) {
@@ -52,11 +58,13 @@ export const addCompetencyDefinition = (input: {
   const id = nextDeviceId(db, 'competency_definitions');
   db.prepare(
     `
-    INSERT INTO competency_definitions (id, code, name, category, relevance, sortOrder, note)
-    VALUES (@id, @code, @name, @category, @relevance, @sortOrder, @note)
+    INSERT INTO competency_definitions (id, code, name, category, relevance, sortOrder, note, templateKey, reviewStatus)
+    VALUES (@id, @code, @name, @category, @relevance, @sortOrder, @note, @templateKey, @reviewStatus)
   `,
   ).run({
     id,
+    templateKey: input.templateKey ?? null,
+    reviewStatus: input.reviewStatus ?? null,
     code: input.code?.trim() || null,
     name: trimmed,
     category: input.category?.trim() || 'Allgemein',
@@ -64,10 +72,35 @@ export const addCompetencyDefinition = (input: {
     sortOrder: nextSort,
     note: input.note ?? null,
   });
+};
+
+const validateReviewStatus = (value: CompetencyDefinition['reviewStatus']) => {
+  if (value != null && value !== 'pending' && value !== 'reviewed')
+    throw new Error('Ungültiger Prüfstatus der Vorlage.');
+};
+
+export const addCompetencyDefinition = (input: Omit<Parameters<typeof insertCompetencyDefinition>[0], 'templateKey'>): CompetencyDefinition[] => {
+  insertCompetencyDefinition(input);
+  return listCompetencyDefinitions();
+};
+
+/** Explicit, additive import. Repeated/stale previews preserve catalogue edits and all assessments. */
+export const importHkpCompetencyDefinitions = (keys: string[]): CompetencyDefinition[] => {
+  if (!Array.isArray(keys) || !keys.length || keys.some((key) => !hkpCatalog.some((entry) => entry.templateKey === key)))
+    throw new Error('Bitte gültige HKP-Kompetenzen auswählen.');
+  getDb().transaction(() => {
+    const existing = listCompetencyDefinitions();
+    for (const key of new Set(keys)) {
+      const entry = hkpCatalog.find((row) => row.templateKey === key)!;
+      if (findExistingHkpDefinition(entry, existing)) continue;
+      insertCompetencyDefinition(entry);
+    }
+  })();
   return listCompetencyDefinitions();
 };
 
 export const updateCompetencyDefinition = (input: {
+  reviewStatus?: CompetencyDefinition['reviewStatus'];
   id: number;
   code?: string | null;
   name: string;
@@ -75,6 +108,7 @@ export const updateCompetencyDefinition = (input: {
   relevance?: string | null;
   note?: string | null;
 }): CompetencyDefinition[] => {
+  validateReviewStatus(input.reviewStatus);
   const db = getDb();
   const trimmed = input.name.trim();
   if (!trimmed) {
@@ -87,11 +121,14 @@ export const updateCompetencyDefinition = (input: {
         name = @name,
         category = @category,
         relevance = @relevance,
-        note = @note
+        note = @note,
+        reviewStatus = CASE WHEN @hasReviewStatus THEN @reviewStatus ELSE reviewStatus END
     WHERE id = @id
   `,
   ).run({
     id: input.id,
+    hasReviewStatus: input.reviewStatus !== undefined ? 1 : 0,
+    reviewStatus: input.reviewStatus ?? null,
     code: input.code?.trim() || null,
     name: trimmed,
     category: input.category?.trim() || 'Allgemein',
@@ -135,6 +172,7 @@ export const listEmployeeCompetencies = (employeeId: number): EmployeeCompetency
         cd.category,
         cd.relevance,
         cd.note as definitionNote,
+        cd.reviewStatus,
         cd.sortOrder,
         ec.level, ec.stageScheme,
         ec.approvedAt,
@@ -168,6 +206,7 @@ export const listEmployeeCompetencies = (employeeId: number): EmployeeCompetency
     approvedBy: row.approvedBy ?? null,
     note: row.note ?? null,
     definitionNote: row.definitionNote ?? null,
+    reviewStatus: row.reviewStatus ?? null,
     sortOrder: row.sortOrder ?? null,
   }));
 };

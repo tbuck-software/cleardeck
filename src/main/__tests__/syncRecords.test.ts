@@ -213,6 +213,19 @@ describe('syncRecords', () => {
     rebuilt.close();
   });
 
+  it('preserves template origin and business review when rebuilding synced competencies', () => {
+    const db = database();
+    db.prepare(`INSERT INTO competency_definitions (name, templateKey, reviewStatus)
+      VALUES (?, ?, ?)`).run('Örtliche Bezeichnung', 'hkp-nrw:032265', 'reviewed');
+    const rebuilt = new SqliteAdapter(createSyncDatabase(captureRecords(db as never), {}));
+    expect(rebuilt.prepare('SELECT name, templateKey, reviewStatus FROM competency_definitions WHERE templateKey = ?')
+      .get('hkp-nrw:032265')).toEqual({
+      name: 'Örtliche Bezeichnung', templateKey: 'hkp-nrw:032265', reviewStatus: 'reviewed',
+    });
+    db.close();
+    rebuilt.close();
+  });
+
   it('allocates disjoint device blocks for ordinary and history integer primary keys', () => {
     const first = database();
     const second = database();

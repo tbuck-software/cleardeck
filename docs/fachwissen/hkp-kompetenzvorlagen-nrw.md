@@ -1,6 +1,6 @@
 # HKP-Kompetenzvorlagen für Nordrhein-Westfalen
 
-Recherche: 18.09.2026. Ergebnis: fachliche Grundlage eingegrenzt; keine freigegebene Berechtigungsmatrix für einen konkreten Pflegedienst.
+Recherche: 18.09.2026; ergänzt am 22.09.2026. Ergebnis: fachliche Grundlage eingegrenzt; keine freigegebene Berechtigungsmatrix für einen konkreten Pflegedienst.
 
 ## Vertrag und Quellenstand
 
@@ -36,3 +36,7 @@ Die folgenden Punkte sind Produktentscheidungen aus den Befunden:
 5. Eine vorbelegte rechtliche NRW-Matrix wird erst nach Abgleich mit der vollständigen anwendbaren Anlage 10 ab 2023, Anlage 11 und relevanten Ergänzungen freigegeben. Bis dahin bleiben betriebliche Vorlagen konfigurierbar; die technische Funktion kann unabhängig davon fertiggestellt werden.
 
 Offen bleiben der konkrete Vertragsbeitritt und die vollständigen aktuellen Anlagen. Eine heutige leistungsgenaue Freigabe lässt sich aus den öffentlich geprüften Unterlagen nicht abschließend ableiten.
+
+## Nachgereichtes Original vom 22.09.2026
+
+Die vollständige vierspaltige Anlage 10 vom 06.03.2023 liegt inzwischen als PDF vor. Die früheren Leselücken einschließlich Fußnoten sind geschlossen. Der [aktualisierte Abgleich](kompetenzmatrix-foto-katalogabgleich.md) und die dort verlinkte Originalquelle ersetzen die früheren Aussagen über fehlende Inhalte. Aktuelle Vertragsgeltung und personenbezogene Nachweise sind weiterhin getrennt zu prüfen.

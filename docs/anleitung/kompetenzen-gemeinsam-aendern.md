@@ -13,7 +13,19 @@ Eine erneute Anwendung ergänzt nur fehlende Kompetenzen. Vorhandene Stufen, Not
 
 Die Vorlagen verwenden die Relevanz der bestehenden Einträge unter **Kompetenzen im Team**. Im Kompetenzeditor heißt das Feld **Berufsgruppen-Vorlage**. Dort lässt sich beispielsweise Pflegefachassistenz getrennt von Pflegefachkräften zuordnen. Einträge für **Alle** erscheinen in jeder Vorlage. Die Gruppenerkennung verwendet die Bezeichnung der hinterlegten Qualifikation; bei ungewöhnlichen Bezeichnungen sollte die Vorschau besonders geprüft werden.
 
-Diese Auswahl dient der betrieblichen Einarbeitung. Sie bestätigt keine Durchführungserlaubnis. Für fachlich geprüfte Vorlagen können Quelle, Stand, Geltungsbereich und Bedingungen in der Katalognotiz festgehalten werden; diese ist in der Vorschau sichtbar. Eine verbindliche HKP-Zuordnung wird nicht mitgeliefert. Der [NRW-Quellenabgleich](../fachwissen/hkp-kompetenzvorlagen-nrw.md) beschreibt den noch offenen Nachweis.
+Diese Auswahl dient der betrieblichen Einarbeitung. Sie bestätigt keine Durchführungserlaubnis. Für fachlich geprüfte Vorlagen können Quelle, Stand, Geltungsbereich und Bedingungen in der Katalognotiz festgehalten werden; diese ist im Editor lesbar und bei HKP-Vorlagen über den Hinweis am Prüfstatus erreichbar. Eine verbindliche HKP-Zuordnung wird nicht mitgeliefert. Der [NRW-Quellenabgleich](../fachwissen/hkp-kompetenzvorlagen-nrw.md) beschreibt den noch offenen Nachweis.
+
+## HKP-Katalog ergänzen
+
+1. Unter **Kompetenzen** auf **HKP-Katalog ergänzen** klicken.
+2. Alle Berufsgruppen oder eine der vier HKP-Gruppen wählen und die gewünschten Einträge markieren.
+3. Mit **ergänzen** übernehmen. Bereits vorhandene Einträge sind nicht auswählbar und bleiben unverändert.
+
+Die Vorlage enthält 50 Positionen aus Anlage 10, Stand 06.03.2023, einschließlich der zugehörigen Bedingungen. Sie ändert bestehende BPf-Einträge nicht. Ähnliche Themen können deshalb nebeneinander bestehen; vorhandene Bewertungen werden nicht automatisch auf neue, genauer abgegrenzte Leistungen übertragen.
+
+**Vorlage ungeprüft** bezeichnet die noch ausstehende betriebliche Prüfung von Anwendbarkeit und Bedingungen. Die persönliche Einarbeitungsstufe bleibt davon getrennt. Im Kompetenzeditor können Bezeichnung, Notiz, mehrere Berufsgruppen und der Prüfstatus später ergänzt werden; bestehende Zuordnungen und Bewertungen bleiben erhalten.
+
+Bei nicht eindeutig bezeichneten Abschlüssen wie „1-jährig examiniert“ wird keine konkrete HKP-Gruppe geraten. Die zutreffende Gruppe lässt sich in **Kompetenzen aus Vorlage** auswählen. Bestandsschutz aus Fußnote 3 muss für die konkrete Person und Leistung geprüft werden und erweitert die Standardauswahl nicht automatisch.
 
 ## Kompetenzstufen gemeinsam ändern
 

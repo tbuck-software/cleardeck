@@ -91,6 +91,7 @@ export type QualificationModalState = {
 export type QualificationModalPayload = Pick<QualificationModalState, 'id' | 'value' | 'note'>;
 
 export type CompetencyModalState = {
+  reviewStatus?: import('../shared/types').CompetencyReviewStatus | null;
   open: boolean;
   id?: number;
   code: string;
@@ -102,7 +103,7 @@ export type CompetencyModalState = {
 
 export type CompetencyModalPayload = Pick<
   CompetencyModalState,
-  'id' | 'code' | 'value' | 'category' | 'relevance' | 'note'
+  'id' | 'code' | 'value' | 'category' | 'relevance' | 'note' | 'reviewStatus'
 >;
 
 export type InstructionModalState = {

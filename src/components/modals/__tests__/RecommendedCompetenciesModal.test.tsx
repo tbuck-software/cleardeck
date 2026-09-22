@@ -67,3 +67,13 @@ it('offers the assistant template even when the qualification catalogue only has
   fireEvent.change(screen.getByLabelText('Berufsgruppe / Qualifikation'), { target: { value: 'Pflegefachassistenz' } });
   expect(props.onQualificationChange).toHaveBeenCalledWith('Pflegefachassistenz');
 });
+
+it('keeps catalogue review visible without presenting a source group as permission', () => {
+  render(<RecommendedCompetenciesModal {...props} definitions={[
+    { id: 4, name: 'Stomaversorgung', relevance: 'HKP G1; HKP G2; HKP G3', reviewStatus: 'pending', templateKey: 'hkp-nrw:032276', note: 'Betriebliche Anwendbarkeit prüfen' },
+    { id: 5, name: 'Wechsel s.c.-Infusion', relevance: 'HKP G1; HKP G2', reviewStatus: 'pending' },
+  ]} employeeQualification="Pflegefachassistenz" assignedIds={[]} />);
+  expect(screen.getByLabelText('Stomaversorgung auswählen')).toBeInTheDocument();
+  expect(screen.queryByLabelText('Wechsel s.c.-Infusion auswählen')).not.toBeInTheDocument();
+  expect(screen.getByText('Vorlage ungeprüft')).toHaveAttribute('title', 'Betriebliche Anwendbarkeit prüfen');
+});
