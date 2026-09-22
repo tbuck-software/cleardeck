@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [2.4.0]
+
+- HKP-Katalog mit 50 Leistungen nach Berufsgruppe ergänzen, ohne vorhandene Bewertungen zu verändern.
+- Berufsgruppen und betrieblichen Prüfstatus je Kompetenz bearbeiten; Quellen und Bedingungen nachlesen.
+
 ## [2.3.0]
 
 - Auffällige Beschäftigungsdaten zentral unter Datenprüfung finden und bereinigen.
