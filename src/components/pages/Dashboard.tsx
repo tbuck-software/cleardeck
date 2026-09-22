@@ -124,7 +124,7 @@ const Dashboard = ({
     {
       value: fte2(totalFte),
       label: annual ? 'Jahres-VZÄ gesamt' : 'VZÄ gesamt',
-      sub: methodLabel,
+      title: methodLabel,
       color: 'var(--color-accent-700)',
     },
     {
@@ -136,7 +136,7 @@ const Dashboard = ({
     {
       value: fte2(totalFte / Math.max(1, totalHeadcount)),
       label: annual ? 'Ø Jahres-VZÄ je Person' : 'Ø VZÄ je Person',
-      sub: 'über alle im Jahr Beschäftigten',
+      title: `${methodLabel}; über alle im Jahr Beschäftigten`,
       color: 'var(--color-text)',
     },
     {
@@ -209,11 +209,11 @@ const Dashboard = ({
       <section className="cd-kpis">
         {kpis.map((kpi) => (
           <div key={kpi.label}>
-            <div className="cd-kpi-value" style={{ color: kpi.color }}>
+            <div className="cd-kpi-value" title={kpi.title} style={{ color: kpi.color }}>
               {kpi.value}
             </div>
             <div style={{ fontWeight: 600, marginTop: 8 }}>{kpi.label}</div>
-            <div className="cd-muted-13">{kpi.sub}</div>
+            {kpi.sub && <div className="cd-muted-13">{kpi.sub}</div>}
           </div>
         ))}
       </section>
@@ -232,7 +232,7 @@ const Dashboard = ({
                     ? 'Personen an mindestens einem Monatsende; je Qualifikation einmal gezählt.'
                     : undefined}>
                     {category.headcount} Personen ·{' '}
-                    <strong style={{ color: 'var(--color-text)' }}>{fte2(category.fte)}</strong> VZÄ
+                    <strong title={methodLabel} style={{ color: 'var(--color-text)' }}>{fte2(category.fte)}</strong> VZÄ
                   </span>
                 </div>
                 <div className="cd-bar-track">

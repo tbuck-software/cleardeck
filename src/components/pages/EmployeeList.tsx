@@ -77,6 +77,7 @@ const EmployeeList = ({
 }: EmployeeListProps) => {
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'name', dir: 1 });
   const today = localDate();
+  const fteTitle = !directoryMode && annualFteMethod ? annualFteLabel(annualFteMethod) : undefined;
 
   const rows = useMemo(() => {
     const value = (employee: EmployeeWithPeriod): string | number => {
@@ -146,7 +147,7 @@ const EmployeeList = ({
       cell: (employee) => {
         const missing = directoryMode ? employee.hoursMissing : employee.annualFteMissing ?? employee.hoursMissing;
         const value = directoryMode ? employee.fte : employee.annualFte ?? employee.fte;
-        return <strong title={missing ? 'Unvollständig: Stellenanteile fehlen im Jahresverlauf.' : undefined}>{missing ? '—' : fte2(value)}</strong>;
+        return <strong title={missing ? [fteTitle, 'Unvollständig: Stellenanteile fehlen.'].filter(Boolean).join('. ') : fteTitle}>{missing ? '—' : fte2(value)}</strong>;
       },
     },
   ];
@@ -167,13 +168,11 @@ const EmployeeList = ({
           <p className="cd-muted" style={{ margin: '4px 0 0' }}>
             {directoryMode
               ? `${filteredEmployees.length} jemals beschäftigte Personen · jeweils letzter erfasster Stand`
-              : `${filteredEmployees.length} Personen im Jahr ${year} · ${fte2(totalFte)} Jahres-VZÄ gesamt`}
+              : <>{filteredEmployees.length} Personen im Jahr {year} · <span title={fteTitle}>{fte2(totalFte)} Jahres-VZÄ gesamt</span></>}
           </p>
-          {!directoryMode && annualFteMethod && (
+          {!directoryMode && filteredEmployees.some(e => e.annualFteMissing || e.annualFteVerified === false) && (
             <p className="cd-muted-13" style={{ margin: '6px 0 0' }}>
-              {annualFteLabel(annualFteMethod)}
-              {filteredEmployees.some(e => e.annualFteMissing || e.annualFteVerified === false) &&
-                ' · Vorläufig: Stellenanteile fehlen oder sind unbestätigt.'}
+              Vorläufig: Stellenanteile fehlen oder sind unbestätigt.
             </p>
           )}
         </div>
@@ -288,14 +287,14 @@ const EmployeeList = ({
                   label: `Summe über ${rows.length} Personen`,
                   cells: {
                     weeklyHours: <strong>{totalHours || '—'}</strong>,
-                    fte: <strong>{fte2(shownFte)}</strong>,
+                    fte: <strong title={fteTitle}>{fte2(shownFte)}</strong>,
                   },
                 }
           }
           compactFooter={
             <>
               <span>{rows.length} Personen</span>
-              <strong>{directoryMode ? 'Letzter Stand je Person' : `${fte2(shownFte)} Jahres-VZÄ`}</strong>
+              <strong title={fteTitle}>{directoryMode ? 'Letzter Stand je Person' : `${fte2(shownFte)} Jahres-VZÄ`}</strong>
             </>
           }
         />
