@@ -12,8 +12,8 @@ type ReportModalProps = {
   years: number[];
   baseHours: number;
   dataset: YearDataset | null;
-  mode?: 'stichtag' | 'year-average';
-  onModeChange?: (mode: 'stichtag' | 'year-average') => void;
+  mode?: 'stichtag' | 'year-average' | 'month-end-average';
+  onModeChange?: (mode: 'stichtag' | 'year-average' | 'month-end-average') => void;
   onYearChange: (year: number) => void;
   onExport: () => void;
   onFixMissingHours: () => void;
@@ -28,12 +28,15 @@ const ReportModal = ({
   baseHours,
   dataset,
   onYearChange,
-  mode = 'stichtag',
+  mode = 'month-end-average',
   onModeChange,
   onExport,
   onFixMissingHours,
   onClose,
 }: ReportModalProps) => {
+  const monthly = mode === 'month-end-average';
+  const modeLabel = monthly ? 'Durchschnitt aus 12 Monatsenden'
+    : mode === 'stichtag' ? 'Stichtag 31.12.' : 'Taggewichteter Jahresdurchschnitt';
   const employees = dataset?.employees ?? [];
   const categories = dataset?.aggregation.categories ?? [];
   const missingHours = employees.filter((employee) => employee.weeklyHours == null);
@@ -60,7 +63,7 @@ const ReportModal = ({
     },
     {
       id: 'base',
-      label: `${mode === 'stichtag' ? 'Stichtag 31.12.' : 'Taggewichteter Jahresdurchschnitt'} · Bezugswert ${dataset?.baseHours ?? baseHours} h`,
+      label: `${modeLabel} · Bezugswert ${dataset?.baseHours ?? baseHours} h`,
       dot: 'var(--ok-800)',
       fix: undefined,
     },
@@ -75,14 +78,16 @@ const ReportModal = ({
         {
           title: 'Berechnung und Verwendung',
           body: `${
-            mode === 'stichtag'
+            monthly
+              ? `Jahresdurchschnitt ${year}: Summe der gültigen Stellenanteile an allen zwölf Monatsenden / 12. Monate ohne Beschäftigte zählen mit null. Es werden die erfassten Stellenanteile verwendet, ohne gesonderte SGB-XI-Aufteilung.`
+              : mode === 'stichtag'
               ? `Bestand zum 31.12.${year}.`
               : `Jahresdurchschnitt ${year}: Stellenanteil × inklusive Beschäftigungstage / Kalendertage des Jahres.`
           } Ob dieser Nachweis dem benötigten Vertragsformular entspricht, ist betrieblich zu prüfen.`,
         },
         {
           title: 'Wie werden Wechsel berücksichtigt?',
-          body: 'Stunden- und Qualifikationswechsel teilen den Zeitraum. Personen zählen je Qualifikation einmal; bei einem Wechsel kann dieselbe Person in mehreren Kategorien vorkommen. Die Gesamtzahl zählt jede Person einmal.',
+          body: `${monthly ? 'Es zählen nur Personen und Qualifikationen, die an mindestens einem Monatsende vertreten sind. Die Personenzahl ist kein Monatsdurchschnitt. ' : ''}Stunden- und Qualifikationswechsel teilen den Zeitraum. Personen zählen je Qualifikation einmal; bei einem Wechsel kann dieselbe Person in mehreren Kategorien vorkommen. Die Gesamtzahl zählt jede Person einmal.`,
         },
       ]}
       primaryLabel="Als Excel exportieren"
@@ -99,9 +104,11 @@ const ReportModal = ({
       {onModeChange && (
         <Segmented
           ariaLabel="Auswertungsart"
+          wrap
           options={[
-            { value: 'stichtag' as const, label: 'Stichtag 31.12.' },
+            { value: 'month-end-average' as const, label: 'Durchschnitt aus 12 Monatsenden' },
             { value: 'year-average' as const, label: 'Taggewichteter Jahresdurchschnitt' },
+            { value: 'stichtag' as const, label: 'Stichtag 31.12.' },
           ]}
           value={mode}
           onChange={onModeChange}
@@ -120,11 +127,16 @@ const ReportModal = ({
         onChange={onYearChange}
       />
 
+      {monthly && <p className="cd-muted-13">
+        VZÄ: Summe der zwölf Monatsendwerte geteilt durch 12. Personen zählen je Qualifikation
+        einmal, wenn sie an mindestens einem Monatsende beschäftigt waren.
+        Die Stellenanteile werden nicht gesondert auf SGB XI begrenzt.
+      </p>}
       <table className="ds-table">
         <thead>
           <tr>
             <th>Qualifikation</th>
-            <th style={{ textAlign: 'right' }}>Personen</th>
+            <th style={{ textAlign: 'right' }}>{monthly ? 'Personen an Monatsenden' : 'Personen'}</th>
             <th style={{ textAlign: 'right' }}>VZÄ</th>
           </tr>
         </thead>
@@ -139,7 +151,7 @@ const ReportModal = ({
           {categories.length === 0 && (
             <tr>
               <td colSpan={3} className="cd-muted-13">
-                Keine Beschäftigten im Jahr {year}.
+                {monthly ? `Keine Beschäftigten an den Monatsenden ${year}.` : `Keine Beschäftigten im Jahr ${year}.`}
               </td>
             </tr>
           )}

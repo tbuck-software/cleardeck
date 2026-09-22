@@ -164,7 +164,7 @@ export const registerDataHandlers = (): void => {
       {
         year,
         mode,
-      }: { year: number; mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory' },
+      }: { year: number; mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'month-end-average' | 'directory' },
     ): YearDataset => {
       ensureDbReady();
       return getYearDataset(year, mode);
@@ -220,7 +220,7 @@ export const registerDataHandlers = (): void => {
       }: {
         year: number;
         format: 'csv' | 'xlsx';
-        mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory';
+        mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'month-end-average' | 'directory';
       },
     ) => {
       ensureDbReady();

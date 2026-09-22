@@ -16,7 +16,7 @@ Die fachlichen Begriffe stehen in [CONTEXT.md](../CONTEXT.md), die daraus getrof
 - Alle jemals Beschäftigten führen, auch ausgeschiedene.
 - Eintritt, Austritt, Wochenstunden, Stellenanteil und Qualifikation jeweils mit Gültigkeitsdatum erfassen. Korrekturen bleiben im Änderungsverlauf nachvollziehbar.
 - Nach Zeitraum und Qualifikation filtern: Wer war im gewählten Jahr ganz oder teilweise beschäftigt?
-- Vollzeitäquivalente (VZÄ) aus der Arbeitszeit berechnen, taggenau über den Zeitraum gewichtet. Ab 36 Wochenstunden zählt eine Person als 1,0; das ist eine betriebliche Regel, keine gesetzliche Definition.
+- Vollzeitäquivalente (VZÄ) aus der Arbeitszeit berechnen. Im Jahresnachweis standardmäßig die gültigen Stellenanteile an zwölf Monatsenden mitteln; taggenaue Gewichtung und Stichtag 31.12. als Alternativen anbieten. Ab 36 Wochenstunden zählt eine Person als 1,0; das ist eine betriebliche Regel, keine gesetzliche Definition.
 - Herkunft und Belegverweis einer Angabe festhalten, z. B. Personalakte oder Dokumentenablage. Dokumente werden verlinkt, nicht verändert.
 - Auffällige oder unvollständige Daten als Aufgabe anzeigen, statt sie stillschweigend als Nullwert zu behandeln.
 - Bestehende Listen aus Excel oder CSV mit Vorschau übernehmen.

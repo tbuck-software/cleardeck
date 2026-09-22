@@ -83,7 +83,7 @@ export type Api = {
   commitStaffImport: (rows: StaffImportRow[]) => Promise<{ imported: number; safetyPath: string }>;
   listEmployees: (
     year: number,
-    mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory',
+    mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'month-end-average' | 'directory',
   ) => Promise<YearDataset>;
   listPeriods: (employeeId: number) => Promise<EmploymentPeriod[]>;
   getEmployeePeriod: (employeeId: number, periodId: number, year: number) => Promise<EmployeeWithPeriod>;
@@ -130,7 +130,7 @@ export type Api = {
   exportData: (
     year: number,
     format: ExportFormat,
-    mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory',
+    mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'month-end-average' | 'directory',
   ) => Promise<{ saved: boolean; filePath?: string; error?: string }>;
   openDocument: (path: string) => Promise<void>;
   listQualifications: () => Promise<QualificationType[]>;
