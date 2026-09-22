@@ -18,6 +18,7 @@ type AdminListPageProps = {
   items: AdminItem[];
   emptyLabel: string;
   onCreate: () => void;
+  extraActions?: React.ReactNode;
   onEdit: (id: number) => void;
   /** Moves the item to a new index; the caller persists the new sort order. */
   onReorder: (id: number, targetIndex: number) => void;
@@ -29,6 +30,7 @@ const AdminListPage = ({
   items,
   emptyLabel,
   onCreate,
+  extraActions,
   onEdit,
   onReorder,
 }: AdminListPageProps) => {
@@ -45,10 +47,13 @@ const AdminListPage = ({
             {subtitle}
           </p>
         </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {extraActions}
         <button type="button" className="btn btn-primary" onClick={onCreate}>
           <Icon name="plus" size={16} />
           Neu
         </button>
+        </div>
       </header>
 
       <ListPanel>

@@ -65,7 +65,7 @@ function loadSchema() {
   try { document = JSON.parse(readFileSync(path, 'utf8')); } catch (error) {
     throw new Error(`syncSchema.json ist ungültig: ${error.message}`);
   }
-  if (document?.schemaVersion !== 23 || !Array.isArray(document.tables) ||
+  if (document?.schemaVersion !== 24 || !Array.isArray(document.tables) ||
       !document.settings || !Array.isArray(document.settings.sharedKeys)) {
     throw new Error('syncSchema.json hat nicht das erwartete Schemaformat.');
   }

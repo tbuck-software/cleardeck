@@ -108,6 +108,7 @@ export const api = {
       call('reorderServiceDefinitions', baseApi.reorderServiceDefinitions, ids),
   },
   competencies: {
+    importHkp: (keys: string[]) => call('importHkpCompetencyDefinitions', baseApi.importHkpCompetencyDefinitions, keys),
     listDefinitions: () => call('listCompetencyDefinitions', baseApi.listCompetencyDefinitions),
     addDefinition: (input: Parameters<Api['addCompetencyDefinition']>[0]) =>
       call('addCompetencyDefinition', baseApi.addCompetencyDefinition, input),

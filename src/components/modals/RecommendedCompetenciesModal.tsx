@@ -1,4 +1,6 @@
 import React from 'react';
+import { HKP_GROUPS } from '../../shared/hkpCatalog';
+import CompetencyReviewBadge from '../ui/CompetencyReviewBadge';
 import Checkbox from '../ui/Checkbox';
 import Dialog from '../ui/Dialog';
 import ListPanel from '../ui/ListPanel';
@@ -28,7 +30,7 @@ const RecommendedCompetenciesModal = ({
   const qualification = state.qualification ?? employeeQualification;
   const options = [...new Set([
     employeeQualification, 'Pflegefachkraft', 'Pflegefachassistenz', 'Pflegehilfskraft',
-    ...qualifications, qualification,
+    ...qualifications, ...HKP_GROUPS.map((group) => group.value), qualification,
   ])].filter(Boolean);
   const matching = definitions.filter((entry) =>
     entry.id != null && matchesQualificationRelevance(qualification, entry.relevance),
@@ -58,7 +60,7 @@ const RecommendedCompetenciesModal = ({
           onChange={(event) => onQualificationChange(event.target.value)}
         >
           {!qualification && <option value="">Keine Qualifikation hinterlegt</option>}
-          {options.map((name) => <option key={name} value={name}>{name}{name === employeeQualification ? ' · aktuell bei dieser Person' : ''}</option>)}
+          {options.map((name) => <option key={name} value={name}>{HKP_GROUPS.some((group) => group.value === name) ? `HKP · ${HKP_GROUPS.find((group) => group.value === name)!.label}` : name}{name === employeeQualification ? ' · aktuell bei dieser Person' : ''}</option>)}
         </select>
       </div>
       <p className="cd-muted-13">
@@ -93,8 +95,8 @@ const RecommendedCompetenciesModal = ({
                 />
               }
               title={label}
-              subline={definition.note}
-              tag={<span className="tag tag-neutral">{assigned ? 'Bereits zugeordnet' : definition.category ?? 'Allgemein'}</span>}
+              subline={definition.templateKey ? undefined : definition.note}
+              tag={<><CompetencyReviewBadge status={definition.reviewStatus} note={definition.note} /><span className="tag tag-neutral">{assigned ? 'Bereits zugeordnet' : definition.category ?? 'Allgemein'}</span></>}
               onSelect={assigned || busy ? undefined : () => onToggle(definitionId)}
             />
           );

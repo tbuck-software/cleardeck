@@ -30,6 +30,8 @@ import { v016_missing_instructions } from './v016_missing_instructions';
 import { v022_patient_service_scope } from './v022_patient_service_scope';
 import { v023_generic_service_label } from './v023_generic_service_label';
 
+import { v024_competency_templates } from './v024_competency_templates';
+
 export type Migration = {
   version: number;
   description: string;
@@ -63,6 +65,7 @@ export const migrations: Migration[] = [
   v021_catalog_actions,
   v022_patient_service_scope,
   v023_generic_service_label,
+  v024_competency_templates,
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations[migrations.length - 1]?.version ?? 0;

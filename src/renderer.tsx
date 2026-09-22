@@ -1,3 +1,4 @@
+import HkpCatalogModal from './components/modals/HkpCatalogModal';
 import { DEFAULT_ANNUAL_FTE_METHOD } from './shared/annualFte';
 import StaffImportModal from './components/modals/StaffImportModal';
 import type { StaffImportPreview } from './shared/staffImport';
@@ -278,6 +279,7 @@ const App = () => {
       refreshAll,
     },
   } = useAppLogic();
+  const [hkpCatalogOpen, setHkpCatalogOpen] = useState(false);
 
   const { wideSidebar, wideTable } = useViewport();
   const {
@@ -383,6 +385,7 @@ const App = () => {
       reportOpen ||
       qualificationModal.open ||
       competencyModal.open ||
+      hkpCatalogOpen ||
       instructionModal.open ||
       editModal.open ||
       employeeCompetencyModal.open ||
@@ -411,6 +414,7 @@ const App = () => {
     auditModal.open,
     auditView,
     competencyModal.open,
+    hkpCatalogOpen,
     confirmState,
     dayModalDate,
     editModal.open,
@@ -1187,8 +1191,8 @@ const App = () => {
           .map((entry) => ({
             id: entry.id as number,
             title: entry.code ? `${entry.code} · ${entry.name}` : entry.name,
-            note: entry.note ?? `Relevanz: ${entry.relevance ?? 'Alle'}`,
-            tags: [entry.category ?? 'Allgemein'],
+            note: entry.templateKey ? undefined : entry.note ?? `Relevanz: ${entry.relevance ?? 'Alle'}`,
+            tags: [entry.category ?? 'Allgemein', ...(entry.reviewStatus ? [entry.reviewStatus === 'pending' ? 'Vorlage ungeprüft' : 'Vorlage betrieblich geprüft'] : [])],
             usage: `${definitionUsage.competencies[entry.id as number] ?? 0} zugeordnet`,
           })),
       };
@@ -1541,6 +1545,7 @@ const App = () => {
             subtitle={admin.subtitle}
             items={admin.items}
             emptyLabel={admin.empty}
+            extraActions={page === 'comps' ? <button type="button" className="btn btn-secondary" onClick={() => setHkpCatalogOpen(true)}>HKP-Katalog ergänzen</button> : undefined}
             onCreate={() => {
               if (page === 'quals') setQualificationModal({ open: true, value: '', note: '' });
               if (page === 'services') openCreateServiceDefinition();
@@ -1588,6 +1593,7 @@ const App = () => {
                     value: entry.name,
                     category: entry.category ?? 'Allgemein',
                     relevance: entry.relevance ?? 'Alle',
+                    reviewStatus: entry.reviewStatus ?? null,
                     note: entry.note ?? '',
                   });
               }
@@ -1774,6 +1780,7 @@ const App = () => {
             : undefined
         }
       />
+      {hkpCatalogOpen && <HkpCatalogModal definitions={competencyDefinitions} onClose={() => setHkpCatalogOpen(false)} onImported={() => { void refreshAll(); setToastMessage('HKP-Katalog ergänzt.'); }} />}
       <CompetencyModal
         state={competencyModal}
         onChange={(next) => setCompetencyModal((prev) => ({ ...prev, ...next }))}

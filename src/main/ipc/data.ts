@@ -1,3 +1,4 @@
+import type { CompetencyDefinition } from '../../shared/types';
 import type { AnnualFteMethod } from '../../shared/annualFte';
 import { saveWorkingTime } from '../repositories/workingTimes';
 import { recordDeparture, switchQualification } from '../repositories/employmentActions';
@@ -62,6 +63,7 @@ import {
   deleteCompetencyDefinition,
   deleteEmployeeCompetency,
   listCompetencyDefinitions,
+  importHkpCompetencyDefinitions,
   listEmployeeCompetencies,
   reorderCompetencyDefinitions,
   assignEmployeeCompetencies,
@@ -331,6 +333,10 @@ export const registerDataHandlers = (): void => {
   });
 
   // Competencies
+  handleData('competencies:importHkp', (_event, keys: string[]) => {
+    ensureDbReady();
+    return importHkpCompetencyDefinitions(keys);
+  });
   handleData('competencies:listDefinitions', () => {
     ensureDbReady();
     return listCompetencyDefinitions();
@@ -346,6 +352,7 @@ export const registerDataHandlers = (): void => {
         category?: string | null;
         relevance?: string | null;
         note?: string | null;
+        reviewStatus?: CompetencyDefinition['reviewStatus'];
       },
     ) => {
       ensureDbReady();
@@ -364,6 +371,7 @@ export const registerDataHandlers = (): void => {
         category?: string | null;
         relevance?: string | null;
         note?: string | null;
+        reviewStatus?: CompetencyDefinition['reviewStatus'];
       },
     ) => {
       ensureDbReady();

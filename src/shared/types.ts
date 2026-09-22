@@ -11,7 +11,11 @@ export interface QualificationType {
   note?: string | null;
 }
 
+export type CompetencyReviewStatus = 'pending' | 'reviewed';
+
 export interface CompetencyDefinition {
+  templateKey?: string | null;
+  reviewStatus?: CompetencyReviewStatus | null;
   id?: number;
   code?: string | null;
   name: string;
@@ -22,6 +26,7 @@ export interface CompetencyDefinition {
 }
 
 export interface EmployeeCompetency {
+  reviewStatus?: CompetencyReviewStatus | null;
   stageScheme?: 'legacy' | 'practice-v1';
   stageHistory?: {
     stageScheme?: string;

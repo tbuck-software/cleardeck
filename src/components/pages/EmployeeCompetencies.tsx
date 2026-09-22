@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Checkbox from '../ui/Checkbox';
+import CompetencyReviewBadge from '../ui/CompetencyReviewBadge';
 import ListPanel from '../ui/ListPanel';
 import ListRow from '../ui/ListRow';
 import type { EmployeeCompetency } from '../../shared/types';
@@ -176,13 +177,13 @@ const EmployeeCompetencies = ({
                 </>
               }
               tag={
-                <span className={`tag ${tagClass}`} style={{ minWidth: 110, justifyContent: 'center' }}>
+                <><CompetencyReviewBadge status={competency.reviewStatus} note={competency.definitionNote} /><span className={`tag ${tagClass}`} style={{ minWidth: 110, justifyContent: 'center' }}>
                   {level
                     ? competency.stageScheme === 'legacy'
                       ? `${level} · ${LEGACY_COMPETENCY_LEVELS[level]}`
                       : COMPETENCY_LEVELS[level]
                     : 'Offen'}
-                </span>
+                </span></>
               }
               onOpen={() => onSelectCompetency(competency)}
             />
