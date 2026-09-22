@@ -91,7 +91,7 @@ export const importDatabase = async (
 export const exportData = async (
   year: number,
   format: 'csv' | 'xlsx',
-  mode: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory' = 'year',
+  mode: 'year' | 'stichtag' | 'current' | 'year-average' | 'month-end-average' | 'directory' = 'year',
 ): Promise<{ saved: boolean; filePath?: string; error?: string }> => {
   const dataset = getYearDataset(year, mode);
   const ext = format === 'csv' ? 'csv' : 'xlsx';

@@ -145,6 +145,7 @@ export interface EmployeeWithPeriod extends Employee {
   hoursVerified?: boolean;
   hoursMissing?: boolean;
   reportDays?: number;
+  reportMonthEnds?: string[];
   unweightedFte?: number | null;
   hoursEffectiveFrom?: string;
   periodId?: number;
@@ -210,7 +211,7 @@ export interface Aggregation {
 
 export interface YearDataset {
   availableYears?: number[];
-  reportMode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory';
+  reportMode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'month-end-average' | 'directory';
   referenceDate?: string;
   unverifiedHoursCount?: number;
   employees: EmployeeWithPeriod[];

@@ -59,7 +59,7 @@ export const api = {
       call('recoverWithKey', baseApi.recoverWithKey, input),
   },
   employees: {
-    list: (year: number, mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory') =>
+    list: (year: number, mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'month-end-average' | 'directory') =>
       call('listEmployees', baseApi.listEmployees, year, mode),
     listPeriods: (employeeId: number) => call('listPeriods', baseApi.listPeriods, employeeId),
     getEmployeePeriod: (employeeId: number, periodId: number, year: number) =>
@@ -166,7 +166,7 @@ export const api = {
     export: (
       year: number,
       format: ExportFormat,
-      mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory',
+      mode?: 'year' | 'stichtag' | 'current' | 'year-average' | 'month-end-average' | 'directory',
     ) => call('exportData', baseApi.exportData, year, format, mode),
     openDocument: (path: string) => call('openDocument', baseApi.openDocument, path),
   },

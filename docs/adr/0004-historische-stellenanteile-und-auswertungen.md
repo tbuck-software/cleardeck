@@ -15,3 +15,14 @@ Die Gesamtliste zeigt alle jemals Beschäftigten mit ihrem letzten erfassten Sta
 Die gewünschte betriebliche VZÄ-Regel bleibt erhalten: ab 36 Wochenstunden 1,0, höchstens 1,0. Der voreingestellte Bezugswert darunter ist 36 Stunden; ein abweichender konfigurierter Bezugswert muss sichtbar sein. Bereits erfasste historische Stellenanteile werden durch eine spätere Änderung dieses Bezugswerts nicht neu berechnet.
 
 Keiner dieser Berichte behauptet ohne Vertragsprüfung, das verbindliche Formular eines bestimmten Empfängers zu erfüllen. Ein vorläufiger Bericht kennzeichnet unbekannte oder unbestätigte Stellenanteile ausdrücklich.
+
+
+## Ergänzung vom 22.09.2026: Monatsenden als Standard
+
+Auf Wunsch des Produktverantwortlichen verwendet der Jahresnachweis standardmäßig den Durchschnitt aus zwölf Monatsenden. Taggewichteter Jahresdurchschnitt und Stichtag 31.12. bleiben als ausdrücklich benannte Alternativen auswählbar. Die Auswahl gilt für Anzeige und Export; Team- und Gesamtliste behalten ihre bisherige Bedeutung.
+
+Für jeden Monatsletzten werden die an diesem Datum gültigen Stellenanteile und Qualifikationen der Beschäftigten berücksichtigt. Eintritt und Austritt zählen einschließlich ihres Datums. Die Summe der zwölf Monatsendwerte wird immer durch zwölf geteilt, auch bei Monaten ohne Beschäftigte. Ein untermonatiger Beschäftigungsabschnitt ohne Monatsende trägt nichts bei. Fehlende Stellenanteile an berücksichtigten Monatsenden bleiben als unbekannt gekennzeichnet; ein ausdrücklich erfasster Nullwert ist davon getrennt.
+
+Die Spalte „Personen an Monatsenden“ zählt unterschiedliche Personen, die an mindestens einem Monatsende vertreten sind. Sie ist kein Durchschnitt der monatlichen Kopfzahlen. Bei einem Qualifikationswechsel kann dieselbe Person in mehreren Gruppen zählen; insgesamt zählt sie einmal. Die taggewichtete Alternative zählt weiterhin alle im Jahr Beschäftigten.
+
+Die Methode verwendet die erfassten Stellenanteile. Sie ergänzt keine SGB-XI-Aufteilung, keine automatischen Freistellungsabzüge und keine bestätigte Zuordnung zu einem bestimmten Vertragsformular. Monatsenden und ihr Gewicht bleiben im Excel-Export nachvollziehbar.

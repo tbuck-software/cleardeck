@@ -151,7 +151,7 @@ const mapEmployeePeriod = (
  */
 export const getYearDataset = (
   year: number,
-  mode: 'year' | 'stichtag' | 'current' | 'year-average' | 'directory' = 'year',
+  mode: 'year' | 'stichtag' | 'current' | 'year-average' | 'month-end-average' | 'directory' = 'year',
 ): YearDataset => {
   assertReportYear(year);
   const db = getDb();
@@ -189,9 +189,12 @@ export const getYearDataset = (
     .prepare('SELECT id,employeeId,startDate,endDate,qualification,note FROM employment_periods ORDER BY employeeId,startDate,id')
     .all() as PeriodWithEmployeeId[];
   const employmentStartByPeriod = buildEmploymentStartByPeriod(allPeriods);
-  if (mode === 'year-average') {
+  if (mode === 'year-average' || mode === 'month-end-average') {
     const employees: EmployeeWithPeriod[] = [];
     const yearDays = daysBetween(startIso, endIso) + 1;
+    const monthEnds = Array.from({ length: 12 }, (_, month) =>
+      localDate(new Date(year, month + 1, 0, 12)),
+    );
     for (const row of rows) {
       const start = row.startDate > startIso ? row.startDate : startIso;
       const end = row.endDate && row.endDate < endIso ? row.endDate : endIso;
@@ -215,6 +218,11 @@ export const getYearDataset = (
           segmentEnd = i + 1 < boundaries.length ? shiftDays(boundaries[i + 1], -1) : end;
         const term = [...terms].reverse().find((t) => t.effectiveFrom <= segmentStart);
         const days = daysBetween(segmentStart, segmentEnd) + 1;
+        const reportMonthEnds = mode === 'month-end-average'
+          ? monthEnds.filter((date) => date >= segmentStart && date <= segmentEnd)
+          : undefined;
+        if (reportMonthEnds?.length === 0) continue;
+        const weight = reportMonthEnds ? reportMonthEnds.length / 12 : days / yearDays;
         employees.push({
           id: row.employeeId,
           periodId: row.periodId,
@@ -227,11 +235,12 @@ export const getYearDataset = (
           note: row.periodNote ?? row.note,
           sourceRef: term?.sourceRef ?? null,
           weeklyHours: term?.weeklyHours ?? null,
-          fte: ((term?.fte ?? 0) * days) / yearDays,
+          fte: (term?.fte ?? 0) * weight,
           unweightedFte: term?.fte ?? null,
           hoursVerified: term?.verified === 1,
           hoursMissing: !term,
-          reportDays: days,
+          reportDays: reportMonthEnds ? undefined : days,
+          reportMonthEnds,
           hoursEffectiveFrom: term?.effectiveFrom,
           status: computeStatus(row.endDate ?? null, year),
         });

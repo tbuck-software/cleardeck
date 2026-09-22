@@ -296,7 +296,7 @@ const App = () => {
   const [dayModalDate, setDayModalDate] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportYear, setReportYear] = useState(currentYear - 1);
-  const [reportMode, setReportMode] = useState<'stichtag' | 'year-average'>('stichtag');
+  const [reportMode, setReportMode] = useState<'stichtag' | 'year-average' | 'month-end-average'>('month-end-average');
   const [reportDataset, setReportDataset] = useState<YearDataset | null>(null);
   useEffect(() => {
     if (!reportOpen || !appReady.unlocked) return;

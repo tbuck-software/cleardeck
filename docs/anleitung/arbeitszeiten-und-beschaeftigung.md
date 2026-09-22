@@ -32,3 +32,16 @@ Unter **Verwaltung → Datenprüfung** stehen die erkannten Auffälligkeiten all
 Die Filter **Alle**, **Fehler** und **Prüfhinweise** sowie die Personensuche grenzen die Liste ein. Ein Klick auf einen Fund öffnet die **Historie** der betroffenen Person. Dort stehen die vorhandenen Korrekturen mit Vorschau bereit. Nach einer Korrektur wird die Prüfung mit den Teamdaten aktualisiert; **Erneut prüfen** lädt sie auch manuell neu.
 
 Aufeinanderfolgende Arbeitszeitstände, etwa 80 % bis Ende Februar und 100 % ab März, sind kein Fehler. Die Prüfung kann fehlende oder bereits gelöschte Zeiträume nicht aus anderen Angaben rekonstruieren und prüft nicht, ob eine Berichtsmethode den Vorgaben eines Empfängers entspricht.
+
+
+## Jahresnachweis nach Monatsenden
+
+Unter **Team → Weitere Aktionen → Jahresnachweis erstellen** das gewünschte Jahr wählen. Standard ist **Durchschnitt aus 12 Monatsenden**. Für jeden Monatsletzten zählt der dann gültige Stellenanteil. Die zwölf Monatsendwerte werden addiert und durch zwölf geteilt, auch wenn in manchen Monaten niemand beschäftigt war.
+
+Beispiel für 2025: Januar und Februar jeweils 0,8 VZÄ, März bis Dezember jeweils 1,0 VZÄ ergeben `(2 × 0,8 + 10 × 1,0) / 12 = 0,96667`, angezeigt als **0,97 VZÄ**. Eine Änderung am Monatsletzten gilt bereits für diesen Monat. Ein Austritt am Monatsletzten wird noch berücksichtigt. Beschäftigung ausschließlich zwischen zwei Monatsenden zählt in dieser Methode nicht.
+
+**Personen an Monatsenden** zählt jede Person je Qualifikation einmal, wenn sie an mindestens einem Monatsende vertreten war. Die Gesamtzahl zählt jede Person einmal, auch bei einem Qualifikationswechsel. Das ist kein Durchschnitt der monatlichen Personenzahlen. Wer alle im Jahresverlauf Beschäftigten zählen möchte, wählt die taggewichtete Alternative und liest dort die Spalte **Personen**.
+
+**Taggewichteter Jahresdurchschnitt** und **Stichtag 31.12.** bleiben im selben Dialog auswählbar. **Als Excel exportieren** übernimmt die ausgewählte Methode. Beim Monatsenddurchschnitt nennt das Blatt **Team** die berücksichtigten Monatsenden und deren Anzahl je Abschnitt.
+
+Die Berechnung verwendet die hinterlegten Stellenanteile, ohne gesonderte Begrenzung auf SGB XI. Unbekannte Stellenanteile an Monatsenden machen den Bericht vorläufig.

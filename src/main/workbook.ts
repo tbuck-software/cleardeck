@@ -77,10 +77,13 @@ export const buildEmployeeWorkbook = (dataset: YearDataset, year: number): XLSX.
         ? 'Gesamtliste aller Beschäftigten; letzter erfasster Stand, keine Jahreskennzahl'
         : dataset.reportMode === 'stichtag'
           ? `Stichtag 31.12.${year}`
+          : dataset.reportMode === 'month-end-average'
+            ? 'Durchschnitt aus 12 Monatsenden; Summe der gültigen Stellenanteile an den zwölf Monatsenden / 12; ohne gesonderte SGB-XI-Aufteilung'
           : dataset.reportMode === 'year-average'
             ? 'Taggewichteter Jahresdurchschnitt; inklusive Tage / Kalendertage des Jahres'
             : 'Im Jahr beschäftigt; letzter Stellenanteil des Jahres',
     ],
+    ...(dataset.reportMode === 'month-end-average' ? [['Personenzählung', 'Unterschiedliche Personen an mindestens einem Monatsende, je Qualifikation einmal; kein Monatsdurchschnitt']] : []),
     ['Bezugswochenstunden', dataset.baseHours ?? 'nicht angegeben'],
     [
       'Betriebliche VZÄ-Regel',
@@ -103,7 +106,7 @@ export const buildEmployeeWorkbook = (dataset: YearDataset, year: number): XLSX.
     ...(dataset.reportMode === 'directory'
       ? [['Personen gesamt', dataset.aggregation.totalHeadcount]]
       : [
-          ['Qualifikation', 'Personen', 'VZÄ'],
+          ['Qualifikation', dataset.reportMode === 'month-end-average' ? 'Personen an Monatsenden' : 'Personen', 'VZÄ'],
           ...dataset.aggregation.categories.map((c) => [c.qualification, c.headcount, c.fte]),
           ['Gesamt', dataset.aggregation.totalHeadcount, dataset.aggregation.totalFte],
         ]),
@@ -117,7 +120,10 @@ export const buildEmployeeWorkbook = (dataset: YearDataset, year: number): XLSX.
         Qualifikation: e.qualification,
         VZÄ: e.hoursMissing ? '' : e.fte,
         'Ungewichteter Stellenanteil': e.unweightedFte ?? '',
-        'Kalendertage im Abschnitt': e.reportDays ?? '',
+        ...(dataset.reportMode === 'month-end-average'
+          ? { 'Berücksichtigte Monatsenden': e.reportMonthEnds?.join(', ') ?? '',
+              'Anzahl Monatsenden': e.reportMonthEnds?.length ?? 0 }
+          : { 'Kalendertage im Abschnitt': e.reportDays ?? '' }),
         Wochenstunden: e.weeklyHours ?? '',
         Eintritt: e.employmentStartDate,
         'Beginn Abschnitt': e.startDate,
