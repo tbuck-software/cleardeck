@@ -228,7 +228,9 @@ const Dashboard = ({
               <div key={category.qualification}>
                 <div className="cd-bar-label">
                   <span style={{ fontWeight: 600 }}>{category.qualification}</span>
-                  <span className="cd-muted">
+                  <span className="cd-muted" title={annual?.method === 'month-end-average'
+                    ? 'Personen an mindestens einem Monatsende; je Qualifikation einmal gezählt.'
+                    : undefined}>
                     {category.headcount} Personen ·{' '}
                     <strong style={{ color: 'var(--color-text)' }}>{fte2(category.fte)}</strong> VZÄ
                   </span>
@@ -249,10 +251,8 @@ const Dashboard = ({
             )}
           </div>
           <p className="cd-muted-13" style={{ margin: '14px 0 0' }}>
-            {methodLabel}. Basis {baseHours} Std./Woche.
-            {annual?.method === 'month-end-average' && ' Personen zählen je Qualifikation an mindestens einem Monatsende; insgesamt jede Person einmal.'}
-            {annual && ' Qualifikationswechsel werden zeitanteilig berücksichtigt.'}
-            {provisional && ' Vorläufig: fehlende Stellenanteile fehlen in der Summe; unbestätigte Altwerte bitte prüfen.'}{' '}
+            Basis {baseHours} Std./Woche.
+            {provisional && ' Vorläufig: Stellenanteile fehlen oder sind unbestätigt.'}{' '}
             <button type="button" className="cd-link" onClick={onOpenReport}>
               Jahresnachweis {year - 1} erstellen →
             </button>

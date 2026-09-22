@@ -66,11 +66,7 @@ const SettingsGeneral = ({
         <option value="year-average">{annualFteLabel('year-average')}</option>
       </select>
       <p id="annual-fte-help" className="cd-muted-13" style={{ margin: '8px 0 0' }}>
-        {annualFteMethod === 'month-end-average'
-          ? 'Summe der gültigen Stellenanteile an den zwölf Monatsenden, geteilt durch zwölf.'
-          : 'Stellenanteile nach ihren gültigen Kalendertagen gewichtet, geteilt durch die Tage des Jahres.'}
-        {' '}Gilt für Dashboard, Jahrestabelle und deren Exporte sowie als Vorauswahl im Jahresnachweis.
-        {' '}Die Einstellung wird für diesen Datenbestand gespeichert. Eine gesonderte SGB-XI-Aufteilung ist nicht enthalten.
+        Gilt für Dashboard, Jahrestabelle und Exporte.
       </p>
       {annualFteSaving && <p role="status" className="cd-muted-13">Wird gespeichert …</p>}
     </div>

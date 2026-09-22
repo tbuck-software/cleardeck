@@ -107,7 +107,7 @@ const EmployeeList = ({
       key: 'qualification',
       label: 'Qualifikation',
       compact: true,
-      cell: (employee) => employee.qualification,
+      cell: (employee) => <span title={directoryMode ? undefined : "Letzter Stand im Jahr"}>{employee.qualification}</span>,
     },
     {
       key: 'startDate',
@@ -136,7 +136,7 @@ const EmployeeList = ({
       key: 'weeklyHours',
       label: 'Std./Wo.',
       align: 'right',
-      cell: (employee) => employee.weeklyHours ?? '—',
+      cell: (employee) => <span title={directoryMode ? undefined : "Letzter Stand im Jahr"}>{employee.weeklyHours ?? '—'}</span>,
     },
     {
       key: 'fte',
@@ -171,10 +171,9 @@ const EmployeeList = ({
           </p>
           {!directoryMode && annualFteMethod && (
             <p className="cd-muted-13" style={{ margin: '6px 0 0' }}>
-              {annualFteLabel(annualFteMethod)}. Qualifikation und Wochenstunden zeigen den letzten Stand im Jahr;
-              Jahres-VZÄ berücksichtigen den gesamten Jahresverlauf.
+              {annualFteLabel(annualFteMethod)}
               {filteredEmployees.some(e => e.annualFteMissing || e.annualFteVerified === false) &&
-                ' Vorläufig: fehlende Stellenanteile fehlen in der Summe; unbestätigte Altwerte bitte prüfen.'}
+                ' · Vorläufig: Stellenanteile fehlen oder sind unbestätigt.'}
             </p>
           )}
         </div>

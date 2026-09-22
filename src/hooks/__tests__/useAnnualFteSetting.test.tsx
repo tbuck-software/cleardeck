@@ -56,5 +56,4 @@ it('offers both annual methods in general settings and disables changes while sa
   rerender(<SettingsGeneral {...props} annualFteMethod="year-average" annualFteSaving />);
   expect(select).toHaveValue('year-average');
   expect(select).toBeDisabled();
-  expect(screen.getByText(/nach ihren gültigen Kalendertagen/)).toBeInTheDocument();
 });
