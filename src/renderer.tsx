@@ -20,6 +20,7 @@ import PatientDetail from './components/pages/PatientDetail';
 import CalendarPage from './components/pages/CalendarPage';
 import AuditPage from './components/pages/AuditPage';
 import TasksPage from './components/pages/TasksPage';
+import EmploymentIntegrityPage from './components/pages/EmploymentIntegrityPage';
 import AdminListPage, { type AdminItem } from './components/pages/AdminListPage';
 import DevPage from './components/pages/DevPage';
 import SettingsGeneral from './components/pages/settings/SettingsGeneral';
@@ -155,6 +156,7 @@ const App = () => {
       calendar,
       dashboardWidgets,
       employmentIntegrity,
+      employmentIntegrityStatus,
       patients,
       selectedPatient,
       patientVisits,
@@ -197,6 +199,7 @@ const App = () => {
     },
     derived: { filteredEmployees, totalFte, timelineItems, sidebarPage, filteredPatients },
     actions: {
+      refreshEmploymentIntegrity,
       goTo,
       handleLogin,
       handleLock,
@@ -928,6 +931,7 @@ const App = () => {
       const pages: { page: Page; label: string }[] = [
         { page: 'dashboard', label: 'Übersicht' },
         { page: 'list', label: 'Team' },
+        { page: 'integrity', label: 'Datenprüfung' },
         { page: 'patients', label: 'Patient:innen' },
         { page: 'audit', label: 'MD-Prüfung' },
         { page: 'calendar', label: 'Kalender' },
@@ -1355,6 +1359,15 @@ const App = () => {
               )
             }
             onOpenTarget={openTarget}
+          />
+        )}
+
+        {page === 'integrity' && (
+          <EmploymentIntegrityPage
+            overview={employmentIntegrity}
+            status={employmentIntegrityStatus}
+            onRefresh={() => void refreshEmploymentIntegrity()}
+            onOpenEmployee={(id) => openTarget({ kind: 'employee', id, tab: 'hist' })}
           />
         )}
 

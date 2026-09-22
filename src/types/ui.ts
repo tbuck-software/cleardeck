@@ -29,6 +29,7 @@ export type Page =
   | 'patient-edit'
   | 'audit'
   | 'tasks'
+  | 'integrity'
   | 'quals'
   | 'services'
   | 'comps'

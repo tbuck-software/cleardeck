@@ -22,3 +22,13 @@ Das Gültigkeitsdatum muss innerhalb einer Beschäftigungsperiode liegen. Der pa
 Arbeitszeiten gelten mit dem Speichern als korrekte Eingaben. Eine Prüf-Checkbox und ein Belegfeld gibt es dafür nicht. In der Historie stehen die gültigen Arbeitszeitabschnitte. Frühere Korrekturfassungen bleiben intern gespeichert; sie erscheinen dort nicht zusätzlich als „Arbeitszeit erfasst“.
 
 Hintergrund: [ADR 0004](../adr/0004-historische-stellenanteile-und-auswertungen.md).
+
+## Beschäftigungsdaten zentral prüfen
+
+Unter **Verwaltung → Datenprüfung** stehen die erkannten Auffälligkeiten aller Personen und Jahre. Die Prüfung schließt ausgeschiedene Personen und Personen ohne Beschäftigungsabschnitt ein. Die Seite ist auch über die Suche erreichbar.
+
+**Fehler** sind sich überschneidende Beschäftigungsabschnitte derselben Person oder ein Beginn nach dem Ende. **Prüfhinweise** betreffen gleichnamige Personen und auffällige Übernahmen. Gleiche Namen beweisen keine doppelte Erfassung. Ein Paar gleichnamiger Personen erscheint in der Übersicht einmal.
+
+Die Filter **Alle**, **Fehler** und **Prüfhinweise** sowie die Personensuche grenzen die Liste ein. Ein Klick auf einen Fund öffnet die **Historie** der betroffenen Person. Dort stehen die vorhandenen Korrekturen mit Vorschau bereit. Nach einer Korrektur wird die Prüfung mit den Teamdaten aktualisiert; **Erneut prüfen** lädt sie auch manuell neu.
+
+Aufeinanderfolgende Arbeitszeitstände, etwa 80 % bis Ende Februar und 100 % ab März, sind kein Fehler. Die Prüfung kann fehlende oder bereits gelöschte Zeiträume nicht aus anderen Angaben rekonstruieren und prüft nicht, ob eine Berichtsmethode den Vorgaben eines Empfängers entspricht.

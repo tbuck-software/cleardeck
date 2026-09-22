@@ -27,11 +27,16 @@ const useEmploymentIntegrity = ({
 }: UseEmploymentIntegrityParams) => {
   const [overview, setOverview] = useState<EmploymentIntegrityOverview>(emptyEmploymentIntegrity);
 
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+
   const refresh = useCallback(async () => {
     if (!enabled) return;
+    setStatus('loading');
     try {
       setOverview(await api.employment.integrityOverview());
+      setStatus('ready');
     } catch (err) {
+      setStatus('error');
       handleError(err);
     }
   }, [enabled, handleError]);
@@ -40,7 +45,7 @@ const useEmploymentIntegrity = ({
     void refresh();
   }, [refresh, dataVersion]);
 
-  return { overview, refresh };
+  return { overview, status, refresh };
 };
 
 export default useEmploymentIntegrity;

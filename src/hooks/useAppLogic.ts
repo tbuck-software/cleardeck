@@ -476,6 +476,7 @@ const useAppLogic = () => {
       calendar: calendarSlice.state,
       dashboardWidgets: dashboardWidgetsSlice.state,
       employmentIntegrity: employmentIntegritySlice.overview,
+      employmentIntegrityStatus: employmentIntegritySlice.status,
       // Patient state
       patients: patientSlice.state.patients,
       selectedPatient: patientSlice.state.selectedPatient,
