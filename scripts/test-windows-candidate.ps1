@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet('2.1.0', '2.2.0', '2.2.1', '2.3.0')]
+  [ValidateSet('2.1.0', '2.2.0', '2.2.1', '2.3.0', '2.4.0')]
   [string]$OldVersion,
   [Parameter(Mandatory = $true)]
   [string]$OldInstaller,
@@ -11,7 +11,7 @@ param(
   [ValidateSet('manual', 'update')]
   [string]$Mode = 'manual',
   [Parameter(Mandatory = $true)]
-  [ValidateSet('2.3.0', '2.3.1')]
+  [ValidateSet('2.4.0', '2.4.1')]
   [string]$TargetVersion
 )
 

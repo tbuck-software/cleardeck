@@ -2,7 +2,7 @@ name: Windows update recovery
 
 on:
   push:
-    tags: ['v2.3.0']
+    tags: ['v2.4.0']
   # Full package and native-upgrade checks are an explicit candidate gate.
   # Everyday changes are checked on pull requests and main by server.yml.
   workflow_dispatch:
@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ['2.3.0', '2.3.1']
+        version: ['2.4.0', '2.4.1']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,8 +48,8 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Set test-only successor version
-        if: matrix.version == '2.3.1'
-        run: npm version 2.3.1 --no-git-tag-version --ignore-scripts
+        if: matrix.version == '2.4.1'
+        run: npm version 2.4.1 --no-git-tag-version --ignore-scripts
       - name: Build Windows package without update credentials
         run: npm run make
         env:
@@ -111,21 +111,25 @@ jobs:
       matrix:
         include:
           - from: '2.1.0'
-            to: '2.3.0'
+            to: '2.4.0'
             mode: manual
             baseline: windows-baseline-2.1.0
           - from: '2.2.0'
-            to: '2.3.0'
+            to: '2.4.0'
             mode: manual
             baseline: original-release
           - from: '2.2.1'
-            to: '2.3.0'
+            to: '2.4.0'
             mode: update
             baseline: original-release
           - from: '2.3.0'
-            to: '2.3.1'
+            to: '2.4.0'
             mode: update
-            baseline: windows-recovery-2.3.0
+            baseline: original-release
+          - from: '2.4.0'
+            to: '2.4.1'
+            mode: update
+            baseline: windows-recovery-2.4.0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -154,6 +158,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Original baseline download failed.' }
           $expected = @{
             '2.2.0' = '28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784'
+            '2.3.0' = '465e8dbb941a68dec5b93a87947a3ccbf38c56ce2974fa782425f37bcf6d0f8a'
             '2.2.1' = 'ab0f2a97e9a2636b1ed123af60c232ea6823d7aa5020ff32b14d626e8e550571'
           }
           $digest = (Get-FileHash "baseline/ClearDeck-$baselineVersion-Setup.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -178,7 +183,7 @@ jobs:
           retention-days: 7
 
   publish:
-    if: github.ref == 'refs/tags/v2.3.0'
+    if: github.ref == 'refs/tags/v2.4.0'
     needs: [checks, build, baseline, upgrade]
     runs-on: windows-latest
     permissions:
@@ -192,7 +197,7 @@ jobs:
       - run: npm ci
       - uses: actions/download-artifact@v4
         with:
-          name: windows-recovery-2.3.0
+          name: windows-recovery-2.4.0
           path: release-files
       - name: Verify uploaded draft before publishing Windows recovery
         run: node scripts/publish-windows-recovery.cjs release-files
@@ -200,6 +205,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NATIVE_WINDOWS_UPGRADES_VERIFIED: '1'
 
-# The 2.3.1 successor exists only to test the next in-app upgrade.
-# Manual candidate runs on branches publish nothing. Only the verified v2.3.0
+# The 2.4.1 successor exists only to test the next in-app upgrade.
+# Manual candidate runs on branches publish nothing. Only the verified v2.4.0
 # tag can publish; its full checks, builds and native-upgrade matrix remain required.
