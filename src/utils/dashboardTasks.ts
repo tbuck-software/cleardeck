@@ -54,7 +54,7 @@ type BuildInput = {
   employmentIntegrity?: EmploymentIntegrityOverview;
 };
 
-const employmentFindingCopy = (
+export const employmentFindingCopy = (
   kind: IntegrityIssueKind,
   otherName: string,
 ): { label: string; sub: string } => {
