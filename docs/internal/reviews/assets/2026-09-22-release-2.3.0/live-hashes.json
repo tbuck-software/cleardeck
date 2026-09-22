@@ -1,0 +1,12 @@
+{
+  "tag": "v2.3.0",
+  "commit": "4f8596bbc73db9128c4a9bc29a55cd4feeb3fa45",
+  "tagBuildMatchesPublishedAssets": true,
+  "sha256": {
+    "ClearDeck-2.3.0-Setup.exe": "465e8dbb941a68dec5b93a87947a3ccbf38c56ce2974fa782425f37bcf6d0f8a",
+    "ClearDeck-win32-x64-2.3.0.zip": "f5470e397eea48379dc5acce15b18946a9f15deef9cd8f7cfd7bc07b23fb7393",
+    "RELEASES": "761f73955dac82e5d1f1b34fb61353a33446a0f3859902e0d20864a16b2b7653",
+    "cleardeck-2.3.0-full.nupkg": "a67cea16449f3b026d4d0b68f8cd0263293b6e179b1992d23405809b49cb7d0b",
+    "latest.yml": "7c091238ba4410c52159eb3d020c137cfd6676db3fe6dd74e3e64548e435bb44"
+  }
+}
