@@ -18,3 +18,13 @@ Screenshots:
 - [Dieselbe Jahrestabelle taggewichtet](assets/2026-09-22-vza-einstellung/team-taggewichtet.png)
 
 Für synchronisierte Datenbestände gehört `annualFteMethod` zu den gemeinsamen Einstellungen. Der Server muss die mitgeänderte `syncSchema.json` verwenden; ältere Server kennen diesen Schlüssel noch nicht. Kein Release oder Serverdeployment durchgeführt. Keine neue Zuordnung von Kompetenzen zur fotografierten Vertragsmatrix und keine gesonderte SGB-XI-Aufteilung.
+
+## Native Windows-Prüfung
+
+Der [Kandidatenlauf für 2.3.0](https://github.com/tbuck-software/cleardeck/actions/runs/35763010811) hat alle vier Installations- und Updatewege bestanden. Die Einstellung wurde dabei im installierten Programm mit verschlüsselten Testdaten geprüft, einschließlich Erhalt der taggewichteten Methode beim Folgeupdate. Die folgenden Aufnahmen ersetzen für die PR-Ansicht die frühere Komponenten-Vorschau:
+
+- [Echte Einstellungen](assets/2026-09-22-release-2.3.0/einstellungen.png)
+- [Echtes Dashboard](assets/2026-09-22-release-2.3.0/after-unlock.png)
+- [Echte Jahrestabelle](assets/2026-09-22-release-2.3.0/team.png)
+
+Die Aufnahmen zeigen synthetische Testdaten in der installierten Windows-App, mit ihrer echten Navigation. Die zugänglichen Namen der Symbolbuttons in der schmalen Einstellungsleiste wurden nach einem Fehler im ersten Kandidatenlauf ergänzt und anschließend erneut unabhängig geprüft.
