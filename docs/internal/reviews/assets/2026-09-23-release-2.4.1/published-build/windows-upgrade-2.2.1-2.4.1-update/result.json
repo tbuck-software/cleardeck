@@ -1,0 +1,10 @@
+{
+  "from": "2.2.1",
+  "to": "2.4.1",
+  "configPreserved": true,
+  "dataPreserved": true,
+  "settingsPreserved": true,
+  "userPreferencesPreserved": true,
+  "schema": "24",
+  "automaticMigrationBackups": 1
+}
