@@ -17,8 +17,8 @@ const result = path.join(process.env.RUNNER_TEMP, 'cleardeck-candidate-result');
 const password = 'Disposable-candidate-password-2026';
 const oldVersion = process.env.OLD_VERSION;
 const targetVersion = process.env.TARGET_VERSION || require('../package.json').version;
-const fullSnapshotVersions = new Set(['2.0.0', '2.1.0', '2.2.0', '2.2.1', '2.3.0', '2.4.0']);
-const fixtureVersion = ['2.2.1', '2.3.0', '2.4.0'].includes(oldVersion) ? '2.2.0' : oldVersion;
+const fullSnapshotVersions = new Set(['2.0.0', '2.1.0', '2.2.0', '2.2.1', '2.3.0', '2.4.0', '2.4.1']);
+const fixtureVersion = ['2.2.1', '2.3.0', '2.4.0', '2.4.1'].includes(oldVersion) ? '2.2.0' : oldVersion;
 const updateRepositoryUrl = 'https://github.com/tbuck-software/cleardeck';
 const updateFixtureToken = 'fixture-private-runtime-token';
 const hash = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
@@ -319,10 +319,10 @@ async function run() {
     const file = path.join(result, 'fixture.db');
     const db = new DatabaseSync(file);
     db.exec(fs.readFileSync(`src/main/__tests__/fixtures/v${fixtureVersion}.sql`, 'utf8'));
-    if (['2.3.0', '2.4.0'].includes(oldVersion)) {
+    if (['2.3.0', '2.4.0', '2.4.1'].includes(oldVersion)) {
       db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES ('annualFteMethod','year-average')").run();
     }
-    if (oldVersion === '2.4.0') {
+    if (['2.4.0', '2.4.1'].includes(oldVersion)) {
       db.exec('ALTER TABLE competency_definitions ADD COLUMN templateKey TEXT');
       db.exec('ALTER TABLE competency_definitions ADD COLUMN reviewStatus TEXT');
       db.prepare("UPDATE settings SET value = '24' WHERE key = 'schema_version'").run();
@@ -398,7 +398,7 @@ async function run() {
     return;
   }
 
-  if (mode !== 'old-ui' && mode !== 'new-ui') {
+  if (!['old-ui', 'new-ui', 'qualification-ui'].includes(mode)) {
     throw Error(`Unknown Windows candidate stage: ${mode}`);
   }
 
@@ -428,6 +428,57 @@ async function run() {
     }));
     assert.equal(info.info.version, expectedVersion);
     assert.equal(info.data.employees[0].name, 'Upgrade Test');
+
+    if (mode === 'qualification-ui') {
+      // Dedicated synthetic person, created after the upgrade-preservation checks.
+      const person = await page.evaluate(async () => {
+        const dataset = await window.api.saveEmployee({
+          name: 'Mara Beispiel', qualification: 'Azubi 1j',
+          startDate: '2025-09-01', endDate: '2026-08-31',
+          weeklyHours: 30, fte: 0.83, year: 2026,
+        });
+        return dataset.employees.find((entry) => entry.name === 'Mara Beispiel');
+      });
+      assert(person?.id, 'Synthetic trainee was not created.');
+      // Reload the renderer so it reads the newly saved person from the native API.
+      await page.reload();
+      await page.getByRole('button', { name: 'Team', exact: true }).click();
+      await page.getByRole('radiogroup', { name: 'Status', exact: true }).getByRole('radio', { name: 'Alle', exact: true }).check();
+      await page.getByLabel('Team durchsuchen', { exact: true }).fill('Mara Beispiel');
+      await page.getByText('Mara Beispiel', { exact: true }).click();
+      await page.getByRole('button', { name: 'Aktion', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Qualifikation wechseln', exact: true }).click();
+      await page.getByLabel('Wechsel ab', { exact: true }).fill('2026-09-01');
+      await page.getByLabel('Neue Qualifikation', { exact: true }).selectOption('1-jährig examiniert');
+      const dialog = page.getByRole('dialog');
+      assert((await dialog.innerText()).includes('bis 31.08.2026'));
+      assert((await dialog.innerText()).includes('ab 01.09.2026 · offen'));
+      await page.screenshot({ path: path.join(result, 'qualifikationswechsel-vorschau.png') });
+      await dialog.getByRole('button', { name: 'Speichern', exact: true }).click();
+      await dialog.waitFor({ state: 'hidden' });
+      const saved = await page.evaluate(async (id) => {
+        const periods = await window.api.listPeriods(id);
+        const next = periods.find((period) => period.startDate === '2026-09-01');
+        return { periods, person: await window.api.getEmployeePeriod(id, next.id, 2026) };
+      }, person.id);
+      assert.equal(saved.periods.length, 2);
+      const old = saved.periods.find((period) => period.startDate === '2025-09-01');
+      assert.equal(old.endDate, '2026-08-31');
+      assert.equal(old.qualification, 'Azubi 1j');
+      assert.equal(saved.person.qualification, '1-jährig examiniert');
+      assert.equal(saved.person.startDate, '2026-09-01');
+      assert.equal(saved.person.endDate, null);
+      assert.equal(saved.person.weeklyHours, 30);
+      assert.equal(saved.person.fte, 0.83);
+      await page.screenshot({ path: path.join(result, 'qualifikationswechsel-gespeichert.png') });
+      fs.writeFileSync(path.join(result, 'qualification-result.json'), JSON.stringify({
+        from: oldVersion, to: targetVersion, savedThroughDialog: true,
+        oldEnd: old.endDate, newStart: saved.person.startDate,
+        newEnd: saved.person.endDate, weeklyHours: saved.person.weeklyHours,
+        fte: saved.person.fte, sameEmployee: saved.person.id === person.id,
+      }, null, 2));
+      process.exit(0);
+    }
 
     const userPreferences = await page.evaluate((isBaseline) => {
       // calendarView is the app's persisted renderer preference. The value is
@@ -466,7 +517,7 @@ async function run() {
         path.join(result, 'last-ui.json'),
         JSON.stringify({ version: info.info.version, userPreferences }),
       );
-      const annualMethod = ['2.3.0', '2.4.0'].includes(oldVersion) ? 'year-average' : 'month-end-average';
+      const annualMethod = ['2.3.0', '2.4.0', '2.4.1'].includes(oldVersion) ? 'year-average' : 'month-end-average';
       assert.equal(info.data.annualSummary.method, annualMethod);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.screenshot({ path: path.join(result, 'after-unlock.png'), animations: 'disabled' });
