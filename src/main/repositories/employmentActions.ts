@@ -1,6 +1,6 @@
 import { getDb } from '../database/connection';
 import { requireDate, shiftDays } from '../../utils/calendarDate';
-import { employmentMessages } from '../../utils/employment';
+import { continuesAfterPeriod, employmentMessages } from '../../utils/employment';
 import type {
   RecordDepartureInput,
   SwitchQualificationInput,
@@ -52,7 +52,7 @@ export const recordDeparture = (input: RecordDepartureInput): YearDataset => {
   return getYearDataset(input.year);
 };
 
-/** Split a period at a qualification transition and carry its effective term forward. */
+/** Split or immediately continue a period, carrying its effective working time forward. */
 export const switchQualification = (input: SwitchQualificationInput): YearDataset => {
   const db = getDb();
   assertReportYear(input.year);
@@ -64,11 +64,13 @@ export const switchQualification = (input: SwitchQualificationInput): YearDatase
     const period = loadPeriod(input.employeeId, input.periodId);
     if (input.effectiveFrom <= period.startDate)
       throw new Error('Der Qualifikationswechsel muss nach dem Beginn der bisherigen Periode liegen.');
-    if (period.endDate && input.effectiveFrom > period.endDate)
-      throw new Error('Das Wechseldatum liegt nach dem Ende der bisherigen Beschäftigungsperiode.');
+    const continuation = continuesAfterPeriod(period, input.effectiveFrom);
+    if (period.endDate && input.effectiveFrom > period.endDate && !continuation)
+      throw new Error('Der Qualifikationswechsel muss innerhalb der bisherigen Periode oder am unmittelbaren Folgetag liegen.');
     if (period.qualification === input.qualification.trim())
       throw new Error('Die neue Qualifikation entspricht bereits der bisherigen.');
 
+    const newEndDate = continuation ? null : period.endDate;
     const next = db
       .prepare(
         `SELECT id,startDate,endDate FROM employment_periods
@@ -82,15 +84,16 @@ export const switchQualification = (input: SwitchQualificationInput): YearDatase
       throw new Error(
         `Am ${next.startDate} gibt es bereits einen zukünftigen Beschäftigungszeitraum. Bitte prüfe diesen Zeitraum, bevor du die Qualifikation wechselst.`,
       );
-    if (next && !period.endDate)
+    if (next && !newEndDate)
       throw new Error(
-        'Ein zukünftiger Beschäftigungszeitraum ist vorhanden, obwohl die bisherige Periode offen ist. Bitte die Zeiträume zuerst prüfen.',
+        'Ein zukünftiger Beschäftigungszeitraum ist vorhanden. Bitte die Zeiträume zuerst prüfen.',
       );
     if (next && period.endDate && next.startDate <= period.endDate)
       throw new Error(
         'Die vorhandenen Beschäftigungszeiträume überschneiden sich. Bitte die zukünftigen Zeiträume zuerst prüfen.',
       );
-    const newEndDate = period.endDate;
+    if (findPeriodConflict(input.employeeId, period.id, input.effectiveFrom, newEndDate))
+      throw new Error(employmentMessages.overlap);
 
     const terms = db
       .prepare(
@@ -98,9 +101,9 @@ export const switchQualification = (input: SwitchQualificationInput): YearDatase
       )
       .all(period.id) as TermRow[];
     const futureTerms = terms.filter((term) => term.effectiveFrom >= input.effectiveFrom);
-    if (futureTerms.some((term) => newEndDate && term.effectiveFrom > newEndDate))
+    if (futureTerms.some((term) => period.endDate && term.effectiveFrom > period.endDate))
       throw new Error(
-        'Ein Arbeitszeitstand liegt hinter dem möglichen Ende der neuen Periode. Bitte prüfe die zukünftige Beschäftigungsperiode zuerst.',
+        'Ein Arbeitszeitstand liegt nach dem Ende der bisherigen Beschäftigungsperiode. Bitte die Arbeitszeitdaten zuerst prüfen.',
       );
 
     db.prepare('UPDATE employment_periods SET endDate=? WHERE id=?').run(

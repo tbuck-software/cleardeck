@@ -135,3 +135,45 @@ it('lets an already recorded departure move to a later date', async () => {
     mode: 'departure', periodId: 21, endDate: '2026-06-30',
   }));
 });
+
+const trainee = { ...employee, qualification: 'Azubi 1j', startDate: '2025-09-01', endDate: '2026-08-31' };
+const trainingPeriod = { id: 21, employeeId: 11, startDate: trainee.startDate, endDate: trainee.endDate, qualification: trainee.qualification };
+const trainingQualifications = [{ id: 1, name: 'Azubi 1j' }, { id: 2, name: 'Pflegefachassistentin' }];
+
+it('offers the day after a finished trainee period and previews an open continuation', async () => {
+  const onSave = vi.fn().mockResolvedValue(undefined);
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-09-23T12:00:00'));
+  try {
+    render(<EmploymentActionModal open mode="qualification" employee={trainee} periods={[trainingPeriod]}
+      qualifications={trainingQualifications} onClose={vi.fn()} onSave={onSave} />);
+    expect(screen.getByLabelText('Wechsel ab')).toHaveValue('2026-09-01');
+    fireEvent.change(screen.getByLabelText('Neue Qualifikation'), { target: { value: 'Pflegefachassistentin' } });
+    expect(screen.getByRole('status')).toHaveTextContent('bis 31.08.2026');
+    expect(screen.getByRole('status')).toHaveTextContent('ab 01.09.2026 · offen');
+    expect(screen.getByRole('status')).toHaveTextContent('Beschäftigung wird fortgesetzt');
+    fireEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ mode: 'qualification', periodId: 21,
+      effectiveFrom: '2026-09-01', qualification: 'Pflegefachassistentin' }));
+  } finally { vi.useRealTimers(); }
+});
+
+it('blocks dates beyond the following day', () => {
+  render(<EmploymentActionModal open mode="qualification" employee={trainee} periods={[trainingPeriod]}
+    qualifications={trainingQualifications} onClose={vi.fn()} onSave={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText('Wechsel ab'), { target: { value: '2026-09-02' } });
+  fireEvent.change(screen.getByLabelText('Neue Qualifikation'), { target: { value: 'Pflegefachassistentin' } });
+  expect(screen.getByRole('button', { name: 'Speichern' })).toBeDisabled();
+  expect(screen.getByRole('alert')).toHaveTextContent('Folgetag');
+});
+
+it('blocks an open continuation into an existing later period', () => {
+  render(<EmploymentActionModal open mode="qualification" employee={trainee}
+    periods={[trainingPeriod, { id: 22, employeeId: 11, startDate: '2026-10-01', endDate: null, qualification: 'Pflegefachkraft' }]}
+    qualifications={trainingQualifications} onClose={vi.fn()} onSave={vi.fn()} />);
+  fireEvent.change(screen.getByLabelText('Wechsel ab'), { target: { value: '2026-09-01' } });
+  fireEvent.change(screen.getByLabelText('Neue Qualifikation'), { target: { value: 'Pflegefachassistentin' } });
+  expect(screen.getByRole('button', { name: 'Speichern' })).toBeDisabled();
+  expect(screen.getByRole('alert')).toHaveTextContent('zukünftiger Beschäftigungszeitraum');
+  expect(screen.queryByRole('status')).not.toBeInTheDocument();
+});
