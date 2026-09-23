@@ -16,7 +16,7 @@ Der Eigentümer kann dem einzelnen Nutzer den Installer direkt geben oder einen 
 
 `UPDATE_FEED_URL` kann für einen eigenen generischen Feed weiterhin zur Laufzeit gesetzt werden. Der Build erhält keine Zugriffstokens. Die Paketprüfung untersucht auch den Inhalt von `app.asar` auf bekannte Tokenformate.
 
-Der Workflow `windows-recovery.yml` prüft die direkte Installation über 2.1.0 und 2.2.0, Updates aus 2.2.1 und 2.3.0 sowie ein anschließendes Update aus 2.4.0 auf einen nur für den Test gebauten Nachfolger. Branchläufe veröffentlichen nichts. Erst der Tag `v2.4.0` führt nach erneuter erfolgreicher Prüfung zur Veröffentlichung der Windows-Dateien; zuvor werden die hochgeladenen Dateien erneut heruntergeladen und geprüft. Der frühere Mac-Feed wird nicht wiederverwendet; die Windows-Reparatur liefert kein neues Mac-Paket aus.
+Der Workflow `windows-recovery.yml` prüft die direkte Installation über 2.1.0 und 2.2.0, Updates aus 2.2.1, 2.3.0 und 2.4.0 sowie ein anschließendes Update aus 2.4.1 auf einen nur für den Test gebauten Nachfolger. Branchläufe veröffentlichen nichts. Erst der Tag `v2.4.1` führt nach erneuter erfolgreicher Prüfung zur Veröffentlichung der Windows-Dateien; zuvor werden die hochgeladenen Dateien erneut heruntergeladen und geprüft. Der frühere Mac-Feed wird nicht wiederverwendet; die Windows-Reparatur liefert kein neues Mac-Paket aus.
 
 ## Änderungen seit der installierten Version
 

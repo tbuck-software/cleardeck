@@ -2,7 +2,7 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet('2.1.0', '2.2.0', '2.2.1', '2.3.0', '2.4.0')]
+  [ValidateSet('2.1.0', '2.2.0', '2.2.1', '2.3.0', '2.4.0', '2.4.1')]
   [string]$OldVersion,
   [Parameter(Mandatory = $true)]
   [string]$OldInstaller,
@@ -11,7 +11,7 @@ param(
   [ValidateSet('manual', 'update')]
   [string]$Mode = 'manual',
   [Parameter(Mandatory = $true)]
-  [ValidateSet('2.4.0', '2.4.1')]
+  [ValidateSet('2.4.1', '2.4.2')]
   [string]$TargetVersion
 )
 
@@ -247,6 +247,10 @@ try {
     Invoke-CandidateScript 'verify'
     Close-CandidateWindow $newExe
   }
+  # Exercise the fix only after both unchanged-profile comparisons passed.
+  Start-Process -FilePath $newExe -ArgumentList @('--remote-debugging-port=9222') | Out-Null
+  Invoke-CandidateScript 'qualification-ui'
+  Close-CandidateWindow $newExe
   Write-Output "PASS: $OldVersion baseline -> $Mode -> $TargetVersion; password, encrypted configuration, database, settings and user preferences survived two target starts."
 } finally {
   if ($server -and !$server.HasExited) {

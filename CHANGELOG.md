@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [2.4.1]
+
+- Qualifikation direkt nach dem Ausbildungsende wechseln und die Beschäftigung mit bisherigen Arbeitszeiten fortsetzen.
+
 ## [2.4.0]
 
 - HKP-Katalog mit 50 Leistungen nach Berufsgruppe ergänzen, ohne vorhandene Bewertungen zu verändern.

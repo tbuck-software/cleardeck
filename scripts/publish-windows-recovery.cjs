@@ -14,10 +14,10 @@ const hashes = (root) => Object.fromEntries(listFiles(root)
 
 async function main() {
   const tag = `v${version}`;
-  if (version !== '2.4.0' || process.env.GITHUB_REF !== `refs/tags/${tag}`)
-    throw Error('Windows recovery publishing requires the matching v2.4.0 tag.');
+  if (version !== '2.4.1' || process.env.GITHUB_REF !== `refs/tags/${tag}`)
+    throw Error('Windows recovery publishing requires the matching v2.4.1 tag.');
   if (process.env.NATIVE_WINDOWS_UPGRADES_VERIFIED !== '1')
-    throw Error('All five native Windows upgrade jobs must pass before publishing.');
+    throw Error('All six native Windows upgrade jobs must pass before publishing.');
   if (!process.argv[2]) throw Error('Windows artifact directory required.');
   const root = path.resolve(process.argv[2]);
   await verifyWindowsRecovery(root, version);
