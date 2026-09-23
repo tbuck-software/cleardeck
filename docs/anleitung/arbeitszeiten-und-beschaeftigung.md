@@ -23,6 +23,12 @@ Arbeitszeiten gelten mit dem Speichern als korrekte Eingaben. Eine Prüf-Checkbo
 
 Hintergrund: [ADR 0004](../adr/0004-historische-stellenanteile-und-auswertungen.md).
 
+## Qualifikation am Ende eines Abschnitts wechseln
+
+Unter **Qualifikation wechseln** ist auch der unmittelbare Folgetag eines beendeten Abschnitts möglich. Beispielsweise bleibt „Azubi“ bis einschließlich 31.08.2026 bestehen; die neue Qualifikation beginnt am 01.09.2026 ohne Enddatum. Die Vorschau zeigt ausdrücklich, dass die Beschäftigung fortgesetzt wird. Bei einem bereits vergangenen Abschnitt schlägt der Dialog diesen Folgetag vor.
+
+Der letzte Arbeitszeitstand wird übernommen; vorhandene Bewertungen, Arbeitszeitdaten und deren Verlauf bleiben erhalten. Bei einem schon vorhandenen Folgezeitraum muss dieser zuerst geprüft werden. Größere Unterbrechungen werden nicht durch einen Qualifikationswechsel überbrückt.
+
 ## Beschäftigungsdaten zentral prüfen
 
 Unter **Verwaltung → Datenprüfung** stehen die erkannten Auffälligkeiten aller Personen und Jahre. Die Prüfung schließt ausgeschiedene Personen und Personen ohne Beschäftigungsabschnitt ein. Die Seite ist auch über die Suche erreichbar.

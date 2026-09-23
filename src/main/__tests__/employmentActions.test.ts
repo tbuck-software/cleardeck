@@ -4,6 +4,7 @@ import SqliteAdapter from './sqliteAdapter';
 import { runMigrations } from '../database/migrations';
 import { getEmployeePeriod, getYearDataset, saveEmployee } from '../repositories/employees';
 import { recordDeparture, switchQualification } from '../repositories/employmentActions';
+import { addCompetencyDefinition, listEmployeeCompetencies, saveEmployeeCompetency } from '../repositories/competencies';
 import { saveWorkingTime } from '../repositories/workingTimes';
 
 const state = vi.hoisted(() => ({ db: null as unknown }));
@@ -237,6 +238,77 @@ describe('employment actions', () => {
       year: 2025,
     })).toThrow(/Arbeitszeitstand/);
     expect(db.serialize()).toEqual(before);
+  });
+
+  it('continues after the last trainee day with preserved working time and assessments', () => {
+    const person = saveEmployee({
+      name: 'Synthetic Trainee', qualification: 'Azubi 1j', startDate: '2025-09-01',
+      endDate: '2026-08-31', weeklyHours: 30, fte: 0.83,
+      hoursVerified: false, sourceRef: 'Altbestand', year: 2026,
+    }).employees[0];
+    const definition = addCompetencyDefinition({ name: 'Bestehende Bewertung' }).find((row) => row.name === 'Bestehende Bewertung')!;
+    saveEmployeeCompetency({ employeeId: person.id!, competencyDefinitionId: definition.id!, level: 4,
+      note: 'Erhalten', approvedBy: 'Prüfperson', approvedAt: '2026-08-01' });
+    const assessments = listEmployeeCompetencies(person.id!);
+    const originalTerms = db.prepare('SELECT * FROM employment_terms WHERE periodId=?').all(person.periodId);
+    const originalHistory = db.prepare('SELECT * FROM employment_term_history WHERE periodId=?').all(person.periodId);
+    const input = { employeeId: person.id!, periodId: person.periodId!, effectiveFrom: '2026-09-01',
+      qualification: 'Pflegefachassistentin', year: 2026 };
+
+    switchQualification(input);
+
+    const periods = db.prepare('SELECT id,startDate,endDate,qualification FROM employment_periods ORDER BY startDate').all();
+    expect(periods).toEqual([
+      { id: person.periodId, startDate: '2025-09-01', endDate: '2026-08-31', qualification: 'Azubi 1j' },
+      { id: expect.any(Number), startDate: '2026-09-01', endDate: null, qualification: 'Pflegefachassistentin' },
+    ]);
+    expect(db.prepare('SELECT * FROM employment_terms WHERE periodId=?').all(person.periodId)).toEqual(originalTerms);
+    expect(db.prepare('SELECT * FROM employment_term_history WHERE periodId=?').all(person.periodId)).toEqual(originalHistory);
+    expect(db.prepare('SELECT effectiveFrom,weeklyHours,fte,verified,sourceRef FROM employment_terms WHERE periodId=?').all(periods[1].id))
+      .toEqual([{ effectiveFrom: '2026-09-01', weeklyHours: 30, fte: 0.83, verified: 0, sourceRef: 'Altbestand' }]);
+    expect(listEmployeeCompetencies(person.id!)).toEqual(assessments);
+    expect(getEmployeePeriod(person.id!, periods[1].id as number, 2026)).toMatchObject({
+      id: person.id, endDate: null, employmentStartDate: '2025-09-01', qualification: 'Pflegefachassistentin',
+    });
+    const beforeRetry = db.serialize();
+    expect(() => switchQualification(input)).toThrow(/bereits/);
+    expect(db.serialize()).toEqual(beforeRetry);
+  });
+
+  it.each([
+    ['2026-12-31', '2027-01-01'],
+    ['2024-02-28', '2024-02-29'],
+    ['2024-02-29', '2024-03-01'],
+  ])('continues even a one-day period at %s across calendar boundaries', (endDate, effectiveFrom) => {
+    const person = saveEmployee({ name: 'Synthetic Boundary', qualification: 'Azubi',
+      startDate: endDate, endDate, fte: 1, year: Number(endDate.slice(0, 4)) }).employees[0];
+    switchQualification({ employeeId: person.id!, periodId: person.periodId!, effectiveFrom,
+      qualification: 'Pflegefachassistenz', year: Number(effectiveFrom.slice(0, 4)) });
+    expect(db.prepare('SELECT startDate,endDate FROM employment_periods ORDER BY startDate').all())
+      .toEqual([{ startDate: endDate, endDate }, { startDate: effectiveFrom, endDate: null }]);
+  });
+
+  it.each(['2026-09-01', '2026-10-01'])('rejects continuation when another period starts %s without changing data', (startDate) => {
+    const person = saveEmployee({ name: 'Synthetic Conflict', qualification: 'Azubi',
+      startDate: '2025-09-01', endDate: '2026-08-31', fte: 1, year: 2026 }).employees[0];
+    saveEmployee({ id: person.id, name: person.name, qualification: 'Pflegefachkraft', startDate, fte: 1, year: 2026 });
+    const before = db.serialize();
+    expect(() => switchQualification({ employeeId: person.id!, periodId: person.periodId!,
+      effectiveFrom: '2026-09-01', qualification: 'Pflegefachassistenz', year: 2026 })).toThrow(/zukünftige[nr] Beschäftigungszeitraum/);
+    expect(db.serialize()).toEqual(before);
+  });
+
+  it('rejects gaps and does not silently repair working-time records beyond a closed period', () => {
+    const person = saveEmployee({ name: 'Synthetic Invalid Continuation', qualification: 'Azubi',
+      startDate: '2025-09-01', endDate: '2026-08-31', fte: 1, year: 2026 }).employees[0];
+    const input = { employeeId: person.id!, periodId: person.periodId!, qualification: 'Pflegefachassistenz', year: 2026 };
+    const before = db.serialize();
+    expect(() => switchQualification({ ...input, effectiveFrom: '2026-09-02' })).toThrow(/Folgetag/);
+    expect(db.serialize()).toEqual(before);
+    db.prepare('UPDATE employment_terms SET effectiveFrom=? WHERE periodId=?').run('2026-09-01', person.periodId);
+    const corruptBefore = db.serialize();
+    expect(() => switchQualification({ ...input, effectiveFrom: '2026-09-01' })).toThrow(/Arbeitszeitstand/);
+    expect(db.serialize()).toEqual(corruptBefore);
   });
 
   it('validates dates before changing anything', () => {

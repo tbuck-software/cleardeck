@@ -58,6 +58,11 @@ export const contiguousEmploymentStart = (
 
 export type PeriodBounds = { startDate: string; endDate?: string | null };
 
+/** A qualification change may continue employment immediately after a closed period. */
+export const continuesAfterPeriod = (period: PeriodBounds, effectiveFrom: string): boolean =>
+  Boolean(period.endDate && validDate(period.endDate) && validDate(effectiveFrom) &&
+    effectiveFrom === shiftDays(period.endDate, 1));
+
 /** Stands in for an open end when comparing ranges. */
 const OPEN_END = '9999-12-31';
 

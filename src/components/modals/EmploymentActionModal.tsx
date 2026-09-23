@@ -7,6 +7,7 @@ import type {
 } from '../../shared/types';
 import type { EmploymentActionInput, EmploymentActionMode } from '../../types/ui';
 import { localDate, shiftDays, validDate } from '../../utils/calendarDate';
+import { continuesAfterPeriod } from '../../utils/employment';
 import { formatDateDE } from '../../utils/dateFormat';
 import { userFacingErrorMessage } from '../../utils/errorMessage';
 
@@ -29,7 +30,7 @@ const initialDate = (mode: EmploymentActionMode, period: EmploymentPeriod): stri
   if (mode === 'departure') return period.endDate || (today > period.startDate ? today : period.startDate);
   const earliest = shiftDays(period.startDate, 1);
   if (today < earliest) return earliest;
-  if (period.endDate && today > period.endDate) return period.endDate;
+  if (period.endDate && today > period.endDate) return shiftDays(period.endDate, 1);
   return today;
 };
 
@@ -69,13 +70,16 @@ const EmploymentActionModal = ({
 
   // A departure may also move later; the repository rejects it if a later
   // period or working-time state would be stranded.
-  const dateWithinSelectedPeriod = validDate(date) &&
+  const continuation = mode === 'qualification' && continuesAfterPeriod(selectedPeriod, date);
+  const continuationConflict = continuation && periods.some((period) =>
+    period.id !== selectedPeriod.id && period.startDate > selectedPeriod.startDate);
+  const dateAllowed = validDate(date) &&
     date >= selectedPeriod.startDate &&
-    (mode === 'departure' || !selectedPeriod.endDate || date <= selectedPeriod.endDate);
+    (mode === 'departure' || !selectedPeriod.endDate || date <= selectedPeriod.endDate || continuation);
   const qualificationChanged = qualification.trim() !== '' && qualification !== employee.qualification;
   const previewEnd = validDate(date) ? shiftDays(date, -1) : '';
   const canSave = Boolean(
-    employee.id && selectedPeriod.id && dateWithinSelectedPeriod &&
+    employee.id && selectedPeriod.id && dateAllowed && !continuationConflict &&
     (mode === 'departure' || (qualificationChanged && date > selectedPeriod.startDate)),
   );
 
@@ -139,12 +143,15 @@ const EmploymentActionModal = ({
       {date && !validDate(date) && (
         <p role="alert" className="cd-danger-link">Bitte ein gültiges Datum eintragen.</p>
       )}
-      {validDate(date) && !dateWithinSelectedPeriod && (
+      {validDate(date) && !dateAllowed && (
         <p role="alert" className="cd-danger-link">
           {mode === 'departure'
             ? 'Das Austrittsdatum liegt vor dem Beginn der Beschäftigungsperiode.'
-            : 'Das Datum muss innerhalb der ausgewählten Beschäftigungsperiode liegen.'}
+            : 'Das Datum muss innerhalb der ausgewählten Periode oder am unmittelbaren Folgetag liegen.'}
         </p>
+      )}
+      {continuationConflict && (
+        <p role="alert" className="cd-danger-link">Ein zukünftiger Beschäftigungszeitraum ist vorhanden. Bitte die Zeiträume zuerst prüfen.</p>
       )}
 
       {mode === 'qualification' && (
@@ -165,7 +172,7 @@ const EmploymentActionModal = ({
               ))}
             </select>
           </div>
-          <div className="cd-notice cd-notice-ok" role="status">
+          {dateAllowed && date > selectedPeriod.startDate && !continuationConflict && <div className="cd-notice cd-notice-ok" role="status">
             <div>
               <strong>Vorschau</strong>
               <div className="cd-action-preview">
@@ -174,14 +181,16 @@ const EmploymentActionModal = ({
                 <span>{qualification || 'Neue Qualifikation'}</span>
                 <span>
                   ab {date ? formatDateDE(date) : '—'}
-                  {selectedPeriod.endDate
+                  {selectedPeriod.endDate && !continuation
                     ? ` bis ${formatDateDE(selectedPeriod.endDate)}`
                     : ' · offen'}
                 </span>
               </div>
-              <p>Beide Zeiträume werden gemeinsam gespeichert. Arbeitszeitdaten bleiben dabei unverändert.</p>
+              <p>{continuation
+                ? 'Die Beschäftigung wird fortgesetzt. Der bisherige Arbeitszeitstand bleibt erhalten.'
+                : 'Beide Zeiträume werden gemeinsam gespeichert. Arbeitszeitdaten bleiben dabei unverändert.'}</p>
             </div>
-          </div>
+          </div>}
         </>
       )}
 
