@@ -1,7 +1,11 @@
 import React, { useRef, useState } from 'react';
 import type { BulkCompetencyChange, EmployeeCompetency } from '../../shared/types';
 import api from '../../services/api';
-import { LEGACY_COMPETENCY_LEVELS } from '../../utils/competencyLevels';
+import {
+  COMPETENCY_LEVELS,
+  LEGACY_COMPETENCY_LEVELS,
+  competencyLevelOption,
+} from '../../utils/competencyLevels';
 import { localDate } from '../../utils/calendarDate';
 import { userFacingErrorMessage } from '../../utils/errorMessage';
 import Dialog from '../ui/Dialog';
@@ -14,15 +18,7 @@ type Props = {
   onClose: () => void;
 };
 
-const PRACTICE_LEVELS = [
-  'Offen',
-  'Stufe 1 · Einarbeitung',
-  'Stufe 2 · Einarbeitung',
-  'Stufe 3 · Einarbeitung',
-  'Stufe 4 · Einarbeitung',
-  'Stufe 5 · Einarbeitung',
-  '6 · Abgeschlossen',
-];
+const PRACTICE_LEVELS = COMPETENCY_LEVELS.map((_, level) => competencyLevelOption(level));
 /** Option prefix for moving a legacy entry into the current model. */
 const REASSESS = 'v1:';
 

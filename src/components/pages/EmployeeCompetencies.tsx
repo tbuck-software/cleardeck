@@ -4,7 +4,11 @@ import CompetencyReviewBadge from '../ui/CompetencyReviewBadge';
 import ListPanel from '../ui/ListPanel';
 import ListRow from '../ui/ListRow';
 import type { EmployeeCompetency } from '../../shared/types';
-import { COMPETENCY_LEVELS, LEGACY_COMPETENCY_LEVELS } from '../../utils/competencyLevels';
+import {
+  COMPETENCY_LEVELS,
+  LEGACY_COMPETENCY_LEVELS,
+  competencyLevelOption,
+} from '../../utils/competencyLevels';
 import { formatDateDE } from '../../utils/dateFormat';
 import Icon from '../ui/Icon';
 import BulkCompetencyModal from '../modals/BulkCompetencyModal';
@@ -177,7 +181,11 @@ const EmployeeCompetencies = ({
                 </>
               }
               tag={
-                <><CompetencyReviewBadge status={competency.reviewStatus} note={competency.definitionNote} /><span className={`tag ${tagClass}`} style={{ minWidth: 110, justifyContent: 'center' }}>
+                <><CompetencyReviewBadge status={competency.reviewStatus} note={competency.definitionNote} /><span
+                  className={`tag ${tagClass}`}
+                  style={{ minWidth: 110, justifyContent: 'center' }}
+                  title={competency.stageScheme === 'legacy' ? undefined : competencyLevelOption(level)}
+                >
                   {level
                     ? competency.stageScheme === 'legacy'
                       ? `${level} · ${LEGACY_COMPETENCY_LEVELS[level]}`
