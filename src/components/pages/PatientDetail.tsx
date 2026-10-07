@@ -51,9 +51,8 @@ const PatientDetail = ({
   onSelectVisit,
 }: PatientDetailProps) => {
   const today = localDate();
-  const group = needsAssessment(patient, today)
-    ? null
-    : teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired);
+  const draft = teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired);
+  const group = needsAssessment(patient, today) ? null : draft;
   const due = visitDue(
     { latestVisitDate: patient.latestVisitDate, admissionDate: patient.admissionDate },
     today,
@@ -159,11 +158,12 @@ const PatientDetail = ({
               className={`tag ${group ? 'tag-accent-2' : 'tag-neutral'}`}
               style={{ fontWeight: 700 }}
             >
-              {group == null
+              {draft == null
                 ? 'Teilgruppe offen'
-                : group === 'none'
+                : draft === 'none'
                   ? 'Ohne Beeinträchtigung'
-                  : `Teilgruppe ${group}`}
+                  : `Teilgruppe ${draft}`}
+              {draft && !group && ' · vorläufig'}
             </span>
             {patient.hkpCode && (
               <span className="tag tag-accent">
@@ -174,7 +174,7 @@ const PatientDetail = ({
           </div>
           <p className="cd-muted" style={{ margin: '6px 0 0' }}>
             {patient.diagnosis || 'Ohne Diagnose'} · {formatDateDE(patient.birthDate)}
-            {age ? ` (${age})` : ''} · {group ? TEILGRUPPE_SHORT[group] : 'Gutachten-Daten fehlen'}
+            {age ? ` (${age})` : ''} · {draft ? TEILGRUPPE_SHORT[draft] : 'Gutachten-Daten fehlen'}
           </p>
           <p style={{ margin: '10px 0 0', fontSize: 14 }}>{patient.note || 'Keine Notiz.'}</p>
         </div>

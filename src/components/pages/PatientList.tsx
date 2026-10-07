@@ -18,7 +18,13 @@ import type { TeilgruppeFilter } from '../../types/ui';
 import { careLevelLabel } from '../../utils/careLevel';
 
 type SortKey = 'name' | 'diagnosis' | 'group' | 'visits' | 'latest' | 'due' | 'action';
-type PatientRow = { patient: PatientWithLatestVisit; group: Teilgruppe | null; due: VisitDue };
+type PatientRow = {
+  patient: PatientWithLatestVisit;
+  group: Teilgruppe | null;
+  /** Derived letter even while the assessment is unconfirmed; display only. */
+  draft: Teilgruppe | null;
+  due: VisitDue;
+};
 const collator = new Intl.Collator('de', { sensitivity: 'base', numeric: true });
 
 export const dueColor = (daysUntilDue: number): string =>
@@ -70,9 +76,8 @@ const PatientList = ({
     () =>
       patients
         .map((patient) => {
-          const group = needsAssessment(patient, today)
-            ? null
-            : teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired);
+          const draft = teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired);
+          const group = needsAssessment(patient, today) ? null : draft;
           const due = visitDue(
             { latestVisitDate: patient.latestVisitDate, admissionDate: patient.admissionDate },
             today,
@@ -82,13 +87,13 @@ const PatientList = ({
           const values: Record<SortKey, string | number | null> = {
             name: patient.name.trim() || null,
             diagnosis: patient.diagnosis?.trim() || null,
-            group,
+            group: draft,
             visits: patient.visitCount ?? visitTrends[patient.id ?? -1]?.length ?? null,
             latest: dateValue(patient.latestVisitDate),
             due: dateValue(due.dueDate),
             action: patient.latestActionNeeded ? 'ja' : 'nein',
           };
-          return { patient, group, due, value: values[sort.key] };
+          return { patient, group, draft, due, value: values[sort.key] };
         })
         .sort((a, b) => {
           // Missing values stay last in both directions; ties keep a stable name order.
@@ -120,16 +125,17 @@ const PatientList = ({
       key: 'group',
       label: 'Teilgruppe',
       nowrap: true,
-      cell: ({ patient, group }) => (
+      cell: ({ patient, group, draft }) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span
             className={`tag ${group ? 'tag-accent-2' : 'tag-neutral'}`}
             style={{ fontWeight: 700 }}
           >
-            {group && group !== 'none' ? group : '–'}
+            {draft && draft !== 'none' ? draft : '–'}
           </span>
           <span style={{ fontSize: 12, color: 'var(--color-neutral-700)' }}>
-            {group ? TEILGRUPPE_SHORT[group] : 'Gutachten-Daten fehlen'}
+            {draft ? TEILGRUPPE_SHORT[draft] : 'Gutachten-Daten fehlen'}
+            {draft && !group && ' · vorläufig'}
           </span>
           {patient.hkpCode && (
             <span className="tag tag-accent" style={{ fontSize: 10 }}>

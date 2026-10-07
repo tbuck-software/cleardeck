@@ -117,6 +117,48 @@ it('rejects unassigned IDs, duplicates and changed models without writing', () =
   expect(snapshot()).toBe(before);
 });
 
+it('re-assesses a legacy entry as completed in the current model and keeps its history', () => {
+  const before = listEmployeeCompetencies(employeeId)[0];
+  const after = bulkChangeCompetencies({
+    employeeId,
+    changes: [
+      { competencyDefinitionId: ids[0], stageScheme: 'practice-v1', fromStageScheme: 'legacy', level: 6 },
+    ],
+    completion: { approvedAt: '2026-01-01', approvedBy: 'PDL' },
+  });
+  expect(after[0]).toMatchObject({
+    stageScheme: 'practice-v1',
+    level: 6,
+    approvedAt: '2026-01-01',
+    approvedBy: 'PDL',
+    note: before.note,
+  });
+  expect(after[0].stageHistory!.some((entry) => entry.stageScheme === 'legacy')).toBe(true);
+});
+
+it('drops legacy approvals when re-assessing below completion', () => {
+  const after = bulkChangeCompetencies({
+    employeeId,
+    changes: [
+      { competencyDefinitionId: ids[0], stageScheme: 'practice-v1', fromStageScheme: 'legacy', level: 3 },
+    ],
+  });
+  expect(after[0]).toMatchObject({ stageScheme: 'practice-v1', level: 3, approvedAt: null, approvedBy: null });
+});
+
+it('rejects re-assessing an entry that is no longer in the legacy model', () => {
+  const before = snapshot();
+  expect(() =>
+    bulkChangeCompetencies({
+      employeeId,
+      changes: [
+        { competencyDefinitionId: ids[1], stageScheme: 'practice-v1', fromStageScheme: 'legacy', level: 4 },
+      ],
+    }),
+  ).toThrow('Stufenmodell');
+  expect(snapshot()).toBe(before);
+});
+
 it('does not add history for unchanged levels', () => {
   const before = snapshot();
   bulkChangeCompetencies({

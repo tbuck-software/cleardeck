@@ -14,6 +14,18 @@ type Props = {
   onClose: () => void;
 };
 
+const PRACTICE_LEVELS = [
+  'Offen',
+  'Stufe 1 · Einarbeitung',
+  'Stufe 2 · Einarbeitung',
+  'Stufe 3 · Einarbeitung',
+  'Stufe 4 · Einarbeitung',
+  'Stufe 5 · Einarbeitung',
+  '6 · Abgeschlossen',
+];
+/** Option prefix for moving a legacy entry into the current model. */
+const REASSESS = 'v1:';
+
 const BulkCompetencyModal = ({ employeeId, employeeName, entries, onSaved, onClose }: Props) => {
   const [levels, setLevels] = useState({ legacy: '', 'practice-v1': '' });
   const [approvedAt, setApprovedAt] = useState('');
@@ -32,15 +44,18 @@ const BulkCompetencyModal = ({ employeeId, employeeName, entries, onSaved, onClo
   const changes: BulkCompetencyChange['changes'] = entries.flatMap((entry) => {
     const scheme = entry.stageScheme;
     if (!scheme || levels[scheme] === '') return [];
+    const reassess = levels[scheme].startsWith(REASSESS);
     return [
       {
         competencyDefinitionId: entry.competencyDefinitionId,
-        stageScheme: scheme,
-        level: Number(levels[scheme]),
+        stageScheme: reassess ? 'practice-v1' : scheme,
+        ...(reassess ? { fromStageScheme: 'legacy' as const } : {}),
+        level: Number(levels[scheme].replace(REASSESS, '')),
       },
     ];
   });
-  const completion = levels['practice-v1'] === '6';
+  const completion =
+    levels['practice-v1'] === '6' || levels.legacy === `${REASSESS}6`;
   const close = () => {
     if (saveInFlight.current) return;
     if (dirty) setDiscard(true);
@@ -103,23 +118,37 @@ const BulkCompetencyModal = ({ employeeId, employeeName, entries, onSaved, onClo
                 onChange={(event) => setLevels({ ...levels, [scheme]: event.target.value })}
               >
                 <option value="">Beibehalten</option>
-                {(scheme === 'legacy'
-                  ? LEGACY_COMPETENCY_LEVELS
-                  : [
-                      'Offen',
-                      'Stufe 1 · Einarbeitung',
-                      'Stufe 2 · Einarbeitung',
-                      'Stufe 3 · Einarbeitung',
-                      'Stufe 4 · Einarbeitung',
-                      'Stufe 5 · Einarbeitung',
-                      '6 · Abgeschlossen',
-                    ]
-                ).map((label, level) => (
-                  <option key={level} value={level}>
-                    {scheme === 'legacy' && level > 0 ? `${level} · ${label}` : label}
-                  </option>
-                ))}
+                {scheme === 'legacy' ? (
+                  <>
+                    <optgroup label="Altmodell">
+                      {LEGACY_COMPETENCY_LEVELS.map((label, level) => (
+                        <option key={level} value={level}>
+                          {level > 0 ? `${level} · ${label}` : label}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Neu einschätzen (aktuelles Modell)">
+                      {PRACTICE_LEVELS.slice(1).map((label, i) => (
+                        <option key={i} value={`${REASSESS}${i + 1}`}>
+                          {label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </>
+                ) : (
+                  PRACTICE_LEVELS.map((label, level) => (
+                    <option key={level} value={level}>
+                      {label}
+                    </option>
+                  ))
+                )}
               </select>
+              {scheme === 'legacy' && (
+                <p className="cd-muted-13" style={{ margin: '6px 0 0' }}>
+                  Im Altmodell gibt es keinen Abschluss. Für „Abgeschlossen“ unter „Neu
+                  einschätzen“ wählen; der alte Stand bleibt im Verlauf.
+                </p>
+              )}
             </div>
           ))}
           {completion && (
