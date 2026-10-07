@@ -953,6 +953,12 @@
   padding: 8px 10px;
 }
 
+.cd-competency-level-meaning {
+  margin: 8px 0 0;
+  font-weight: 600;
+  font-size: 15px;
+}
+
 .cd-typeahead > .cd-muted-13 {
   padding: 8px 10px;
 }
