@@ -2,11 +2,13 @@
 
 ## [Unreleased]
 
+## [2.5.0]
+
 - Teilgruppe im Patientenformular groß und farbig hervorheben.
-- Teilgruppe bei ungeprüfter Einstufung als „vorläufig“ statt „offen“ anzeigen.
-- Kompetenzen aus dem Altmodell über „Stufe ändern“ neu einschätzen und abschließen.
-- Bedeutung jeder Einarbeitungsstufe in Auswahl und Stufenfeld anzeigen.
-- Auszubildende je Beschäftigungszeitraum aus der VZÄ-Gesamtsumme herausnehmen; ihr eigener VZÄ-Wert bleibt sichtbar.
+- Ungeprüfte Teilgruppe als „vorläufig“ statt „offen“ anzeigen.
+- Kompetenzen aus dem Altmodell neu einschätzen und abschließen.
+- Bedeutung jeder Einarbeitungsstufe direkt in der Auswahl sehen.
+- Auszubildende aus der VZÄ-Gesamtsumme herausnehmen.
 
 ## [2.4.1]
 

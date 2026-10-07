@@ -2,7 +2,7 @@ name: Windows update recovery
 
 on:
   push:
-    tags: ['v2.4.1']
+    tags: ['v2.5.0']
   # Full package and native-upgrade checks are an explicit candidate gate.
   # Everyday changes are checked on pull requests and main by server.yml.
   workflow_dispatch:
@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ['2.4.1', '2.4.2']
+        version: ['2.5.0', '2.5.1']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,8 +48,8 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Set test-only successor version
-        if: matrix.version == '2.4.2'
-        run: npm version 2.4.2 --no-git-tag-version --ignore-scripts
+        if: matrix.version == '2.5.1'
+        run: npm version 2.5.1 --no-git-tag-version --ignore-scripts
       - name: Build Windows package without update credentials
         run: npm run make
         env:
@@ -77,23 +77,27 @@ jobs:
     needs: checks
     runs-on: windows-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        version: ['2.1.0', '2.2.0']
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: v2.1.0
+          ref: v${{ matrix.version }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
-      # The original 2.1 installer is unavailable. Reconstruct its release
-      # source without credentials; this is not an original-binary test.
+      # The original 2.1 and 2.2.0 installers are unavailable. Reconstruct their
+      # release sources without credentials; this is not an original-binary test.
       - run: npm run make
         env:
           SKIP_FUSES: '1'
       - uses: actions/upload-artifact@v4
         with:
-          name: windows-baseline-2.1.0
+          name: windows-baseline-${{ matrix.version }}
           path: out/make/squirrel.windows/x64/*Setup.exe
           if-no-files-found: error
           retention-days: 1
@@ -111,29 +115,33 @@ jobs:
       matrix:
         include:
           - from: '2.1.0'
-            to: '2.4.1'
+            to: '2.5.0'
             mode: manual
             baseline: windows-baseline-2.1.0
           - from: '2.2.0'
-            to: '2.4.1'
+            to: '2.5.0'
             mode: manual
-            baseline: original-release
+            baseline: windows-baseline-2.2.0
           - from: '2.2.1'
-            to: '2.4.1'
+            to: '2.5.0'
             mode: update
             baseline: original-release
           - from: '2.3.0'
-            to: '2.4.1'
+            to: '2.5.0'
             mode: update
             baseline: original-release
           - from: '2.4.0'
-            to: '2.4.1'
+            to: '2.5.0'
             mode: update
             baseline: original-release
           - from: '2.4.1'
-            to: '2.4.2'
+            to: '2.5.0'
             mode: update
-            baseline: windows-recovery-2.4.1
+            baseline: original-release
+          - from: '2.5.0'
+            to: '2.5.1'
+            mode: update
+            baseline: windows-recovery-2.5.0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -161,8 +169,8 @@ jobs:
           gh release download "v$baselineVersion" --pattern "ClearDeck-$baselineVersion-Setup.exe" --dir baseline
           if ($LASTEXITCODE -ne 0) { throw 'Original baseline download failed.' }
           $expected = @{
+            '2.4.1' = '31bea54014e3c5c01565417b12763b5abda2f8b57aafc730dec9817e75f2f12a'
             '2.4.0' = '648424ef2f873dba5e9ebde7d11928f82e83700cab0fb543bf7f60c549e79b25'
-            '2.2.0' = '28f9eaf3fc82d1a7a1eff41065df3a6e3b3cdfbb323482c62737f92740e74784'
             '2.3.0' = '465e8dbb941a68dec5b93a87947a3ccbf38c56ce2974fa782425f37bcf6d0f8a'
             '2.2.1' = 'ab0f2a97e9a2636b1ed123af60c232ea6823d7aa5020ff32b14d626e8e550571'
           }
@@ -188,7 +196,7 @@ jobs:
           retention-days: 7
 
   publish:
-    if: github.ref == 'refs/tags/v2.4.1'
+    if: github.ref == 'refs/tags/v2.5.0'
     needs: [checks, build, baseline, upgrade]
     runs-on: windows-latest
     permissions:
@@ -202,7 +210,7 @@ jobs:
       - run: npm ci
       - uses: actions/download-artifact@v4
         with:
-          name: windows-recovery-2.4.1
+          name: windows-recovery-2.5.0
           path: release-files
       - name: Verify uploaded draft before publishing Windows recovery
         run: node scripts/publish-windows-recovery.cjs release-files
@@ -210,6 +218,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NATIVE_WINDOWS_UPGRADES_VERIFIED: '1'
 
-# The 2.4.2 successor exists only to test the next in-app upgrade.
-# Manual candidate runs on branches publish nothing. Only the verified v2.4.1
+# The 2.5.1 successor exists only to test the next in-app upgrade.
+# Manual candidate runs on branches publish nothing. Only the verified v2.5.0
 # tag can publish; its full checks, builds and native-upgrade matrix remain required.

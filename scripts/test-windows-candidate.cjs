@@ -17,8 +17,8 @@ const result = path.join(process.env.RUNNER_TEMP, 'cleardeck-candidate-result');
 const password = 'Disposable-candidate-password-2026';
 const oldVersion = process.env.OLD_VERSION;
 const targetVersion = process.env.TARGET_VERSION || require('../package.json').version;
-const fullSnapshotVersions = new Set(['2.0.0', '2.1.0', '2.2.0', '2.2.1', '2.3.0', '2.4.0', '2.4.1']);
-const fixtureVersion = ['2.2.1', '2.3.0', '2.4.0', '2.4.1'].includes(oldVersion) ? '2.2.0' : oldVersion;
+const fullSnapshotVersions = new Set(['2.0.0', '2.1.0', '2.2.0', '2.2.1', '2.3.0', '2.4.0', '2.4.1', '2.5.0']);
+const fixtureVersion = ['2.2.1', '2.3.0', '2.4.0', '2.4.1', '2.5.0'].includes(oldVersion) ? '2.2.0' : oldVersion;
 const updateRepositoryUrl = 'https://github.com/tbuck-software/cleardeck';
 const updateFixtureToken = 'fixture-private-runtime-token';
 const hash = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
@@ -319,16 +319,21 @@ async function run() {
     const file = path.join(result, 'fixture.db');
     const db = new DatabaseSync(file);
     db.exec(fs.readFileSync(`src/main/__tests__/fixtures/v${fixtureVersion}.sql`, 'utf8'));
-    if (['2.3.0', '2.4.0', '2.4.1'].includes(oldVersion)) {
+    if (['2.3.0', '2.4.0', '2.4.1', '2.5.0'].includes(oldVersion)) {
       db.prepare("INSERT OR REPLACE INTO settings(key,value) VALUES ('annualFteMethod','year-average')").run();
     }
-    if (['2.4.0', '2.4.1'].includes(oldVersion)) {
+    if (['2.4.0', '2.4.1', '2.5.0'].includes(oldVersion)) {
       db.exec('ALTER TABLE competency_definitions ADD COLUMN templateKey TEXT');
       db.exec('ALTER TABLE competency_definitions ADD COLUMN reviewStatus TEXT');
       db.prepare("UPDATE settings SET value = '24' WHERE key = 'schema_version'").run();
       db.prepare(`INSERT INTO competency_definitions (name, code, relevance, note, templateKey, reviewStatus)
         VALUES (?, ?, ?, ?, ?, ?)`).run('Örtliche HKP-Vorlage', '032265', 'HKP G1',
         'Eigene betriebliche Notiz', 'hkp-nrw:032265', 'reviewed');
+    }
+    if (oldVersion === '2.5.0') {
+      db.exec('ALTER TABLE employment_periods ADD COLUMN excludeFromFteTotal INTEGER NOT NULL DEFAULT 0');
+      db.exec('UPDATE employment_periods SET excludeFromFteTotal = 1 WHERE id = (SELECT MIN(id) FROM employment_periods)');
+      db.prepare("UPDATE settings SET value = '25' WHERE key = 'schema_version'").run();
     }
     db.close();
     const bytes = fs.readFileSync(file);
@@ -435,11 +440,14 @@ async function run() {
         const dataset = await window.api.saveEmployee({
           name: 'Mara Beispiel', qualification: 'Azubi 1j',
           startDate: '2025-09-01', endDate: '2026-08-31',
-          weeklyHours: 30, fte: 0.83, year: 2026,
+          weeklyHours: 30, fte: 0.83, year: 2026, excludeFromFteTotal: true,
         });
-        return dataset.employees.find((entry) => entry.name === 'Mara Beispiel');
+        const created = dataset.employees.find((entry) => entry.name === 'Mara Beispiel');
+        return created && { ...created, excludedFte: dataset.aggregation.excludedFte };
       });
       assert(person?.id, 'Synthetic trainee was not created.');
+      assert.equal(person.excludeFromFteTotal, true);
+      assert(person.excludedFte > 0, 'Trainee FTE was not left out of the total.');
       // Reload the renderer so it reads the newly saved person from the native API.
       await page.reload();
       await page.getByRole('button', { name: 'Team', exact: true }).click();
@@ -465,6 +473,9 @@ async function run() {
       const old = saved.periods.find((period) => period.startDate === '2025-09-01');
       assert.equal(old.endDate, '2026-08-31');
       assert.equal(old.qualification, 'Azubi 1j');
+      assert.equal(old.excludeFromFteTotal, true);
+      // A qualified successor period counts toward the total again.
+      assert.equal(saved.periods.find((period) => period.startDate === '2026-09-01').excludeFromFteTotal, false);
       assert.equal(saved.person.qualification, '1-jährig examiniert');
       assert.equal(saved.person.startDate, '2026-09-01');
       assert.equal(saved.person.endDate, null);
@@ -476,6 +487,7 @@ async function run() {
         oldEnd: old.endDate, newStart: saved.person.startDate,
         newEnd: saved.person.endDate, weeklyHours: saved.person.weeklyHours,
         fte: saved.person.fte, sameEmployee: saved.person.id === person.id,
+        traineeExcludedFromTotal: old.excludeFromFteTotal,
       }, null, 2));
       process.exit(0);
     }
@@ -517,7 +529,7 @@ async function run() {
         path.join(result, 'last-ui.json'),
         JSON.stringify({ version: info.info.version, userPreferences }),
       );
-      const annualMethod = ['2.3.0', '2.4.0', '2.4.1'].includes(oldVersion) ? 'year-average' : 'month-end-average';
+      const annualMethod = ['2.3.0', '2.4.0', '2.4.1', '2.5.0'].includes(oldVersion) ? 'year-average' : 'month-end-average';
       assert.equal(info.data.annualSummary.method, annualMethod);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.screenshot({ path: path.join(result, 'after-unlock.png'), animations: 'disabled' });

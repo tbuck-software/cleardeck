@@ -1,0 +1,18 @@
+{
+  "tag": "v2.5.0",
+  "live": {
+    "ClearDeck-2.5.0-Setup.exe": "e790731b1768c78a56bf9bae3223986c169e0a68db41949eb092636af846b618",
+    "ClearDeck-win32-x64-2.5.0.zip": "1adcc46b9b51a5e25414758a55b1d5fcee1b81cc567d54b98977dc5324f249c1",
+    "RELEASES": "bbed773edbffc7e8fe66782c60f6ab286878dc72ffe8ab5cd44aaf6c440d2f04",
+    "cleardeck-2.5.0-full.nupkg": "98ce3fd4eed55e95dc4bdfd4fb5d159be033d7828a677d3c51ec572b3e2f8315",
+    "latest.yml": "d1f361d51c53473931662a7a8bb7df805796045c89971c8509e74d9de15cf4f6"
+  },
+  "build": {
+    "latest.yml": "d1f361d51c53473931662a7a8bb7df805796045c89971c8509e74d9de15cf4f6",
+    "ClearDeck-2.5.0-Setup.exe": "e790731b1768c78a56bf9bae3223986c169e0a68db41949eb092636af846b618",
+    "RELEASES": "bbed773edbffc7e8fe66782c60f6ab286878dc72ffe8ab5cd44aaf6c440d2f04",
+    "cleardeck-2.5.0-full.nupkg": "98ce3fd4eed55e95dc4bdfd4fb5d159be033d7828a677d3c51ec572b3e2f8315",
+    "ClearDeck-win32-x64-2.5.0.zip": "1adcc46b9b51a5e25414758a55b1d5fcee1b81cc567d54b98977dc5324f249c1"
+  },
+  "equal": true
+}
