@@ -5,6 +5,7 @@ import BirthDateInput from '../ui/BirthDateInput';
 import type { IntegrityEmployee, QualificationType } from '../../shared/types';
 import type { EditModalState, FormState } from '../../types/ui';
 import { formatDateDE } from '../../utils/dateFormat';
+import { isTraineeQualification } from '../../utils/qualificationRelevance';
 
 type EmployeeModalProps = {
   state: EditModalState;
@@ -61,6 +62,10 @@ const EmployeeModal = ({
         {
           title: 'Wie werden VZÄ berechnet?',
           body: `Betriebliche VZÄ-Regel: ab 36 Wochenstunden 1,0; darunter Anteil am eingestellten Bezugswert. ${fteHelp}`,
+        },
+        {
+          title: 'Wer zählt nicht in der VZÄ-Gesamtsumme?',
+          body: 'Die Auswahl gilt für den aktuellen Beschäftigungszeitraum. Der eigene VZÄ-Wert bleibt sichtbar, fließt aber nicht in Summen und Jahresnachweis ein. Beim Qualifikationswechsel wird sie für den neuen Zeitraum neu vorgeschlagen.',
         },
         ...(isCreate
           ? []
@@ -134,7 +139,12 @@ const EmployeeModal = ({
                 id="employee-qualification"
                 className="input"
                 value={form.qualification}
-                onChange={(event) => onFormChange({ qualification: event.target.value })}
+                onChange={(event) => {
+                  const qualification = event.target.value;
+                  onFormChange({ qualification });
+                  if (!state.excludeFromFteTotalTouched)
+                    onStateChange({ excludeFromFteTotal: isTraineeQualification(qualification) });
+                }}
               >
                 {qualifications.map((qualification) => (
                   <option key={qualification.id ?? qualification.name} value={qualification.name}>
@@ -244,6 +254,26 @@ const EmployeeModal = ({
             )}
           </div>
         </div>
+      )}
+      <label className="radio">
+        <input
+          type="checkbox"
+          checked={Boolean(state.excludeFromFteTotal)}
+          onChange={(event) =>
+            onStateChange({
+              excludeFromFteTotal: event.target.checked,
+              excludeFromFteTotalTouched: true,
+            })
+          }
+        />
+        <span className="dot" style={{ borderRadius: 5 }} />
+        <span>Nicht in VZÄ-Gesamtsumme (z. B. Auszubildende)</span>
+      </label>
+      {!isCreate && !state.excludeFromFteTotal && isTraineeQualification(form.qualification) && (
+        <p className="cd-muted-13" role="status">
+          Die Qualifikation „{form.qualification}“ deutet auf eine Ausbildung hin. Der Stellenanteil
+          zählt derzeit in der VZÄ-Summe.
+        </p>
       )}
       <div className="field">
         <label htmlFor="employee-note">Notiz</label>

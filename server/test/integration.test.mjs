@@ -359,7 +359,7 @@ test('Postgres v2 sync keeps per-record CAS, atomic batches, receipts, tombstone
 
     const invalidForeignKey = transaction(randomUUID(), instance, [{
       table: 'employment_periods', key: '[99]', before: null,
-      after: { id: 99, employeeId: 404, startDate: '2026-01-01', endDate: null, qualification: null, note: null },
+      after: { id: 99, employeeId: 404, startDate: '2026-01-01', endDate: null, qualification: null, note: null, excludeFromFteTotal: 0 },
     }]);
     const invalidResult = await http(app.url, '/v2/transactions', { method: 'POST', headers: headers(first), body: JSON.stringify(invalidForeignKey) });
     assert.equal(invalidResult.response.status, 422);

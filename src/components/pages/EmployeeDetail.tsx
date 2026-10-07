@@ -217,7 +217,9 @@ const EmployeeDetail = ({
         </div>
         <div>
           <div className="cd-fact-value">{employee.hoursMissing ? '—' : fte2(employee.fte)}</div>
-          <div className="cd-fact-label">VZÄ (Basis {baseHours} h)</div>
+          <div className="cd-fact-label">
+            VZÄ (Basis {baseHours} h){employee.excludeFromFteTotal && ' · nicht in VZÄ-Summe'}
+          </div>
         </div>
         <div>
           <div className="cd-fact-value">
@@ -348,7 +350,7 @@ const EmployeeDetail = ({
                 ? 'Beschäftigungsperiode'
                 : isWorkingTime ? 'Arbeitszeit' : item.record.title;
               const detail = isPeriod
-                ? `${item.record.qualification}${item.record.endDate ? ` · bis ${formatDateDE(item.record.endDate)}` : ''}`
+                ? `${item.record.qualification}${item.record.endDate ? ` · bis ${formatDateDE(item.record.endDate)}` : ''}${item.record.excludeFromFteTotal ? ' · nicht in VZÄ-Summe' : ''}`
                 : isWorkingTime
                   ? `${item.record.weeklyHours ?? '—'} Std./Woche · ${fte2(item.record.fte)} VZÄ${item.record.effectiveUntil ? ` · bis ${formatDateDE(item.record.effectiveUntil)}` : ''}`
                   : (item.record.details ?? '');

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 24,
+  "schemaVersion": 25,
   "settings": {
     "sharedKeys": [
       "baseHours",
@@ -75,7 +75,8 @@
         { "name": "startDate", "type": "TEXT", "notNull": true, "default": null },
         { "name": "endDate", "type": "TEXT", "notNull": false, "default": null },
         { "name": "qualification", "type": "TEXT", "notNull": false, "default": null },
-        { "name": "note", "type": "TEXT", "notNull": false, "default": null }
+        { "name": "note", "type": "TEXT", "notNull": false, "default": null },
+        { "name": "excludeFromFteTotal", "type": "INTEGER", "notNull": true, "default": "0" }
       ],
       "primaryKey": ["id"],
       "foreignKeys": [
@@ -86,7 +87,7 @@
         { "name": "idx_periods_employee", "columns": ["employeeId"], "unique": false, "sql": "CREATE INDEX idx_periods_employee ON employment_periods(employeeId)" },
         { "name": "idx_periods_dates", "columns": ["startDate", "endDate"], "unique": false, "sql": "CREATE INDEX idx_periods_dates ON employment_periods(startDate, endDate)" }
       ],
-      "createSql": "CREATE TABLE employment_periods (id INTEGER PRIMARY KEY AUTOINCREMENT, employeeId INTEGER NOT NULL, startDate TEXT NOT NULL, endDate TEXT, qualification TEXT, note TEXT, FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE)"
+      "createSql": "CREATE TABLE employment_periods (id INTEGER PRIMARY KEY AUTOINCREMENT, employeeId INTEGER NOT NULL, startDate TEXT NOT NULL, endDate TEXT, qualification TEXT, note TEXT, excludeFromFteTotal INTEGER NOT NULL DEFAULT 0, FOREIGN KEY (employeeId) REFERENCES employees(id) ON DELETE CASCADE)"
     },
     {
       "name": "employee_events",

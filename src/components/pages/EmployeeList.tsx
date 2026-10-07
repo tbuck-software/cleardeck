@@ -6,6 +6,7 @@ import Segmented from '../ui/Segmented';
 import ActionMenu from '../ui/ActionMenu';
 import DataTable, { type DataTableColumn } from '../ui/DataTable';
 import { formatDateDE } from '../../utils/dateFormat';
+import { fteInTotal } from '../../utils/fte';
 import type { EmployeeWithPeriod, QualificationType } from '../../shared/types';
 
 type SortKey =
@@ -19,6 +20,11 @@ type SortKey =
 
 const fte2 = (value: number | null | undefined) =>
   value == null ? '—' : value.toFixed(2).replace('.', ',');
+
+const excludedFromTotal = (employee: EmployeeWithPeriod, annual: boolean): boolean =>
+  annual && employee.annualFteExcluded !== undefined
+    ? employee.annualFteExcluded > 0
+    : Boolean(employee.excludeFromFteTotal);
 
 /** "leaving" is not a stored status — it is an active person with an end date ahead. */
 const statusTag = (employee: EmployeeWithPeriod, today: string): [string, string] => {
@@ -147,13 +153,19 @@ const EmployeeList = ({
       cell: (employee) => {
         const missing = directoryMode ? employee.hoursMissing : employee.annualFteMissing ?? employee.hoursMissing;
         const value = directoryMode ? employee.fte : employee.annualFte ?? employee.fte;
-        return <strong title={missing ? [fteTitle, 'Unvollständig: Stellenanteile fehlen.'].filter(Boolean).join('. ') : fteTitle}>{missing ? '—' : fte2(value)}</strong>;
+        const excluded = excludedFromTotal(employee, !directoryMode);
+        return (
+          <>
+            <strong title={missing ? [fteTitle, 'Unvollständig: Stellenanteile fehlen.'].filter(Boolean).join('. ') : fteTitle}>{missing ? '—' : fte2(value)}</strong>
+            {excluded && <div className="cd-muted-13">nicht in VZÄ-Summe</div>}
+          </>
+        );
       },
     },
   ];
 
   const totalHours = rows.reduce((sum, employee) => sum + (employee.weeklyHours ?? 0), 0);
-  const shownFte = rows.reduce((sum, employee) => sum + ((directoryMode ? employee.fte : employee.annualFte ?? employee.fte) ?? 0), 0);
+  const shownFte = rows.reduce((sum, employee) => sum + fteInTotal(employee, !directoryMode), 0);
 
   const toggleSort = (key: SortKey) =>
     setSort((current) => ({ key, dir: current.key === key ? ((current.dir * -1) as 1 | -1) : 1 }));

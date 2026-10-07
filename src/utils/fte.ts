@@ -14,3 +14,17 @@ export const deriveWeeklyHoursFromFte = (fte: number, baseHours: number): number
   if (!Number.isFinite(fte) || !Number.isFinite(baseHours) || baseHours <= 0) return 0;
   return Number((Math.max(0, Math.min(1, fte)) * baseHours).toFixed(1));
 };
+
+type FteShare = {
+  fte: number;
+  annualFte?: number;
+  annualFteExcluded?: number;
+  excludeFromFteTotal?: boolean;
+};
+
+/** The part of a row's shown FTE that belongs in the FTE total. */
+export const fteInTotal = (employee: FteShare, annual: boolean): number => {
+  if (annual && employee.annualFte !== undefined)
+    return Math.max(0, employee.annualFte - (employee.annualFteExcluded ?? 0));
+  return employee.excludeFromFteTotal ? 0 : (employee.fte ?? 0);
+};

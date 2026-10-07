@@ -23,7 +23,7 @@ import type {
   SuggestedCompetencyModalState,
 } from '../types/ui';
 import { deriveFteFromWeeklyHours } from '../utils/fte';
-import { matchesQualificationRelevance } from '../utils/qualificationRelevance';
+import { isTraineeQualification, matchesQualificationRelevance } from '../utils/qualificationRelevance';
 
 export const emptyForm = (year: number, defaultQualification = ''): FormState => ({
   name: '',
@@ -877,6 +877,7 @@ const useEmployees = ({
       initialHoursEffectiveFrom: effectiveFrom,
       existingHoursEffectiveFrom: selectedEmployee.hoursEffectiveFrom,
       sourceRef: selectedEmployee.sourceRef ?? '',
+      excludeFromFteTotal: Boolean(selectedEmployee.excludeFromFteTotal),
     });
   }, [baseHours, selectedEmployee]);
 
@@ -898,6 +899,7 @@ const useEmployees = ({
       linked: true,
       fteValue: '',
       birthDate: '',
+      excludeFromFteTotal: isTraineeQualification(defaultQualification),
     });
   }, [qualifications, year]);
 
@@ -941,6 +943,7 @@ const useEmployees = ({
             editModal.mode === 'create' ? form.startDate : editModal.hoursEffectiveFrom,
           hoursVerified: true,
           sourceRef: editModal.sourceRef,
+          excludeFromFteTotal: Boolean(editModal.excludeFromFteTotal),
         };
         const updated = await api.employees.save(payload);
         setDataset(updated);
@@ -1002,6 +1005,7 @@ const useEmployees = ({
         hoursEffectiveFrom: editModal.hoursEffectiveFrom,
         sourceRef: editModal.sourceRef,
         hoursVerified: updateHours,
+        excludeFromFteTotal: Boolean(editModal.excludeFromFteTotal),
       };
       const updated = await api.employees.save({
         ...payload,
@@ -1066,9 +1070,10 @@ const useEmployees = ({
   }, [dataset, search, statusFilter, qualificationFilter]);
 
   const averageFte = useMemo(() => {
-    const headcount = dataset?.aggregation.totalHeadcount ?? 0;
-    if (!headcount) return 0;
-    return (dataset.annualSummary?.aggregation.totalFte ?? dataset.aggregation.totalFte) / headcount;
+    const aggregation = dataset?.annualSummary?.aggregation ?? dataset?.aggregation;
+    const headcount = (dataset?.aggregation.totalHeadcount ?? 0) - (aggregation?.excludedHeadcount ?? 0);
+    if (!aggregation || headcount <= 0) return 0;
+    return aggregation.totalFte / headcount;
   }, [dataset]);
   const totalFte = dataset?.annualSummary?.aggregation.totalFte ?? dataset?.aggregation.totalFte ?? 0;
   const totalHeadcount = dataset?.aggregation.totalHeadcount ?? 0;

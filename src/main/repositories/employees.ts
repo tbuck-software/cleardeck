@@ -44,22 +44,32 @@ const computeStatus = (endDate: string | null, year: number): 'active' | 'left' 
  */
 const buildAggregation = (employees: EmployeeWithPeriod[]): Aggregation => {
   let totalFte = 0;
-  const categories = new Map<string, { headcount: number; fte: number }>();
+  let excludedFte = 0;
+  const categories = new Map<string, { headcount: number; fte: number; excludedFte: number }>();
   employees.forEach((emp) => {
-    totalFte += emp.fte;
-    const current = categories.get(emp.qualification) ?? { headcount: 0, fte: 0 };
+    const current = categories.get(emp.qualification) ?? { headcount: 0, fte: 0, excludedFte: 0 };
     current.headcount += 1;
-    current.fte += emp.fte;
+    if (emp.excludeFromFteTotal) {
+      excludedFte += emp.fte;
+      current.excludedFte += emp.fte;
+    } else {
+      totalFte += emp.fte;
+      current.fte += emp.fte;
+    }
     categories.set(emp.qualification, current);
   });
+  const counted = new Set(employees.filter((e) => !e.excludeFromFteTotal).map((e) => e.id));
 
   return {
     totalHeadcount: employees.length,
     totalFte: Number(totalFte.toFixed(2)),
+    excludedFte: Number(excludedFte.toFixed(2)),
+    excludedHeadcount: new Set(employees.map((e) => e.id)).size - counted.size,
     categories: Array.from(categories.entries()).map(([qualification, value]) => ({
       qualification,
       headcount: value.headcount,
       fte: Number(value.fte.toFixed(2)),
+      ...(value.excludedFte ? { excludedFte: Number(value.excludedFte.toFixed(2)) } : {}),
     })),
   };
 };
@@ -75,6 +85,7 @@ type EmployeePeriodRow = {
   endDate: string | null;
   qualification: string;
   periodNote: string | null;
+  excludeFromFteTotal: number;
 };
 
 type PeriodWithEmployeeId = EmploymentPeriod & { employeeId: number };
@@ -142,6 +153,7 @@ const mapEmployeePeriod = (
     hoursVerified: terms?.verified === 1,
     hoursMissing: !terms,
     hoursEffectiveFrom: terms?.effectiveFrom,
+    excludeFromFteTotal: row.excludeFromFteTotal === 1,
     status: computeStatus(row.endDate ?? null, year),
     createdAt: row.createdAt,
   };
@@ -178,7 +190,7 @@ export const getYearDataset = (
   const rows = db
     .prepare(
       `SELECT e.id AS employeeId,e.name,e.note,e.createdAt,e.birthDate,
-    p.id AS periodId,p.startDate,p.endDate,p.qualification,p.note AS periodNote
+    p.id AS periodId,p.startDate,p.endDate,p.qualification,p.note AS periodNote,p.excludeFromFteTotal
     FROM employees e JOIN employment_periods p ON p.employeeId=e.id
     WHERE p.startDate<=? AND (p.endDate IS NULL OR p.endDate>=?) ORDER BY p.startDate DESC,p.id DESC`,
     )
@@ -243,6 +255,7 @@ export const getYearDataset = (
           reportDays: reportMonthEnds ? undefined : days,
           reportMonthEnds,
           hoursEffectiveFrom: term?.effectiveFrom,
+          excludeFromFteTotal: row.excludeFromFteTotal === 1,
           status: computeStatus(row.endDate ?? null, year),
         });
       }
@@ -276,10 +289,11 @@ export const getYearDataset = (
   if (mode === 'year') {
     const method = getAnnualFteMethod();
     const annual = getYearDataset(year, method);
-    const contributions = new Map<number, { fte: number; missing: boolean; verified: boolean }>();
+    const contributions = new Map<number, { fte: number; excluded: number; missing: boolean; verified: boolean }>();
     for (const segment of annual.employees) {
-      const contribution = contributions.get(segment.id!) ?? { fte: 0, missing: false, verified: true };
+      const contribution = contributions.get(segment.id!) ?? { fte: 0, excluded: 0, missing: false, verified: true };
       contribution.fte += segment.fte;
+      if (segment.excludeFromFteTotal) contribution.excluded += segment.fte;
       contribution.missing ||= !!segment.hoursMissing;
       contribution.verified &&= !!segment.hoursVerified;
       contributions.set(segment.id!, contribution);
@@ -287,6 +301,7 @@ export const getYearDataset = (
     for (const employee of employees) {
       const contribution = contributions.get(employee.id!);
       employee.annualFte = contribution?.fte ?? 0;
+      employee.annualFteExcluded = contribution?.excluded ?? 0;
       employee.annualFteMissing = contribution?.missing ?? false;
       employee.annualFteVerified = contribution?.verified ?? true;
     }
@@ -316,14 +331,14 @@ export const listPeriods = (employeeId: number): EmploymentPeriod[] => {
   const rows = db
     .prepare(
       `
-      SELECT id, startDate, endDate, qualification, note
+      SELECT id, startDate, endDate, qualification, note, excludeFromFteTotal
       FROM employment_periods
       WHERE employeeId = ?
       ORDER BY startDate DESC;
     `,
     )
-    .all(employeeId) as EmploymentPeriod[];
-  return rows;
+    .all(employeeId) as Array<Omit<EmploymentPeriod, 'excludeFromFteTotal'> & { excludeFromFteTotal: number }>;
+  return rows.map((row) => ({ ...row, excludeFromFteTotal: row.excludeFromFteTotal === 1 }));
 };
 
 /** Get one period with the same effective working-time mapping used by reports. */
@@ -337,7 +352,7 @@ export const getEmployeePeriod = (
   const row = db
     .prepare(
       `SELECT e.id AS employeeId,e.name,e.note,e.createdAt,e.birthDate,
-       p.id AS periodId,p.startDate,p.endDate,p.qualification,p.note AS periodNote
+       p.id AS periodId,p.startDate,p.endDate,p.qualification,p.note AS periodNote,p.excludeFromFteTotal
        FROM employees e JOIN employment_periods p ON p.employeeId=e.id
        WHERE e.id=? AND p.id=?`,
     )
@@ -405,6 +420,8 @@ export const saveEmployee = (input: {
   hoursEffectiveFrom?: string;
   hoursVerified?: boolean;
   updateHours?: boolean;
+  /** Left untouched on existing periods when omitted. */
+  excludeFromFteTotal?: boolean;
 }): YearDataset => {
   const db = getDb();
 
@@ -476,6 +493,11 @@ export const saveEmployee = (input: {
       db.prepare(
         'UPDATE employment_periods SET startDate=?,endDate=?,qualification=? WHERE id=?',
       ).run(input.startDate, input.endDate || null, input.qualification, periodId);
+      if (input.excludeFromFteTotal !== undefined)
+        db.prepare('UPDATE employment_periods SET excludeFromFteTotal=? WHERE id=?').run(
+          input.excludeFromFteTotal ? 1 : 0,
+          periodId,
+        );
       if (input.periodNote !== undefined)
         db.prepare('UPDATE employment_periods SET note=? WHERE id=?').run(
           input.periodNote,
@@ -487,7 +509,7 @@ export const saveEmployee = (input: {
         nextDeviceId(db, 'employment_periods'),
       );
       db.prepare(
-        'INSERT INTO employment_periods(id,employeeId,startDate,endDate,qualification,note) VALUES (?,?,?,?,?,?)',
+        'INSERT INTO employment_periods(id,employeeId,startDate,endDate,qualification,note,excludeFromFteTotal) VALUES (?,?,?,?,?,?,?)',
       ).run(
         periodId,
         employeeId,
@@ -495,6 +517,7 @@ export const saveEmployee = (input: {
         input.endDate || null,
         input.qualification,
         input.periodNote ?? null,
+        input.excludeFromFteTotal ? 1 : 0,
       );
     }
     const existing = db

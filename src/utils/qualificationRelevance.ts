@@ -82,3 +82,7 @@ export const deriveHkpGroup = (qualification: string): string | undefined => {
   if (/pflegefach(?:kraft|frau|mann|person)|krankenschwester|krankenpfleger|kinderkrankenpfleger|altenpfleger|notfallsanitäter|notfallsanitaeter|3[- ](?:jährig|jaehrig)/.test(value)) return 'HKP G1';
   return undefined;
 };
+
+/** Trainees count per person, but usually not in the FTE total. */
+export const isTraineeQualification = (qualification: string): boolean =>
+  deriveQualificationTags(qualification).has('Azubi');

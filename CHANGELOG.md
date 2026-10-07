@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Auszubildende je Beschäftigungszeitraum aus der VZÄ-Gesamtsumme herausnehmen; ihr eigener VZÄ-Wert bleibt sichtbar.
+
 ## [2.4.1]
 
 - Qualifikation direkt nach dem Ausbildungsende wechseln und die Beschäftigung mit bisherigen Arbeitszeiten fortsetzen.

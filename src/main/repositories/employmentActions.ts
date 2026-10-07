@@ -8,6 +8,7 @@ import type {
 } from '../../shared/types';
 import { getYearDataset } from './employees';
 import { nextDeviceId } from '../syncRecords';
+import { isTraineeQualification } from '../../utils/qualificationRelevance';
 import {
   assertNoStrandedTerms,
   assertReportYear,
@@ -112,7 +113,7 @@ export const switchQualification = (input: SwitchQualificationInput): YearDatase
     );
     const newPeriodId = nextDeviceId(db, 'employment_periods');
     db.prepare(
-      'INSERT INTO employment_periods(id,employeeId,startDate,endDate,qualification,note) VALUES (?,?,?,?,?,?)',
+      'INSERT INTO employment_periods(id,employeeId,startDate,endDate,qualification,note,excludeFromFteTotal) VALUES (?,?,?,?,?,?,?)',
     ).run(
       newPeriodId,
       input.employeeId,
@@ -120,6 +121,8 @@ export const switchQualification = (input: SwitchQualificationInput): YearDatase
       newEndDate,
       input.qualification.trim(),
       period.note,
+      // Not carried over: finishing training must bring the person into the total.
+      (input.excludeFromFteTotal ?? isTraineeQualification(input.qualification)) ? 1 : 0,
     );
 
     const transitionTerm = futureTerms.find((term) => term.effectiveFrom === input.effectiveFrom);

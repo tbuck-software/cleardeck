@@ -1,5 +1,6 @@
 import { annualFteLabel } from '../shared/annualFte';
-import type { YearDataset } from '../shared/types';
+import type { EmployeeWithPeriod, YearDataset } from '../shared/types';
+import { fteInTotal } from '../utils/fte';
 /**
  * Workbook building and writing.
  *
@@ -67,6 +68,12 @@ export const buildPersonListWorkbook = (patients: Patient[]): XLSX.WorkBook => {
   return workbook;
 };
 
+const inFteTotal = (e: EmployeeWithPeriod, annual: boolean): string => {
+  if (!annual || e.annualFteExcluded === undefined) return e.excludeFromFteTotal ? 'Nein' : 'Ja';
+  if (!e.annualFteExcluded) return 'Ja';
+  return fteInTotal(e, true) > 0 ? 'Teilweise' : 'Nein';
+};
+
 /** The report and its individual rows travel together in the exported workbook. */
 export const buildEmployeeWorkbook = (dataset: YearDataset, year: number): XLSX.WorkBook => {
   const workbook = XLSX.utils.book_new();
@@ -115,6 +122,9 @@ export const buildEmployeeWorkbook = (dataset: YearDataset, year: number): XLSX.
           ['Qualifikation', reportMode === 'month-end-average' ? 'Personen an Monatsenden' : 'Personen', 'VZÄ'],
           ...aggregation.categories.map((c) => [c.qualification, c.headcount, c.fte]),
           ['Gesamt', aggregation.totalHeadcount, aggregation.totalFte],
+          ...(aggregation.excludedFte
+            ? [['Nicht in VZÄ-Summe (z. B. Auszubildende)', '', aggregation.excludedFte]]
+            : []),
         ]),
   ];
   XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summary), 'Jahresnachweis');
@@ -125,6 +135,7 @@ export const buildEmployeeWorkbook = (dataset: YearDataset, year: number): XLSX.
         Name: e.name,
         Qualifikation: e.qualification,
         VZÄ: (annual ? e.annualFteMissing : e.hoursMissing) ? '' : (e.annualFte ?? e.fte),
+        'In VZÄ-Summe': inFteTotal(e, Boolean(annual)),
         ...(annual ? {
           'Berechnung Jahres-VZÄ': annualFteLabel(annual.method),
           'Stellenanteil letzter Stand im Jahr': e.hoursMissing ? '' : e.fte,

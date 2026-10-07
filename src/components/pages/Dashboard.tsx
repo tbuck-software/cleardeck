@@ -116,7 +116,10 @@ const Dashboard = ({
   const remaining = openTaskCount - preview.length;
 
   const annual = dataset?.annualSummary;
-  const categories = (annual?.aggregation ?? dataset?.aggregation)?.categories ?? [];
+  const aggregation = annual?.aggregation ?? dataset?.aggregation;
+  const categories = aggregation?.categories ?? [];
+  const excludedFte = aggregation?.excludedFte ?? 0;
+  const fteHeadcount = totalHeadcount - (aggregation?.excludedHeadcount ?? 0);
   const methodLabel = annual ? annualFteLabel(annual.method) : `Basis ${baseHours} Std./Woche`;
   const provisional = annual && (annual.unverifiedHoursCount > 0 || employees.some(e => e.annualFteMissing));
 
@@ -125,6 +128,7 @@ const Dashboard = ({
       value: fte2(totalFte),
       label: annual ? 'Jahres-VZÄ gesamt' : 'VZÄ gesamt',
       title: methodLabel,
+      sub: excludedFte ? `${fte2(excludedFte)} VZÄ nicht eingerechnet` : undefined,
       color: 'var(--color-accent-700)',
     },
     {
@@ -134,9 +138,9 @@ const Dashboard = ({
       color: 'var(--color-text)',
     },
     {
-      value: fte2(totalFte / Math.max(1, totalHeadcount)),
+      value: fte2(totalFte / Math.max(1, fteHeadcount)),
       label: annual ? 'Ø Jahres-VZÄ je Person' : 'Ø VZÄ je Person',
-      title: `${methodLabel}; über alle im Jahr Beschäftigten`,
+      title: `${methodLabel}; über alle im Jahr Beschäftigten in der VZÄ-Summe`,
       color: 'var(--color-text)',
     },
     {
@@ -233,6 +237,7 @@ const Dashboard = ({
                     : undefined}>
                     {category.headcount} Personen ·{' '}
                     <strong title={methodLabel} style={{ color: 'var(--color-text)' }}>{fte2(category.fte)}</strong> VZÄ
+                    {!!category.excludedFte && ` · ${fte2(category.excludedFte)} nicht in VZÄ-Summe`}
                   </span>
                 </div>
                 <div className="cd-bar-track">
