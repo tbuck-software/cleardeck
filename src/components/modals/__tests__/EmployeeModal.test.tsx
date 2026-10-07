@@ -179,3 +179,60 @@ it('announces a new state when the pre-filled date differs from the existing ter
 
   expect(screen.getByText('Ersetzt den Stand vom 01.01.2025.')).toBeInTheDocument();
 });
+
+/** Holds both state and form, as the create dialog changes the qualification. */
+const FteTotalHarness = ({ initial, initialForm }: { initial: EditModalState; initialForm: FormState }) => {
+  const [state, setState] = useState(initial);
+  const [current, setForm] = useState(initialForm);
+  return (
+    <EmployeeModal
+      state={state}
+      form={current}
+      qualifications={[{ id: 1, name: 'Pflegefachkraft' }, { id: 2, name: 'Azubi Pflege' }]}
+      fteHelp=""
+      onStateChange={(next) => setState((prev) => ({ ...prev, ...next }))}
+      onFormChange={(next) => setForm((prev) => ({ ...prev, ...next }))}
+      onWeeklyHoursChange={vi.fn()}
+      onFteChange={vi.fn()}
+      onToggleLinked={vi.fn()}
+      onClose={vi.fn()}
+      onSave={vi.fn()}
+    />
+  );
+};
+
+describe('VZÄ-Gesamtsumme', () => {
+  const label = 'Nicht in VZÄ-Gesamtsumme (z. B. Auszubildende)';
+  const createState: EditModalState = { ...state, excludeFromFteTotal: false };
+  const createForm: FormState = { ...form, qualification: 'Pflegefachkraft' };
+
+  it('schlägt beim Anlegen für Auszubildende den Ausschluss vor', () => {
+    render(<FteTotalHarness initial={createState} initialForm={createForm} />);
+    expect(screen.getByLabelText(label)).not.toBeChecked();
+    fireEvent.change(screen.getByLabelText('Qualifikation'), { target: { value: 'Azubi Pflege' } });
+    expect(screen.getByLabelText(label)).toBeChecked();
+    fireEvent.change(screen.getByLabelText('Qualifikation'), { target: { value: 'Pflegefachkraft' } });
+    expect(screen.getByLabelText(label)).not.toBeChecked();
+  });
+
+  it('überschreibt eine bewusste Auswahl nicht beim Qualifikationswechsel', () => {
+    render(<FteTotalHarness initial={createState} initialForm={createForm} />);
+    fireEvent.click(screen.getByLabelText(label));
+    fireEvent.change(screen.getByLabelText('Qualifikation'), { target: { value: 'Azubi Pflege' } });
+    fireEvent.change(screen.getByLabelText('Qualifikation'), { target: { value: 'Pflegefachkraft' } });
+    expect(screen.getByLabelText(label)).toBeChecked();
+  });
+
+  it('weist beim Bearbeiten nur hin und ändert gespeicherte Daten nicht', () => {
+    render(
+      <FteTotalHarness
+        initial={{ ...baseState, excludeFromFteTotal: false }}
+        initialForm={{ ...hintForm, qualification: 'Auszubildende' }}
+      />,
+    );
+    expect(screen.getByLabelText(label)).not.toBeChecked();
+    expect(screen.getByText(/deutet auf eine Ausbildung hin/)).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(label));
+    expect(screen.queryByText(/deutet auf eine Ausbildung hin/)).not.toBeInTheDocument();
+  });
+});

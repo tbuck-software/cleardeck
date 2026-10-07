@@ -176,6 +176,10 @@ export type EditModalState = {
   linked: boolean;
   fteValue: string;
   birthDate: string;
+  /** Applies to the edited employment period. */
+  excludeFromFteTotal?: boolean;
+  /** Once set, a qualification change no longer proposes a value. */
+  excludeFromFteTotalTouched?: boolean;
 };
 
 export type AddPeriodFormState = {

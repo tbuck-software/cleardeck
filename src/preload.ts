@@ -111,6 +111,7 @@ export type Api = {
     hoursVerified?: boolean;
     updateHours?: boolean;
     department?: string | null;
+    excludeFromFteTotal?: boolean;
   }) => Promise<YearDataset>;
   deleteEmployee: (id: number, year: number) => Promise<YearDataset>;
   saveEvent: (input: {

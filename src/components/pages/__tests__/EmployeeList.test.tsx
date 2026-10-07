@@ -116,6 +116,22 @@ describe('EmployeeList', () => {
     expect(screen.getByText('1,30')).toBeInTheDocument();
   });
 
+  it('lässt Auszubildende aus der VZÄ-Summe heraus, zeigt ihren Wert aber an', () => {
+    renderList({
+      filteredEmployees: [
+        { ...employees[0], annualFte: 0.8, annualFteExcluded: 0 },
+        { ...employees[1], qualification: 'Azubi', annualFte: 0.67, annualFteExcluded: 0.67, excludeFromFteTotal: true },
+      ],
+      totalFte: 0.8,
+    });
+
+    const row = screen.getByText('Bruno Beispiel').closest('tr')!;
+    expect(row).toHaveTextContent('0,67');
+    expect(row).toHaveTextContent('nicht in Summe');
+    expect(screen.getByText('Anna Beispiel').closest('tr')).not.toHaveTextContent('nicht in Summe');
+    expect(screen.getByRole('table').querySelector('tfoot')).toHaveTextContent('0,80');
+  });
+
   it('sortiert nach Klick auf eine Spaltenüberschrift', () => {
     renderList();
 

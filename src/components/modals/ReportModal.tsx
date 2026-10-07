@@ -145,7 +145,14 @@ const ReportModal = ({
             <tr key={category.qualification}>
               <td>{category.qualification}</td>
               <td style={{ textAlign: 'right' }}>{category.headcount}</td>
-              <td style={{ textAlign: 'right', fontWeight: 600 }}>{fte2(category.fte)}</td>
+              <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                {fte2(category.fte)}
+                {!!category.excludedFte && (
+                  <div className="cd-muted-13" style={{ fontWeight: 400 }}>
+                    {fte2(category.excludedFte)} nicht in VZÄ-Summe
+                  </div>
+                )}
+              </td>
             </tr>
           ))}
           {categories.length === 0 && (
@@ -166,6 +173,14 @@ const ReportModal = ({
               {fte2(dataset?.aggregation.totalFte ?? 0)}
             </td>
           </tr>
+          {!!dataset?.aggregation.excludedFte && (
+            <tr>
+              <td className="cd-muted-13" colSpan={2}>Nicht in VZÄ-Summe (z. B. Auszubildende)</td>
+              <td className="cd-muted-13" style={{ textAlign: 'right' }}>
+                {fte2(dataset.aggregation.excludedFte)}
+              </td>
+            </tr>
+          )}
         </tfoot>
       </table>
 

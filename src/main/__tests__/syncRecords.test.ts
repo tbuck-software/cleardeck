@@ -158,7 +158,7 @@ describe('syncRecords', () => {
         table: 'employment_periods',
         key: '[2]',
         before: null,
-        after: { id: 2, employeeId: 2, startDate: '2026-01-01', endDate: null, qualification: 'PFK', note: null },
+        after: { id: 2, employeeId: 2, startDate: '2026-01-01', endDate: null, qualification: 'PFK', note: null, excludeFromFteTotal: 0 },
       },
       {
         table: 'employees',

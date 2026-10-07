@@ -31,6 +31,7 @@ import { v022_patient_service_scope } from './v022_patient_service_scope';
 import { v023_generic_service_label } from './v023_generic_service_label';
 
 import { v024_competency_templates } from './v024_competency_templates';
+import { v025_fte_total_exclusion } from './v025_fte_total_exclusion';
 
 export type Migration = {
   version: number;
@@ -66,6 +67,7 @@ export const migrations: Migration[] = [
   v022_patient_service_scope,
   v023_generic_service_label,
   v024_competency_templates,
+  v025_fte_total_exclusion,
 ];
 
 export const CURRENT_SCHEMA_VERSION = migrations[migrations.length - 1]?.version ?? 0;

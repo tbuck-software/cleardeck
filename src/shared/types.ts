@@ -102,6 +102,7 @@ export interface EmploymentPeriod {
   endDate?: string | null;
   qualification: Qualification | string;
   note?: string | null;
+  excludeFromFteTotal?: boolean;
 }
 
 export interface WorkingTime {
@@ -134,6 +135,8 @@ export interface SwitchQualificationInput {
   effectiveFrom: string;
   qualification: string;
   year: number;
+  /** Defaults to whether the new qualification looks like a trainee. */
+  excludeFromFteTotal?: boolean;
 }
 
 export interface EmployeeWithPeriod extends Employee {
@@ -154,6 +157,10 @@ export interface EmployeeWithPeriod extends Employee {
   annualFte?: number;
   annualFteMissing?: boolean;
   annualFteVerified?: boolean;
+  /** Share of annualFte from periods left out of the FTE total. */
+  annualFteExcluded?: number;
+  /** This period counts per person but not in the FTE total (e.g. trainees). */
+  excludeFromFteTotal?: boolean;
   reportDays?: number;
   reportMonthEnds?: string[];
   unweightedFte?: number | null;
@@ -211,11 +218,16 @@ export interface UpcomingEvent extends EmployeeEvent {
 
 export interface Aggregation {
   totalHeadcount: number;
+  /** Excludes periods marked excludeFromFteTotal; see excludedFte. */
   totalFte: number;
+  excludedFte?: number;
+  /** People with no period counted in totalFte. */
+  excludedHeadcount?: number;
   categories: {
     qualification: string;
     headcount: number;
     fte: number;
+    excludedFte?: number;
   }[];
 }
 

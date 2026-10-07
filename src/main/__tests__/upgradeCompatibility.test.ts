@@ -119,6 +119,7 @@ it('upgrades the 2.0.0 schema once, keeps every record and marks undecided peopl
     (db.prepare(`SELECT * FROM ${table} ORDER BY id`).all() as Array<Record<string, unknown>>).map((row) => {
       const copy = { ...row };
       delete copy.serviceScopeSource;
+      delete copy.excludeFromFteTotal;
       return copy;
     }));
   const before = snapshot(old);
@@ -132,6 +133,10 @@ it('upgrades the 2.0.0 schema once, keeps every record and marks undecided peopl
       expect(
         getDb().prepare('SELECT serviceScope, serviceScopeSource FROM patients ORDER BY id').all(),
       ).toEqual([{ serviceScope: 'unknown', serviceScopeSource: 'services' }]);
+      // v025 must not guess trainees; every existing period stays in the FTE total.
+      expect(
+        getDb().prepare('SELECT COUNT(*) AS n FROM employment_periods WHERE excludeFromFteTotal<>0').get(),
+      ).toEqual({ n: 0 });
       const backupDir = path.join(getDataDir(), 'backups');
       expect(fs.existsSync(backupDir) ? fs.readdirSync(backupDir).filter(name => name.startsWith('before-migration-')) : []).toHaveLength(1);
       closeDb();
