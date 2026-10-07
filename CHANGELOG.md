@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Teilgruppe im Patientenformular groß und farbig hervorheben.
+- Kompetenzen aus dem Altmodell über „Stufe ändern“ neu einschätzen und abschließen.
+
 ## [2.4.1]
 
 - Qualifikation direkt nach dem Ausbildungsende wechseln und die Beschäftigung mit bisherigen Arbeitszeiten fortsetzen.

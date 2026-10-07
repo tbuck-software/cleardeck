@@ -593,6 +593,8 @@ export type BulkCompetencyChange = {
   changes: {
     competencyDefinitionId: number;
     stageScheme: 'legacy' | 'practice-v1';
+    /** Set when a legacy entry is deliberately re-assessed in the current model. */
+    fromStageScheme?: 'legacy';
     level: number;
   }[];
   completion?: { approvedAt: string; approvedBy: string };

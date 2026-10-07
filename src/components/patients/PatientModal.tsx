@@ -475,21 +475,30 @@ const PatientModal = ({
             </p>
           </div>
         )}
-        <div className="cd-group-preview">
-          <span
-            className={`tag ${group ? 'tag-accent-2' : 'tag-neutral'}`}
-            style={{ fontWeight: 700 }}
-          >
-            {group == null ? '—' : group === 'none' ? 'ohne' : group}
+        <div className={`cd-group-result${group ? '' : ' is-open'}`} role="status">
+          <span className="cd-group-result-letter" aria-hidden="true">
+            {group == null ? '?' : group === 'none' ? '–' : group}
           </span>
-          <span>
-            {group == null
-              ? 'Teilgruppe offen — Mobilität und Kognition eintragen'
-              : TEILGRUPPE_LABEL[group]}
-            {hkpCodesOf(modal).length
-              ? ` · zusätzlich D-Merkmal (HKP ${hkpCodesOf(modal).join(', ')})`
-              : ''}
-          </span>
+          <div>
+            <div className="cd-group-result-title">
+              {group == null
+                ? 'Teilgruppe offen'
+                : group === 'none'
+                  ? 'Keine Teilgruppe A–C'
+                  : `Teilgruppe ${group}`}
+            </div>
+            <div className="cd-group-result-text">
+              {group == null
+                ? 'Mobilität und Kognition oben eintragen.'
+                : TEILGRUPPE_LABEL[group]}
+            </div>
+            {hkpCodesOf(modal).length > 0 && (
+              <div className="cd-group-result-text">
+                <strong>Zusätzlich Teilgruppe D</strong> · aufwändige HKP{' '}
+                {hkpCodesOf(modal).join(', ')}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
