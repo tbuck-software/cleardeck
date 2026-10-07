@@ -77,6 +77,12 @@ describe('PatientDetail', () => {
     expect(screen.getByText('Teilgruppe offen')).toBeInTheDocument();
   });
 
+  it('zeigt die Teilgruppe ohne Datum der Einstufung als vorläufig', () => {
+    renderDetail({ patient: { ...patient, assessmentDate: null } });
+
+    expect(screen.getByText(/Teilgruppe A · vorläufig/)).toBeInTheDocument();
+  });
+
   it('unterscheidet unbekannten Pflegegrad und keinen Pflegegrad', () => {
     const { unmount } = renderDetail({ patient: { ...patient, careLevel: 0 } });
     expect(screen.getByText('Kein Pflegegrad')).toBeInTheDocument();

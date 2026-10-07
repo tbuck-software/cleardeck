@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - Teilgruppe im Patientenformular groß und farbig hervorheben.
+- Teilgruppe bei ungeprüfter Einstufung als „vorläufig“ statt „offen“ anzeigen.
 - Kompetenzen aus dem Altmodell über „Stufe ändern“ neu einschätzen und abschließen.
 
 ## [2.4.1]

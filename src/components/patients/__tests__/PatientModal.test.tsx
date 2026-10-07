@@ -78,6 +78,20 @@ describe('PatientModal Teilgruppe', () => {
     expect(screen.getByText('Zusätzlich Teilgruppe D')).toBeInTheDocument();
   });
 
+  it('kennzeichnet die Teilgruppe ohne Quelle und Datum als vorläufig', () => {
+    render(
+      <PatientModal
+        modal={{ ...modal, cognitionImpaired: false, mobilityImpaired: true, assessmentDate: null }}
+        onChange={vi.fn()}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText('Teilgruppe B')).toBeInTheDocument();
+    expect(screen.getByText('Vorläufig')).toBeInTheDocument();
+  });
+
   it('weist auf fehlende Merkmale hin', () => {
     render(
       <PatientModal modal={modal} onChange={vi.fn()} onClose={vi.fn()} onSave={vi.fn()} />,

@@ -475,7 +475,10 @@ const PatientModal = ({
             </p>
           </div>
         )}
-        <div className={`cd-group-result${group ? '' : ' is-open'}`} role="status">
+        <div
+          className={`cd-group-result${group && !needsAssessment(modal) ? '' : ' is-open'}`}
+          role="status"
+        >
           <span className="cd-group-result-letter" aria-hidden="true">
             {group == null ? '?' : group === 'none' ? '–' : group}
           </span>
@@ -492,6 +495,11 @@ const PatientModal = ({
                 ? 'Mobilität und Kognition oben eintragen.'
                 : TEILGRUPPE_LABEL[group]}
             </div>
+            {group && needsAssessment(modal) && (
+              <div className="cd-group-result-text">
+                <strong>Vorläufig</strong> · zählt erst, wenn Quelle und Datum der Einstufung oben vollständig und aktuell sind.
+              </div>
+            )}
             {hkpCodesOf(modal).length > 0 && (
               <div className="cd-group-result-text">
                 <strong>Zusätzlich Teilgruppe D</strong> · aufwändige HKP{' '}
