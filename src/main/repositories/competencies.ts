@@ -356,16 +356,25 @@ export const bulkChangeCompetencies = (input: BulkCompetencyChange): EmployeeCom
       );
       if (!old)
         throw new Error('Eine ausgewählte Kompetenz ist dieser Person nicht mehr zugeordnet.');
-      if (old.stageScheme !== change.stageScheme)
+      const reassess = change.fromStageScheme != null;
+      if (reassess && (change.fromStageScheme !== 'legacy' || change.stageScheme !== 'practice-v1'))
+        throw new Error('Ungültiger Wechsel des Stufenmodells.');
+      if (old.stageScheme !== (change.fromStageScheme ?? change.stageScheme))
         throw new Error(
           `${old.competencyName}: Das Stufenmodell hat sich geändert. Bitte die Auswahl neu öffnen.`,
         );
       const completion = change.stageScheme === 'practice-v1' && change.level === 6;
       if (completion && (!input.completion?.approvedAt || !input.completion.approvedBy.trim()))
         throw new Error('Abschluss braucht Bestätigungsdatum und verantwortliche Person.');
-      const approvedAt = completion ? input.completion!.approvedAt : old.approvedAt;
-      const approvedBy = completion ? input.completion!.approvedBy.trim() : old.approvedBy;
+      // A legacy approval does not confirm a stage of the new model.
+      const approvedAt = completion ? input.completion!.approvedAt : reassess ? null : old.approvedAt;
+      const approvedBy = completion
+        ? input.completion!.approvedBy.trim()
+        : reassess
+          ? null
+          : old.approvedBy;
       if (
+        !reassess &&
         old.level === change.level &&
         old.approvedAt === approvedAt &&
         old.approvedBy === approvedBy

@@ -150,3 +150,11 @@ it('keeps Tab focus inside the modal', () => {
   fireEvent.keyDown(window, { key: 'Tab', shiftKey: true });
   expect(screen.getByRole('button', { name: 'Speichern' })).toHaveFocus();
 });
+
+it('names the meaning of each stage in the level dropdown', () => {
+  show();
+  fireEvent.click(screen.getByLabelText('Hygiene auswählen'));
+  fireEvent.click(screen.getByRole('button', { name: 'Stufe ändern' }));
+  expect(screen.getByRole('option', { name: 'Stufe 2 · Unter Anleitung / Aufsicht' })).toBeInTheDocument();
+  expect(screen.getByRole('option', { name: 'Stufe 6 · Abgeschlossen / Anleitend' })).toBeInTheDocument();
+});

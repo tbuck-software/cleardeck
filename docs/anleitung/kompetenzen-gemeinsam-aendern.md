@@ -1,6 +1,6 @@
 # Kompetenzen aus Vorlagen zuordnen und Stufen gemeinsam ändern
 
-Stand: 18.09.2026. Vorlagenvorschau ab Version 2.2.1; gemeinsame Stufenänderung ab Version 2.1.0.
+Stand: 07.10.2026. Vorlagenvorschau ab Version 2.2.1; gemeinsame Stufenänderung ab Version 2.1.0.
 
 ## Kompetenzen aus einer Berufsgruppen-Vorlage
 
@@ -38,9 +38,23 @@ Der Klick auf die übrige Zeilenfläche öffnet weiterhin die Einzelbearbeitung.
 
 ## Unterschiedliche Stufenmodelle
 
-Die Auswahl beginnt mit **Beibehalten**. Enthält sie alte Kompetenzstufen und aktuelle Einarbeitungsstufen, erscheinen zwei beschriftete Felder mit der jeweiligen Anzahl. Für jede Gruppe lässt sich ein neuer Wert wählen oder der vorhandene Stand beibehalten. Die App ändert dabei kein Stufenmodell.
+Die Auswahl beginnt mit **Beibehalten**. Enthält sie alte Kompetenzstufen und aktuelle Einarbeitungsstufen, erscheinen zwei beschriftete Felder mit der jeweiligen Anzahl. Für jede Gruppe lässt sich ein neuer Wert wählen oder der vorhandene Stand beibehalten.
 
-Im Altmodell heißt Stufe 5 **Kann anleiten**. Im aktuellen Modell dokumentieren Stufen 1 bis 5 laufende Einarbeitung; Stufe 6 bedeutet **Abgeschlossen**. Für einen gemeinsamen Abschluss werden Bestätigungsdatum und verantwortliche Person eingegeben.
+Das Altmodell kennt keinen Abschluss. Für Altmodell-Einträge bietet das Feld deshalb zusätzlich **Neu einschätzen (aktuelles Modell)** mit den Stufen 1 bis 6 an. Erst diese ausdrückliche Wahl überführt die Einträge ins aktuelle Modell. Alte Bestätigungen gelten dort nicht weiter; der bisherige Stand bleibt im Verlauf. In der Einzelbearbeitung führt **Stand neu einschätzen** zum selben Ergebnis.
+
+Im Altmodell heißt Stufe 5 **Kann anleiten**. Im aktuellen Modell dokumentieren Stufen 1 bis 5 laufende Einarbeitung; Stufe 6 bedeutet **Abgeschlossen**. Auswahl und Stufenfeld nennen die Bedeutung jeder Stufe:
+
+| Stufe | Bedeutung |
+| --- | --- |
+| Offen | Noch keine Einarbeitung erfolgt |
+| 1 | Gesehen / Erklärt |
+| 2 | Unter Anleitung / Aufsicht |
+| 3 | Selbstständig unter Nachkontrolle |
+| 4 | Selbstständig / Sicher |
+| 5 | Routiniert / Vertieft |
+| 6 | Abgeschlossen / Anleitend |
+
+„Anleitend“ beschreibt den Lernstand, keine eigene Berechtigung zur Anleitung anderer. Für einen gemeinsamen Abschluss werden Bestätigungsdatum und verantwortliche Person eingegeben.
 
 Eine reine Stufenänderung erhält vorhandene Notizen und Bestätigungsangaben. Ein ausdrücklich erfasster Abschluss übernimmt die neu eingegebene Bestätigung für die betroffenen Abschluss-Einträge. Frühere Stände bleiben im jeweiligen Kompetenzverlauf erhalten. Unveränderte Werte erzeugen keine zusätzlichen Verlaufseinträge.
 

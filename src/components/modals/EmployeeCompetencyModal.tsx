@@ -35,7 +35,7 @@ const EmployeeCompetencyModal = ({
       help={[
         {
           title: 'Stufen und Bestätigung',
-          body: 'Stufen 1–5: Einarbeitung läuft. Stufe 6: abgeschlossen mit Bestätigung. Die Stufe ist keine eigenständige Einsatzberechtigung. Frühere Stände bleiben dokumentiert.',
+          body: 'Stufen 1–5: Einarbeitung läuft, von „Gesehen / Erklärt“ bis „Routiniert / Vertieft“. Stufe 6: abgeschlossen mit Bestätigung. Die Stufe ist keine eigenständige Einsatzberechtigung. Frühere Stände bleiben dokumentiert.',
         },
       ]}
       primaryLabel="Speichern"
@@ -80,7 +80,8 @@ const EmployeeCompetencyModal = ({
 
       {state.stageScheme === 'legacy' && (
         <p>
-          Alter Stufenstand, Abschluss noch ungeprüft.{' '}
+          Altmodell ohne Stufe „Abgeschlossen“. Für einen Abschluss den Stand im aktuellen Modell
+          neu einschätzen.{' '}
           <button
             type="button"
             className="btn btn-secondary"
