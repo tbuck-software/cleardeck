@@ -1,3 +1,4 @@
+import Checkbox from '../ui/Checkbox';
 import React, { useState } from 'react';
 import Dialog from '../ui/Dialog';
 import Icon from '../ui/Icon';
@@ -255,20 +256,17 @@ const EmployeeModal = ({
           </div>
         </div>
       )}
-      <label className="radio">
-        <input
-          type="checkbox"
-          checked={Boolean(state.excludeFromFteTotal)}
-          onChange={(event) =>
-            onStateChange({
-              excludeFromFteTotal: event.target.checked,
-              excludeFromFteTotalTouched: true,
-            })
-          }
-        />
-        <span className="dot" style={{ borderRadius: 5 }} />
-        <span>Nicht in VZÄ-Gesamtsumme (z. B. Auszubildende)</span>
-      </label>
+      <Checkbox
+        checked={Boolean(state.excludeFromFteTotal)}
+        onChange={(event) =>
+          onStateChange({
+            excludeFromFteTotal: event.target.checked,
+            excludeFromFteTotalTouched: true,
+          })
+        }
+      >
+        Nicht in VZÄ-Gesamtsumme (z. B. Auszubildende)
+      </Checkbox>
       {!isCreate && !state.excludeFromFteTotal && isTraineeQualification(form.qualification) && (
         <p className="cd-muted-13" role="status">
           Die Qualifikation „{form.qualification}“ deutet auf eine Ausbildung hin. Der Stellenanteil

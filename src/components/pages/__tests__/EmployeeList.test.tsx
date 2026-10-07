@@ -127,8 +127,8 @@ describe('EmployeeList', () => {
 
     const row = screen.getByText('Bruno Beispiel').closest('tr')!;
     expect(row).toHaveTextContent('0,67');
-    expect(row).toHaveTextContent('nicht in VZÄ-Summe');
-    expect(screen.getByText('Anna Beispiel').closest('tr')).not.toHaveTextContent('nicht in VZÄ-Summe');
+    expect(row).toHaveTextContent('nicht in Summe');
+    expect(screen.getByText('Anna Beispiel').closest('tr')).not.toHaveTextContent('nicht in Summe');
     expect(screen.getByRole('table').querySelector('tfoot')).toHaveTextContent('0,80');
   });
 

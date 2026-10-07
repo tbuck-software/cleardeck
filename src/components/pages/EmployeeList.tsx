@@ -157,7 +157,11 @@ const EmployeeList = ({
         return (
           <>
             <strong title={missing ? [fteTitle, 'Unvollständig: Stellenanteile fehlen.'].filter(Boolean).join('. ') : fteTitle}>{missing ? '—' : fte2(value)}</strong>
-            {excluded && <div className="cd-muted-13">nicht in VZÄ-Summe</div>}
+            {excluded && (
+              <div className="cd-muted-13" style={{ whiteSpace: 'nowrap' }} title="Nicht in der VZÄ-Gesamtsumme">
+                nicht in Summe
+              </div>
+            )}
           </>
         );
       },
