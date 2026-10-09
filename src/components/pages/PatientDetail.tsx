@@ -1,5 +1,5 @@
 import HelpPopover from '../ui/HelpPopover';
-import { localDate } from '../../utils/calendarDate';
+import { localDate, validDate } from '../../utils/calendarDate';
 import React from 'react';
 import Icon from '../ui/Icon';
 import BackLink, { type BackTarget } from '../ui/BackLink';
@@ -13,6 +13,7 @@ import {
   teilgruppeOf,
   hkpCodesOf,
   assessmentIssue,
+  serviceEnded,
   intensiveCareForList,
   serviceScopeOf,
   SERVICE_SCOPE_LABEL,
@@ -72,6 +73,7 @@ const PatientDetail = ({
     visitIntervalDays,
   );
   const age = ageOf(patient.birthDate);
+  const ended = serviceEnded(patient, today);
   const serviceDecision = serviceScopeOf(patient);
   // Labels and order come from the catalogue with the record; see useServiceCatalog.
   const serviceLabels = patient.services?.length
@@ -209,7 +211,7 @@ const PatientDetail = ({
               </span>
             )}
             {patient.latestActionNeeded && <span className="tag tag-accent">Handlungsbedarf</span>}
-            {patient.serviceStatus === 'ended' && (
+            {ended && (
               <span className="tag tag-neutral">
                 Versorgung beendet
                 {patient.serviceEndDate && ` am ${formatDateDE(patient.serviceEndDate)}`}
@@ -217,8 +219,13 @@ const PatientDetail = ({
             )}
           </div>
           <p className="cd-muted" style={{ margin: '6px 0 0' }}>
-            {patient.diagnosis || 'Ohne Diagnose'} · {formatDateDE(patient.birthDate)}
-            {age ? ` (${age})` : ''} · {draft ? TEILGRUPPE_SHORT[draft] : 'Gutachten-Daten fehlen'}
+            {[
+              patient.diagnosis || 'Ohne Diagnose',
+              patient.birthDate && validDate(patient.birthDate)
+                ? `${formatDateDE(patient.birthDate)}${age ? ` (${age})` : ''}`
+                : 'geb. unbekannt',
+              draft ? TEILGRUPPE_SHORT[draft] : 'Gutachten-Daten fehlen',
+            ].join(' · ')}
           </p>
           <p style={{ margin: '10px 0 0', fontSize: 14 }}>{patient.note || 'Keine Notiz.'}</p>
         </div>
@@ -255,18 +262,22 @@ const PatientDetail = ({
             {TEILGRUPPE_LABEL[group]}
           </p>
         )}
-        <p
-          style={{
-            margin: '18px 0 0',
-            fontSize: 14,
-            fontWeight: 600,
-            color: dueColor(due.daysUntilDue),
-          }}
-        >
-          {due.overdue
-            ? `Nächste Pflegevisite überfällig seit ${-due.daysUntilDue} Tagen (fällig ${formatDateDE(due.dueDate)}).`
-            : `Nächste Pflegevisite fällig am ${formatDateDE(due.dueDate)} — ${due.label}.`}
-        </p>
+        {!ended && (
+          <p
+            style={{
+              margin: '18px 0 0',
+              fontSize: 14,
+              fontWeight: 600,
+              color: dueColor(due.daysUntilDue),
+            }}
+          >
+            {due.missingAnchor
+              ? `Nächste Pflegevisite: ${due.label}.`
+              : due.overdue
+                ? `Nächste Pflegevisite überfällig seit ${-due.daysUntilDue} Tagen (fällig ${formatDateDE(due.dueDate)}).`
+                : `Nächste Pflegevisite fällig am ${formatDateDE(due.dueDate)} — ${due.label}.`}
+          </p>
+        )}
       </section>
 
       <section>

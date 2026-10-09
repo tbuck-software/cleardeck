@@ -4,6 +4,7 @@
 
 - Von Personen- und Patientenseiten per Zurück-Link dorthin zurückkehren, woher man kam.
 - Auf der Patientenseite sehen, warum die Teilgruppe nur vorläufig ist.
+- Bei beendeter Versorgung keine nächste Pflegevisite mehr angezeigt bekommen.
 
 ## [2.5.0]
 
