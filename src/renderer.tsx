@@ -76,7 +76,9 @@ import {
   buildNavigationSnapshot,
   createAppHistoryState,
   isAppHistoryState,
+  navigationTargetLabel,
   resolveNavigationSnapshot,
+  type NavigationSnapshot,
 } from './utils/navigationHistory';
 import { SETTINGS_PAGES, type AuditModalState, type Page } from './types/ui';
 import type {
@@ -464,6 +466,9 @@ const App = () => {
   });
 
   const historyIndexRef = useRef(0);
+  // Mirrors the app's history entries so the back link can name its target.
+  const historyEntriesRef = useRef<NavigationSnapshot[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const restoringHistoryRef = useRef(false);
   const selectedEmployeeRef = useRef(selectedEmployee);
   const selectedPatientRef = useRef(selectedPatient);
@@ -707,6 +712,8 @@ const App = () => {
       const nextIndex = historyIndexRef.current + 1;
       window.history.pushState(createAppHistoryState(nextIndex, snapshot), '');
       historyIndexRef.current = nextIndex;
+      historyEntriesRef.current = [...historyEntriesRef.current.slice(0, nextIndex), snapshot];
+      setHistoryIndex(nextIndex);
     },
     [appReady.unlocked],
   );
@@ -748,6 +755,8 @@ const App = () => {
     const index = isAppHistoryState(state) ? state.index : historyIndexRef.current;
     window.history.replaceState(createAppHistoryState(index, currentSnapshot), '');
     historyIndexRef.current = index;
+    historyEntriesRef.current[index] = currentSnapshot;
+    setHistoryIndex(index);
   }, [appReady.unlocked, currentSnapshot]);
 
   useEffect(() => {
@@ -756,6 +765,8 @@ const App = () => {
     if (!isAppHistoryState(window.history.state)) {
       window.history.replaceState(createAppHistoryState(0, currentSnapshotRef.current), '');
       historyIndexRef.current = 0;
+      historyEntriesRef.current = [currentSnapshotRef.current];
+      setHistoryIndex(0);
     }
 
     const handlePopState = (event: PopStateEvent) => {
@@ -763,6 +774,8 @@ const App = () => {
         ? event.state
         : createAppHistoryState(0, currentSnapshotRef.current);
       historyIndexRef.current = state.index;
+      historyEntriesRef.current[state.index] = state.snapshot;
+      setHistoryIndex(state.index);
       restoringHistoryRef.current = true;
       void restoreSnapshot(state.snapshot).finally(() => {
         restoringHistoryRef.current = false;
@@ -1302,6 +1315,25 @@ const App = () => {
   );
   const dayEvents = dayModalDate ? (calendar.eventsByDate[dayModalDate] ?? []) : [];
 
+  // Steps back through history when possible; otherwise returns to the section's list.
+  const backTarget = (fallback: Page) => {
+    const previous = historyIndex > 0 ? historyEntriesRef.current[historyIndex - 1] : undefined;
+    if (!previous) {
+      return {
+        label: navigationTargetLabel(buildNavigationSnapshot(fallback), [], []),
+        onBack: () => navigateToPage(fallback),
+      };
+    }
+    return {
+      label: navigationTargetLabel(
+        previous,
+        [...(directoryDataset?.employees ?? []), ...(dataset?.employees ?? [])],
+        patients,
+      ),
+      onBack: () => window.history.back(),
+    };
+  };
+
   return (
     <div className="app-shell">
       {inSettings ? (
@@ -1438,6 +1470,7 @@ const App = () => {
 
         {page === 'view' && selectedEmployee && (
           <EmployeeDetail key={selectedEmployee.id}
+            back={backTarget('list')}
             instructionReminderDays={careSettings.instructionReminderDays}
             employee={selectedEmployee}
             baseHours={baseHours}
@@ -1492,6 +1525,7 @@ const App = () => {
 
         {page === 'patients' && selectedPatient && (
           <PatientDetail
+            back={backTarget('patients')}
             patient={selectedPatient}
             visits={patientVisits}
             visitIntervalDays={careSettings.visitIntervalDays}

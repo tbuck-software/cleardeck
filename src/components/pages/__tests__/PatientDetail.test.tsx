@@ -40,6 +40,7 @@ const renderDetail = (
 ): ReturnType<typeof render> =>
   render(
     <PatientDetail
+      back={{ label: 'Patient:innen', onBack: noop }}
       patient={patient}
       visits={visits}
       visitIntervalDays={90}
@@ -51,6 +52,15 @@ const renderDetail = (
   );
 
 describe('PatientDetail', () => {
+  it('führt über den Zurück-Link an die vorherige Stelle', () => {
+    const onBack = vi.fn();
+    renderDetail({ back: { label: 'Aufgaben', onBack } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Aufgaben' }));
+
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
   it('zeigt Teilgruppe A und D nebeneinander', () => {
     renderDetail();
 
