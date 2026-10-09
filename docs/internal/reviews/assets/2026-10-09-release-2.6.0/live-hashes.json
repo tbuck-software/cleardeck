@@ -1,0 +1,18 @@
+{
+  "tag": "v2.6.0",
+  "live": {
+    "RELEASES": "1ce92c434e2543075b387f4935c2fc8b3b345252c812a032ed0a2f8366f408b0",
+    "latest.yml": "182a8628a73a5dd698e697d369979a9d114682ba6f877b20cd3088e75a7cfbed",
+    "cleardeck-2.6.0-full.nupkg": "90f12862e413706e7cbb31c0147f4a6f2545c78395c6b1006764e348222b061f",
+    "ClearDeck-2.6.0-Setup.exe": "f1b7dcf8be04a9173e76917e51538c38169a382205cb48fc939ce9a47da523c5",
+    "ClearDeck-win32-x64-2.6.0.zip": "4191240a99d7d473f95184e4989d6de4df8f0c1bcd1405d9bcaefbc08b562bf9"
+  },
+  "build": {
+    "RELEASES": "1ce92c434e2543075b387f4935c2fc8b3b345252c812a032ed0a2f8366f408b0",
+    "latest.yml": "182a8628a73a5dd698e697d369979a9d114682ba6f877b20cd3088e75a7cfbed",
+    "cleardeck-2.6.0-full.nupkg": "90f12862e413706e7cbb31c0147f4a6f2545c78395c6b1006764e348222b061f",
+    "ClearDeck-2.6.0-Setup.exe": "f1b7dcf8be04a9173e76917e51538c38169a382205cb48fc939ce9a47da523c5",
+    "ClearDeck-win32-x64-2.6.0.zip": "4191240a99d7d473f95184e4989d6de4df8f0c1bcd1405d9bcaefbc08b562bf9"
+  },
+  "equal": true
+}
