@@ -4,6 +4,7 @@ import {
   FIRST_VISIT_DAYS,
   TEILGRUPPE_TARGET,
   addDays,
+  assessmentIssue,
   daysBetween,
   teilgruppeLabel,
   teilgruppeOf,
@@ -137,5 +138,39 @@ describe('QPR-Leistungsumfang', () => {
     expect(serviceScopeOf({ serviceScope: 'unknown', serviceScopeSource: 'legacy' }).reason).toBe(
       SERVICES_NOT_RECORDED,
     );
+  });
+});
+
+describe('assessmentIssue', () => {
+  const today = '2026-10-09';
+  const assessed = {
+    name: 'Helga Test',
+    cognitionImpaired: true,
+    mobilityImpaired: false,
+    assessmentSource: 'report' as const,
+    assessmentDate: '2026-03-01',
+  };
+
+  it('akzeptiert ein Gutachten bis zu einem Jahr', () => {
+    expect(assessmentIssue(assessed, today)).toBeNull();
+    expect(assessmentIssue({ ...assessed, assessmentDate: '2025-10-09' }, today)).toBeNull();
+  });
+
+  it('nennt fehlende Angaben vor allen anderen Gründen', () => {
+    expect(assessmentIssue({ ...assessed, cognitionImpaired: null }, today)).toBe('missing');
+    expect(assessmentIssue({ ...assessed, assessmentSource: 'unknown' }, today)).toBe('missing');
+    expect(assessmentIssue({ ...assessed, assessmentDate: null }, today)).toBe('missing');
+  });
+
+  it('unterscheidet Zukunftsdatum, veraltetes Gutachten und fehlende Begründung', () => {
+    expect(assessmentIssue({ ...assessed, assessmentDate: '2026-11-01' }, today)).toBe('future');
+    expect(assessmentIssue({ ...assessed, assessmentDate: '2025-10-08' }, today)).toBe('stale');
+    expect(assessmentIssue({ ...assessed, assessmentSource: 'own' }, today)).toBe('unjustified');
+    expect(
+      assessmentIssue(
+        { ...assessed, assessmentSource: 'own', assessmentDate: '2020-01-01', assessmentNote: 'Visite' },
+        today,
+      ),
+    ).toBeNull();
   });
 });

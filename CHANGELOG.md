@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 - Von Personen- und Patientenseiten per Zurück-Link dorthin zurückkehren, woher man kam.
+- Auf der Patientenseite sehen, warum die Teilgruppe nur vorläufig ist.
 
 ## [2.5.0]
 

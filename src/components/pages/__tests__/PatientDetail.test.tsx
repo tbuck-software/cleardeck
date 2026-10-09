@@ -93,6 +93,28 @@ describe('PatientDetail', () => {
     expect(screen.getByText(/Teilgruppe A · vorläufig/)).toBeInTheDocument();
   });
 
+  it('nennt bei veraltetem Gutachten den Grund', () => {
+    renderDetail({ patient: { ...patient, assessmentDate: '2020-01-01' } });
+
+    expect(screen.getByText(/Teilgruppe A · vorläufig/)).toBeInTheDocument();
+    expect(screen.getByText(/Das Gutachten ist älter als ein Jahr/)).toBeInTheDocument();
+  });
+
+  it('erklärt fehlende Angaben nicht zusätzlich zu den roten Feldern', () => {
+    renderDetail({ patient: { ...patient, cognitionImpaired: null } });
+
+    expect(screen.getByText('fehlt')).toBeInTheDocument();
+    expect(screen.queryByText(/in den Stammdaten/)).not.toBeInTheDocument();
+  });
+
+  it('zeigt das Versorgungsende als Tag neben dem Namen', () => {
+    renderDetail({
+      patient: { ...patient, serviceStatus: 'ended', serviceEndDate: '2026-05-31' },
+    });
+
+    expect(screen.getByText('Versorgung beendet am 31.05.2026')).toBeInTheDocument();
+  });
+
   it('unterscheidet unbekannten Pflegegrad und keinen Pflegegrad', () => {
     const { unmount } = renderDetail({ patient: { ...patient, careLevel: 0 } });
     expect(screen.getByText('Kein Pflegegrad')).toBeInTheDocument();
