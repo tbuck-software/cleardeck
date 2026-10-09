@@ -2,7 +2,7 @@ name: Windows update recovery
 
 on:
   push:
-    tags: ['v2.5.0']
+    tags: ['v2.6.0']
   # Full package and native-upgrade checks are an explicit candidate gate.
   # Everyday changes are checked on pull requests and main by server.yml.
   workflow_dispatch:
@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ['2.5.0', '2.5.1']
+        version: ['2.6.0', '2.6.1']
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,8 +48,8 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Set test-only successor version
-        if: matrix.version == '2.5.1'
-        run: npm version 2.5.1 --no-git-tag-version --ignore-scripts
+        if: matrix.version == '2.6.1'
+        run: npm version 2.6.1 --no-git-tag-version --ignore-scripts
       - name: Build Windows package without update credentials
         run: npm run make
         env:
@@ -115,33 +115,37 @@ jobs:
       matrix:
         include:
           - from: '2.1.0'
-            to: '2.5.0'
+            to: '2.6.0'
             mode: manual
             baseline: windows-baseline-2.1.0
           - from: '2.2.0'
-            to: '2.5.0'
+            to: '2.6.0'
             mode: manual
             baseline: windows-baseline-2.2.0
           - from: '2.2.1'
-            to: '2.5.0'
+            to: '2.6.0'
             mode: update
             baseline: original-release
           - from: '2.3.0'
-            to: '2.5.0'
+            to: '2.6.0'
             mode: update
             baseline: original-release
           - from: '2.4.0'
-            to: '2.5.0'
+            to: '2.6.0'
             mode: update
             baseline: original-release
           - from: '2.4.1'
-            to: '2.5.0'
+            to: '2.6.0'
             mode: update
             baseline: original-release
           - from: '2.5.0'
-            to: '2.5.1'
+            to: '2.6.0'
             mode: update
-            baseline: windows-recovery-2.5.0
+            baseline: original-release
+          - from: '2.6.0'
+            to: '2.6.1'
+            mode: update
+            baseline: windows-recovery-2.6.0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -169,6 +173,7 @@ jobs:
           gh release download "v$baselineVersion" --pattern "ClearDeck-$baselineVersion-Setup.exe" --dir baseline
           if ($LASTEXITCODE -ne 0) { throw 'Original baseline download failed.' }
           $expected = @{
+            '2.5.0' = 'e790731b1768c78a56bf9bae3223986c169e0a68db41949eb092636af846b618'
             '2.4.1' = '31bea54014e3c5c01565417b12763b5abda2f8b57aafc730dec9817e75f2f12a'
             '2.4.0' = '648424ef2f873dba5e9ebde7d11928f82e83700cab0fb543bf7f60c549e79b25'
             '2.3.0' = '465e8dbb941a68dec5b93a87947a3ccbf38c56ce2974fa782425f37bcf6d0f8a'
@@ -196,7 +201,7 @@ jobs:
           retention-days: 7
 
   publish:
-    if: github.ref == 'refs/tags/v2.5.0'
+    if: github.ref == 'refs/tags/v2.6.0'
     needs: [checks, build, baseline, upgrade]
     runs-on: windows-latest
     permissions:
@@ -210,7 +215,7 @@ jobs:
       - run: npm ci
       - uses: actions/download-artifact@v4
         with:
-          name: windows-recovery-2.5.0
+          name: windows-recovery-2.6.0
           path: release-files
       - name: Verify uploaded draft before publishing Windows recovery
         run: node scripts/publish-windows-recovery.cjs release-files
@@ -218,6 +223,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           NATIVE_WINDOWS_UPGRADES_VERIFIED: '1'
 
-# The 2.5.1 successor exists only to test the next in-app upgrade.
-# Manual candidate runs on branches publish nothing. Only the verified v2.5.0
+# The 2.6.1 successor exists only to test the next in-app upgrade.
+# Manual candidate runs on branches publish nothing. Only the verified v2.6.0
 # tag can publish; its full checks, builds and native-upgrade matrix remain required.
