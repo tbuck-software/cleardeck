@@ -367,6 +367,11 @@
   margin-top: 6px;
 }
 
+.cd-back-link {
+  align-self: flex-start;
+  margin: -12px 0 -14px calc(var(--space-1) * -1);
+}
+
 .cd-detail-header {
   display: flex;
   flex-wrap: wrap;

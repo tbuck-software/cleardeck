@@ -1,6 +1,12 @@
 /// <reference types="vitest/globals" />
 
-import { buildNavigationSnapshot, createAppHistoryState, isAppHistoryState, resolveNavigationSnapshot } from '../navigationHistory';
+import {
+  buildNavigationSnapshot,
+  createAppHistoryState,
+  isAppHistoryState,
+  navigationTargetLabel,
+  resolveNavigationSnapshot,
+} from '../navigationHistory';
 import type { EmployeeWithPeriod, PatientWithLatestVisit } from '../../shared/types';
 
 const employees: EmployeeWithPeriod[] = [
@@ -74,5 +80,18 @@ describe('navigationHistory', () => {
       employee: null,
       patient: null,
     });
+  });
+
+  it('benennt das ziel eines zurück-schritts nach person oder bereich', () => {
+    const label = (page: Parameters<typeof buildNavigationSnapshot>[0], employeeId?: number, patientId?: number) =>
+      navigationTargetLabel(buildNavigationSnapshot(page, employeeId, patientId), employees, patients);
+
+    expect(label('tasks')).toBe('Aufgaben');
+    expect(label('dashboard')).toBe('Übersicht');
+    expect(label('view', 7)).toBe('Mara Beispiel');
+    expect(label('view', 999)).toBe('Team');
+    expect(label('patients', undefined, 21)).toBe('Helga Test');
+    expect(label('patients')).toBe('Patient:innen');
+    expect(label('security')).toBe('Einstellungen');
   });
 });

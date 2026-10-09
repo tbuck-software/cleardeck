@@ -2,6 +2,7 @@ import HelpPopover from '../ui/HelpPopover';
 import { localDate } from '../../utils/calendarDate';
 import React from 'react';
 import Icon from '../ui/Icon';
+import BackLink, { type BackTarget } from '../ui/BackLink';
 import Timeline from '../ui/Timeline';
 import { formatDateDE } from '../../utils/dateFormat';
 import { dueColor } from './PatientList';
@@ -34,6 +35,7 @@ const ageOf = (birthDate?: string | null): string => {
 };
 
 type PatientDetailProps = {
+  back: BackTarget;
   patient: PatientWithLatestVisit;
   visits: PatientVisit[];
   visitIntervalDays: number;
@@ -43,6 +45,7 @@ type PatientDetailProps = {
 };
 
 const PatientDetail = ({
+  back,
   patient,
   visits,
   visitIntervalDays,
@@ -136,6 +139,7 @@ const PatientDetail = ({
 
   return (
     <div className="cd-page cd-detail" style={{ maxWidth: 1100 }}>
+      <BackLink {...back} />
       <header className="cd-detail-header">
         <div style={{ flex: 1, minWidth: 260 }}>
           {patient.serviceStatus === 'ended' && (

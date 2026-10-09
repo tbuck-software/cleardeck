@@ -60,6 +60,7 @@ const renderDetail = (
 ): ReturnType<typeof render> =>
   render(
     <EmployeeDetail
+      back={{ label: 'Team', onBack: noop }}
       employee={employee}
       baseHours={36}
       tab="comp"

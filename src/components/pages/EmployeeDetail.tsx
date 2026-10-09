@@ -5,6 +5,7 @@ import EmploymentRepairPanel from '../employment/EmploymentRepairPanel';
 import WorkingTimeModal from '../modals/WorkingTimeModal';
 import Icon from '../ui/Icon';
 import Avatar from '../ui/Avatar';
+import BackLink, { type BackTarget } from '../ui/BackLink';
 import ListPanel from '../ui/ListPanel';
 import ListRow from '../ui/ListRow';
 import Timeline from '../ui/Timeline';
@@ -62,6 +63,7 @@ const hasMeaningfulEventNote = (item: Extract<TimelineItem, { kind: 'event' }>):
 };
 
 type EmployeeDetailProps = {
+  back: BackTarget;
   employee: EmployeeWithPeriod;
   baseHours: number;
   instructionReminderDays?: number;
@@ -93,6 +95,7 @@ type EmployeeDetailProps = {
 };
 
 const EmployeeDetail = ({
+  back,
   employee,
   baseHours,
   instructionReminderDays = 30,
@@ -169,6 +172,7 @@ const EmployeeDetail = ({
 
   return (
     <div className="cd-page cd-detail">
+      <BackLink {...back} />
       <header className="cd-detail-header">
         <Avatar name={employee.name} size={72} />
         <div style={{ flex: 1, minWidth: 260 }}>

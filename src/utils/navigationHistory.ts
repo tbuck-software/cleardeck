@@ -1,5 +1,5 @@
 import type { EmployeeWithPeriod, PatientWithLatestVisit } from '../shared/types';
-import type { Page } from '../types/ui';
+import { SETTINGS_PAGES, type Page } from '../types/ui';
 
 export type NavigationSnapshot = {
   page: Page;
@@ -63,4 +63,37 @@ export const resolveNavigationSnapshot = (
     employee,
     patient,
   };
+};
+
+const PAGE_LABELS: Partial<Record<Page, string>> = {
+  dashboard: 'Übersicht',
+  tasks: 'Aufgaben',
+  list: 'Team',
+  view: 'Team',
+  patients: 'Patient:innen',
+  audit: 'MD-Prüfung',
+  calendar: 'Kalender',
+  integrity: 'Datenprüfung',
+  quals: 'Qualifikationen',
+  services: 'Leistungen',
+  comps: 'Kompetenzen',
+  instrs: 'Einweisungen',
+};
+
+/** Names the place a snapshot leads back to, e.g. for a "← Aufgaben" link. */
+export const navigationTargetLabel = (
+  snapshot: NavigationSnapshot,
+  employees: EmployeeWithPeriod[],
+  patients: PatientWithLatestVisit[],
+): string => {
+  if (snapshot.employeeId != null) {
+    const employee = employees.find((entry) => entry.id === snapshot.employeeId);
+    if (employee) return employee.name;
+  }
+  if (snapshot.patientId != null) {
+    const patient = patients.find((entry) => entry.id === snapshot.patientId);
+    if (patient) return patient.name;
+  }
+  if (SETTINGS_PAGES.includes(snapshot.page)) return 'Einstellungen';
+  return PAGE_LABELS[snapshot.page] ?? 'Zurück';
 };

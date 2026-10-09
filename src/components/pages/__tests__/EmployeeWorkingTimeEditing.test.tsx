@@ -14,7 +14,7 @@ const employee: EmployeeWithPeriod = {
   workingTimes: [{ id: 42, periodId: 9, effectiveFrom: '2025-03-01', effectiveUntil: null, weeklyHours: 36, fte: 1 }],
 };
 const showDetail = (onSaved: () => Promise<void>) => render(
-  <EmployeeDetail employee={employee} baseHours={36} tab="hist" competencies={[]} instructions={[]}
+  <EmployeeDetail back={{ label: 'Team', onBack: vi.fn() }} employee={employee} baseHours={36} tab="hist" competencies={[]} instructions={[]}
     timelineItems={[]} employmentIntegrity={{ issues: [], employees: [], periods: [] }} backupFolder={null}
     suggestedCompetencyCount={0} availableCompetencyCount={0} availableInstructionCount={0}
     onTabChange={vi.fn()} onEdit={vi.fn()} onCompetenciesSaved={vi.fn()} onWorkingTimeSaved={onSaved} onAddCompetency={vi.fn()}

@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Von Personen- und Patientenseiten per Zurück-Link dorthin zurückkehren, woher man kam.
+
 ## [2.5.0]
 
 - Teilgruppe im Patientenformular groß und farbig hervorheben.
