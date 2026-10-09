@@ -115,6 +115,28 @@ describe('PatientDetail', () => {
     expect(screen.getByText('Versorgung beendet am 31.05.2026')).toBeInTheDocument();
   });
 
+  it('zeigt ohne Geburtsdatum „geb. unbekannt“ statt eines Strichs', () => {
+    renderDetail({ patient: { ...patient, birthDate: null } });
+
+    expect(screen.getByText(/Herzinsuffizienz NYHA III · geb\. unbekannt · /)).toBeInTheDocument();
+  });
+
+  it('nennt bei beendeter Versorgung keine nächste Visite', () => {
+    renderDetail({
+      patient: { ...patient, serviceStatus: 'ended', serviceEndDate: '2026-05-31' },
+    });
+
+    expect(screen.queryByText(/Nächste Pflegevisite/)).not.toBeInTheDocument();
+  });
+
+  it('nennt ohne Visite und Aufnahmedatum die ungeklärte Fälligkeit', () => {
+    renderDetail({ patient: { ...patient, latestVisitDate: null, admissionDate: null } });
+
+    expect(
+      screen.getByText('Nächste Pflegevisite: Aufnahmedatum fehlt; Fälligkeit ungeklärt.'),
+    ).toBeInTheDocument();
+  });
+
   it('unterscheidet unbekannten Pflegegrad und keinen Pflegegrad', () => {
     const { unmount } = renderDetail({ patient: { ...patient, careLevel: 0 } });
     expect(screen.getByText('Kein Pflegegrad')).toBeInTheDocument();

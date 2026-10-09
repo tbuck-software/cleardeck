@@ -157,6 +157,16 @@ describe('PatientList', () => {
     expect(onGroupChange).toHaveBeenCalledWith('A');
   });
 
+  it('nennt bei beendeter Versorgung keine Fälligkeit', () => {
+    renderList({
+      patients: [{ ...patients[0], serviceStatus: 'ended', serviceEndDate: '2026-05-31' }],
+      groupFilter: 'archived',
+    });
+
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText(/überfällig|in \d+ Tagen/)).not.toBeInTheDocument();
+  });
+
   it('zählt die Teilgruppen im Untertitel', () => {
     renderList();
 

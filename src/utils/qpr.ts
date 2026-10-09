@@ -253,10 +253,11 @@ export const visitDue = (
 export const hkpCodesOf = (patient: Pick<Patient, 'hkpCode' | 'hkpCodes'>): HkpCode[] =>
   patient.hkpCodes ?? (patient.hkpCode ? [patient.hkpCode] : []);
 
+export const serviceEnded = (patient: Patient, today = toIsoDate(new Date())): boolean =>
+  patient.serviceStatus === 'ended' || (!!patient.serviceEndDate && patient.serviceEndDate < today);
+
 export const isActivePatient = (patient: Patient, today = toIsoDate(new Date())): boolean =>
-  patient.serviceStatus !== 'ended' &&
-  (!patient.admissionDate || patient.admissionDate <= today) &&
-  (!patient.serviceEndDate || patient.serviceEndDate >= today);
+  !serviceEnded(patient, today) && (!patient.admissionDate || patient.admissionDate <= today);
 
 export const representativeMissing = (patient: Patient): boolean =>
   patient.representativeStatus !== 'none' && !patient.contact?.trim();

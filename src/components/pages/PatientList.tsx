@@ -10,6 +10,7 @@ import {
   teilgruppeOf,
   hkpCodesOf,
   needsAssessment,
+  serviceEnded,
   visitDue,
 } from '../../utils/qpr';
 import type { VisitDue } from '../../utils/qpr';
@@ -23,7 +24,8 @@ type PatientRow = {
   group: Teilgruppe | null;
   /** Derived letter even while the assessment is unconfirmed; display only. */
   draft: Teilgruppe | null;
-  due: VisitDue;
+  /** null once the service has ended: no visit is due any more. */
+  due: VisitDue | null;
 };
 const collator = new Intl.Collator('de', { sensitivity: 'base', numeric: true });
 
@@ -78,11 +80,13 @@ const PatientList = ({
         .map((patient) => {
           const draft = teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired);
           const group = needsAssessment(patient, today) ? null : draft;
-          const due = visitDue(
-            { latestVisitDate: patient.latestVisitDate, admissionDate: patient.admissionDate },
-            today,
-            visitIntervalDays,
-          );
+          const due = serviceEnded(patient, today)
+            ? null
+            : visitDue(
+                { latestVisitDate: patient.latestVisitDate, admissionDate: patient.admissionDate },
+                today,
+                visitIntervalDays,
+              );
           const dateValue = (value?: string | null) => (value && validDate(value) ? value : null);
           const values: Record<SortKey, string | number | null> = {
             name: patient.name.trim() || null,
@@ -90,7 +94,7 @@ const PatientList = ({
             group: draft,
             visits: patient.visitCount ?? visitTrends[patient.id ?? -1]?.length ?? null,
             latest: dateValue(patient.latestVisitDate),
-            due: dateValue(due.dueDate),
+            due: dateValue(due?.dueDate),
             action: patient.latestActionNeeded ? 'ja' : 'nein',
           };
           return { patient, group, draft, due, value: values[sort.key] };
@@ -182,9 +186,12 @@ const PatientList = ({
       label: 'Nächste fällig',
       nowrap: true,
       compact: true,
-      cell: ({ due }) => (
-        <span style={{ fontWeight: 600, color: dueColor(due.daysUntilDue) }}>{due.label}</span>
-      ),
+      cell: ({ due }) =>
+        due ? (
+          <span style={{ fontWeight: 600, color: dueColor(due.daysUntilDue) }}>{due.label}</span>
+        ) : (
+          <span className="cd-muted-13">—</span>
+        ),
     },
   ];
 
@@ -198,7 +205,7 @@ const PatientList = ({
     D: rows.filter((row) => row.patient.hkpCode != null).length,
   };
   const visitsDue = rows.filter(
-    (row) => !row.due.missingAnchor && (row.due.overdue || row.due.daysUntilDue <= 14),
+    (row) => row.due && !row.due.missingAnchor && (row.due.overdue || row.due.daysUntilDue <= 14),
   ).length;
   const actionNeeded = rows.filter((row) => row.patient.latestActionNeeded).length;
 
