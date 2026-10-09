@@ -367,9 +367,22 @@
   margin-top: 6px;
 }
 
+.cd-detail-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cd-detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .cd-back-link {
-  align-self: flex-start;
-  margin: -12px 0 -14px calc(var(--space-1) * -1);
+  margin-left: calc(var(--space-1) * -1);
 }
 
 .cd-detail-header {

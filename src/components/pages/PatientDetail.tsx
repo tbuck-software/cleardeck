@@ -139,7 +139,35 @@ const PatientDetail = ({
 
   return (
     <div className="cd-page cd-detail" style={{ maxWidth: 1100 }}>
-      <BackLink {...back} />
+      <div className="cd-detail-bar">
+        <BackLink {...back} />
+        <div className="cd-detail-actions">
+          <HelpPopover
+            heading={patient.name}
+            entries={[
+              {
+                title: 'Grundlage der Einstufung',
+                body: 'Pflegegrad-Gutachten höchstens ein Jahr alt: Modul 1 Mobilität ab 4, Modul 2 Kognition ab 6 ungewichteten Punkten. Sonst eigene Einschätzung nach QPR Kapitel 8.',
+              },
+              ...(patient.legacyQprStatus
+                ? [
+                    {
+                      title: 'Übernommene Angaben',
+                      body: `Frühere Einstufung: ${patient.legacyQprStatus}. Aus der bisherigen App erhalten; keine Ableitung der heutigen Stichprobenteilgruppe.`,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+          <button type="button" className="btn btn-secondary" onClick={onEdit}>
+            Bearbeiten
+          </button>
+          <button type="button" className="btn btn-primary" onClick={onNewVisit}>
+            <Icon name="plus" size={16} />
+            Neue Visite
+          </button>
+        </div>
+      </div>
       <header className="cd-detail-header">
         <div style={{ flex: 1, minWidth: 260 }}>
           {patient.serviceStatus === 'ended' && (
@@ -181,32 +209,6 @@ const PatientDetail = ({
             {age ? ` (${age})` : ''} · {draft ? TEILGRUPPE_SHORT[draft] : 'Gutachten-Daten fehlen'}
           </p>
           <p style={{ margin: '10px 0 0', fontSize: 14 }}>{patient.note || 'Keine Notiz.'}</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <HelpPopover
-            heading={patient.name}
-            entries={[
-              {
-                title: 'Grundlage der Einstufung',
-                body: 'Pflegegrad-Gutachten höchstens ein Jahr alt: Modul 1 Mobilität ab 4, Modul 2 Kognition ab 6 ungewichteten Punkten. Sonst eigene Einschätzung nach QPR Kapitel 8.',
-              },
-              ...(patient.legacyQprStatus
-                ? [
-                    {
-                      title: 'Übernommene Angaben',
-                      body: `Frühere Einstufung: ${patient.legacyQprStatus}. Aus der bisherigen App erhalten; keine Ableitung der heutigen Stichprobenteilgruppe.`,
-                    },
-                  ]
-                : []),
-            ]}
-          />
-          <button type="button" className="btn btn-secondary" onClick={onEdit}>
-            Bearbeiten
-          </button>
-          <button type="button" className="btn btn-primary" onClick={onNewVisit}>
-            <Icon name="plus" size={16} />
-            Neue Visite
-          </button>
         </div>
       </header>
 

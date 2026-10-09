@@ -172,7 +172,26 @@ const EmployeeDetail = ({
 
   return (
     <div className="cd-page cd-detail">
-      <BackLink {...back} />
+      <div className="cd-detail-bar">
+        <BackLink {...back} />
+        <div className="cd-detail-actions">
+          <ActionMenu
+            items={[
+              { label: 'Austritt erfassen', onSelect: () => onOpenEmploymentAction('departure') },
+              {
+                label: 'Qualifikation wechseln',
+                onSelect: () => onOpenEmploymentAction('qualification'),
+              },
+            ]}
+          >
+            Aktion
+          </ActionMenu>
+          <button type="button" className="btn btn-secondary" onClick={onEdit}>
+            <Icon name="edit" size={16} />
+            Bearbeiten
+          </button>
+        </div>
+      </div>
       <header className="cd-detail-header">
         <Avatar name={employee.name} size={72} />
         <div style={{ flex: 1, minWidth: 260 }}>
@@ -189,23 +208,6 @@ const EmployeeDetail = ({
               ` · Abschnitt seit ${formatDateDE(employee.startDate)}`}
           </p>
           {employee.note && <p style={{ margin: '10px 0 0', fontSize: 14 }}>{employee.note}</p>}
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-          <ActionMenu
-            items={[
-              { label: 'Austritt erfassen', onSelect: () => onOpenEmploymentAction('departure') },
-              {
-                label: 'Qualifikation wechseln',
-                onSelect: () => onOpenEmploymentAction('qualification'),
-              },
-            ]}
-          >
-            Aktion
-          </ActionMenu>
-          <button type="button" className="btn btn-secondary" onClick={onEdit}>
-            <Icon name="edit" size={16} />
-            Bearbeiten
-          </button>
         </div>
       </header>
 
