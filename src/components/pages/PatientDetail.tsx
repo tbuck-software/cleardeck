@@ -12,12 +12,13 @@ import {
   TEILGRUPPE_SHORT,
   teilgruppeOf,
   hkpCodesOf,
-  needsAssessment,
+  assessmentIssue,
   intensiveCareForList,
   serviceScopeOf,
   SERVICE_SCOPE_LABEL,
   SERVICES_NOT_RECORDED,
   visitDue,
+  type AssessmentIssue,
 } from '../../utils/qpr';
 import type { PatientVisit, PatientWithLatestVisit } from '../../shared/types';
 import { careLevelLabel } from '../../utils/careLevel';
@@ -32,6 +33,14 @@ const ageOf = (birthDate?: string | null): string => {
     (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate());
   if (beforeBirthday) age -= 1;
   return `${age} Jahre`;
+};
+
+// Missing data needs no sentence: the empty fields already show in red.
+const ASSESSMENT_ISSUE_TEXT: Record<AssessmentIssue, string | null> = {
+  missing: null,
+  future: 'Das Datum der Einstufung liegt in der Zukunft. Datum in den Stammdaten korrigieren.',
+  stale: 'Das Gutachten ist älter als ein Jahr. Neue Einstufung in den Stammdaten erfassen.',
+  unjustified: 'Eigene Einschätzung ohne Begründung. Begründung in den Stammdaten ergänzen.',
 };
 
 type PatientDetailProps = {
@@ -55,7 +64,8 @@ const PatientDetail = ({
 }: PatientDetailProps) => {
   const today = localDate();
   const draft = teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired);
-  const group = needsAssessment(patient, today) ? null : draft;
+  const issue = assessmentIssue(patient, today);
+  const group = issue ? null : draft;
   const due = visitDue(
     { latestVisitDate: patient.latestVisitDate, admissionDate: patient.admissionDate },
     today,
@@ -69,7 +79,13 @@ const PatientDetail = ({
     : SERVICES_NOT_RECORDED;
 
   const missing = 'fehlt';
-  const facts: { label: string; value: string; mutedValue?: string; wide?: boolean }[] = [
+  const facts: {
+    label: string;
+    value: string;
+    mutedValue?: string;
+    wide?: boolean;
+    flagged?: boolean;
+  }[] = [
     {
       label: 'Erbrachte Leistungen',
       value: serviceLabels,
@@ -89,10 +105,12 @@ const PatientDetail = ({
           : patient.assessmentSource === 'own'
             ? 'Eigene Einschätzung'
             : 'Unbekannt',
+      flagged: patient.assessmentSource !== 'report' && patient.assessmentSource !== 'own',
     },
     {
       label: 'Eingeschätzt am',
       value: patient.assessmentDate ? formatDateDE(patient.assessmentDate) : missing,
+      flagged: issue === 'future' || issue === 'stale',
     },
     {
       label: 'Pflegegrad',
@@ -170,18 +188,6 @@ const PatientDetail = ({
       </div>
       <header className="cd-detail-header">
         <div style={{ flex: 1, minWidth: 260 }}>
-          {patient.serviceStatus === 'ended' && (
-            <p>
-              Versorgung beendet am {formatDateDE(patient.serviceEndDate ?? '')}. Historischer
-              Datensatz.
-            </p>
-          )}
-          {needsAssessment(patient, today) && (
-            <p>
-              Einstufung ungeprüft, unvollständig oder veraltet. Quelle und Datum in den Stammdaten
-              prüfen.
-            </p>
-          )}
           <div className="cd-detail-title">
             <h1 className="cd-h1" style={{ marginTop: 0 }}>
               {patient.name}
@@ -203,6 +209,12 @@ const PatientDetail = ({
               </span>
             )}
             {patient.latestActionNeeded && <span className="tag tag-accent">Handlungsbedarf</span>}
+            {patient.serviceStatus === 'ended' && (
+              <span className="tag tag-neutral">
+                Versorgung beendet
+                {patient.serviceEndDate && ` am ${formatDateDE(patient.serviceEndDate)}`}
+              </span>
+            )}
           </div>
           <p className="cd-muted" style={{ margin: '6px 0 0' }}>
             {patient.diagnosis || 'Ohne Diagnose'} · {formatDateDE(patient.birthDate)}
@@ -223,7 +235,8 @@ const PatientDetail = ({
               <div
                 style={{
                   fontWeight: 600,
-                  color: fact.value === missing ? 'var(--bad-800)' : 'var(--color-text)',
+                  color:
+                    fact.value === missing || fact.flagged ? 'var(--bad-800)' : 'var(--color-text)',
                 }}
               >
                 {fact.value}
@@ -232,6 +245,11 @@ const PatientDetail = ({
             </div>
           ))}
         </div>
+        {issue && ASSESSMENT_ISSUE_TEXT[issue] && (
+          <p style={{ margin: '14px 0 0', fontSize: 14, color: 'var(--bad-800)' }}>
+            {ASSESSMENT_ISSUE_TEXT[issue]}
+          </p>
+        )}
         {group != null && (
           <p className="cd-muted-13" style={{ margin: '14px 0 0' }}>
             {TEILGRUPPE_LABEL[group]}

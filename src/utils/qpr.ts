@@ -261,22 +261,32 @@ export const isActivePatient = (patient: Patient, today = toIsoDate(new Date()))
 export const representativeMissing = (patient: Patient): boolean =>
   patient.representativeStatus !== 'none' && !patient.contact?.trim();
 
-export const needsAssessment = (patient: Patient, today = toIsoDate(new Date())): boolean => {
+export type AssessmentIssue = 'missing' | 'future' | 'stale' | 'unjustified';
+
+/** Why the Teilgruppe is only provisional, or null when the assessment holds. */
+export const assessmentIssue = (
+  patient: Patient,
+  today = toIsoDate(new Date()),
+): AssessmentIssue | null => {
   if (
     teilgruppeOf(patient.cognitionImpaired, patient.mobilityImpaired) == null ||
     !patient.assessmentDate ||
     !patient.assessmentSource ||
-    patient.assessmentSource === 'unknown' ||
-    patient.assessmentDate > today
+    patient.assessmentSource === 'unknown'
   )
-    return true;
-  if (patient.assessmentSource === 'own') return !patient.assessmentNote?.trim();
+    return 'missing';
+  if (patient.assessmentDate > today) return 'future';
+  if (patient.assessmentSource === 'own')
+    return patient.assessmentNote?.trim() ? null : 'unjustified';
   const date = new Date(`${patient.assessmentDate}T12:00:00`);
   const month = date.getMonth();
   date.setFullYear(date.getFullYear() + 1);
   if (date.getMonth() !== month) date.setDate(0);
-  return toIsoDate(date) < today;
+  return toIsoDate(date) < today ? 'stale' : null;
 };
+
+export const needsAssessment = (patient: Patient, today = toIsoDate(new Date())): boolean =>
+  assessmentIssue(patient, today) != null;
 
 export const intensiveCareForList = (patient: Patient, today = toIsoDate(new Date())): string => {
   if (!patient.intensiveCare) return '';
